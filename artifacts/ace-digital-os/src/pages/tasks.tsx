@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams,
@@ -38,12 +39,27 @@ type CreateForm = z.infer<typeof createSchema>;
 
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
 
+function getProjectIdFromUrl(): number | undefined {
+  const id = new URLSearchParams(window.location.search).get("projectId");
+  if (!id) return undefined;
+  const n = Number(id);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export default function TasksPage() {
+  const projectIdFilter = getProjectIdFromUrl();
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const { data: tasks, isLoading } = useListTasks(
-    filterStatus !== "all" ? { status: filterStatus } : {}
-  );
+
+  const taskParams = useMemo(() => {
+    const base: { status?: string; projectId?: number } = {};
+    if (filterStatus !== "all") base.status = filterStatus;
+    if (projectIdFilter) base.projectId = projectIdFilter;
+    return base;
+  }, [filterStatus, projectIdFilter]);
+
   const { data: projects } = useListProjects();
+  const filteredProject = projects?.find((p) => p.id === projectIdFilter);
+  const { data: tasks, isLoading } = useListTasks(taskParams);
   const { data: employees } = useListEmployees({});
   const { data: teams } = useListTeams();
   const toggleTask = useToggleTask();
@@ -54,8 +70,19 @@ export default function TasksPage() {
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { title: "", priority: "MEDIUM", status: "PENDING" },
+    defaultValues: {
+      title: "",
+      priority: "MEDIUM",
+      status: "PENDING",
+      projectId: projectIdFilter ? String(projectIdFilter) : "",
+    },
   });
+
+  useEffect(() => {
+    if (projectIdFilter) {
+      form.setValue("projectId", String(projectIdFilter));
+    }
+  }, [projectIdFilter, form]);
 
   async function onSubmit(data: CreateForm) {
     await createTask.mutateAsync({
@@ -82,6 +109,18 @@ export default function TasksPage() {
 
   return (
     <AppLayout title="Tasks">
+      {projectIdFilter && filteredProject && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5 text-sm">
+          <span>
+            Showing tasks for <strong>{filteredProject.name}</strong>
+          </span>
+          <Link href="/tasks">
+            <button type="button" className="text-primary text-xs font-medium hover:underline">
+              Clear filter
+            </button>
+          </Link>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-muted-foreground" />

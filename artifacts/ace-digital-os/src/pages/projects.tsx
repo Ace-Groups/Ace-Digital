@@ -1,16 +1,25 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ProjectDetailDialog } from "@/components/projects/ProjectDetailDialog";
 import {
-  useListProjects, useCreateProject, useUpdateProjectStatus, useListTeams,
+  useListProjects,
+  useCreateProject,
+  useUpdateProjectStatus,
+  useListTeams,
+  useListClients,
   getListProjectsQueryKey,
+  type Project,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -19,13 +28,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, DollarSign, TrendingUp, GripVertical } from "lucide-react";
+import { Plus, Calendar, IndianRupee, GripVertical } from "lucide-react";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const;
 const STATUS_LABELS: Record<string, string> = {
-  TODO: "To Do", IN_PROGRESS: "In Progress", REVIEW: "Review", DONE: "Done",
+  TODO: "To Do",
+  IN_PROGRESS: "In Progress",
+  REVIEW: "Review",
+  DONE: "Done",
 };
 const STATUS_COLORS: Record<string, string> = {
   TODO: "bg-gray-50 border-gray-200",
@@ -38,6 +50,7 @@ const createSchema = z.object({
   name: z.string().min(1, "Name required"),
   description: z.string().optional(),
   teamId: z.string().optional(),
+  clientId: z.string().optional(),
   priority: z.string(),
   deadline: z.string().optional(),
   budget: z.string().optional(),
@@ -47,11 +60,14 @@ type CreateForm = z.infer<typeof createSchema>;
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useListProjects();
   const { data: teams } = useListTeams();
+  const { data: clients } = useListClients();
   const createProject = useCreateProject();
   const updateStatus = useUpdateProjectStatus();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [dragging, setDragging] = useState<number | null>(null);
 
   const form = useForm<CreateForm>({
@@ -65,6 +81,7 @@ export default function ProjectsPage() {
         name: data.name,
         description: data.description,
         teamId: data.teamId ? Number(data.teamId) : undefined,
+        clientId: data.clientId ? Number(data.clientId) : undefined,
         priority: data.priority,
         status: "TODO",
         deadline: data.deadline || undefined,
@@ -73,13 +90,41 @@ export default function ProjectsPage() {
     });
     queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
     toast({ title: "Project created!" });
-    setOpen(false);
+    setCreateOpen(false);
     form.reset();
   }
 
   async function handleDrop(status: string, projectId: number) {
     await updateStatus.mutateAsync({ id: projectId, data: { status } });
     queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+  }
+
+  function openProject(project: Project) {
+    setSelectedProject(project);
+    setDetailOpen(true);
+  }
+
+  async function handleDuplicate(source: Project) {
+    await createProject.mutateAsync({
+      data: {
+        name: `${source.name} (copy)`,
+        description: source.description ?? undefined,
+        teamId: source.teamId ?? undefined,
+        clientId: source.clientId ?? undefined,
+        priority: source.priority,
+        status: "TODO",
+        deadline: source.deadline ?? undefined,
+        budget: source.budget ?? undefined,
+      },
+    });
+    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+    toast({ title: "Project duplicated", description: "A copy was added to To Do." });
+    setDetailOpen(false);
+  }
+
+  function handleDetailOpenChange(open: boolean) {
+    setDetailOpen(open);
+    if (!open) setSelectedProject(null);
   }
 
   const byStatus = STATUSES.reduce<Record<string, typeof projects>>((acc, s) => {
@@ -90,8 +135,10 @@ export default function ProjectsPage() {
   return (
     <AppLayout title="Projects">
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-muted-foreground">{projects?.length ?? 0} total projects</p>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <p className="text-sm text-muted-foreground">
+          {projects?.length ?? 0} total projects · click a card to edit
+        </p>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="btn-create-project" className="gap-2">
               <Plus size={16} /> New Project
@@ -103,64 +150,127 @@ export default function ProjectsPage() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Name</FormLabel>
-                    <FormControl><Input data-testid="input-project-name" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea data-testid="input-project-desc" rows={2} {...field} /></FormControl>
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Name</FormLabel>
+                      <FormControl>
+                        <Input data-testid="input-project-name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea data-testid="input-project-desc" rows={2} {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="teamId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-project-team">
-                            <SelectValue placeholder="Select team" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="priority" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-project-priority">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="teamId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Team</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-project-team">
+                              <SelectValue placeholder="Select team" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {teams?.map((t) => (
+                              <SelectItem key={t.id} value={String(t.id)}>
+                                {t.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-project-priority">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
                 </div>
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-project-client">
+                            <SelectValue placeholder="Optional client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clients?.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.companyName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="deadline" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Deadline</FormLabel>
-                      <FormControl><Input type="date" data-testid="input-project-deadline" {...field} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="budget" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Budget (₹)</FormLabel>
-                      <FormControl><Input type="number" data-testid="input-project-budget" {...field} /></FormControl>
-                    </FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="deadline"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Deadline</FormLabel>
+                        <FormControl>
+                          <Input type="date" data-testid="input-project-deadline" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="budget"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Budget (₹)</FormLabel>
+                        <FormControl>
+                          <Input type="number" data-testid="input-project-budget" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <Button
                   data-testid="btn-submit-project"
@@ -176,15 +286,31 @@ export default function ProjectsPage() {
         </Dialog>
       </div>
 
-      {/* Kanban board */}
-      <div className="grid grid-cols-4 gap-4 min-h-96">
+      <ProjectDetailDialog
+        project={selectedProject}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+        teams={teams}
+        clients={clients?.map((c) => ({ id: c.id, companyName: c.companyName }))}
+        onDuplicate={handleDuplicate}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 min-h-96">
         {STATUSES.map((status) => (
           <div
             key={status}
             data-testid={`kanban-col-${status.toLowerCase()}`}
-            className={cn("rounded-xl border-2 p-3 min-h-64 transition-colors", STATUS_COLORS[status])}
-            onDragOver={(e) => { e.preventDefault(); }}
-            onDrop={() => { if (dragging !== null) handleDrop(status, dragging); setDragging(null); }}
+            className={cn(
+              "rounded-xl border-2 p-3 min-h-64 transition-colors",
+              STATUS_COLORS[status],
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+            }}
+            onDrop={() => {
+              if (dragging !== null) handleDrop(status, dragging);
+              setDragging(null);
+            }}
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-gray-700">{STATUS_LABELS[status]}</span>
@@ -195,7 +321,9 @@ export default function ProjectsPage() {
 
             {isLoading ? (
               <div className="space-y-2">
-                {[1, 2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                ))}
               </div>
             ) : (
               <div className="space-y-2">
@@ -203,46 +331,69 @@ export default function ProjectsPage() {
                   <div
                     key={project.id}
                     data-testid={`project-card-${project.id}`}
-                    draggable
-                    onDragStart={() => setDragging(project.id)}
-                    onDragEnd={() => setDragging(null)}
-                    className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <p className="text-sm font-medium text-gray-900 leading-tight">{project.name}</p>
-                      <GripVertical size={14} className="text-gray-300 shrink-0 mt-0.5" />
-                    </div>
-                    {project.teamName && (
-                      <p className="text-xs text-muted-foreground mb-2">{project.teamName}</p>
+                    className={cn(
+                      "bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow group",
+                      dragging === project.id && "opacity-50 ring-2 ring-primary/30",
                     )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
-                        {project.priority}
-                      </Badge>
+                  >
+                    <div
+                      draggable
+                      onDragStart={() => setDragging(project.id)}
+                      onDragEnd={() => setDragging(null)}
+                      className="flex justify-end px-2 pt-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+                      title="Drag to move column"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical size={14} />
                     </div>
-                    {/* Progress */}
-                    <div className="mt-2">
-                      <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${project.progress}%` }}
-                        />
+                    <button
+                      type="button"
+                      onClick={() => openProject(project)}
+                      className="w-full text-left px-3 pb-3 pt-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-b-lg"
+                    >
+                      <p className="text-sm font-medium text-gray-900 leading-tight pr-1">
+                        {project.name}
+                      </p>
+                      {project.teamName && (
+                        <p className="text-xs text-muted-foreground mt-1">{project.teamName}</p>
+                      )}
+                      {project.clientName && (
+                        <p className="text-xs text-muted-foreground">{project.clientName}</p>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap mt-2">
+                        <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
+                          {project.priority}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {project.progress}%
+                        </span>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      {project.deadline && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar size={10} />
-                          {new Date(project.deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                        </span>
-                      )}
-                      {project.budget && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <DollarSign size={10} />
-                          {formatCurrency(project.budget)}
-                        </span>
-                      )}
-                    </div>
+                      <div className="mt-2">
+                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 gap-2">
+                        {project.deadline && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar size={10} />
+                            {new Date(project.deadline).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </span>
+                        )}
+                        {project.budget != null && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
+                            <IndianRupee size={10} />
+                            {formatCurrency(project.budget)}
+                          </span>
+                        )}
+                      </div>
+                    </button>
                   </div>
                 ))}
               </div>
