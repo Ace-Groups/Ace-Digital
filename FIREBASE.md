@@ -21,11 +21,37 @@
 - Email: `admin@acedigital.com`
 - Password: `Admin@123`
 
-## One-time: enable API (Blaze)
+## Managing Director login
+
+| Field | Value |
+|-------|--------|
+| Email | `kavin@acedigital.com` |
+| Password | `Kavin@2026` |
+| Job title | Managing Director |
+| App role | `super_admin` (full access) |
+
+Create or refresh this user in Firestore (works before Functions deploy):
+
+```bash
+USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
+```
+
+Login only works on the live site **after** Cloud Functions are deployed (see below).
+
+## One-time: enable API (Blaze) — required
+
+Your project must show **billing enabled**. Check:
+
+```bash
+gcloud billing projects describe ace-digital-os --format='value(billingEnabled)'
+```
+
+Must return `True`. If `False`, complete these steps:
 
 1. Open https://console.firebase.google.com/project/ace-digital-os/usage/details  
-2. Upgrade to **Blaze (pay as you go)** — required for Cloud Functions / Cloud Build on new projects.  
-3. Deploy the API:
+2. Click **Modify plan** → **Blaze (pay as you go)**.  
+3. Link a Google Cloud **billing account** (credit/debit card). You are **not** charged a flat monthly Firebase fee.  
+4. Wait 2–5 minutes, then deploy the API:
 
 ```bash
 pnpm run build:api
@@ -65,6 +91,21 @@ pnpm run deploy:firebase
 - **Cloud Functions (gen 1)** — `asia-south1`, 512MB, max 10 instances — Express app bundled as `api-app.mjs` using `USE_FIRESTORE=true`.
 
 Postgres (`DATABASE_URL`) is still supported locally for development; production Firebase uses Firestore only.
+
+## Estimated monthly cost (Ace Digital OS, small team)
+
+Blaze means **billing is attached**, not that you pay every month. For a small internal app (~5–15 users, light usage), you typically stay in **free quotas**:
+
+| Service | Free quota (typical) | Your likely usage |
+|---------|----------------------|-------------------|
+| Hosting | 10 GB storage, ~360 MB/day transfer | Well within free |
+| Firestore | 50K reads / 20K writes per day | Well within free |
+| Cloud Functions | 2M invocations/month (Gen 1) | Well within free |
+| Cloud Build | 120 build-min/day | Only when you deploy |
+
+**Realistic estimate:** **$0–3/month** for light internal use. Charges appear only if you exceed free limits (heavy traffic, many builds, or large Firestore reads). Set a [budget alert](https://console.cloud.google.com/billing/budgets) at $5–10 in Google Cloud Console to get email warnings.
+
+There is **no** fixed “Blaze monthly fee” — you pay for usage above free tier only.
 
 ## GitHub
 

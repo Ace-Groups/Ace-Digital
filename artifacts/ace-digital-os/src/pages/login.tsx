@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "admin@acedigital.com", password: "" },
+    defaultValues: { email: "kavin@acedigital.com", password: "" },
   });
 
   async function onSubmit(data: FormData) {
@@ -172,9 +172,8 @@ export default function LoginPage() {
 
           <Card className="mt-6 border-primary/15 bg-primary/5">
             <CardContent className="p-4">
-              <p className="text-xs font-semibold text-foreground">Default admin credentials</p>
-              <p className="mt-2 text-xs text-muted-foreground">Email: admin@acedigital.com</p>
-              <p className="text-xs text-muted-foreground">Password: Admin@123</p>
+              <p className="text-xs font-semibold text-foreground">Managing Director access</p>
+              <p className="mt-2 text-xs text-muted-foreground">Email: kavin@acedigital.com</p>
             </CardContent>
           </Card>
         </div>

@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
     "seed:firestore": "tsx ./src/seed-firestore.ts",
+    "upsert:kavin": "tsx ./src/upsert-kavin-admin.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
