@@ -1,0 +1,292 @@
+Build a production-ready internal company operating system called **Ace Digital OS** (not "Nexus"). This is a private web app for a small IT company to manage teams, projects, tasks, clients, finance/payroll, approvals, reports, and team communication.
+
+---
+
+## REFERENCE UI (MUST MATCH)
+
+I have a working HTML prototype at `plan.html` in this repo. Use it as the **exact UX and feature blueprint**:
+
+- Same sidebar navigation structure and page names
+- Same layouts: dashboard stat cards, Kanban projects (Todo / In Progress / Review / Done), task lists, team tables, finance salary table, client table, approval cards with Approve/Reject, reports grid, comms with channels + chat
+- Same modals: New Project, Add Task, Add Employee, Add Client
+- Same interactions: toggle tasks, approve/reject, send chat messages, toast notifications
+
+**Rebrand everything:**
+- Product name: **Ace Digital** (subtitle: "Company OS" or "Internal Portal")
+- Replace all "Nexus" branding with Ace Digital
+- Use the Ace Digital logo image I provide (stylized blue "A" mark) in sidebar header and login page
+- Use this brand color palette as CSS variables (replace the prototype's purple/dark theme):
+
+  --ace-900: #021024;   /* darkest — sidebar, headers, primary text on light */
+  --ace-800: #052659;   /* deep navy — sidebar, nav */
+  --ace-700: #1a4a7a;   /* mid-dark blue (derive if needed between 800 and 600) */
+  --ace-600: #5483B3;   /* steel blue — primary buttons, links, active states */
+  --ace-500: #7DA0CA;   /* muted blue — borders, secondary buttons */
+  --ace-100: #C1E8FF;   /* sky — main content background, cards */
+
+  Application of colors:
+  - Sidebar + top bar: ace-800 / ace-900 gradient
+  - Main content area background: ace-100 (light, readable)
+  - Cards: white or very light with ace-500 borders
+  - Primary CTAs ("New Project", "Approve", "Add Task"): ace-600
+  - Text on dark: white; text on light: ace-900
+
+- Typography: clean professional sans (e.g. Inter, DM Sans, or Plus Jakarta Sans). Do NOT use generic purple startup aesthetic from the prototype.
+
+- Currency: Indian Rupees (₹) with `en-IN` formatting (e.g. ₹1,20,000)
+
+---
+
+## COMPANY CONTEXT
+
+**Company:** Ace Digital — small IT services company  
+**Teams (6):**
+1. Developer Team
+2. Marketing Team
+3. Management Team
+4. Finance Team
+5. Client Management Team
+6. AI Collaborators (human AI engineers + tracked AI tools like Claude, Copilot, etc.)
+
+**Roles & access (RBAC):**
+- `super_admin` — CEO/owner: full access
+- `management` — Management team: projects, teams, approvals, reports
+- `finance` — Finance team: payroll, expenses, financial reports, salary approvals
+- `team_lead` — per-team lead: manage team tasks/projects
+- `employee` — own tasks, team channel, limited salary view (own payslip only)
+- `client_manager` — clients module full access
+
+Enforce permissions on every API route and hide UI nav items by role.
+
+---
+
+## TECH STACK (Replit-friendly, production standard)
+
+**Monorepo or clear separation:**
+
+### Frontend
+- **React 18+** with **TypeScript**
+- **Vite** for build
+- **React Router** for SPA routes matching plan.html pages
+- **TanStack Query** for server state
+- **Tailwind CSS** (or CSS modules) implementing Ace Digital tokens above
+- Responsive: desktop-first (internal tool), usable on tablet
+
+### Backend
+- **Node.js + Express** (or Fastify) with **TypeScript**
+- **PostgreSQL** via Replit Database or Neon/Supabase Postgres (use Replit's built-in Postgres if available)
+- **Prisma ORM** for schema + migrations
+- **JWT auth** (httpOnly cookies) + bcrypt password hashing
+- **Zod** validation on all request bodies
+- REST API under `/api/v1/...`
+- File uploads (avatars, report exports): Replit Object Storage or local `/uploads` with signed URLs
+
+### Real-time (Comms)
+- **Socket.io** for team channel messages and live notifications
+- Persist messages in DB; show unread counts per channel
+
+### Optional but recommended
+- Seed script with demo data matching plan.html sample names/projects
+- `README.md` with env vars, migrate, seed, run instructions
+- ESLint + Prettier
+
+---
+
+## DATABASE SCHEMA (Prisma models — implement fully)
+
+**User**
+- id, email, passwordHash, fullName, avatarUrl, role (enum), teamId, jobTitle, status (active/inactive), createdAt
+
+**Team**
+- id, name (enum: DEVELOPER, MARKETING, MANAGEMENT, FINANCE, CLIENT_MGMT, AI), color hex
+
+**Project**
+- id, name, description, teamId, priority (HIGH/MEDIUM/LOW), status (TODO/IN_PROGRESS/REVIEW/DONE), progress (0-100), deadline, budget (decimal), clientId optional, createdById
+
+**Task**
+- id, title, projectId optional, assigneeId, teamId, priority, dueDate, status (PENDING/DONE), createdById
+
+**EmployeeProfile** (extends User or 1:1)
+- baseSalary, bonus, payrollStatus (PENDING/APPROVED/PROCESSED), bankDetails optional (encrypted or omitted in v1)
+
+**Client**
+- id, contactName, companyName, email, phone, assignedTeamId, status (ACTIVE/NEGOTIATION/CHURNED), contractValue, nextMeetingAt
+
+**ClientProject** (link client ↔ project)
+
+**Approval**
+- id, type (SALARY_HIKE, PROJECT_BUDGET, EXPENSE_CLAIM, NEW_HIRE, SOFTWARE_LICENSE, OTHER), title, description, amount optional, requestedById, teamId, status (PENDING/APPROVED/REJECTED), reviewedById, reviewedAt
+
+**Expense** (for finance)
+- id, description, amount, teamId, submittedById, status, receiptUrl optional
+
+**PayrollRun**
+- id, month, year, totalAmount, status, approvedById
+
+**Payslip**
+- id, userId, payrollRunId, baseSalary, bonus, deductions, netPay, pdfUrl optional
+
+**Report**
+- id, type (FINANCIAL, PROJECT_STATUS, TEAM_PERFORMANCE, CLIENT_REVENUE, PAYROLL, AI_USAGE), title, period, generatedAt, fileUrl optional
+
+**Channel**
+- id, name, teamId optional, type (TEAM/ANNOUNCEMENT/DM)
+
+**Message**
+- id, channelId, senderId, body, createdAt
+
+**ActivityLog**
+- id, actorId, action, entityType, entityId, metadata JSON, createdAt (powers dashboard "Recent Activity")
+
+**Notification**
+- id, userId, title, body, read, link
+
+Add indexes on foreign keys and `(status, teamId)` where queried often.
+
+---
+
+## API ENDPOINTS (implement all with auth + validation)
+
+### Auth
+- POST `/api/v1/auth/register` (super_admin only after first user)
+- POST `/api/v1/auth/login`
+- POST `/api/v1/auth/logout`
+- GET `/api/v1/auth/me`
+
+### Dashboard
+- GET `/api/v1/dashboard` → activeProjectsCount, employeeCount, monthlyRevenue, pendingApprovals, recentActivity[], upcomingDeadlines[], teamLoad[]
+
+### Projects
+- CRUD `/api/v1/projects`
+- PATCH `/api/v1/projects/:id/status` (for Kanban drag or status dropdown)
+- PATCH `/api/v1/projects/:id/progress`
+
+### Tasks
+- CRUD `/api/v1/tasks`
+- PATCH `/api/v1/tasks/:id/toggle`
+
+### Employees / Teams
+- GET `/api/v1/teams`
+- GET `/api/v1/teams/:id/members`
+- CRUD `/api/v1/employees` (finance + management only for salary fields)
+
+### Finance
+- GET `/api/v1/finance/summary` (payroll, revenue, expenses, net profit)
+- GET `/api/v1/finance/salaries`
+- POST `/api/v1/finance/payroll-runs`
+- POST `/api/v1/finance/payslips/:userId/send`
+- CRUD `/api/v1/finance/expenses`
+
+### Clients
+- CRUD `/api/v1/clients`
+
+### Approvals
+- GET `/api/v1/approvals?status=PENDING`
+- POST `/api/v1/approvals`
+- POST `/api/v1/approvals/:id/approve`
+- POST `/api/v1/approvals/:id/reject`
+
+### Reports
+- GET `/api/v1/reports`
+- POST `/api/v1/reports/generate` (type + period) → create PDF or CSV stub and return download URL
+
+### Comms
+- GET `/api/v1/channels`
+- GET `/api/v1/channels/:id/messages`
+- POST `/api/v1/channels/:id/messages`
+- WebSocket: `message:new`, `notification:new`
+
+### Activity
+- GET `/api/v1/activity?limit=20`
+
+---
+
+## FRONTEND PAGES (mirror plan.html routes)
+
+| Route | Page |
+|-------|------|
+| `/login` | Login with Ace Digital logo |
+| `/` | Dashboard |
+| `/projects` | Kanban board |
+| `/tasks` | Pending / Completed |
+| `/teams/developer` | Developer team table |
+| `/teams/marketing` | Marketing team table |
+| `/teams/management` | Management team table |
+| `/teams/ai` | AI collaborators cards + AI tools |
+| `/finance` | Finance summary + salary table |
+| `/clients` | Client management table |
+| `/approvals` | Pending approvals with Approve/Reject |
+| `/reports` | Report cards + Export |
+| `/comms` | Channels + real-time chat |
+
+**Global layout:**
+- Left sidebar (220px): logo, nav sections (Overview, Teams, Operations), user pill at bottom
+- Top bar: page title + contextual actions ("+ New Project", "+ Add Task")
+- Modals for create forms (same fields as plan.html)
+
+**Kanban:** Allow changing project status (click menu or drag-and-drop if feasible).
+
+**Approvals:** Only `management`, `finance`, or `super_admin` can approve; finance-only for salary/expense types.
+
+**Finance salary table:** "Approve Salary" flow creates an Approval record; after approval, update EmployeeProfile and PayrollRun.
+
+---
+
+## BUSINESS RULES
+
+1. Creating a project with budget > ₹5,00,000 auto-creates a pending **PROJECT_BUDGET** approval for Management.
+2. Salary change > 10% requires Finance + Management approval chain.
+3. Task completion updates project progress (% of done tasks / total tasks on that project).
+4. Dashboard stats are computed from DB, not hardcoded.
+5. Employees see only their team's channel + company announcements; Management sees all team channels.
+6. Audit: every approve/reject and salary change writes to ActivityLog.
+
+---
+
+## SEED DATA
+
+Seed the database with the same sample data as plan.html:
+- 8 projects (E-Commerce Platform, Brand Refresh, AI Chatbot, etc.)
+- 8+ tasks
+- 12 employees across 6 teams
+- 5 clients
+- 5 pending approvals
+- Sample chat messages in dev/mkt/ai channels
+
+Default login for demo:
+- `admin@acedigital.com` / `Admin@123` (super_admin, Management · CEO)
+
+---
+
+## DEPLOYMENT ON REPLIT
+
+- Single Replit project: run frontend + backend concurrently (e.g. `concurrently` npm script)
+- `.replit` and `replit.nix` configured correctly
+- Environment variables: `DATABASE_URL`, `JWT_SECRET`, `NODE_ENV`, `PORT`
+- On Replit deploy: migrations run, seed optional via `npm run db:seed`
+- Health check: GET `/api/v1/health`
+
+---
+
+## QUALITY BAR
+
+- No mock-only frontend: all tables and stats load from API
+- Loading skeletons and error states on every page
+- Form validation with user-friendly errors
+- 404 page and protected routes (redirect to login if unauthenticated)
+- Basic security: rate limit login, sanitize inputs, CORS for own origin only
+- Comments only where logic is non-obvious
+
+---
+
+## DELIVERABLES CHECKLIST
+
+1. Full-stack app running on Replit with one-click Run
+2. PostgreSQL schema + migrations + seed
+3. Auth + RBAC working
+4. All 12 pages functional and styled with Ace Digital blue palette + logo
+5. Real-time chat in Comms
+6. Approvals workflow end-to-end
+7. README with setup steps
+
+Start by reading `plan.html`, then scaffold the monorepo, database, auth, and dashboard. Build feature-by-feature in the order: Auth → Dashboard → Projects → Tasks → Teams → Finance → Clients → Approvals → Reports → Comms.

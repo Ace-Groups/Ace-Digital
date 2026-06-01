@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Company OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --bg4: #22222f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f8;
+    --text2: #9090b0;
+    --text3: #5a5a78;
+    --accent: #7c6fff;
+    --accent2: #a594ff;
+    --accent-glow: rgba(124,111,255,0.15);
+    --green: #2ecc7a;
+    --green-bg: rgba(46,204,122,0.1);
+    --amber: #f0a832;
+    --amber-bg: rgba(240,168,50,0.1);
+    --red: #f05252;
+    --red-bg: rgba(240,82,82,0.1);
+    --blue: #3b9eff;
+    --blue-bg: rgba(59,158,255,0.1);
+    --pink: #e879f9;
+    --pink-bg: rgba(232,121,249,0.1);
+    --teal: #2dd4bf;
+    --teal-bg: rgba(45,212,191,0.1);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; display: flex; height: 100vh; overflow: hidden; }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 0; overflow: hidden;
+  }
+  .logo {
+    padding: 22px 20px 18px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-head); font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .logo small { display: block; font-size: 10px; font-weight: 400; color: var(--text3); font-family: var(--font-body); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+  .nav-section { padding: 16px 12px 8px; }
+  .nav-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 0 8px 8px; font-weight: 500; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius);
+    cursor: pointer; color: var(--text2); transition: all 0.15s; margin-bottom: 2px;
+    font-size: 13.5px; font-weight: 400;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--accent-glow); color: var(--accent2); font-weight: 500; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; opacity: 0.8; }
+  .nav-item .badge {
+    margin-left: auto; background: var(--accent); color: white; font-size: 10px;
+    padding: 2px 6px; border-radius: 20px; font-weight: 600;
+  }
+  .sidebar-bottom {
+    margin-top: auto; padding: 14px 12px; border-top: 1px solid var(--border);
+  }
+  .user-pill {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-radius: var(--radius); cursor: pointer; transition: background 0.15s;
+  }
+  .user-pill:hover { background: var(--bg3); }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent-glow);
+    border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--accent2); flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-role { font-size: 11px; color: var(--text3); }
+
+  /* MAIN */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 56px; display: flex; align-items: center; gap: 16px;
+    flex-shrink: 0;
+  }
+  .topbar h1 { font-family: var(--font-head); font-size: 18px; font-weight: 700; flex: 1; }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 13px;
+    font-family: var(--font-body); transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg3); border-color: var(--border2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn.primary:hover { background: var(--accent2); }
+  .btn.danger { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .btn.success { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+  /* CONTENT */
+  #content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* GRID */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 18px; transition: border-color 0.15s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-title { font-family: var(--font-head); font-size: 14px; font-weight: 600; }
+  .card-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* STAT CARD */
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; }
+  .stat-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-family: var(--font-head); font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+  .stat-trend { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 7px; border-radius: 20px; margin-top: 6px; }
+  .trend-up { background: var(--green-bg); color: var(--green); }
+  .trend-down { background: var(--red-bg); color: var(--red); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-purple { background: var(--accent-glow); color: var(--accent2); }
+  .badge-pink { background: var(--pink-bg); color: var(--pink); }
+  .badge-teal { background: var(--teal-bg); color: var(--teal); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--bg3); border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg3); }
+
+  /* PROGRESS BAR */
+  .progress-bar { background: var(--bg4); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s; }
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.amber { background: var(--amber); }
+  .progress-fill.red { background: var(--red); }
+
+  /* TEAM COLORS */
+  .team-dev { background: var(--blue-bg); color: var(--blue); }
+  .team-mkt { background: var(--pink-bg); color: var(--pink); }
+  .team-mgmt { background: var(--accent-glow); color: var(--accent2); }
+  .team-fin { background: var(--green-bg); color: var(--green); }
+  .team-client { background: var(--amber-bg); color: var(--amber); }
+  .team-ai { background: var(--teal-bg); color: var(--teal); }
+
+  /* SECTION TITLE */
+  .section-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .section-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+
+  /* TASK ITEM */
+  .task-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: var(--radius); border: 1px solid var(--border);
+    margin-bottom: 8px; background: var(--bg3); transition: border-color 0.15s;
+  }
+  .task-item:hover { border-color: var(--border2); }
+  .task-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text3); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .task-check.done { background: var(--green); border-color: var(--green); }
+  .task-text { flex: 1; font-size: 13.5px; }
+  .task-text.done { text-decoration: line-through; color: var(--text3); }
+
+  /* CHAT */
+  .message { display: flex; gap: 10px; margin-bottom: 14px; }
+  .msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .msg-body { flex: 1; }
+  .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .msg-name { font-size: 13px; font-weight: 600; }
+  .msg-time { font-size: 11px; color: var(--text3); }
+  .msg-text { font-size: 13.5px; color: var(--text2); line-height: 1.6; background: var(--bg3); padding: 9px 12px; border-radius: 4px 12px 12px 12px; display: inline-block; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex;
+    align-items: center; justify-content: center; z-index: 1000; opacity: 0;
+    pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-lg);
+    padding: 28px; width: 500px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 { font-family: var(--font-head); font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 9px 12px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 13.5px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+  .form-group select option { background: var(--bg3); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* NOTIFICATION TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--bg3);
+    border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px 18px;
+    font-size: 13.5px; z-index: 2000; transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; max-width: 300px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--green); color: var(--green); }
+
+  /* KANBAN */
+  .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .kanban-col { background: var(--bg3); border-radius: var(--radius-lg); padding: 14px; min-height: 300px; }
+  .kanban-col-header { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .kanban-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .kanban-card:hover { border-color: var(--accent); }
+  .kanban-card-title { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .kanban-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* CHART BARS */
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 100px; padding: 0 0 8px; }
+  .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { border-radius: 4px 4px 0 0; width: 100%; background: var(--accent); transition: height 0.5s; opacity: 0.8; }
+  .bar-label { font-size: 10px; color: var(--text3); }
+  .bar-val { font-size: 10px; color: var(--text2); }
+
+  /* APPROVAL ITEM */
+  .approval-item {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .approval-icon { width: 40px; height: 40px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .approval-body { flex: 1; }
+  .approval-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .approval-meta { font-size: 12px; color: var(--text3); }
+  .approval-actions { display: flex; gap: 8px; }
+
+  /* NOTIFICATION DOT */
+  .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mini-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .inline-flex { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="logo">NEXUS<span>.</span><small>Company OS</small></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="icon">⊞</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('projects')">
+      <span class="icon">◈</span> Projects
+      <span class="badge">8</span>
+    </div>
+    <div class="nav-item" onclick="navigate('tasks')">
+      <span class="icon">✓</span> Tasks
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Teams</div>
+    <div class="nav-item" onclick="navigate('team-dev')">
+      <span class="icon" style="color:var(--blue)">◉</span> Developer
+    </div>
+    <div class="nav-item" onclick="navigate('team-mkt')">
+      <span class="icon" style="color:var(--pink)">◉</span> Marketing
+    </div>
+    <div class="nav-item" onclick="navigate('team-mgmt')">
+      <span class="icon" style="color:var(--accent2)">◉</span> Management
+    </div>
+    <div class="nav-item" onclick="navigate('team-ai')">
+      <span class="icon" style="color:var(--teal)">◉</span> AI Collaborators
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Operations</div>
+    <div class="nav-item" onclick="navigate('finance')">
+      <span class="icon" style="color:var(--green)">₹</span> Finance
+    </div>
+    <div class="nav-item" onclick="navigate('clients')">
+      <span class="icon">👤</span> Clients
+    </div>
+    <div class="nav-item" onclick="navigate('approvals')">
+      <span class="icon">🔔</span> Approvals
+      <span class="badge" style="background:var(--red)">5</span>
+    </div>
+    <div class="nav-item" onclick="navigate('reports')">
+      <span class="icon">📊</span> Reports
+    </div>
+    <div class="nav-item" onclick="navigate('comms')">
+      <span class="icon">💬</span> Comms
+    </div>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="user-pill">
+      <div class="avatar">AD</div>
+      <div>
+        <div class="user-name">Admin User</div>
+        <div class="user-role">Management · CEO</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <h1 id="page-title">Dashboard</h1>
+    <div class="topbar-actions">
+      <button class="btn" onclick="openModal('add-project-modal')">+ New Project</button>
+      <button class="btn primary" onclick="openModal('add-task-modal')">+ Add Task</button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ======== DASHBOARD ======== -->
+    <div id="page-dashboard" class="page active">
+      <div class="grid-4">
+        <div class="stat-card">
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-value" style="color:var(--accent2)">8</div>
+          <div class="stat-trend trend-up">↑ 2 this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Employees</div>
+          <div class="stat-value" style="color:var(--blue)">24</div>
+          <div class="stat-sub">Across 6 teams</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Revenue</div>
+          <div class="stat-value" style="color:var(--green)">₹8.4L</div>
+          <div class="stat-trend trend-up">↑ 12% vs last month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Approvals</div>
+          <div class="stat-value" style="color:var(--red)">5</div>
+          <div class="stat-sub">Requires your attention</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Active Projects</div>
+              <div class="card-subtitle">Status overview</div>
+            </div>
+          </div>
+          <div id="project-list-dash"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Team Load</div>
+          </div>
+          <div id="team-load-chart"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Activity</div>
+          </div>
+          <div id="activity-feed"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Upcoming Deadlines</div>
+          </div>
+          <div id="deadlines-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== PROJECTS ======== -->
+    <div id="page-projects" class="page">
+      <div class="section-row">
+        <div class="section-title">All Projects</div>
+        <button class="btn primary" onclick="openModal('add-project-modal')">+ New Project</button>
+      </div>
+      <div class="kanban" id="kanban-board"></div>
+    </div>
+
+    <!-- ======== TASKS ======== -->
+    <div id="page-tasks" class="page">
+      <div class="section-row">
+        <div class="section-title">Tasks</div>
+        <button class="btn primary" onclick="openModal('add-task-modal')">+ Add Task</button>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div style="margin-bottom:10px;font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Pending</div>
+          <div id="tasks-pending"></div>
+        </div>
+        <div>
+          <div style="margin-bottom:10px;font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Completed</div>
+          <div id="tasks-done"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== DEV TEAM ======== -->
+    <div id="page-team-dev" class="page">
+      <div class="section-title">Developer Team</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Role</th><th>Active Project</th><th>Tasks Done</th><th>Salary</th><th>Status</th></tr></thead>
+          <tbody id="team-dev-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== MARKETING TEAM ======== -->
+    <div id="page-team-mkt" class="page">
+      <div class="section-title">Marketing Team</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Role</th><th>Campaign</th><th>Tasks Done</th><th>Salary</th><th>Status</th></tr></thead>
+          <tbody id="team-mkt-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== MANAGEMENT TEAM ======== -->
+    <div id="page-team-mgmt" class="page">
+      <div class="section-title">Management Team</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Role</th><th>Responsibility</th><th>Approvals Pending</th><th>Salary</th><th>Status</th></tr></thead>
+          <tbody id="team-mgmt-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== AI COLLABORATORS ======== -->
+    <div id="page-team-ai" class="page">
+      <div class="section-title">AI Collaborators</div>
+      <div class="grid-3" id="ai-collaborators"></div>
+    </div>
+
+    <!-- ======== FINANCE ======== -->
+    <div id="page-finance" class="page">
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Monthly Payroll</div>
+          <div class="stat-value" style="color:var(--green)">₹18.6L</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-value" style="color:var(--blue)">₹84.2L</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Expenses</div>
+          <div class="stat-value" style="color:var(--amber)">₹32.4L</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Net Profit</div>
+          <div class="stat-value" style="color:var(--accent2)">₹51.8L</div>
+        </div>
+      </div>
+      <div class="section-row">
+        <div class="section-title">Employee Salaries</div>
+        <button class="btn primary" onclick="openModal('add-employee-modal')">+ Add Employee</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employee</th><th>Team</th><th>Role</th><th>Base Salary</th><th>Bonus</th><th>Total</th><th>Payroll Status</th><th>Action</th></tr></thead>
+          <tbody id="salary-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== CLIENTS ======== -->
+    <div id="page-clients" class="page">
+      <div class="section-row">
+        <div class="section-title">Client Management</div>
+        <button class="btn primary" onclick="openModal('add-client-modal')">+ Add Client</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Client</th><th>Company</th><th>Project</th><th>Value</th><th>Status</th><th>Assigned Team</th><th>Next Meeting</th></tr></thead>
+          <tbody id="clients-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== APPROVALS ======== -->
+    <div id="page-approvals" class="page">
+      <div class="section-title">Pending Approvals</div>
+      <div id="approvals-list"></div>
+    </div>
+
+    <!-- ======== REPORTS ======== -->
+    <div id="page-reports" class="page">
+      <div class="grid-3" id="reports-grid"></div>
+    </div>
+
+    <!-- ======== COMMS ======== -->
+    <div id="page-comms" class="page">
+      <div class="grid-2" style="height:calc(100vh - 130px);align-items:start">
+        <div class="card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card-header"><div class="card-title">Team Channels</div></div>
+          <div id="channels-list" style="margin-bottom:12px"></div>
+          <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:auto">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Announcements</div>
+            <div id="announcements-list"></div>
+          </div>
+        </div>
+        <div class="card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card-header">
+            <div class="card-title" id="active-channel-name">Developer Team</div>
+            <div class="badge badge-blue">Active</div>
+          </div>
+          <div id="chat-messages" style="flex:1;overflow-y:auto;margin-bottom:14px;max-height:400px"></div>
+          <div style="display:flex;gap:8px;margin-top:auto">
+            <input id="chat-input" type="text" placeholder="Type a message..." style="flex:1" onkeydown="if(event.key==='Enter')sendMessage()">
+            <button class="btn primary" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ======== MODALS ======== -->
+
+<!-- Add Project Modal -->
+<div class="modal-overlay" id="add-project-modal">
+  <div class="modal">
+    <h2>New Project</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Project Name</label><input type="text" id="proj-name" placeholder="e.g. Client Portal v2"></div>
+      <div class="form-group"><label>Team</label>
+        <select id="proj-team">
+          <option>Developer Team</option><option>Marketing Team</option><option>Management Team</option>
+          <option>Finance Team</option><option>Client Management</option><option>AI Collaborators</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Priority</label>
+        <select id="proj-priority"><option>High</option><option>Medium</option><option>Low</option></select>
+      </div>
+      <div class="form-group"><label>Deadline</label><input type="date" id="proj-deadline"></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="proj-desc" placeholder="Project overview..."></textarea></div>
+    <div class="form-group"><label>Budget (₹)</label><input type="number" id="proj-budget" placeholder="500000"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('add-project-modal')">Cancel</button>
+      <button class="btn primary" onclick="addProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="add-task-modal">
+  <div class="modal">
+    <h2>Add Task</h2>
+    <div class="form-group"><label>Task Title</label><input type="text" id="task-title" placeholder="e.g. Design login page"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Assign To</label>
+        <select id="task-assignee"><option>Ravi Kumar</option><option>Priya Sharma</option><option>Arun Raj</option><option>Meena Iyer</option><option>Karthik S</option></select>
+      </div>
+      <div class="form-group"><label>Team</label>
+        <select id="task-team">
+          <option>Developer Team</option><option>Marketing Team</option><option>Management</option><option>Finance</option><option>Client Mgmt</option><option>AI Team</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Priority</label>
+        <select id="task-priority"><option>High</option><option>Medium</option><option>Low</option></select>
+      </div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="task-due"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('add-task-modal')">Cancel</button>
+      <button class="btn primary" onclick="addTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal-overlay" id="add-employee-modal">
+  <div class="modal">
+    <h2>Add Employee</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Full Name</label><input type="text" id="emp-name" placeholder="Full name"></div>
+      <div class="form-group"><label>Role</label><input type="text" id="emp-role" placeholder="e.g. Senior Developer"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Team</label>
+        <select id="emp-team">
+          <option>Developer Team</option><option>Marketing Team</option><option>Management Team</option>
+          <option>Finance Team</option><option>Client Management</option><option>AI Collaborators</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Base Salary (₹/month)</label><input type="number" id="emp-salary" placeholder="50000"></div>
+    </div>
+    <div class="form-group"><label>Email</label><input type="email" id="emp-email" placeholder="employee@company.com"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('add-employee-modal')">Cancel</button>
+      <button class="btn primary" onclick="addEmployee()">Add Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Client Modal -->
+<div class="modal-overlay" id="add-client-modal">
+  <div class="modal">
+    <h2>Add Client</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Contact Name</label><input type="text" id="client-name" placeholder="Contact person"></div>
+      <div class="form-group"><label>Company</label><input type="text" id="client-company" placeholder="Company name"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Project</label><input type="text" id="client-project" placeholder="Project name"></div>
+      <div class="form-group"><label>Contract Value (₹)</label><input type="number" id="client-value" placeholder="1000000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Assigned Team</label>
+        <select id="client-team">
+          <option>Developer Team</option><option>Marketing Team</option><option>AI Collaborators</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Next Meeting</label><input type="date" id="client-meeting"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('add-client-modal')">Cancel</button>
+      <button class="btn primary" onclick="addClient()">Add Client</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ========== DATA ==========
+const state = {
+  currentPage: 'dashboard',
+  projects: [
+    { id:1, name:'E-Commerce Platform', team:'Developer Team', priority:'High', status:'In Progress', progress:65, deadline:'2026-07-15', budget:800000, desc:'Full-stack shopping platform' },
+    { id:2, name:'Brand Refresh Campaign', team:'Marketing Team', priority:'Medium', status:'In Progress', progress:40, deadline:'2026-06-30', budget:200000, desc:'Q3 marketing rebrand' },
+    { id:3, name:'AI Chatbot Integration', team:'AI Collaborators', priority:'High', status:'Review', progress:85, deadline:'2026-06-20', budget:350000, desc:'Customer support AI' },
+    { id:4, name:'CRM System Upgrade', team:'Management Team', priority:'Medium', status:'Todo', progress:10, deadline:'2026-08-01', budget:150000, desc:'Internal CRM improvements' },
+    { id:5, name:'Mobile App v2', team:'Developer Team', priority:'High', status:'In Progress', progress:50, deadline:'2026-09-01', budget:600000, desc:'React Native app rewrite' },
+    { id:6, name:'Q3 Financial Audit', team:'Finance Team', priority:'Low', status:'Done', progress:100, deadline:'2026-06-01', budget:80000, desc:'Annual audit preparation' },
+    { id:7, name:'Client Portal', team:'Client Management', priority:'Medium', status:'Review', progress:78, deadline:'2026-07-01', budget:250000, desc:'Self-service client portal' },
+    { id:8, name:'SEO Optimization', team:'Marketing Team', priority:'Low', status:'Todo', progress:5, deadline:'2026-08-15', budget:100000, desc:'Technical SEO overhaul' },
+  ],
+  tasks: [
+    { id:1, title:'Design login screen', team:'Developer Team', assignee:'Ravi Kumar', priority:'High', due:'2026-06-10', done:false },
+    { id:2, title:'Write API documentation', team:'Developer Team', assignee:'Arun Raj', priority:'Medium', due:'2026-06-12', done:false },
+    { id:3, title:'Create social media calendar', team:'Marketing Team', assignee:'Priya Sharma', priority:'High', due:'2026-06-08', done:true },
+    { id:4, title:'Review Q2 expense reports', team:'Finance Team', assignee:'Meena Iyer', priority:'High', due:'2026-06-05', done:true },
+    { id:5, title:'Client onboarding call - TechCorp', team:'Client Mgmt', assignee:'Karthik S', priority:'Medium', due:'2026-06-15', done:false },
+    { id:6, title:'Train GPT model on FAQs', team:'AI Team', assignee:'Dev Singh', priority:'High', due:'2026-06-18', done:false },
+    { id:7, title:'Deploy to production', team:'Developer Team', assignee:'Ravi Kumar', priority:'High', due:'2026-06-20', done:false },
+    { id:8, title:'Salary approval June', team:'Finance Team', assignee:'Meena Iyer', priority:'High', due:'2026-06-30', done:false },
+  ],
+  employees: [
+    { id:1, name:'Ravi Kumar', team:'Developer Team', role:'Lead Developer', salary:120000, bonus:10000, status:'Active', initials:'RK', color:'var(--blue)' },
+    { id:2, name:'Arun Raj', team:'Developer Team', role:'Full Stack Dev', salary:85000, bonus:5000, status:'Active', initials:'AR', color:'var(--blue)' },
+    { id:3, name:'Suresh Babu', team:'Developer Team', role:'Frontend Dev', salary:70000, bonus:3000, status:'Active', initials:'SB', color:'var(--blue)' },
+    { id:4, name:'Priya Sharma', team:'Marketing Team', role:'Marketing Lead', salary:90000, bonus:8000, status:'Active', initials:'PS', color:'var(--pink)' },
+    { id:5, name:'Divya Nair', team:'Marketing Team', role:'Content Strategist', salary:60000, bonus:4000, status:'Active', initials:'DN', color:'var(--pink)' },
+    { id:6, name:'Admin User', team:'Management Team', role:'CEO', salary:250000, bonus:50000, status:'Active', initials:'AD', color:'var(--accent2)' },
+    { id:7, name:'Sanjay Mehta', team:'Management Team', role:'CTO', salary:200000, bonus:40000, status:'Active', initials:'SM', color:'var(--accent2)' },
+    { id:8, name:'Meena Iyer', team:'Finance Team', role:'Finance Manager', salary:110000, bonus:12000, status:'Active', initials:'MI', color:'var(--green)' },
+    { id:9, name:'Rahul Gupta', team:'Finance Team', role:'Accountant', salary:65000, bonus:5000, status:'Active', initials:'RG', color:'var(--green)' },
+    { id:10, name:'Karthik S', team:'Client Management', role:'Client Success Lead', salary:95000, bonus:15000, status:'Active', initials:'KS', color:'var(--amber)' },
+    { id:11, name:'Dev Singh', team:'AI Collaborators', role:'AI Engineer', salary:150000, bonus:20000, status:'Active', initials:'DS', color:'var(--teal)' },
+    { id:12, name:'Nisha Patel', team:'AI Collaborators', role:'ML Engineer', salary:140000, bonus:18000, status:'Active', initials:'NP', color:'var(--teal)' },
+  ],
+  clients: [
+    { name:'Vijay Anand', company:'TechCorp India', project:'E-Commerce Platform', value:800000, status:'Active', team:'Developer Team', meeting:'2026-06-10' },
+    { name:'Lakshmi Rao', company:'RetailMax', project:'Mobile App v2', value:600000, status:'Active', team:'Developer Team', meeting:'2026-06-14' },
+    { name:'Prasad Kumar', company:'StartupX', project:'AI Chatbot', value:350000, status:'Active', team:'AI Collaborators', meeting:'2026-06-18' },
+    { name:'Ananya Reddy', company:'MediaHub', project:'Brand Refresh', value:200000, status:'Negotiation', team:'Marketing Team', meeting:'2026-06-22' },
+    { name:'Rohit Shah', company:'FinServe Ltd', project:'Client Portal', value:250000, status:'Active', team:'Client Management', meeting:'2026-06-25' },
+  ],
+  approvals: [
+    { id:1, type:'Salary Hike', desc:'Ravi Kumar — ₹1,20,000 → ₹1,35,000', from:'Finance Team', date:'2026-06-01', icon:'💰', iconBg:'var(--green-bg)' },
+    { id:2, type:'Project Budget', desc:'Mobile App v2 — Additional ₹1,50,000', from:'Developer Team', date:'2026-06-01', icon:'📁', iconBg:'var(--blue-bg)' },
+    { id:3, type:'Expense Claim', desc:'Marketing Conference — ₹25,000', from:'Marketing Team', date:'2026-05-31', icon:'🧾', iconBg:'var(--amber-bg)' },
+    { id:4, type:'New Hire', desc:'Junior Developer — ₹55,000/month', from:'Management', date:'2026-05-30', icon:'👤', iconBg:'var(--accent-glow)' },
+    { id:5, type:'Software License', desc:'AWS Enterprise — ₹80,000/year', from:'Developer Team', date:'2026-05-29', icon:'☁️', iconBg:'var(--teal-bg)' },
+  ],
+  messages: {
+    dev: [
+      { name:'Ravi Kumar', initials:'RK', color:'var(--blue)', time:'10:30 AM', text:'Deployed the login module to staging. Please review.' },
+      { name:'Arun Raj', initials:'AR', color:'var(--blue-bg)', time:'10:45 AM', text:'Checked — looks good! Minor CSS issue on mobile, will fix by EOD.' },
+      { name:'Sanjay Mehta', initials:'SM', color:'var(--accent2)', time:'11:00 AM', text:'Great work team. Remember the client demo is on Friday.' },
+    ],
+    mkt: [
+      { name:'Priya Sharma', initials:'PS', color:'var(--pink)', time:'9:00 AM', text:'Social media calendar for June is ready. Check the shared drive.' },
+      { name:'Divya Nair', initials:'DN', color:'var(--pink-bg)', time:'9:30 AM', text:'Blog posts scheduled for the week. Waiting on approval for the paid campaign.' },
+    ],
+    ai: [
+      { name:'Dev Singh', initials:'DS', color:'var(--teal)', time:'2:00 PM', text:'Model training complete. Accuracy at 94.2%. Ready for integration.' },
+      { name:'Nisha Patel', initials:'NP', color:'var(--teal-bg)', time:'2:15 PM', text:'Updated the prompt templates. The chatbot handles edge cases much better now.' },
+    ]
+  },
+  activeChannel: 'dev',
+  nextProjectId: 9,
+  nextTaskId: 9,
+  nextEmployeeId: 13,
+  nextClientId: 6,
+  nextApprovalId: 6,
+};
+
+// ========== NAVIGATION ==========
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  state.currentPage = page;
+  const titles = {
+    'dashboard':'Dashboard','projects':'Projects','tasks':'Tasks',
+    'team-dev':'Developer Team','team-mkt':'Marketing Team','team-mgmt':'Management Team','team-ai':'AI Collaborators',
+    'finance':'Finance & Payroll','clients':'Client Management','approvals':'Pending Approvals',
+    'reports':'Reports','comms':'Communications'
+  };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  const navMap = {
+    'dashboard':0,'projects':1,'tasks':2,'team-dev':4,'team-mkt':5,'team-mgmt':6,'team-ai':7,
+    'finance':8,'clients':9,'approvals':10,'reports':11,'comms':12
+  };
+  const items = document.querySelectorAll('.nav-item');
+  if (navMap[page] !== undefined && items[navMap[page]]) items[navMap[page]].classList.add('active');
+  renderPage(page);
+}
+
+// ========== RENDER ==========
+function renderPage(page) {
+  switch(page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'projects': renderProjects(); break;
+    case 'tasks': renderTasks(); break;
+    case 'team-dev': renderTeam('Developer Team', 'team-dev-table'); break;
+    case 'team-mkt': renderTeam('Marketing Team', 'team-mkt-table'); break;
+    case 'team-mgmt': renderTeam('Management Team', 'team-mgmt-table'); break;
+    case 'team-ai': renderAI(); break;
+    case 'finance': renderFinance(); break;
+    case 'clients': renderClients(); break;
+    case 'approvals': renderApprovals(); break;
+    case 'reports': renderReports(); break;
+    case 'comms': renderComms(); break;
+  }
+}
+
+function priorityBadge(p) {
+  if (p==='High') return '<span class="badge badge-red">High</span>';
+  if (p==='Medium') return '<span class="badge badge-amber">Medium</span>';
+  return '<span class="badge badge-blue">Low</span>';
+}
+
+function statusBadge(s) {
+  if (s==='Done' || s==='Active') return `<span class="badge badge-green">${s}</span>`;
+  if (s==='In Progress') return `<span class="badge badge-blue">${s}</span>`;
+  if (s==='Review') return `<span class="badge badge-amber">${s}</span>`;
+  if (s==='Todo' || s==='Negotiation') return `<span class="badge badge-purple">${s}</span>`;
+  return `<span class="badge badge-blue">${s}</span>`;
+}
+
+function teamBadge(t) {
+  const map = {'Developer Team':'team-dev','Marketing Team':'team-mkt','Management Team':'team-mgmt','Finance Team':'team-fin','Client Management':'team-client','AI Collaborators':'team-ai'};
+  const cls = map[t] || 'badge-blue';
+  return `<span class="badge ${cls}" style="border-radius:6px">${t}</span>`;
+}
+
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+
+function renderDashboard() {
+  // Projects list
+  const pdash = document.getElementById('project-list-dash');
+  if (!pdash) return;
+  pdash.innerHTML = state.projects.slice(0,5).map(p => `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:13px;font-weight:500">${p.name}</span>
+        <span style="font-size:12px;color:var(--text3)">${p.progress}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill ${p.progress===100?'green':p.progress>60?'':p.progress>30?'amber':'red'}" style="width:${p.progress}%"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:5px">${statusBadge(p.status)} ${priorityBadge(p.priority)}</div>
+    </div>`).join('');
+
+  // Team load
+  const tl = document.getElementById('team-load-chart');
+  const teams = ['Dev','Mkt','Mgmt','Fin','Client','AI'];
+  const loads = [8,3,2,2,3,4];
+  const colors = ['var(--blue)','var(--pink)','var(--accent2)','var(--green)','var(--amber)','var(--teal)'];
+  const max = Math.max(...loads);
+  tl.innerHTML = `<div class="bar-chart">${teams.map((t,i)=>`
+    <div class="bar-item">
+      <div class="bar-val">${loads[i]}</div>
+      <div class="bar" style="height:${Math.round((loads[i]/max)*80)+10}px;background:${colors[i]}"></div>
+      <div class="bar-label">${t}</div>
+    </div>`).join('')}</div>`;
+
+  // Activity
+  const af = document.getElementById('activity-feed');
+  const activities = [
+    { icon:'🚀', text:'Mobile App v2 moved to In Progress', time:'2h ago', color:'var(--blue)' },
+    { icon:'✅', text:'Q3 Financial Audit marked complete', time:'4h ago', color:'var(--green)' },
+    { icon:'💬', text:'New message in Developer Team channel', time:'5h ago', color:'var(--accent2)' },
+    { icon:'💰', text:'Salary hike request from Finance Team', time:'1d ago', color:'var(--amber)' },
+    { icon:'👤', text:'New client: RetailMax onboarded', time:'2d ago', color:'var(--pink)' },
+  ];
+  af.innerHTML = activities.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">${a.icon}</span>
+      <span style="font-size:13px;flex:1;color:var(--text2)">${a.text}</span>
+      <span style="font-size:11px;color:var(--text3);white-space:nowrap">${a.time}</span>
+    </div>`).join('');
+
+  // Deadlines
+  const dl = document.getElementById('deadlines-list');
+  const upcoming = state.projects.filter(p=>p.status!=='Done').sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
+  dl.innerHTML = upcoming.map(p => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${p.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${p.deadline}</div>
+      </div>
+      ${priorityBadge(p.priority)}
+    </div>`).join('');
+}
+
+function renderProjects() {
+  const board = document.getElementById('kanban-board');
+  const cols = ['Todo','In Progress','Review','Done'];
+  const colColors = { 'Todo':'var(--text3)','In Progress':'var(--blue)','Review':'var(--amber)','Done':'var(--green)' };
+  board.innerHTML = cols.map(col => {
+    const projs = state.projects.filter(p=>p.status===col);
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <div style="width:8px;height:8px;border-radius:50%;background:${colColors[col]}"></div>
+        ${col} <span style="margin-left:auto;background:var(--bg4);padding:1px 7px;border-radius:10px;font-size:11px">${projs.length}</span>
+      </div>
+      ${projs.map(p=>`
+        <div class="kanban-card">
+          <div class="kanban-card-title">${p.name}</div>
+          <div class="kanban-card-meta">
+            ${priorityBadge(p.priority)}
+            <span style="font-size:11px;color:var(--text3)">📅 ${p.deadline}</span>
+          </div>
+          <div style="margin-top:8px">
+            <div class="progress-bar"><div class="progress-fill" style="width:${p.progress}%;background:${colColors[col]}"></div></div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">${p.progress}% complete</div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+            💰 ₹${(p.budget/100000).toFixed(1)}L &nbsp;·&nbsp; ${teamBadge(p.team)}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderTasks() {
+  const pending = document.getElementById('tasks-pending');
+  const done = document.getElementById('tasks-done');
+  const pTasks = state.tasks.filter(t=>!t.done);
+  const dTasks = state.tasks.filter(t=>t.done);
+  pending.innerHTML = pTasks.map(t=>`
+    <div class="task-item">
+      <div class="task-check" onclick="toggleTask(${t.id})"></div>
+      <div style="flex:1">
+        <div class="task-text">${t.title}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">${t.assignee} · ${t.team}</div>
+      </div>
+      ${priorityBadge(t.priority)}
+      <span style="font-size:11px;color:var(--text3)">📅 ${t.due}</span>
+    </div>`).join('') || '<p style="color:var(--text3);font-size:13px">All tasks done! 🎉</p>';
+  done.innerHTML = dTasks.map(t=>`
+    <div class="task-item" style="opacity:0.5">
+      <div class="task-check done">✓</div>
+      <div class="task-text done" style="flex:1">${t.title}</div>
+      <span style="font-size:11px;color:var(--text3)">${t.assignee}</span>
+    </div>`).join('') || '<p style="color:var(--text3);font-size:13px">No completed tasks yet.</p>';
+}
+
+function toggleTask(id) {
+  const t = state.tasks.find(t=>t.id===id);
+  if (t) { t.done = !t.done; renderTasks(); showToast(t.done ? '✅ Task completed!' : 'Task reopened'); }
+}
+
+function renderTeam(teamName, tableId) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const members = state.employees.filter(e=>e.team===teamName);
+  tbody.innerHTML = members.map(e=>`
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="mini-avatar" style="background:${e.color}20;color:${e.color}">${e.initials}</div>
+          <span>${e.name}</span>
+        </div>
+      </td>
+      <td style="color:var(--text2)">${e.role}</td>
+      <td>${state.projects.find(p=>p.team===teamName)?.name || '—'}</td>
+      <td>${state.tasks.filter(t=>t.assignee===e.name&&t.done).length}</td>
+      <td>₹${e.salary.toLocaleString('en-IN')}</td>
+      <td>${statusBadge(e.status)}</td>
+    </tr>`).join('');
+}
+
+function renderAI() {
+  const grid = document.getElementById('ai-collaborators');
+  const aiTeam = state.employees.filter(e=>e.team==='AI Collaborators');
+  const tools = [
+    { name:'Claude (Anthropic)', role:'Language Model', use:'Content, code review, analysis', color:'var(--accent2)' },
+    { name:'GitHub Copilot', role:'Code Assistant', use:'Autocomplete, debugging', color:'var(--blue)' },
+    { name:'Midjourney', role:'Image Generation', use:'Marketing visuals, mockups', color:'var(--pink)' },
+  ];
+  grid.innerHTML = [
+    ...aiTeam.map(e=>`
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div class="avatar" style="background:${e.color}20;border-color:${e.color};color:${e.color}">${e.initials}</div>
+          <div>
+            <div style="font-weight:600;font-size:14px">${e.name}</div>
+            <div style="font-size:12px;color:var(--text3)">${e.role}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3)">Salary: <span style="color:var(--text)">₹${e.salary.toLocaleString('en-IN')}/mo</span></div>
+        <div style="margin-top:8px">${statusBadge(e.status)}</div>
+      </div>`),
+    ...tools.map(t=>`
+      <div class="card" style="border-color:${t.color}40">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:36px;height:36px;border-radius:var(--radius);background:${t.color}20;display:flex;align-items:center;justify-content:center;font-size:18px">🤖</div>
+          <div>
+            <div style="font-weight:600;font-size:13px">${t.name}</div>
+            <div style="font-size:11px;color:var(--text3)">${t.role}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text2)">${t.use}</div>
+        <div style="margin-top:10px"><span class="badge badge-teal">AI Tool</span></div>
+      </div>`)
+  ].join('');
+}
+
+function renderFinance() {
+  const tbody = document.getElementById('salary-table');
+  tbody.innerHTML = state.employees.map(e=>`
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="mini-avatar" style="background:${e.color}20;color:${e.color}">${e.initials}</div>
+          ${e.name}
+        </div>
+      </td>
+      <td>${teamBadge(e.team)}</td>
+      <td style="color:var(--text2)">${e.role}</td>
+      <td>₹${e.salary.toLocaleString('en-IN')}</td>
+      <td style="color:var(--green)">₹${e.bonus.toLocaleString('en-IN')}</td>
+      <td style="font-weight:600">₹${(e.salary+e.bonus).toLocaleString('en-IN')}</td>
+      <td><span class="badge badge-green">✓ Processed</span></td>
+      <td>
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="showToast('💰 Payslip sent to '+${JSON.stringify(e.name)})">Payslip</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderClients() {
+  const tbody = document.getElementById('clients-table');
+  tbody.innerHTML = state.clients.map(c=>`
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="mini-avatar" style="background:var(--amber-bg);color:var(--amber)">${initials(c.name)}</div>
+          ${c.name}
+        </div>
+      </td>
+      <td style="font-weight:500">${c.company}</td>
+      <td style="color:var(--text2)">${c.project}</td>
+      <td style="font-weight:600;color:var(--green)">₹${(c.value/100000).toFixed(1)}L</td>
+      <td>${statusBadge(c.status)}</td>
+      <td>${teamBadge(c.team)}</td>
+      <td style="color:var(--text2)">${c.meeting}</td>
+    </tr>`).join('');
+}
+
+function renderApprovals() {
+  const list = document.getElementById('approvals-list');
+  if (!state.approvals.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">No pending approvals 🎉</div>';
+    return;
+  }
+  list.innerHTML = state.approvals.map(a=>`
+    <div class="approval-item">
+      <div class="approval-icon" style="background:${a.iconBg}">${a.icon}</div>
+      <div class="approval-body">
+        <div class="approval-title">${a.type}</div>
+        <div class="approval-meta">${a.desc} · From: ${a.from} · ${a.date}</div>
+      </div>
+      <div class="approval-actions">
+        <button class="btn success" onclick="approveItem(${a.id})">✓ Approve</button>
+        <button class="btn danger" onclick="rejectItem(${a.id})">✗ Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+function approveItem(id) {
+  state.approvals = state.approvals.filter(a=>a.id!==id);
+  renderApprovals();
+  showToast('✅ Approved successfully!');
+}
+function rejectItem(id) {
+  state.approvals = state.approvals.filter(a=>a.id!==id);
+  renderApprovals();
+  showToast('❌ Request rejected');
+}
+
+function renderReports() {
+  const grid = document.getElementById('reports-grid');
+  const reports = [
+    { title:'Q2 Financial Summary', desc:'Revenue, expenses, and profit breakdown', date:'June 2026', icon:'📊', color:'var(--green)' },
+    { title:'Project Status Report', desc:'All 8 projects — status, progress, deadlines', date:'June 2026', icon:'📁', color:'var(--blue)' },
+    { title:'Team Performance', desc:'Task completion rates by team', date:'June 2026', icon:'📈', color:'var(--accent2)' },
+    { title:'Client Revenue Report', desc:'Revenue per client and contract status', date:'June 2026', icon:'👥', color:'var(--amber)' },
+    { title:'Payroll Report', desc:'Monthly payroll summary all employees', date:'June 2026', icon:'💰', color:'var(--teal)' },
+    { title:'AI Tools Usage', desc:'AI collaboration metrics and ROI', date:'June 2026', icon:'🤖', color:'var(--pink)' },
+  ];
+  grid.innerHTML = reports.map(r=>`
+    <div class="card" style="cursor:pointer" onclick="showToast('📄 Generating ${r.title}...')">
+      <div style="width:44px;height:44px;border-radius:var(--radius);background:${r.color}20;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px">${r.icon}</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:6px">${r.title}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${r.desc}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;color:var(--text3)">📅 ${r.date}</span>
+        <button class="btn" style="padding:4px 10px;font-size:12px">Export PDF</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderComms() {
+  const channels = [
+    { id:'dev', name:'Developer Team', color:'var(--blue)', unread:2 },
+    { id:'mkt', name:'Marketing Team', color:'var(--pink)', unread:0 },
+    { id:'ai', name:'AI Collaborators', color:'var(--teal)', unread:1 },
+    { id:'mgmt', name:'Management', color:'var(--accent2)', unread:0 },
+  ];
+  const cl = document.getElementById('channels-list');
+  cl.innerHTML = channels.map(c=>`
+    <div class="task-item" style="cursor:pointer;background:${c.id===state.activeChannel?'var(--bg4)':'var(--bg3)'}" onclick="switchChannel('${c.id}')">
+      <div style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+      <span style="flex:1;font-size:13px">${c.name}</span>
+      ${c.unread ? `<span style="background:var(--red);color:white;font-size:10px;padding:2px 6px;border-radius:10px">${c.unread}</span>` : ''}
+    </div>`).join('');
+
+  const ann = document.getElementById('announcements-list');
+  const announcements = [
+    { text:'🎉 Company hits ₹1Cr monthly revenue milestone!', time:'Today' },
+    { text:'📅 All-hands meeting Friday 3 PM', time:'Yesterday' },
+  ];
+  ann.innerHTML = announcements.map(a=>`
+    <div style="padding:8px 10px;background:var(--bg3);border-radius:var(--radius);margin-bottom:6px;font-size:12.5px;color:var(--text2)">
+      ${a.text}<div style="font-size:10px;color:var(--text3);margin-top:3px">${a.time}</div>
+    </div>`).join('');
+
+  renderChat();
+}
+
+function switchChannel(id) {
+  state.activeChannel = id;
+  const names = { dev:'Developer Team', mkt:'Marketing Team', ai:'AI Collaborators', mgmt:'Management' };
+  document.getElementById('active-channel-name').textContent = names[id] || id;
+  renderChat();
+  renderComms();
+}
+
+function renderChat() {
+  const chat = document.getElementById('chat-messages');
+  if (!chat) return;
+  const msgs = state.messages[state.activeChannel] || [];
+  chat.innerHTML = msgs.map(m=>`
+    <div class="message">
+      <div class="msg-avatar" style="background:${m.color}30;color:${m.color}">${m.initials}</div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="msg-name">${m.name}</span>
+          <span class="msg-time">${m.time}</span>
+        </div>
+        <div class="msg-text">${m.text}</div>
+      </div>
+    </div>`).join('');
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!state.messages[state.activeChannel]) state.messages[state.activeChannel] = [];
+  state.messages[state.activeChannel].push({ name:'Admin User', initials:'AD', color:'var(--accent2)', time:'Now', text });
+  input.value = '';
+  renderChat();
+}
+
+// ========== ADD FUNCTIONS ==========
+function addProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { showToast('⚠️ Enter a project name'); return; }
+  state.projects.push({
+    id: state.nextProjectId++,
+    name, team: document.getElementById('proj-team').value,
+    priority: document.getElementById('proj-priority').value,
+    status: 'Todo', progress: 0,
+    deadline: document.getElementById('proj-deadline').value || '2026-12-31',
+    budget: parseInt(document.getElementById('proj-budget').value) || 100000,
+    desc: document.getElementById('proj-desc').value,
+  });
+  closeModal('add-project-modal');
+  showToast('✅ Project created!');
+  if (state.currentPage === 'projects') renderProjects();
+  if (state.currentPage === 'dashboard') renderDashboard();
+}
+
+function addTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) { showToast('⚠️ Enter a task title'); return; }
+  state.tasks.push({
+    id: state.nextTaskId++,
+    title, assignee: document.getElementById('task-assignee').value,
+    team: document.getElementById('task-team').value,
+    priority: document.getElementById('task-priority').value,
+    due: document.getElementById('task-due').value || '2026-12-31',
+    done: false,
+  });
+  closeModal('add-task-modal');
+  showToast('✅ Task added!');
+  if (state.currentPage === 'tasks') renderTasks();
+}
+
+function addEmployee() {
+  const name = document.getElementById('emp-name').value.trim();
+  if (!name) { showToast('⚠️ Enter employee name'); return; }
+  const teamColors = { 'Developer Team':'var(--blue)', 'Marketing Team':'var(--pink)', 'Management Team':'var(--accent2)', 'Finance Team':'var(--green)', 'Client Management':'var(--amber)', 'AI Collaborators':'var(--teal)' };
+  const team = document.getElementById('emp-team').value;
+  state.employees.push({
+    id: state.nextEmployeeId++,
+    name, team, role: document.getElementById('emp-role').value,
+    salary: parseInt(document.getElementById('emp-salary').value) || 50000,
+    bonus: 0, status: 'Active',
+    initials: initials(name), color: teamColors[team] || 'var(--blue)',
+  });
+  closeModal('add-employee-modal');
+  showToast('✅ Employee added!');
+  if (state.currentPage === 'finance') renderFinance();
+}
+
+function addClient() {
+  const name = document.getElementById('client-name').value.trim();
+  if (!name) { showToast('⚠️ Enter client name'); return; }
+  state.clients.push({
+    name, company: document.getElementById('client-company').value,
+    project: document.getElementById('client-project').value,
+    value: parseInt(document.getElementById('client-value').value) || 100000,
+    status: 'Active',
+    team: document.getElementById('client-team').value,
+    meeting: document.getElementById('client-meeting').value || '—',
+  });
+  closeModal('add-client-modal');
+  showToast('✅ Client added!');
+  if (state.currentPage === 'clients') renderClients();
+}
+
+// ========== MODAL ==========
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ========== TOAST ==========
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2500);
+}
+
+// ========== INIT ==========
+renderDashboard();
+</script>
+</body>
+</html>

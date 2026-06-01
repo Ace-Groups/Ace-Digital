@@ -1,0 +1,423 @@
+/* ===== ACE DIGITAL OS — 3D ISOMETRIC LOADING ANIMATION ===== */
+/* Adapted from original animation, recoloured to Ace Digital brand */
+
+.ace-loader-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #052659 0%, #0a3a7a 40%, #5483B3 100%);
+  flex-direction: column;
+}
+
+.ace-loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.ace-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+}
+
+.ace-loader-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ace-loader-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(193, 232, 255, 0.6));
+  animation: logo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.ace-loader-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #C1E8FF;
+  letter-spacing: 0.05em;
+  font-family: system-ui, sans-serif;
+}
+
+.ace-loader-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ace-loader-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C1E8FF;
+  animation: dot-bounce 1.2s ease-in-out infinite;
+}
+
+.ace-loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+.ace-loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== CUBE ENGINE ===== */
+
+.ace-loader {
+  --duration: 4s;
+  --easing: cubic-bezier(.5, 0, 0, 1);
+  --gap: 2px;
+}
+
+.ace-loader *, .ace-loader *:before, .ace-loader *:after {
+  box-sizing: border-box;
+  position: relative;
+  animation-timing-function: var(--easing) !important;
+}
+
+.ace-loader .cubes {
+  width: 10vmin;
+  height: 10vmin;
+  transform: rotateX(60deg) rotateZ(-45deg);
+  backface-visibility: visible;
+  overflow: visible;
+  transform-style: preserve-3d;
+  perspective: 9000px;
+}
+
+.ace-loader .cube,
+.ace-loader .large-shadow {
+  height: 10vmin;
+  width: 10vmin;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+  transform-origin: center center -.5vmin;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.ace-loader .cube > .cube-wrap {
+  animation: ace-cube var(--duration) infinite both;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+  transform-origin: center center -.5vmin;
+  will-change: transform;
+}
+
+@keyframes ace-cube {
+  from, to, 20%, 60% {
+    animation-timing-function: step-start;
+    transform: none;
+  }
+  40% {
+    transform: rotateY(-1turn);
+  }
+}
+
+/* Row colors — Ace Digital brand palette */
+.ace-loader .cube[data-cube^="1"] {
+  top: calc(-10vmin - var(--gap));
+  --color-bg-top: #C1E8FF;
+  --color-bg-bottom: #a8d8f5;
+  --color-fl-top: #5483B3;
+  --color-fl-bottom: #3d6fa0;
+}
+.ace-loader .cube[data-cube^="2"] {
+  --color-bg-top: #a8d8f5;
+  --color-bg-bottom: #8abde0;
+  --color-fl-top: #3d6fa0;
+  --color-fl-bottom: #2d5a8e;
+}
+.ace-loader .cube[data-cube^="3"] {
+  top: calc(10vmin + var(--gap));
+  --color-bg-top: #8abde0;
+  --color-bg-bottom: #6ba3cc;
+  --color-fl-top: #2d5a8e;
+  --color-fl-bottom: #1e4a7a;
+}
+
+/* Column colors */
+.ace-loader .cube[data-cube^="11"],
+.ace-loader .cube[data-cube^="21"],
+.ace-loader .cube[data-cube^="31"] {
+  left: calc(-10vmin - var(--gap));
+  --color-fr-top: #052659;
+  --color-fr-bottom: #0a3267;
+}
+.ace-loader .cube[data-cube^="12"],
+.ace-loader .cube[data-cube^="22"],
+.ace-loader .cube[data-cube^="32"] {
+  --color-fr-top: #0a3267;
+  --color-fr-bottom: #0e3d78;
+}
+.ace-loader .cube[data-cube^="13"],
+.ace-loader .cube[data-cube^="23"],
+.ace-loader .cube[data-cube^="33"] {
+  left: calc(10vmin + var(--gap));
+  --color-fr-top: #0e3d78;
+  --color-fr-bottom: #1a4d8a;
+}
+
+/* Layer Z placement */
+.ace-loader .cube[data-cube$="2"] {
+  transform: translateZ(calc(10vmin + var(--gap)));
+}
+.ace-loader .cube[data-cube$="3"] {
+  transform: translateZ(calc(-10vmin - var(--gap)));
+}
+
+/* Large shadows */
+.ace-loader .large-shadows {
+  transform: translateZ(-21vmin);
+}
+.ace-loader .large-shadow {
+  background: #052659;
+  height: 10vmin;
+  width: 10vmin;
+  transform-origin: top right;
+  animation: ace-large-shadow var(--duration) infinite both;
+  filter: blur(3vmin);
+  opacity: 0.35;
+  will-change: transform;
+}
+
+@keyframes ace-large-shadow {
+  from, 80%, to { transform: scale(1.5, 3); }
+  20% { transform: scale(1.5, 2); }
+  40%, 60% { transform: scale(1.5, 5); }
+  50% { transform: scale(1, 5); }
+}
+
+/* Face base styles */
+.ace-loader [class^="cube-"] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: visible;
+  top: 0;
+  left: 0;
+}
+.ace-loader [class^="cube-"],
+.ace-loader [class^="cube-"]:before {
+  will-change: transform;
+  animation: any var(--duration) infinite both;
+}
+.ace-loader [class^="cube-"]:before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: inherit;
+}
+
+/* Top face */
+.ace-loader .cube-top {
+  animation-name: ace-cube-top;
+  overflow: hidden;
+}
+.ace-loader .cube-top:before {
+  background-image:
+    linear-gradient(to bottom, rgba(193,232,255,0.6), transparent),
+    linear-gradient(to bottom, var(--color-bg-top), var(--color-bg-bottom));
+  background-size: 2px 100%, auto;
+  background-repeat: no-repeat;
+}
+.ace-loader .cube-top:after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: #C1E8FF;
+  animation: ace-cube-top-flash var(--duration) infinite both;
+}
+
+@keyframes ace-cube-top-flash {
+  from, 50%, 60%, to { opacity: 0; }
+  52% { opacity: 0.7; }
+}
+@keyframes ace-cube-top {
+  20% { transform: translateZ(calc(-10vmin + 2vmin)); }
+  40%, 60%, 80% { transform: none; }
+}
+
+/* Front-left face */
+.ace-loader .cube-front-left {
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  overflow: hidden;
+}
+.ace-loader .cube-front-left:before {
+  background-image:
+    linear-gradient(to bottom, var(--color-fl-top), var(--color-fl-bottom)),
+    linear-gradient(to bottom, rgba(193, 232, 255, 0.3), transparent 60%);
+  background-size: auto, 1px 100%;
+  background-repeat: no-repeat;
+  transform-origin: right;
+  animation-name: ace-cube-front-left;
+  will-change: transform;
+}
+
+@keyframes ace-cube-front-left {
+  20% { transform: scaleX(.2); }
+  40%, 60% { transform: translateX(-8vmin) scaleX(.2); }
+  80% { transform: none; }
+}
+
+/* Front-right face */
+.ace-loader .cube-front-right {
+  transform-origin: bottom center;
+  transform: rotateX(90deg);
+}
+.ace-loader .cube-front-right:before {
+  background-image: linear-gradient(to right, var(--color-fr-top), var(--color-fr-bottom));
+  transform-origin: top;
+  animation-name: ace-cube-front-right;
+  will-change: transform;
+}
+
+@keyframes ace-cube-front-right {
+  20% { transform: scaleY(.2); }
+  40%, 60% { transform: translateY(8vmin) scaleY(.2); }
+  80% { transform: none; }
+}
+
+/* Bottom face */
+.ace-loader .cube-bottom {
+  transform: translateZ(-10vmin);
+  background-image: linear-gradient(to bottom, var(--color-bg-top), var(--color-bg-bottom));
+  animation-name: ace-cube-bottom;
+}
+.ace-loader .cube-bottom:after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: #C1E8FF;
+  animation: ace-cube-bottom-flash var(--duration) infinite both;
+  will-change: transform;
+}
+
+@keyframes ace-cube-bottom {
+  from, 20%, 80%, to { transform: translateZ(calc(-10vmin + 1px)) scale(.95); }
+  40%, 60% { transform: translateZ(-2vmin) scale(.95); }
+}
+@keyframes ace-cube-bottom-flash {
+  from, 40%, 50%, to { opacity: 0; }
+  45% { opacity: 0.7; }
+}
+
+/* Shadows */
+.ace-loader [class^="shadow"] {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  filter: blur(20px);
+}
+.ace-loader [class^="shadow"],
+.ace-loader [class^="shadow"]:before {
+  will-change: transform;
+}
+.ace-loader [class^="shadow"]:before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: #052659;
+  opacity: 0.6;
+}
+
+.ace-loader .shadow-y {
+  animation: ace-shadow-y var(--duration) infinite both;
+}
+.ace-loader .shadow-y[data-cube^="11"],
+.ace-loader .shadow-y[data-cube^="21"] { left: 10%; }
+.ace-loader .shadow-y[data-cube^="13"],
+.ace-loader .shadow-y[data-cube^="23"] { left: -10%; }
+
+@keyframes ace-shadow-y {
+  to, 40%, 60%, 80%, from { transform: translateY(-100%) scale(2, .75); }
+  20% { transform: scale(2, 1); }
+}
+.ace-loader .shadow-y:before {
+  animation: ace-shadow-y-inverse var(--duration) infinite both;
+  transform-origin: top center;
+}
+@keyframes ace-shadow-y-inverse {
+  to, 40%, 60%, 80%, from { opacity: 0.9; transform: scale(2, 1); }
+  20% { opacity: 0; transform: translateY(-100%) scale(2, .75); }
+}
+
+.ace-loader .shadow-flip {
+  width: 2vmin;
+  height: 50%;
+  top: -1vmin;
+  left: calc(50% - 1vmin);
+  transform-origin: top center;
+  filter: blur(1vmin);
+  animation: ace-shadow-flip var(--duration) infinite both;
+  overflow: visible;
+}
+@keyframes ace-shadow-flip {
+  from, 20%, 40%, 50%, to { transform: rotate(90deg); }
+  45% { transform: rotate(270deg); }
+}
+.ace-loader .shadow-flip:before {
+  animation: ace-shadow-flip-inverse var(--duration) infinite both;
+  transform-origin: top center;
+  opacity: 0;
+}
+@keyframes ace-shadow-flip-inverse {
+  from, 20%, 40%, 50%, to { transform: rotate(0deg); opacity: 0; }
+  45% { transform: rotate(-180deg); opacity: 0.5; }
+}
+
+.ace-loader .shadow-z {
+  animation: ace-shadow-z var(--duration) infinite both;
+  overflow: visible;
+  will-change: transform;
+  transform-origin: top center;
+}
+.ace-loader .shadow-z[data-cube^="11"] { --shadow-z-left: 50%; --shadow-z-top: 50%; }
+.ace-loader .shadow-z[data-cube^="21"],
+.ace-loader .shadow-z[data-cube^="31"] { --shadow-z-left: 50%; --shadow-z-top: 0; }
+.ace-loader .shadow-z[data-cube^="32"] { --shadow-z-left: 0; --shadow-z-top: 0; --shadow-x-scale: 2; }
+.ace-loader .shadow-z[data-cube^="33"] { --shadow-z-left: -50%; --shadow-z-top: 0; }
+
+@keyframes ace-shadow-z {
+  from, 40%, 60%, 80%, to { transform: scale(var(--shadow-x-scale, 1), 2); }
+  20% { transform: translateX(var(--shadow-z-left)) translateY(var(--shadow-z-top)) scale(calc(var(--shadow-x-scale, 1) / 2), 2); }
+}
+.ace-loader .shadow-z:before {
+  animation: ace-shadow-z-inverse var(--duration) infinite both;
+}
+@keyframes ace-shadow-z-inverse {
+  40%, 60% { transform: translateX(var(--shadow-z-left)) translateY(var(--shadow-z-top)) scale(var(--shadow-x-scale, 1), 2); }
+  45% { opacity: 0; }
+  from, 40%, 55% { opacity: .5; }
+  to { opacity: 1; }
+  from, 20%, 80%, to { transform: scale(2); }
+}
