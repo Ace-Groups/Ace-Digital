@@ -8,13 +8,14 @@
 | Console | https://console.firebase.google.com/project/ace-digital-os |
 | Hosting URL | https://ace-digital-os.web.app |
 | Database | Cloud Firestore `(default)` in `asia-south1` |
-| Plan target | Spark (free) + Blaze only if you enable Cloud Functions |
+| API region | `asia-south1` (Gen 1 HTTPS function `api`) |
+| Plan | Blaze (billing enabled) |
 
 ## What is deployed
 
 - **Firestore** — rules, indexes, and seed data (collections mirror the Postgres schema: `users`, `teams`, `projects`, `tasks`, `clients`, `approvals`, `expenses`, `payroll_runs`, `reports`, `channels`, `messages`, `activity_logs`, `employee_profiles`, `_meta/counters`).
 - **Hosting** — production build of `artifacts/ace-digital-os` (SPA).
-- **Cloud Functions (API)** — code is ready in `firebase/functions`, but deploy requires upgrading the Firebase project to the **Blaze** plan (billing account attached; you still pay $0 while within [free quotas](https://firebase.google.com/pricing)).
+- **Cloud Functions (API)** — Gen 1 HTTPS `api` in `asia-south1`; Hosting rewrites `/api/**` to this function.
 
 ## Default login (after seed)
 
@@ -36,7 +37,7 @@ Create or refresh this user in Firestore (works before Functions deploy):
 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
 ```
 
-Login only works on the live site **after** Cloud Functions are deployed (see below).
+Login on https://ace-digital-os.web.app uses the deployed API via Hosting rewrite.
 
 ## One-time: enable API (Blaze) — required
 
@@ -61,11 +62,17 @@ cd ../..
 npx firebase-tools@latest deploy --only functions --project ace-digital-os
 ```
 
-4. Re-deploy hosting so `/api/**` rewrites resolve:
+5. Re-deploy hosting so `/api/**` rewrites resolve:
 
 ```bash
 npx firebase-tools@latest deploy --only hosting --project ace-digital-os
 ```
+
+## Deploy troubleshooting
+
+- **Hosting** `Assertion failed: resolving hosting target...` — `firebase.json` must include `"site": "ace-digital-os"` under `hosting`.
+- **Functions** `...-compute@developer.gserviceaccount.com doesn't exist` — use `serviceAccount: "ace-digital-os@appspot.gserviceaccount.com"` in `firebase/functions/src/index.ts` (`runWith`).
+- **Artifact cleanup policy** (non-fatal after a successful deploy) — run `npx firebase-tools functions:artifacts:setpolicy --project ace-digital-os` or deploy functions with `--force`.
 
 ## Local commands
 

@@ -22,7 +22,13 @@ async function getApp(): Promise<Express> {
 /** Gen 1 HTTPS function — compatible with Firebase Spark (free) tier */
 export const api = functions
   .region("asia-south1")
-  .runWith({ memory: "512MB", timeoutSeconds: 60, maxInstances: 10 })
+  .runWith({
+    memory: "512MB",
+    timeoutSeconds: 60,
+    maxInstances: 10,
+    // Project default compute SA was deleted; use App Engine default (always present on Firebase).
+    serviceAccount: "ace-digital-os@appspot.gserviceaccount.com",
+  })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {
     const app = await getApp();
     return app(req, res);

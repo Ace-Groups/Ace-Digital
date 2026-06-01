@@ -4,12 +4,16 @@
     "indexes": "firebase/firestore.indexes.json"
   },
   "hosting": {
+    "site": "ace-digital-os",
     "public": "artifacts/ace-digital-os/dist/public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "api"
+        "function": {
+          "functionId": "api",
+          "region": "asia-south1"
+        }
       },
       {
         "source": "**",
