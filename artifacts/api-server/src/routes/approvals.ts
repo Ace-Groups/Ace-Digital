@@ -1,19 +1,14 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { approvalsTable, usersTable, teamsTable, activityLogsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { store } from "@workspace/db";
+import type { Approval } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
-async function approvalWithRelations(a: typeof approvalsTable.$inferSelect) {
-  const requester = (await db.select().from(usersTable).where(eq(usersTable.id, a.requestedById)))[0];
-  const reviewer = a.reviewedById
-    ? (await db.select().from(usersTable).where(eq(usersTable.id, a.reviewedById)))[0]
-    : null;
-  const team = a.teamId
-    ? (await db.select().from(teamsTable).where(eq(teamsTable.id, a.teamId)))[0]
-    : null;
+async function approvalWithRelations(a: Approval) {
+  const requester = await store.findUserById(a.requestedById);
+  const reviewer = a.reviewedById ? await store.findUserById(a.reviewedById) : null;
+  const team = a.teamId ? await store.findTeamById(a.teamId) : null;
   return {
     id: a.id,
     type: a.type,
@@ -35,11 +30,10 @@ async function approvalWithRelations(a: typeof approvalsTable.$inferSelect) {
 
 router.get("/v1/approvals", requireAuth, async (req, res): Promise<void> => {
   const { status } = req.query;
-  const approvals = status
-    ? await db.select().from(approvalsTable).where(eq(approvalsTable.status, status as string)).orderBy(sql`${approvalsTable.createdAt} DESC`)
-    : await db.select().from(approvalsTable).orderBy(sql`${approvalsTable.createdAt} DESC`);
-  const result = await Promise.all(approvals.map(approvalWithRelations));
-  res.json(result);
+  const approvals = await store.listApprovals({
+    status: status as string | undefined,
+  });
+  res.json(await Promise.all(approvals.map(approvalWithRelations)));
 });
 
 router.post("/v1/approvals", requireAuth, async (req, res): Promise<void> => {
@@ -48,7 +42,7 @@ router.post("/v1/approvals", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Type and title are required" });
     return;
   }
-  const [approval] = await db.insert(approvalsTable).values({
+  const approval = await store.createApproval({
     type,
     title,
     description: description ?? null,
@@ -56,7 +50,10 @@ router.post("/v1/approvals", requireAuth, async (req, res): Promise<void> => {
     requestedById: req.user!.userId,
     teamId: teamId ?? req.user!.teamId,
     status: "PENDING",
-  }).returning();
+    reviewedById: null,
+    reviewedAt: null,
+    note: null,
+  });
   res.status(201).json(await approvalWithRelations(approval));
 });
 
@@ -68,17 +65,17 @@ router.post("/v1/approvals/:id/approve", requireAuth, async (req, res): Promise<
   }
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { note } = req.body ?? {};
-  const [approval] = await db.update(approvalsTable).set({
+  const approval = await store.updateApproval(id, {
     status: "APPROVED",
     reviewedById: req.user!.userId,
     reviewedAt: new Date(),
     note: note ?? null,
-  }).where(eq(approvalsTable.id, id)).returning();
+  });
   if (!approval) {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  await db.insert(activityLogsTable).values({
+  await store.insertActivityLog({
     actorId: req.user!.userId,
     action: "approved",
     entityType: "approval",
@@ -96,17 +93,17 @@ router.post("/v1/approvals/:id/reject", requireAuth, async (req, res): Promise<v
   }
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { note } = req.body ?? {};
-  const [approval] = await db.update(approvalsTable).set({
+  const approval = await store.updateApproval(id, {
     status: "REJECTED",
     reviewedById: req.user!.userId,
     reviewedAt: new Date(),
     note: note ?? null,
-  }).where(eq(approvalsTable.id, id)).returning();
+  });
   if (!approval) {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  await db.insert(activityLogsTable).values({
+  await store.insertActivityLog({
     actorId: req.user!.userId,
     action: "rejected",
     entityType: "approval",

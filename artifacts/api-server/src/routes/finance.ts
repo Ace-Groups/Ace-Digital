@@ -1,27 +1,14 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import {
-  usersTable, teamsTable, employeeProfilesTable, expensesTable, payrollRunsTable, clientsTable,
-} from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
 router.get("/v1/finance/summary", requireAuth, async (_req, res): Promise<void> => {
-  const profiles = await db.select().from(employeeProfilesTable);
+  const profiles = await store.listProfiles();
   const totalPayroll = profiles.reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
-
-  const clientRevenue = await db.execute(
-    sql`SELECT COALESCE(SUM(contract_value), 0) as total FROM clients WHERE status = 'ACTIVE'`
-  );
-  const totalRevenue = Number((clientRevenue.rows[0] as Record<string, unknown>)?.total ?? 0);
-
-  const expenseResult = await db.execute(
-    sql`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE status = 'APPROVED'`
-  );
-  const totalExpenses = Number((expenseResult.rows[0] as Record<string, unknown>)?.total ?? 0);
-
+  const totalRevenue = await store.sumActiveClientRevenue();
+  const totalExpenses = await store.sumApprovedExpenses();
   const pendingPayroll = profiles
     .filter((p) => p.payrollStatus === "PENDING")
     .reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
@@ -36,40 +23,27 @@ router.get("/v1/finance/summary", requireAuth, async (_req, res): Promise<void> 
 });
 
 router.get("/v1/finance/salaries", requireAuth, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({
-      userId: usersTable.id,
-      fullName: usersTable.fullName,
-      teamId: usersTable.teamId,
-      jobTitle: usersTable.jobTitle,
-      baseSalary: employeeProfilesTable.baseSalary,
-      bonus: employeeProfilesTable.bonus,
-      payrollStatus: employeeProfilesTable.payrollStatus,
-    })
-    .from(usersTable)
-    .leftJoin(employeeProfilesTable, eq(usersTable.id, employeeProfilesTable.userId));
-
-  const teams = await db.select().from(teamsTable);
+  const rows = await store.listSalaries();
+  const teams = await store.listTeams();
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
-
   res.json(
     rows.map((r) => ({
       userId: r.userId,
       fullName: r.fullName,
       teamName: r.teamId ? teamMap[r.teamId] ?? null : null,
       jobTitle: r.jobTitle,
-      baseSalary: r.baseSalary ? Number(r.baseSalary) : 0,
-      bonus: r.bonus ? Number(r.bonus) : 0,
-      totalPay: (r.baseSalary ? Number(r.baseSalary) : 0) + (r.bonus ? Number(r.bonus) : 0),
-      payrollStatus: r.payrollStatus ?? "PENDING",
-    }))
+      baseSalary: r.baseSalary,
+      bonus: r.bonus,
+      totalPay: r.baseSalary + r.bonus,
+      payrollStatus: r.payrollStatus,
+    })),
   );
 });
 
 router.get("/v1/finance/expenses", requireAuth, async (_req, res): Promise<void> => {
-  const expenses = await db.select().from(expensesTable).orderBy(sql`${expensesTable.createdAt} DESC`);
-  const teams = await db.select().from(teamsTable);
-  const users = await db.select().from(usersTable);
+  const expenses = await store.listExpenses();
+  const teams = await store.listTeams();
+  const users = await store.listUsers();
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
   const userMap = Object.fromEntries(users.map((u) => [u.id, u.fullName]));
   res.json(
@@ -83,7 +57,7 @@ router.get("/v1/finance/expenses", requireAuth, async (_req, res): Promise<void>
       submitterName: e.submittedById ? userMap[e.submittedById] ?? null : null,
       status: e.status,
       createdAt: e.createdAt.toISOString(),
-    }))
+    })),
   );
 });
 
@@ -93,13 +67,14 @@ router.post("/v1/finance/expenses", requireAuth, async (req, res): Promise<void>
     res.status(400).json({ error: "Description and amount are required" });
     return;
   }
-  const [expense] = await db.insert(expensesTable).values({
+  const expense = await store.createExpense({
     description,
     amount: String(amount),
     teamId: teamId ?? null,
     submittedById: req.user!.userId,
     status: "PENDING",
-  }).returning();
+    receiptUrl: null,
+  });
   res.status(201).json({
     id: expense.id,
     description: expense.description,
@@ -114,7 +89,7 @@ router.post("/v1/finance/expenses", requireAuth, async (req, res): Promise<void>
 });
 
 router.get("/v1/finance/payroll-runs", requireAuth, async (_req, res): Promise<void> => {
-  const runs = await db.select().from(payrollRunsTable).orderBy(sql`${payrollRunsTable.createdAt} DESC`);
+  const runs = await store.listPayrollRuns();
   res.json(
     runs.map((r) => ({
       id: r.id,
@@ -124,7 +99,7 @@ router.get("/v1/finance/payroll-runs", requireAuth, async (_req, res): Promise<v
       status: r.status,
       approvedById: r.approvedById,
       createdAt: r.createdAt.toISOString(),
-    }))
+    })),
   );
 });
 
@@ -135,14 +110,15 @@ router.post("/v1/finance/payroll-runs", requireAuth, async (req, res): Promise<v
     return;
   }
   const { month, year } = req.body;
-  const profiles = await db.select().from(employeeProfilesTable);
+  const profiles = await store.listProfiles();
   const totalAmount = profiles.reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
-  const [run] = await db.insert(payrollRunsTable).values({
+  const run = await store.createPayrollRun({
     month,
     year,
     totalAmount: String(totalAmount),
     status: "PENDING",
-  }).returning();
+    approvedById: null,
+  });
   res.status(201).json({
     id: run.id,
     month: run.month,

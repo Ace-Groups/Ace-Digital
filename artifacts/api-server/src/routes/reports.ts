@@ -1,13 +1,11 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { reportsTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
 router.get("/v1/reports", requireAuth, async (_req, res): Promise<void> => {
-  const reports = await db.select().from(reportsTable).orderBy(sql`${reportsTable.generatedAt} DESC`);
+  const reports = await store.listReports();
   res.json(
     reports.map((r) => ({
       id: r.id,
@@ -16,7 +14,7 @@ router.get("/v1/reports", requireAuth, async (_req, res): Promise<void> => {
       period: r.period,
       generatedAt: r.generatedAt.toISOString(),
       fileUrl: r.fileUrl,
-    }))
+    })),
   );
 });
 
@@ -27,12 +25,12 @@ router.post("/v1/reports", requireAuth, async (req, res): Promise<void> => {
     return;
   }
   const reportTitle = title ?? `${type.replace(/_/g, " ")} Report - ${period}`;
-  const [report] = await db.insert(reportsTable).values({
+  const report = await store.createReport({
     type,
     title: reportTitle,
     period,
     fileUrl: null,
-  }).returning();
+  });
   res.status(201).json({
     id: report.id,
     type: report.type,

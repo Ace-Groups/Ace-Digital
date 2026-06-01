@@ -1,7 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { usersTable, teamsTable, employeeProfilesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { store } from "@workspace/db";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -13,7 +11,7 @@ router.post("/v1/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
+  const user = await store.findUserByEmail(email);
   if (!user) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
@@ -26,10 +24,7 @@ router.post("/v1/auth/login", async (req, res): Promise<void> => {
   }
 
   const token = signToken({ userId: user.id, role: user.role, teamId: user.teamId });
-
-  const team = user.teamId
-    ? (await db.select().from(teamsTable).where(eq(teamsTable.id, user.teamId)))[0]
-    : null;
+  const team = user.teamId ? await store.findTeamById(user.teamId) : null;
 
   res.json({
     token,
@@ -53,15 +48,13 @@ router.post("/v1/auth/logout", (_req, res): void => {
 });
 
 router.get("/v1/auth/me", requireAuth, async (req, res): Promise<void> => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
+  const user = await store.findUserById(req.user!.userId);
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
   }
 
-  const team = user.teamId
-    ? (await db.select().from(teamsTable).where(eq(teamsTable.id, user.teamId)))[0]
-    : null;
+  const team = user.teamId ? await store.findTeamById(user.teamId) : null;
 
   res.json({
     id: user.id,
@@ -89,23 +82,23 @@ router.post("/v1/auth/register", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
-  if (existing.length > 0) {
+  const existing = await store.findUserByEmail(email);
+  if (existing) {
     res.status(400).json({ error: "Email already in use" });
     return;
   }
 
   const passwordHash = await hashPassword(password);
-  const [user] = await db.insert(usersTable).values({
-    email: email.toLowerCase(),
+  const user = await store.createUser({
+    email,
     passwordHash,
     fullName,
     role,
     teamId: teamId ?? null,
     jobTitle: jobTitle ?? null,
-  }).returning();
+  });
 
-  await db.insert(employeeProfilesTable).values({ userId: user.id });
+  await store.createProfile({ userId: user.id });
 
   res.status(201).json({
     id: user.id,

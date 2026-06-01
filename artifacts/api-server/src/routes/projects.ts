@@ -1,18 +1,13 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { projectsTable, teamsTable, clientsTable, approvalsTable, activityLogsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { store } from "@workspace/db";
+import type { Project } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
-async function projectWithRelations(p: typeof projectsTable.$inferSelect) {
-  const team = p.teamId
-    ? (await db.select().from(teamsTable).where(eq(teamsTable.id, p.teamId)))[0]
-    : null;
-  const client = p.clientId
-    ? (await db.select().from(clientsTable).where(eq(clientsTable.id, p.clientId)))[0]
-    : null;
+async function projectWithRelations(p: Project) {
+  const team = p.teamId ? await store.findTeamById(p.teamId) : null;
+  const client = p.clientId ? await store.findClientById(p.clientId) : null;
   return {
     id: p.id,
     name: p.name,
@@ -33,15 +28,11 @@ async function projectWithRelations(p: typeof projectsTable.$inferSelect) {
 
 router.get("/v1/projects", requireAuth, async (req, res): Promise<void> => {
   const { status, teamId } = req.query;
-  let query = db.select().from(projectsTable);
-  const conditions = [];
-  if (status) conditions.push(eq(projectsTable.status, status as string));
-  if (teamId) conditions.push(eq(projectsTable.teamId, Number(teamId)));
-  const projects = conditions.length
-    ? await db.select().from(projectsTable).where(and(...conditions)).orderBy(sql`${projectsTable.createdAt} DESC`)
-    : await db.select().from(projectsTable).orderBy(sql`${projectsTable.createdAt} DESC`);
-  const result = await Promise.all(projects.map(projectWithRelations));
-  res.json(result);
+  const projects = await store.listProjects({
+    status: status as string | undefined,
+    teamId: teamId ? Number(teamId) : undefined,
+  });
+  res.json(await Promise.all(projects.map(projectWithRelations)));
 });
 
 router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
@@ -50,20 +41,22 @@ router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Name is required" });
     return;
   }
-  const [project] = await db.insert(projectsTable).values({
+
+  const project = await store.createProject({
     name,
     description: description ?? null,
     teamId: teamId ?? null,
     priority: priority ?? "MEDIUM",
     status: status ?? "TODO",
+    progress: 0,
     deadline: deadline ? new Date(deadline) : null,
     budget: budget ? String(budget) : null,
     clientId: clientId ?? null,
     createdById: req.user!.userId,
-  }).returning();
+  });
 
   if (budget && Number(budget) > 500000) {
-    await db.insert(approvalsTable).values({
+    await store.createApproval({
       type: "PROJECT_BUDGET",
       title: `Budget Approval for "${name}"`,
       description: `Project budget exceeds ₹5,00,000. Requires management approval.`,
@@ -71,10 +64,13 @@ router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
       requestedById: req.user!.userId,
       teamId: teamId ?? null,
       status: "PENDING",
+      reviewedById: null,
+      reviewedAt: null,
+      note: null,
     });
   }
 
-  await db.insert(activityLogsTable).values({
+  await store.insertActivityLog({
     actorId: req.user!.userId,
     action: "created project",
     entityType: "project",
@@ -87,7 +83,7 @@ router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
 
 router.get("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const [project] = await db.select().from(projectsTable).where(eq(projectsTable.id, id));
+  const project = await store.findProjectById(id);
   if (!project) {
     res.status(404).json({ error: "Project not found" });
     return;
@@ -98,7 +94,7 @@ router.get("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
 router.patch("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { name, description, teamId, priority, status, progress, deadline, budget, clientId } = req.body;
-  const [project] = await db.update(projectsTable).set({
+  const project = await store.updateProject(id, {
     ...(name !== undefined && { name }),
     ...(description !== undefined && { description }),
     ...(teamId !== undefined && { teamId }),
@@ -108,7 +104,7 @@ router.patch("/v1/projects/:id", requireAuth, async (req, res): Promise<void> =>
     ...(deadline !== undefined && { deadline: new Date(deadline) }),
     ...(budget !== undefined && { budget: String(budget) }),
     ...(clientId !== undefined && { clientId }),
-  }).where(eq(projectsTable.id, id)).returning();
+  });
   if (!project) {
     res.status(404).json({ error: "Project not found" });
     return;
@@ -118,7 +114,7 @@ router.patch("/v1/projects/:id", requireAuth, async (req, res): Promise<void> =>
 
 router.delete("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  await db.delete(projectsTable).where(eq(projectsTable.id, id));
+  await store.deleteProject(id);
   res.sendStatus(204);
 });
 
@@ -129,12 +125,12 @@ router.patch("/v1/projects/:id/status", requireAuth, async (req, res): Promise<v
     res.status(400).json({ error: "Status is required" });
     return;
   }
-  const [project] = await db.update(projectsTable).set({ status }).where(eq(projectsTable.id, id)).returning();
+  const project = await store.updateProject(id, { status });
   if (!project) {
     res.status(404).json({ error: "Project not found" });
     return;
   }
-  await db.insert(activityLogsTable).values({
+  await store.insertActivityLog({
     actorId: req.user!.userId,
     action: `moved project to ${status}`,
     entityType: "project",

@@ -1,11 +1,8 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
 import bcrypt from "bcryptjs";
 import * as schema from "@workspace/db";
+import { getPgDb, closePgPool } from "@workspace/db/pg";
 
-const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool, { schema });
+const { db } = getPgDb();
 
 async function seed() {
   console.log("🌱 Seeding database...");
@@ -245,7 +242,7 @@ async function seed() {
     .onConflictDoNothing();
   console.log(`  ✓ reports seeded`);
 
-  await pool.end();
+  await closePgPool();
   console.log("✅ Database seeded successfully!");
 }
 

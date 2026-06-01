@@ -1,15 +1,12 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { clientsTable, teamsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { store } from "@workspace/db";
+import type { Client } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
-async function clientWithRelations(c: typeof clientsTable.$inferSelect) {
-  const team = c.assignedTeamId
-    ? (await db.select().from(teamsTable).where(eq(teamsTable.id, c.assignedTeamId)))[0]
-    : null;
+async function clientWithRelations(c: Client) {
+  const team = c.assignedTeamId ? await store.findTeamById(c.assignedTeamId) : null;
   return {
     id: c.id,
     contactName: c.contactName,
@@ -26,18 +23,18 @@ async function clientWithRelations(c: typeof clientsTable.$inferSelect) {
 }
 
 router.get("/v1/clients", requireAuth, async (_req, res): Promise<void> => {
-  const clients = await db.select().from(clientsTable).orderBy(sql`${clientsTable.createdAt} DESC`);
-  const result = await Promise.all(clients.map(clientWithRelations));
-  res.json(result);
+  const clients = await store.listClients();
+  res.json(await Promise.all(clients.map(clientWithRelations)));
 });
 
 router.post("/v1/clients", requireAuth, async (req, res): Promise<void> => {
-  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } = req.body;
+  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
+    req.body;
   if (!contactName || !companyName || !email) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
-  const [client] = await db.insert(clientsTable).values({
+  const client = await store.createClient({
     contactName,
     companyName,
     email,
@@ -46,13 +43,13 @@ router.post("/v1/clients", requireAuth, async (req, res): Promise<void> => {
     status: status ?? "ACTIVE",
     contractValue: contractValue ? String(contractValue) : null,
     nextMeetingAt: nextMeetingAt ? new Date(nextMeetingAt) : null,
-  }).returning();
+  });
   res.status(201).json(await clientWithRelations(client));
 });
 
 router.get("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, id));
+  const client = await store.findClientById(id);
   if (!client) {
     res.status(404).json({ error: "Client not found" });
     return;
@@ -62,8 +59,9 @@ router.get("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } = req.body;
-  const [client] = await db.update(clientsTable).set({
+  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
+    req.body;
+  const client = await store.updateClient(id, {
     ...(contactName !== undefined && { contactName }),
     ...(companyName !== undefined && { companyName }),
     ...(email !== undefined && { email }),
@@ -72,7 +70,7 @@ router.patch("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => 
     ...(status !== undefined && { status }),
     ...(contractValue !== undefined && { contractValue: String(contractValue) }),
     ...(nextMeetingAt !== undefined && { nextMeetingAt: new Date(nextMeetingAt) }),
-  }).where(eq(clientsTable.id, id)).returning();
+  });
   if (!client) {
     res.status(404).json({ error: "Client not found" });
     return;
@@ -82,7 +80,7 @@ router.patch("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => 
 
 router.delete("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  await db.delete(clientsTable).where(eq(clientsTable.id, id));
+  await store.deleteClient(id);
   res.sendStatus(204);
 });
 

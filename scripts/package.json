@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
+    "seed:firestore": "tsx ./src/seed-firestore.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

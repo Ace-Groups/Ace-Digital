@@ -1,25 +1,20 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { channelsTable, messagesTable, usersTable, teamsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
 router.get("/v1/channels", requireAuth, async (req, res): Promise<void> => {
   const user = req.user!;
-  let channels: typeof channelsTable.$inferSelect[];
+  const allChannels = await store.listChannels();
+  const channels =
+    ["super_admin", "management"].includes(user.role)
+      ? allChannels
+      : allChannels.filter(
+          (c) => c.type === "ANNOUNCEMENT" || (c.type === "TEAM" && c.teamId === user.teamId),
+        );
 
-  if (["super_admin", "management"].includes(user.role)) {
-    channels = await db.select().from(channelsTable).orderBy(channelsTable.name);
-  } else {
-    const allChannels = await db.select().from(channelsTable).orderBy(channelsTable.name);
-    channels = allChannels.filter(
-      (c) => c.type === "ANNOUNCEMENT" || (c.type === "TEAM" && c.teamId === user.teamId)
-    );
-  }
-
-  const teams = await db.select().from(teamsTable);
+  const teams = await store.listTeams();
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
 
   res.json(
@@ -30,27 +25,15 @@ router.get("/v1/channels", requireAuth, async (req, res): Promise<void> => {
       teamName: c.teamId ? teamMap[c.teamId] ?? null : null,
       type: c.type,
       unreadCount: 0,
-    }))
+    })),
   );
 });
 
 router.get("/v1/channels/:id/messages", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const messages = await db
-    .select({
-      id: messagesTable.id,
-      channelId: messagesTable.channelId,
-      senderId: messagesTable.senderId,
-      senderName: usersTable.fullName,
-      senderAvatar: usersTable.avatarUrl,
-      body: messagesTable.body,
-      createdAt: messagesTable.createdAt,
-    })
-    .from(messagesTable)
-    .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
-    .where(eq(messagesTable.channelId, id))
-    .orderBy(sql`${messagesTable.createdAt} ASC`)
-    .limit(100);
+  const messages = await store.listMessagesByChannel(id, 100);
+  const users = await store.listUsers();
+  const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
 
   res.json(
     messages.map((m) => ({
@@ -58,10 +41,10 @@ router.get("/v1/channels/:id/messages", requireAuth, async (req, res): Promise<v
       channelId: m.channelId,
       senderId: m.senderId,
       senderName: m.senderName ?? "Unknown",
-      senderAvatar: m.senderAvatar,
+      senderAvatar: avatarMap[m.senderId] ?? null,
       body: m.body,
       createdAt: m.createdAt.toISOString(),
-    }))
+    })),
   );
 });
 
@@ -72,14 +55,13 @@ router.post("/v1/channels/:id/messages", requireAuth, async (req, res): Promise<
     res.status(400).json({ error: "Message body is required" });
     return;
   }
-  const [message] = await db.insert(messagesTable).values({
+  const message = await store.createMessage({
     channelId: id,
     senderId: req.user!.userId,
     body,
-  }).returning();
-
-  const [sender] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
-  const result = {
+  });
+  const sender = await store.findUserById(req.user!.userId);
+  res.status(201).json({
     id: message.id,
     channelId: message.channelId,
     senderId: message.senderId,
@@ -87,8 +69,7 @@ router.post("/v1/channels/:id/messages", requireAuth, async (req, res): Promise<
     senderAvatar: sender?.avatarUrl ?? null,
     body: message.body,
     createdAt: message.createdAt.toISOString(),
-  };
-  res.status(201).json(result);
+  });
 });
 
 export default router;

@@ -1,0 +1,22 @@
+{
+  "name": "ace-digital-functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "seed": "node lib/seed.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^6.6.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

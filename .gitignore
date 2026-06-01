@@ -10,3 +10,8 @@ dist/
 .turbo
 coverage/
 .vite/
+.firebase/
+firebase/functions/api-app.mjs
+firebase/functions/api-app.mjs.map
+firebase/functions/lib/
+firebase/functions/node_modules/
