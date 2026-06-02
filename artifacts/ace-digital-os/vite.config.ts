@@ -18,7 +18,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      // Avoid disruptive app refresh while users are actively editing.
+      registerType: "prompt",
       includeAssets: [
         "favicon-16.png",
         "favicon-32.png",
