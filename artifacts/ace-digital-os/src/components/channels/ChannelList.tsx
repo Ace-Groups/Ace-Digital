@@ -76,7 +76,7 @@ export function ChannelList({
               data-testid={`channel-item-${ch.id}`}
               onClick={() => onSelect(ch.id)}
               className={cn(
-                "mb-0.5 flex w-full min-h-11 items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                "mb-0.5 flex w-full min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors active:scale-[0.99]",
                 selectedChannelId === ch.id
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",

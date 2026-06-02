@@ -16,7 +16,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 24rem;
+  padding: 0 1.5rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.ace-loader-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(88vw, 22rem);
+  height: min(52vw, 16rem);
+  margin-bottom: clamp(2.5rem, 10vw, 3.5rem);
+  flex-shrink: 0;
+  isolation: isolate;
 }
 
 .ace-loader {
@@ -27,11 +43,29 @@
 }
 
 .ace-loader-text {
-  font-size: 1.25rem;
+  position: relative;
+  z-index: 10;
+  margin: 0;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: clamp(1.125rem, 4.5vw, 1.5rem);
   font-weight: 700;
-  color: #C1E8FF;
-  letter-spacing: 0.05em;
+  color: #c1e8ff;
+  letter-spacing: 0.06em;
   font-family: system-ui, sans-serif;
+  text-shadow: 0 2px 24px rgba(5, 38, 89, 0.45);
+}
+
+@media (max-width: 767px) {
+  .ace-loader-stage .ace-loader {
+    transform: scale(0.88);
+    transform-origin: center center;
+  }
+
+  .ace-loader-stage {
+    height: min(48vw, 14rem);
+    margin-bottom: clamp(2.75rem, 12vw, 4rem);
+  }
 }
 
 /* ===== CUBE ENGINE ===== */

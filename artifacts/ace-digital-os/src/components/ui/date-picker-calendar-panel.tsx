@@ -10,6 +10,8 @@ interface DatePickerCalendarPanelProps {
   onClear: () => void;
   onToday: () => void;
   size?: DatePickerCalendarSize;
+  /** Label + chevrons — better on iOS/Android than native dropdowns inside sheets. */
+  useLabelCaption?: boolean;
   className?: string;
 }
 
@@ -19,6 +21,7 @@ export function DatePickerCalendarPanel({
   onClear,
   onToday,
   size = "default",
+  useLabelCaption = false,
   className,
 }: DatePickerCalendarPanelProps) {
   const isLarge = size === "large";
@@ -37,13 +40,13 @@ export function DatePickerCalendarPanel({
         selected={selected}
         onSelect={onSelect}
         defaultMonth={selected}
-        captionLayout="dropdown"
+        captionLayout={useLabelCaption ? "label" : "dropdown"}
         fromYear={new Date().getFullYear() - 5}
         toYear={new Date().getFullYear() + 10}
         className={cn(
           "w-full bg-transparent p-0",
           isLarge
-            ? "[--cell-size:3.25rem] p-1 sm:[--cell-size:3rem]"
+            ? "[--cell-size:3.5rem] p-2 sm:[--cell-size:3.25rem]"
             : "[--cell-size:2.75rem] p-2",
         )}
       />

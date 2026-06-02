@@ -306,7 +306,17 @@ body {
   }
 
   .calendar-panel-large .rdp-caption_label {
-    font-size: 1rem;
+    font-size: 1.0625rem;
+  }
+
+  .calendar-panel-large .rdp-button_previous,
+  .calendar-panel-large .rdp-button_next {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .calendar-panel-large .rdp-month_caption {
+    min-height: 3.25rem;
   }
 
   .mobile-form {

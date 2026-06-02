@@ -152,9 +152,9 @@ export default function LoginPage() {
             }}
             onMouseLeave={() => setTilt({ rx: 0, ry: 0 })}
           >
-            <div className="mb-8 flex justify-center lg:hidden">
+            <div className="mb-6 flex flex-col items-center lg:hidden">
               <AceLogoParticles
-                className="h-[150px] w-[240px]"
+                className="h-[140px] w-[240px]"
                 size={190}
                 widthScale={1.35}
                 particleSize={2.4}
@@ -162,6 +162,9 @@ export default function LoginPage() {
                 interactive={false}
                 quality="balanced"
               />
+              <p className="mt-6 text-center text-lg font-semibold tracking-wide text-[hsl(203_100%_90%)]">
+                Ace Digital OS
+              </p>
             </div>
 
             <div className="mb-8">

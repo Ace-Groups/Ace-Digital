@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Send } from "lucide-react";
 import { formatRelativeTime, cn } from "@/lib/utils";
@@ -136,7 +137,9 @@ export default function ChannelsPage() {
     <div
       className={cn(
         "flex min-w-0 flex-1 flex-col bg-card",
-        isMobile && mobileThreadOpen && "fixed inset-0 z-50 min-h-[100dvh]",
+        isMobile &&
+          mobileThreadOpen &&
+          "fixed inset-0 z-50 flex min-h-[100dvh] flex-col pt-[env(safe-area-inset-top)]",
       )}
     >
       {selectedChannel && (
@@ -148,7 +151,10 @@ export default function ChannelsPage() {
         />
       )}
 
-      <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+      <div
+        ref={messagesContainerRef}
+        className="touch-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6"
+      >
         {!selectedChannelId ? (
           <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
             Select a channel to start chatting
@@ -219,7 +225,7 @@ export default function ChannelsPage() {
                   )}
                   <div
                     className={cn(
-                      "rounded-2xl px-4 py-2.5 text-sm",
+                      "rounded-2xl px-4 py-3 text-[0.9375rem] leading-relaxed",
                       isMe
                         ? "rounded-tr-sm bg-primary text-primary-foreground"
                         : "rounded-tl-sm bg-muted text-foreground",
@@ -236,27 +242,27 @@ export default function ChannelsPage() {
       </div>
 
       {selectedChannelId && canPost && (
-        <div className="shrink-0 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-2">
-            <input
+        <div className="shrink-0 border-t border-border px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4">
+          <div className="flex items-end gap-2 rounded-2xl border border-border bg-muted/40 p-2 sm:gap-3 sm:px-3">
+            <Textarea
               data-testid="input-message"
-              type="text"
+              rows={1}
               placeholder={`Message #${selectedChannel?.name ?? "channel"}...`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onFocus={() => setShouldAutoScroll(false)}
               onBlur={() => setShouldAutoScroll(true)}
               onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none sm:text-sm"
+              className="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-base shadow-none focus-visible:ring-0 sm:min-h-10 sm:text-sm"
             />
             <button
               type="button"
               data-testid="btn-send-message"
               onClick={() => void handleSend()}
               disabled={!message.trim() || sendMessage.isPending}
-              className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors active:scale-[0.97] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Send size={18} />
+              <Send size={20} />
             </button>
           </div>
         </div>
@@ -277,7 +283,7 @@ export default function ChannelsPage() {
       <div
         className={cn(
           "flex overflow-hidden rounded-xl border border-border",
-          isMobile ? "min-h-[calc(100dvh-12rem)] flex-col" : "min-h-[calc(100dvh-8rem)]",
+          isMobile ? "min-h-[calc(100dvh-11rem)] flex-col" : "min-h-[calc(100dvh-8rem)]",
         )}
       >
         {isMobile ? (

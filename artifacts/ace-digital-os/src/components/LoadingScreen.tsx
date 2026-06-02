@@ -43,15 +43,16 @@ export function LoadingScreen() {
   return (
     <div className="ace-loader-screen">
       <div className="ace-loader-content">
-        <div className="ace-loader" style={{ perspective: "1000px" }}>
-          <div className="cubes">
-            {/* Row 1 */}
-            {["111","121","131","211","221","231","311","321","331",
-               "112","122","132","212","222","232","312","322","332",
-               "113","123","133","213","223","233","313","323","333"].map((key) => (
-              <Cube key={key} id={key} />
-            ))}
-            <LargeShadows />
+        <div className="ace-loader-stage">
+          <div className="ace-loader" style={{ perspective: "1000px" }}>
+            <div className="cubes">
+              {["111","121","131","211","221","231","311","321","331",
+                 "112","122","132","212","222","232","312","322","332",
+                 "113","123","133","213","223","233","313","323","333"].map((key) => (
+                <Cube key={key} id={key} />
+              ))}
+              <LargeShadows />
+            </div>
           </div>
         </div>
         <p className="ace-loader-text">Ace Digital OS</p>
