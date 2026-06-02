@@ -32,8 +32,10 @@ export default function ChannelsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const sendMessage = useSendMessage();
   const queryClient = useQueryClient();
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedChannel = channels?.find((c) => c.id === selectedChannelId);
@@ -63,7 +65,8 @@ export default function ChannelsPage() {
       query: {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0),
-        refetchInterval: 5000,
+        refetchInterval: selectedChannelId && (!isMobile || mobileThreadOpen) ? 15_000 : false,
+        refetchIntervalInBackground: false,
       },
     },
   );
@@ -76,8 +79,23 @@ export default function ChannelsPage() {
   }, [channels, selectedChannelId, isMobile]);
 
   useEffect(() => {
+    if (!messages || messages.length === 0) return;
+    if (!shouldAutoScroll) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
+
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShouldAutoScroll(distanceFromBottom < 96);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [selectedChannelId, isMobile, mobileThreadOpen]);
 
   async function handleSend() {
     if (!message.trim() || !selectedChannelId || !canPost) return;
@@ -130,7 +148,7 @@ export default function ChannelsPage() {
         />
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+      <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         {!selectedChannelId ? (
           <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
             Select a channel to start chatting
@@ -226,6 +244,8 @@ export default function ChannelsPage() {
               placeholder={`Message #${selectedChannel?.name ?? "channel"}...`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onFocus={() => setShouldAutoScroll(false)}
+              onBlur={() => setShouldAutoScroll(true)}
               onKeyDown={handleKeyDown}
               className="flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none sm:text-sm"
             />
