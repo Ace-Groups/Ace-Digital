@@ -8,6 +8,7 @@
     "seed": "tsx ./src/seed.ts",
     "seed:firestore": "tsx ./src/seed-firestore.ts",
     "upsert:kavin": "tsx ./src/upsert-kavin-admin.ts",
+    "reset:production": "tsx ./src/reset-firestore-production.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

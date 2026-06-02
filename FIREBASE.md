@@ -17,12 +17,7 @@
 - **Hosting** — production build of `artifacts/ace-digital-os` (SPA).
 - **Cloud Functions (API)** — Gen 1 HTTPS `api` in `asia-south1`; Hosting rewrites `/api/**` to this function.
 
-## Default login (after seed)
-
-- Email: `admin@acedigital.com`
-- Password: `Admin@123`
-
-## Managing Director login
+## Production login (single admin)
 
 | Field | Value |
 |-------|--------|
@@ -31,13 +26,24 @@
 | Job title | Managing Director |
 | App role | `super_admin` (full access) |
 
-Create or refresh this user in Firestore (works before Functions deploy):
+Login: https://ace-digital-os.web.app
+
+### Reset database to production baseline
+
+Removes **all** demo data (projects, tasks, users, clients, etc.) and keeps only the Kavin admin account plus one Operations team:
+
+```bash
+CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+  pnpm --filter @workspace/scripts run reset:production
+```
+
+Requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) for `ace-digital-os` (e.g. `gcloud auth application-default login`).
+
+Refresh a single admin without wiping data:
 
 ```bash
 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
 ```
-
-Login on https://ace-digital-os.web.app uses the deployed API via Hosting rewrite.
 
 ## One-time: enable API (Blaze) — required
 

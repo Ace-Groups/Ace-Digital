@@ -31,7 +31,7 @@ async function main() {
         role: ROLE,
         jobTitle: JOB_TITLE,
         status: "active",
-        teamId: existing.teamId ?? 5,
+        teamId: existing.teamId ?? 1,
       },
       { merge: true },
     );
@@ -39,13 +39,13 @@ async function main() {
   } else {
     const counters = await db.collection("_meta").doc("counters").get();
     const data = counters.data() ?? {};
-    userId = ((data.users as number) ?? 12) + 1;
+    userId = ((data.users as number) ?? 0) + 1;
     await db.collection("users").doc(String(userId)).set({
       email: EMAIL.toLowerCase(),
       passwordHash,
       fullName: FULL_NAME,
       role: ROLE,
-      teamId: 5,
+      teamId: 1,
       jobTitle: JOB_TITLE,
       status: "active",
       avatarUrl: null,

@@ -10,8 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import aceLogo from "@assets/ace_logo_1780335102216.png";
-import { Card, CardContent } from "@/components/ui/card";
-
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
@@ -19,11 +17,11 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const DEMO_STATS = [
-  { label: "Active Projects", value: "8" },
-  { label: "Team Members", value: "12" },
-  { label: "Clients Served", value: "6" },
-  { label: "Monthly Revenue", value: "₹95L" },
+const PRODUCT_HIGHLIGHTS = [
+  { label: "Projects", value: "Kanban" },
+  { label: "Teams", value: "Org-wide" },
+  { label: "Clients", value: "CRM" },
+  { label: "Finance", value: "Payroll" },
 ] as const;
 
 export default function LoginPage() {
@@ -82,7 +80,7 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="relative grid grid-cols-2 gap-3">
-          {DEMO_STATS.map((stat) => (
+          {PRODUCT_HIGHLIGHTS.map((stat) => (
             <div
               key={stat.label}
               className="rounded-xl border border-sidebar-border/80 bg-sidebar-accent/40 p-4 backdrop-blur-sm"
@@ -170,12 +168,9 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <Card className="mt-6 border-primary/15 bg-primary/5">
-            <CardContent className="p-4">
-              <p className="text-xs font-semibold text-foreground">Managing Director access</p>
-              <p className="mt-2 text-xs text-muted-foreground">Email: kavin@acedigital.com</p>
-            </CardContent>
-          </Card>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Authorized Ace Digital personnel only
+          </p>
         </div>
       </div>
     </div>
