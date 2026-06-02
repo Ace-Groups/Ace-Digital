@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -403,7 +404,14 @@ export function ProjectDetailDialog({
                         <Calendar size={14} /> Deadline
                       </FormLabel>
                       <FormControl>
-                        <Input type="date" data-testid="edit-project-deadline" {...field} />
+                        <DatePicker
+                          inModal
+                          data-testid="edit-project-deadline"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Select deadline"
+                        />
                       </FormControl>
                     </FormItem>
                   )}

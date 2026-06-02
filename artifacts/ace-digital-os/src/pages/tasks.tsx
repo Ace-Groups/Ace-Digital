@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
@@ -274,7 +275,16 @@ export default function TasksPage() {
           <FormField control={form.control} name="dueDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Due Date</FormLabel>
-              <FormControl><Input type="date" data-testid="input-task-due" {...field} /></FormControl>
+              <FormControl>
+                <DatePicker
+                  inModal
+                  data-testid="input-task-due"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="Select due date"
+                />
+              </FormControl>
             </FormItem>
           )} />
         </div>

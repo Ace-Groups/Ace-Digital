@@ -31,6 +31,47 @@ export function formatRelativeTime(dateStr: string | null | undefined): string {
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
+/** Parse `YYYY-MM-DD` as local calendar date (no timezone shift). */
+export function parseDateInput(value: string | undefined | null): Date | undefined {
+  if (!value) return undefined;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return undefined;
+  }
+  return date;
+}
+
+/** Format date as `YYYY-MM-DD` for API / form state. */
+export function toDateInputValue(date: Date | undefined | null): string {
+  if (!date) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function formatDateLabel(
+  value: string | undefined | null,
+  options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  },
+): string {
+  const date = parseDateInput(value) ?? (value ? new Date(value) : undefined);
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-IN", options);
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")
