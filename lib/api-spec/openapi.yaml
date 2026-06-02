@@ -95,6 +95,36 @@ paths:
         "401":
           description: Unauthorized
 
+  /v1/auth/permissions:
+    get:
+      operationId: getAuthPermissions
+      tags: [auth]
+      summary: Get current user role and permissions
+      responses:
+        "200":
+          description: Permissions for UI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPermissions"
+        "401":
+          description: Unauthorized
+
+  /v1/me:
+    get:
+      operationId: getMyProfile
+      tags: [employees]
+      summary: Get own employee profile (includes payslip fields when allowed)
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "401":
+          description: Unauthorized
+
   /v1/auth/register:
     post:
       operationId: register
@@ -521,6 +551,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinanceSummary"
+        "403":
+          description: Forbidden
+
+  /v1/finance/me:
+    get:
+      operationId: getMyPayslip
+      tags: [finance]
+      summary: Get own payslip
+      responses:
+        "200":
+          description: Payslip
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayslipMe"
+        "403":
+          description: Forbidden
 
   /v1/finance/salaries:
     get:
@@ -568,6 +615,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Expense"
+
+  /v1/finance/expenses/{id}:
+    patch:
+      operationId: patchExpenseStatus
+      tags: [finance]
+      summary: Approve or reject expense (finance)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED]
+      responses:
+        "200":
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
 
   /v1/finance/payroll-runs:
     get:
@@ -999,9 +1080,39 @@ components:
           type: string
 
     # DASHBOARD
+    AuthPermissions:
+      type: object
+      required: [role, permissions]
+      properties:
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    PayslipMe:
+      type: object
+      required: [fullName, baseSalary, bonus, totalPay, payrollStatus]
+      properties:
+        fullName:
+          type: string
+        baseSalary:
+          type: number
+        bonus:
+          type: number
+        totalPay:
+          type: number
+        payrollStatus:
+          type: string
+        jobTitle:
+          type: ["string", "null"]
+        teamName:
+          type: ["string", "null"]
+
     DashboardData:
       type: object
-      required: [activeProjectsCount, employeeCount, monthlyRevenue, pendingApprovalsCount, recentActivity, upcomingDeadlines, teamLoad]
+      required: [activeProjectsCount, employeeCount, monthlyRevenue, pendingApprovalsCount, recentActivity, upcomingDeadlines, teamLoad, widgets]
       properties:
         activeProjectsCount:
           type: integer
@@ -1011,6 +1122,16 @@ components:
           type: number
         pendingApprovalsCount:
           type: integer
+        activeClientsCount:
+          type: integer
+        contractValueTotal:
+          type: number
+        myOpenTasksCount:
+          type: integer
+        widgets:
+          type: array
+          items:
+            type: string
         recentActivity:
           type: array
           items:

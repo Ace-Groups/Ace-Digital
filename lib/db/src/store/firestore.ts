@@ -18,6 +18,7 @@ import type {
 } from "../schema";
 import type {
   ActivityLogWithActor,
+  AccessContext,
   CreateProfileInput,
   CreateUserInput,
   DashboardSnapshot,
@@ -26,6 +27,12 @@ import type {
   UpdateProfileInput,
   UpdateUserInput,
 } from "./types";
+import { buildDashboardSnapshot } from "./build-dashboard";
+import {
+  filterApprovalsScoped,
+  scopeProjectList,
+  scopeTaskList,
+} from "./scoping";
 
 const COL = {
   meta: "_meta",
@@ -224,6 +231,19 @@ export function createFirestoreStore() {
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
+    async listTasksForAccess(
+      ctx: AccessContext,
+      filters?: {
+        projectId?: number;
+        teamId?: number;
+        assigneeId?: number;
+        status?: string;
+      },
+    ): Promise<Task[]> {
+      const base = await this.listTasks(filters);
+      return scopeTaskList(ctx, base);
+    },
+
     async findTaskById(id: number): Promise<Task | null> {
       const snap = await db.collection(COL.tasks).doc(docId(id)).get();
       if (!snap.exists) return null;
@@ -259,6 +279,17 @@ export function createFirestoreStore() {
       if (filters?.status) items = items.filter((p) => p.status === filters.status);
       if (filters?.teamId != null) items = items.filter((p) => p.teamId === filters.teamId);
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    },
+
+    async listProjectsForAccess(
+      ctx: AccessContext,
+      filters?: { status?: string; teamId?: number },
+    ): Promise<Project[]> {
+      const base =
+        ctx.role === "team_lead" || ctx.role === "employee"
+          ? await this.listProjects({ ...filters, teamId: ctx.teamId ?? undefined })
+          : await this.listProjects(filters);
+      return scopeProjectList(ctx, base);
     },
 
     async findProjectById(id: number): Promise<Project | null> {
@@ -350,12 +381,26 @@ export function createFirestoreStore() {
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
+    async listApprovalsForAccess(
+      ctx: AccessContext,
+      filters?: { status?: string },
+    ): Promise<Approval[]> {
+      const base = await this.listApprovals(filters);
+      return filterApprovalsScoped(ctx, base);
+    },
+
     async createApproval(data: Omit<Approval, "id" | "createdAt" | "updatedAt">): Promise<Approval> {
       const id = await nextId(COL.approvals);
       const now = new Date().toISOString();
       const row = { ...serializeApproval(data), createdAt: now, updatedAt: now };
       await db.collection(COL.approvals).doc(docId(id)).set(row);
       return mapApproval(row, String(id));
+    },
+
+    async findApprovalById(id: number): Promise<Approval | null> {
+      const snap = await db.collection(COL.approvals).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapApproval(snap.data()!, snap.id);
     },
 
     async updateApproval(id: number, patch: Partial<Approval>): Promise<Approval | null> {
@@ -464,6 +509,22 @@ export function createFirestoreStore() {
       return mapExpense(row, String(id));
     },
 
+    async updateExpense(id: number, patch: Partial<Expense>): Promise<Expense | null> {
+      const ref = db.collection(COL.expenses).doc(docId(id));
+      if (!(await ref.get()).exists) return null;
+      const row: Record<string, unknown> = { ...patch };
+      if (patch.amount != null) row.amount = String(patch.amount);
+      await ref.set(row, { merge: true });
+      const snap = await ref.get();
+      return mapExpense(snap.data()!, snap.id);
+    },
+
+    async findExpenseById(id: number): Promise<Expense | null> {
+      const snap = await db.collection(COL.expenses).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapExpense(snap.data()!, snap.id);
+    },
+
     async listPayrollRuns(): Promise<PayrollRun[]> {
       const items = await allDocs(COL.payrollRuns, mapPayroll);
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -476,25 +537,21 @@ export function createFirestoreStore() {
       return mapPayroll(row, String(id));
     },
 
-    async getDashboardSnapshot(): Promise<DashboardSnapshot> {
-      const teams = await this.listTeams();
-      const teamLoad = await Promise.all(
-        teams.map(async (team) => ({
-          teamId: team.id,
-          teamName: team.name,
-          activeProjects: await this.countActiveProjectsByTeam(team.id),
-          members: await this.countUsersByTeam(team.id),
-        })),
-      );
-      return {
-        activeProjectsCount: await this.countActiveProjects(),
-        employeeCount: await this.countActiveUsers(),
-        monthlyRevenue: await this.sumActiveClientRevenue(),
-        pendingApprovalsCount: await this.countPendingApprovals(),
-        recentActivity: await this.listActivityLogs(10),
-        upcomingDeadlines: await this.listUpcomingDeadlines(5),
-        teamLoad,
-      };
+    async getDashboardSnapshot(ctx: AccessContext): Promise<DashboardSnapshot> {
+      const self = this;
+      return buildDashboardSnapshot(ctx, {
+        listProjects: (f) => self.listProjects(f),
+        listTasks: (f) => self.listTasks(f),
+        listApprovals: (f) => self.listApprovals(f),
+        listTeams: () => self.listTeams(),
+        countActiveUsers: () => self.countActiveUsers(),
+        sumActiveClientRevenue: () => self.sumActiveClientRevenue(),
+        listClients: () => self.listClients(),
+        listActivityLogs: (limit) => self.listActivityLogs(limit),
+        listUpcomingDeadlines: (limit) => self.listUpcomingDeadlines(limit),
+        countActiveProjectsByTeam: (teamId) => self.countActiveProjectsByTeam(teamId),
+        countUsersByTeam: (teamId) => self.countUsersByTeam(teamId),
+      });
     },
 
     /** Seed helper — bulk write demo data */

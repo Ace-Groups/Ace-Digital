@@ -46,6 +46,23 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface AuthPermissions {
+  role: string;
+  permissions: string[];
+}
+
+export interface PayslipMe {
+  fullName: string;
+  baseSalary: number;
+  bonus: number;
+  totalPay: number;
+  payrollStatus: string;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  teamName?: string | null;
+}
+
 /**
  * @nullable
  */
@@ -103,6 +120,10 @@ export interface DashboardData {
   employeeCount: number;
   monthlyRevenue: number;
   pendingApprovalsCount: number;
+  activeClientsCount?: number;
+  contractValueTotal?: number;
+  myOpenTasksCount?: number;
+  widgets: string[];
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];
   teamLoad: TeamLoad[];
@@ -442,6 +463,18 @@ status?: string;
 export type ListEmployeesParams = {
 teamId?: number;
 status?: string;
+};
+
+export type PatchExpenseStatusBodyStatus = typeof PatchExpenseStatusBodyStatus[keyof typeof PatchExpenseStatusBodyStatus];
+
+
+export const PatchExpenseStatusBodyStatus = {
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export type PatchExpenseStatusBody = {
+  status: PatchExpenseStatusBodyStatus;
 };
 
 export type ListApprovalsParams = {

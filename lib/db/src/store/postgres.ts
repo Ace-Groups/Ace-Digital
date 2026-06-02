@@ -34,6 +34,7 @@ import type {
 } from "../schema";
 import type {
   ActivityLogWithActor,
+  AccessContext,
   CreateProfileInput,
   CreateUserInput,
   DashboardSnapshot,
@@ -42,6 +43,12 @@ import type {
   UpdateProfileInput,
   UpdateUserInput,
 } from "./types";
+import { buildDashboardSnapshot } from "./build-dashboard";
+import {
+  filterApprovalsScoped,
+  scopeProjectList,
+  scopeTaskList,
+} from "./scoping";
 
 export function createPostgresStore() {
   const { db } = getPgDb();
@@ -176,6 +183,46 @@ export function createPostgresStore() {
         ? q.where(and(...conditions)).orderBy(sql`${projectsTable.createdAt} DESC`)
         : q.orderBy(sql`${projectsTable.createdAt} DESC`);
     },
+    listProjectsForAccess: async (
+      ctx: AccessContext,
+      filters?: { status?: string; teamId?: number },
+    ) => {
+      const merged = {
+        ...filters,
+        teamId:
+          ctx.role === "team_lead" || ctx.role === "employee"
+            ? (ctx.teamId ?? undefined)
+            : filters?.teamId,
+      };
+      const conditions = [];
+      if (merged.status) conditions.push(eq(projectsTable.status, merged.status));
+      if (merged.teamId != null) conditions.push(eq(projectsTable.teamId, merged.teamId));
+      const q = db.select().from(projectsTable);
+      const base = conditions.length
+        ? await q.where(and(...conditions)).orderBy(sql`${projectsTable.createdAt} DESC`)
+        : await q.orderBy(sql`${projectsTable.createdAt} DESC`);
+      return scopeProjectList(ctx, base);
+    },
+    listTasksForAccess: async (
+      ctx: AccessContext,
+      filters?: {
+        projectId?: number;
+        teamId?: number;
+        assigneeId?: number;
+        status?: string;
+      },
+    ) => {
+      const conditions = [];
+      if (filters?.projectId != null) conditions.push(eq(tasksTable.projectId, filters.projectId));
+      if (filters?.teamId != null) conditions.push(eq(tasksTable.teamId, filters.teamId));
+      if (filters?.assigneeId != null) conditions.push(eq(tasksTable.assigneeId, filters.assigneeId));
+      if (filters?.status) conditions.push(eq(tasksTable.status, filters.status));
+      const q = db.select().from(tasksTable);
+      const base = conditions.length
+        ? await q.where(and(...conditions)).orderBy(sql`${tasksTable.createdAt} DESC`)
+        : await q.orderBy(sql`${tasksTable.createdAt} DESC`);
+      return scopeTaskList(ctx, base);
+    },
     findProjectById: async (id: number) => {
       const [p] = await db.select().from(projectsTable).where(eq(projectsTable.id, id));
       return p ?? null;
@@ -247,9 +294,20 @@ export function createPostgresStore() {
         ? q.where(eq(approvalsTable.status, filters.status)).orderBy(sql`${approvalsTable.createdAt} DESC`)
         : q.orderBy(sql`${approvalsTable.createdAt} DESC`);
     },
+    listApprovalsForAccess: async (ctx: AccessContext, filters?: { status?: string }) => {
+      const q = db.select().from(approvalsTable);
+      const base = filters?.status
+        ? await q.where(eq(approvalsTable.status, filters.status)).orderBy(sql`${approvalsTable.createdAt} DESC`)
+        : await q.orderBy(sql`${approvalsTable.createdAt} DESC`);
+      return filterApprovalsScoped(ctx, base);
+    },
     createApproval: async (data: Omit<Approval, "id" | "createdAt" | "updatedAt">) => {
       const [a] = await db.insert(approvalsTable).values(data).returning();
       return a;
+    },
+    findApprovalById: async (id: number) => {
+      const [a] = await db.select().from(approvalsTable).where(eq(approvalsTable.id, id));
+      return a ?? null;
     },
     updateApproval: async (id: number, patch: Partial<Approval>) => {
       const [a] = await db.update(approvalsTable).set(patch).where(eq(approvalsTable.id, id)).returning();
@@ -353,89 +411,34 @@ export function createPostgresStore() {
       const [e] = await db.insert(expensesTable).values(data).returning();
       return e;
     },
+    updateExpense: async (id: number, patch: Partial<Expense>) => {
+      const [e] = await db.update(expensesTable).set(patch).where(eq(expensesTable.id, id)).returning();
+      return e ?? null;
+    },
+    findExpenseById: async (id: number) => {
+      const [e] = await db.select().from(expensesTable).where(eq(expensesTable.id, id));
+      return e ?? null;
+    },
     listPayrollRuns: () => db.select().from(payrollRunsTable).orderBy(sql`${payrollRunsTable.createdAt} DESC`),
     createPayrollRun: async (data: Omit<PayrollRun, "id" | "createdAt">) => {
       const [p] = await db.insert(payrollRunsTable).values(data).returning();
       return p;
     },
-    getDashboardSnapshot: async (): Promise<DashboardSnapshot> => {
-      const [projectCount] = await db
-        .select({ count: count() })
-        .from(projectsTable)
-        .where(sql`${projectsTable.status} != 'DONE'`);
-      const [employeeCount] = await db
-        .select({ count: count() })
-        .from(usersTable)
-        .where(eq(usersTable.status, "active"));
-      const [pendingCount] = await db
-        .select({ count: count() })
-        .from(approvalsTable)
-        .where(eq(approvalsTable.status, "PENDING"));
-      const revenueResult = await db.execute(
-        sql`SELECT COALESCE(SUM(contract_value), 0) as total FROM clients WHERE status = 'ACTIVE'`,
-      );
-      const monthlyRevenue = Number((revenueResult.rows[0] as Record<string, unknown>)?.total ?? 0);
-      const recentActivity = await db
-        .select({
-          id: activityLogsTable.id,
-          actorId: activityLogsTable.actorId,
-          actorName: usersTable.fullName,
-          action: activityLogsTable.action,
-          entityType: activityLogsTable.entityType,
-          entityId: activityLogsTable.entityId,
-          metadata: activityLogsTable.metadata,
-          createdAt: activityLogsTable.createdAt,
-        })
-        .from(activityLogsTable)
-        .leftJoin(usersTable, eq(activityLogsTable.actorId, usersTable.id))
-        .orderBy(sql`${activityLogsTable.createdAt} DESC`)
-        .limit(10);
-      const upcomingDeadlines = await db
-        .select()
-        .from(projectsTable)
-        .where(
-          and(
-            sql`${projectsTable.deadline} IS NOT NULL`,
-            sql`${projectsTable.deadline} > NOW()`,
-            sql`${projectsTable.status} != 'DONE'`,
-          ),
-        )
-        .orderBy(projectsTable.deadline)
-        .limit(5);
-      const teams = await db.select().from(teamsTable);
-      const teamLoad = await Promise.all(
-        teams.map(async (team) => ({
-          teamId: team.id,
-          teamName: team.name,
-          activeProjects: (
-            await db
-              .select({ count: count() })
-              .from(projectsTable)
-              .where(and(eq(projectsTable.teamId, team.id), sql`${projectsTable.status} != 'DONE'`))
-          )[0].count,
-          members: (
-            await db.select({ count: count() }).from(usersTable).where(eq(usersTable.teamId, team.id))
-          )[0].count,
-        })),
-      );
-      return {
-        activeProjectsCount: projectCount.count,
-        employeeCount: employeeCount.count,
-        monthlyRevenue,
-        pendingApprovalsCount: pendingCount.count,
-        recentActivity: recentActivity.map((r) => ({
-          id: r.id,
-          actorId: r.actorId,
-          action: r.action,
-          entityType: r.entityType,
-          entityId: r.entityId,
-          metadata: r.metadata,
-          createdAt: r.createdAt,
-          actorName: r.actorName,
-        })),
-        upcomingDeadlines,
-        teamLoad,
-      };
+    getDashboardSnapshot: async (ctx: AccessContext): Promise<DashboardSnapshot> => {
+      const snapshotStore = createPostgresStore();
+      return buildDashboardSnapshot(ctx, {
+        listProjects: (f) => snapshotStore.listProjects(f),
+        listTasks: (f) => snapshotStore.listTasks(f),
+        listApprovals: (f) => snapshotStore.listApprovals(f),
+        listTeams: () => snapshotStore.listTeams(),
+        countActiveUsers: () => snapshotStore.countActiveUsers(),
+        sumActiveClientRevenue: () => snapshotStore.sumActiveClientRevenue(),
+        listClients: () => snapshotStore.listClients(),
+        listActivityLogs: (limit) => snapshotStore.listActivityLogs(limit),
+        listUpcomingDeadlines: (limit) => snapshotStore.listUpcomingDeadlines(limit),
+        countActiveProjectsByTeam: (teamId) => snapshotStore.countActiveProjectsByTeam(teamId),
+        countUsersByTeam: (teamId) => snapshotStore.countUsersByTeam(teamId),
+      });
     },
   };
 }

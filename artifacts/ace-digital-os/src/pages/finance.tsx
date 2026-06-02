@@ -1,7 +1,16 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
-  useGetFinanceSummary, useListSalaries, useListExpenses, useListPayrollRuns,
-  useCreatePayrollRun, getListPayrollRunsQueryKey,
+  useGetFinanceSummary,
+  useGetMyPayslip,
+  useListSalaries,
+  useListExpenses,
+  useListPayrollRuns,
+  useCreatePayrollRun,
+  getListPayrollRunsQueryKey,
+  getGetMyPayslipQueryKey,
+  getGetFinanceSummaryQueryKey,
+  getListSalariesQueryKey,
+  getListExpensesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,15 +23,58 @@ import {
 } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function FinancePage() {
-  const { data: summary, isLoading: summaryLoading } = useGetFinanceSummary();
-  const { data: salaries } = useListSalaries();
-  const { data: expenses } = useListExpenses();
-  const { data: payrollRuns } = useListPayrollRuns();
+  const { can } = usePermissions();
+  const payslipOnly = can("finance:salaries_self") && !can("finance:summary");
+  const { data: myPayslip, isLoading: payslipLoading } = useGetMyPayslip({
+    query: { enabled: payslipOnly, queryKey: getGetMyPayslipQueryKey() },
+  });
+  const { data: summary, isLoading: summaryLoading } = useGetFinanceSummary({
+    query: { enabled: !payslipOnly, queryKey: getGetFinanceSummaryQueryKey() },
+  });
+  const { data: salaries } = useListSalaries({
+    query: { enabled: !payslipOnly, queryKey: getListSalariesQueryKey() },
+  });
+  const { data: expenses } = useListExpenses({
+    query: { enabled: !payslipOnly, queryKey: getListExpensesQueryKey() },
+  });
+  const { data: payrollRuns } = useListPayrollRuns({
+    query: { enabled: !payslipOnly, queryKey: getListPayrollRunsQueryKey() },
+  });
   const createPayrollRun = useCreatePayrollRun();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  if (payslipOnly) {
+    return (
+      <AppLayout title="My Payslip">
+        {payslipLoading ? (
+          <Skeleton className="h-48 w-full max-w-md" />
+        ) : myPayslip ? (
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle className="text-lg">{myPayslip.fullName}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p className="text-muted-foreground">
+                {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
+              </p>
+              <p>Base salary: {formatCurrency(myPayslip.baseSalary)}</p>
+              <p>Bonus: {formatCurrency(myPayslip.bonus)}</p>
+              <p className="text-base font-semibold pt-2">
+                Total: {formatCurrency(myPayslip.totalPay)}
+              </p>
+              <Badge variant="outline" className={cn("mt-2", statusColor(myPayslip.payrollStatus))}>
+                {myPayslip.payrollStatus}
+              </Badge>
+            </CardContent>
+          </Card>
+        ) : null}
+      </AppLayout>
+    );
+  }
 
   async function handleRunPayroll() {
     const now = new Date();

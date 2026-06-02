@@ -24,6 +24,7 @@ import type {
   Approval,
   ApprovalInput,
   ApprovalReviewInput,
+  AuthPermissions,
   AuthResponse,
   Channel,
   Client,
@@ -46,8 +47,10 @@ import type {
   Message,
   MessageInput,
   Notification,
+  PatchExpenseStatusBody,
   PayrollRun,
   PayrollRunInput,
+  PayslipMe,
   Project,
   ProjectInput,
   ProjectStatusUpdate,
@@ -358,6 +361,160 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAuthPermissionsUrl = () => {
+
+
+
+
+  return `/api/v1/auth/permissions`
+}
+
+/**
+ * @summary Get current user role and permissions
+ */
+export const getAuthPermissions = async ( options?: RequestInit): Promise<AuthPermissions> => {
+
+  return customFetch<AuthPermissions>(getGetAuthPermissionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthPermissionsQueryKey = () => {
+    return [
+    `/api/v1/auth/permissions`
+    ] as const;
+    }
+
+
+export const getGetAuthPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getAuthPermissions>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthPermissionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthPermissions>>> = ({ signal }) => getAuthPermissions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthPermissions>>>
+export type GetAuthPermissionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get current user role and permissions
+ */
+
+export function useGetAuthPermissions<TData = Awaited<ReturnType<typeof getAuthPermissions>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMyProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me`
+}
+
+/**
+ * @summary Get own employee profile (includes payslip fields when allowed)
+ */
+export const getMyProfile = async ( options?: RequestInit): Promise<Employee> => {
+
+  return customFetch<Employee>(getGetMyProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyProfileQueryKey = () => {
+    return [
+    `/api/v1/me`
+    ] as const;
+    }
+
+
+export const getGetMyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getMyProfile>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProfile>>> = ({ signal }) => getMyProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
+export type GetMyProfileQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get own employee profile (includes payslip fields when allowed)
+ */
+
+export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyProfileQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1969,7 +2126,7 @@ export const getGetFinanceSummaryQueryKey = () => {
     }
 
 
-export const getGetFinanceSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getFinanceSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinanceSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetFinanceSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getFinanceSummary>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinanceSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1988,19 +2145,96 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetFinanceSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getFinanceSummary>>>
-export type GetFinanceSummaryQueryError = ErrorType<unknown>
+export type GetFinanceSummaryQueryError = ErrorType<void>
 
 
 /**
  * @summary Get finance summary
  */
 
-export function useGetFinanceSummary<TData = Awaited<ReturnType<typeof getFinanceSummary>>, TError = ErrorType<unknown>>(
+export function useGetFinanceSummary<TData = Awaited<ReturnType<typeof getFinanceSummary>>, TError = ErrorType<void>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinanceSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFinanceSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMyPayslipUrl = () => {
+
+
+
+
+  return `/api/v1/finance/me`
+}
+
+/**
+ * @summary Get own payslip
+ */
+export const getMyPayslip = async ( options?: RequestInit): Promise<PayslipMe> => {
+
+  return customFetch<PayslipMe>(getGetMyPayslipUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyPayslipQueryKey = () => {
+    return [
+    `/api/v1/finance/me`
+    ] as const;
+    }
+
+
+export const getGetMyPayslipQueryOptions = <TData = Awaited<ReturnType<typeof getMyPayslip>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPayslip>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyPayslipQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyPayslip>>> = ({ signal }) => getMyPayslip({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyPayslip>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyPayslipQueryResult = NonNullable<Awaited<ReturnType<typeof getMyPayslip>>>
+export type GetMyPayslipQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get own payslip
+ */
+
+export function useGetMyPayslip<TData = Awaited<ReturnType<typeof getMyPayslip>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPayslip>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyPayslipQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2236,6 +2470,78 @@ export const useCreateExpense = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateExpenseMutationOptions(options));
+    }
+
+export const getPatchExpenseStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/finance/expenses/${id}`
+}
+
+/**
+ * @summary Approve or reject expense (finance)
+ */
+export const patchExpenseStatus = async (id: number,
+    patchExpenseStatusBody: PatchExpenseStatusBody, options?: RequestInit): Promise<Expense> => {
+
+  return customFetch<Expense>(getPatchExpenseStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchExpenseStatusBody,)
+  }
+);}
+
+
+
+
+export const getPatchExpenseStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchExpenseStatus>>, TError,{id: number;data: BodyType<PatchExpenseStatusBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchExpenseStatus>>, TError,{id: number;data: BodyType<PatchExpenseStatusBody>}, TContext> => {
+
+const mutationKey = ['patchExpenseStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchExpenseStatus>>, {id: number;data: BodyType<PatchExpenseStatusBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchExpenseStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchExpenseStatusMutationResult = NonNullable<Awaited<ReturnType<typeof patchExpenseStatus>>>
+    export type PatchExpenseStatusMutationBody = BodyType<PatchExpenseStatusBody>
+    export type PatchExpenseStatusMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve or reject expense (finance)
+ */
+export const usePatchExpenseStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchExpenseStatus>>, TError,{id: number;data: BodyType<PatchExpenseStatusBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchExpenseStatus>>,
+        TError,
+        {id: number;data: BodyType<PatchExpenseStatusBody>},
+        TContext
+      > => {
+      return useMutation(getPatchExpenseStatusMutationOptions(options));
     }
 
 export const getListPayrollRunsUrl = () => {

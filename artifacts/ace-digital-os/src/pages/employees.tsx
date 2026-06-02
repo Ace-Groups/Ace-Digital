@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
-  useListEmployees, useCreateEmployee, useListTeams,
+  useListEmployees,
+  useCreateEmployee,
+  useListTeams,
+  useGetMyProfile,
   getListEmployeesQueryKey,
+  getGetMyProfileQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +26,18 @@ import { z } from "zod";
 import { Plus, Mail, Briefcase, Search } from "lucide-react";
 import { formatCurrency, getInitials, statusColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 
-const ROLES = ["employee", "team_lead", "finance", "hr", "management", "super_admin"];
+const ROLES = [
+  "employee",
+  "team_lead",
+  "finance",
+  "hr",
+  "management",
+  "client_manager",
+  "super_admin",
+];
 
 const createSchema = z.object({
   fullName: z.string().min(1, "Name required"),
@@ -37,8 +51,16 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function EmployeesPage() {
+  const { user } = useAuth();
+  const { can } = usePermissions();
+  const isSelfOnly = can("employees:read_self") && !can("employees:read");
   const [search, setSearch] = useState("");
-  const { data: employees, isLoading } = useListEmployees({});
+  const { data: employees, isLoading } = useListEmployees(undefined, {
+    query: { enabled: !isSelfOnly, queryKey: getListEmployeesQueryKey() },
+  });
+  const { data: meProfile, isLoading: meLoading } = useGetMyProfile({
+    query: { enabled: isSelfOnly, queryKey: getGetMyProfileQueryKey() },
+  });
   const { data: teams } = useListTeams();
   const createEmployee = useCreateEmployee();
   const queryClient = useQueryClient();
@@ -75,6 +97,33 @@ export default function EmployeesPage() {
     form.reset();
   }
 
+  if (isSelfOnly) {
+    const p = meProfile;
+    return (
+      <AppLayout title="My Profile">
+        {meLoading ? (
+          <Skeleton className="h-40 w-full max-w-lg" />
+        ) : p ? (
+          <Card className="max-w-lg">
+            <CardContent className="p-6 space-y-3">
+              <p className="text-lg font-semibold">{p.fullName}</p>
+              <p className="text-sm text-muted-foreground">{p.email}</p>
+              <p className="text-sm">{p.jobTitle ?? "—"} · {p.teamName ?? "No team"}</p>
+              <p className="text-sm capitalize">{p.role.replace("_", " ")}</p>
+              {(p.baseSalary != null || p.bonus != null) && (
+                <div className="pt-3 border-t text-sm">
+                  <p>Base: {formatCurrency(p.baseSalary ?? 0)}</p>
+                  <p>Bonus: {formatCurrency(p.bonus ?? 0)}</p>
+                  <p className="text-muted-foreground">Payroll: {p.payrollStatus ?? "—"}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout title="Employees">
       <div className="flex items-center justify-between mb-6">
@@ -89,6 +138,7 @@ export default function EmployeesPage() {
             className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-[#5483B3]/30"
           />
         </div>
+        {can("employees:write") && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="btn-add-employee" className="gap-2">
@@ -167,6 +217,7 @@ export default function EmployeesPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

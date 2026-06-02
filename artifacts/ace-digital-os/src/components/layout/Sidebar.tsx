@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
   Building2, ClipboardCheck, BarChart3, MessageSquare, Activity,
@@ -12,18 +13,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ProfileDialog, getStoredAvatar } from "@/components/ProfileDialog";
 import aceLogo from "@assets/ace_logo_1780335102216.png";
 
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: FolderKanban, label: "Projects", href: "/projects" },
-  { icon: CheckSquare, label: "Tasks", href: "/tasks" },
-  { icon: Users, label: "Employees", href: "/employees" },
-  { icon: DollarSign, label: "Finance", href: "/finance" },
-  { icon: Building2, label: "Clients", href: "/clients" },
-  { icon: ClipboardCheck, label: "Approvals", href: "/approvals" },
-  { icon: BarChart3, label: "Reports", href: "/reports" },
-  { icon: MessageSquare, label: "Channels", href: "/channels" },
-  { icon: Activity, label: "Activity", href: "/activity" },
-];
+const NAV_ICONS = {
+  dashboard: LayoutDashboard,
+  projects: FolderKanban,
+  tasks: CheckSquare,
+  employees: Users,
+  finance: DollarSign,
+  clients: Building2,
+  approvals: ClipboardCheck,
+  reports: BarChart3,
+  channels: MessageSquare,
+  activity: Activity,
+} as const;
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -34,6 +35,12 @@ export function Sidebar() {
 
   const initials = getInitials(user?.fullName ?? "?");
   const storedAvatar = getStoredAvatar();
+  const allowedRoutes = new Set(getNavRoutesForRole(user?.role ?? ""));
+  const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
+    ...n,
+    icon: NAV_ICONS[n.route],
+    label: n.route === "employees" && user?.role === "employee" ? "My Profile" : n.label,
+  }));
 
   function handleProfileClose() {
     setProfileOpen(false);
@@ -79,7 +86,7 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-          {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
+          {navItems.map(({ icon: Icon, label, href }) => {
             const active =
               location === href || (href !== "/" && location.startsWith(href));
             return (

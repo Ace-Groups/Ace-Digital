@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
+import { canAssignRole, getPermissionsForRole } from "@workspace/rbac";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
+import { getAccessContext } from "../lib/access";
+import { requirePermission } from "../lib/rbac-middleware";
 
 const router = Router();
 
@@ -70,15 +73,28 @@ router.get("/v1/auth/me", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.post("/v1/auth/register", requireAuth, async (req, res): Promise<void> => {
-  if (req.user!.role !== "super_admin") {
-    res.status(403).json({ error: "Only super_admin can register users" });
-    return;
-  }
+router.get("/v1/auth/permissions", requireAuth, async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
+  res.json({
+    role: ctx.role,
+    permissions: getPermissionsForRole(ctx.role),
+  });
+});
 
+router.post(
+  "/v1/auth/register",
+  requireAuth,
+  requirePermission("users:register"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const { email, password, fullName, role, teamId, jobTitle } = req.body;
   if (!email || !password || !fullName || !role) {
     res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  if (!canAssignRole(ctx.role, role)) {
+    res.status(403).json({ error: "Cannot assign this role" });
     return;
   }
 
@@ -112,6 +128,7 @@ router.post("/v1/auth/register", requireAuth, async (req, res): Promise<void> =>
     status: user.status,
     createdAt: user.createdAt.toISOString(),
   });
-});
+  },
+);
 
 export default router;

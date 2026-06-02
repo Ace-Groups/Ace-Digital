@@ -59,6 +59,35 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary Get current user role and permissions
+ */
+export const GetAuthPermissionsResponse = zod.object({
+  "role": zod.string(),
+  "permissions": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Get own employee profile (includes payslip fields when allowed)
+ */
+export const GetMyProfileResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "baseSalary": zod.number().nullish(),
+  "bonus": zod.number().nullish(),
+  "payrollStatus": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
  * @summary Register user (super_admin only after first)
  */
 export const RegisterBody = zod.object({
@@ -79,6 +108,10 @@ export const GetDashboardResponse = zod.object({
   "employeeCount": zod.number(),
   "monthlyRevenue": zod.number(),
   "pendingApprovalsCount": zod.number(),
+  "activeClientsCount": zod.number().optional(),
+  "contractValueTotal": zod.number().optional(),
+  "myOpenTasksCount": zod.number().optional(),
+  "widgets": zod.array(zod.string()),
   "recentActivity": zod.array(zod.object({
   "id": zod.number(),
   "actorId": zod.number().nullish(),
@@ -551,6 +584,20 @@ export const GetFinanceSummaryResponse = zod.object({
 
 
 /**
+ * @summary Get own payslip
+ */
+export const GetMyPayslipResponse = zod.object({
+  "fullName": zod.string(),
+  "baseSalary": zod.number(),
+  "bonus": zod.number(),
+  "totalPay": zod.number(),
+  "payrollStatus": zod.string(),
+  "jobTitle": zod.string().nullish(),
+  "teamName": zod.string().nullish()
+})
+
+
+/**
  * @summary List employee salaries
  */
 export const ListSalariesResponseItem = zod.object({
@@ -590,6 +637,30 @@ export const CreateExpenseBody = zod.object({
   "description": zod.string(),
   "amount": zod.number(),
   "teamId": zod.number().optional()
+})
+
+
+/**
+ * @summary Approve or reject expense (finance)
+ */
+export const PatchExpenseStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchExpenseStatusBody = zod.object({
+  "status": zod.enum(['APPROVED', 'REJECTED'])
+})
+
+export const PatchExpenseStatusResponse = zod.object({
+  "id": zod.number(),
+  "description": zod.string(),
+  "amount": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "submittedById": zod.number().nullish(),
+  "submitterName": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string().optional()
 })
 
 

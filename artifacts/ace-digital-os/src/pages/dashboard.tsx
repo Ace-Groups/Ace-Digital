@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   FolderKanban, Users, DollarSign, ClipboardCheck,
-  TrendingUp, Clock,
+  TrendingUp, Clock, Building2, CheckSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency, formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: dash, isLoading } = useGetDashboard();
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
+  const widgets = new Set(dash?.widgets ?? []);
 
   return (
     <AppLayout title="Dashboard">
@@ -50,45 +51,87 @@ export default function DashboardPage() {
         </section>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Active Projects"
-            value={dash?.activeProjectsCount ?? 0}
-            icon={FolderKanban}
-            tone="brand"
-            href="/projects"
-            isLoading={isLoading}
-            testId="stat-active-projects"
-          />
-          <StatCard
-            label="Total Employees"
-            value={dash?.employeeCount ?? 0}
-            icon={Users}
-            tone="success"
-            href="/employees"
-            isLoading={isLoading}
-            testId="stat-total-employees"
-          />
-          <StatCard
-            label="Monthly Revenue"
-            value={formatCurrency(dash?.monthlyRevenue ?? 0)}
-            icon={DollarSign}
-            tone="warning"
-            href="/finance"
-            isLoading={isLoading}
-            testId="stat-monthly-revenue"
-          />
-          <StatCard
-            label="Pending Approvals"
-            value={dash?.pendingApprovalsCount ?? 0}
-            icon={ClipboardCheck}
-            tone="danger"
-            href="/approvals"
-            isLoading={isLoading}
-            testId="stat-pending-approvals"
-          />
+          {widgets.has("activeProjects") && (
+            <StatCard
+              label="Active Projects"
+              value={dash?.activeProjectsCount ?? 0}
+              icon={FolderKanban}
+              tone="brand"
+              href="/projects"
+              isLoading={isLoading}
+              testId="stat-active-projects"
+            />
+          )}
+          {widgets.has("myOpenTasks") && (
+            <StatCard
+              label="My Open Tasks"
+              value={dash?.myOpenTasksCount ?? 0}
+              icon={CheckSquare}
+              tone="brand"
+              href="/tasks"
+              isLoading={isLoading}
+              testId="stat-my-tasks"
+            />
+          )}
+          {widgets.has("employeeCount") && (
+            <StatCard
+              label="Total Employees"
+              value={dash?.employeeCount ?? 0}
+              icon={Users}
+              tone="success"
+              href="/employees"
+              isLoading={isLoading}
+              testId="stat-total-employees"
+            />
+          )}
+          {widgets.has("activeClients") && (
+            <StatCard
+              label="Active Clients"
+              value={dash?.activeClientsCount ?? 0}
+              icon={Building2}
+              tone="success"
+              href="/clients"
+              isLoading={isLoading}
+              testId="stat-active-clients"
+            />
+          )}
+          {widgets.has("contractValue") && (
+            <StatCard
+              label="Contract Value"
+              value={formatCurrency(dash?.contractValueTotal ?? 0)}
+              icon={DollarSign}
+              tone="warning"
+              href="/clients"
+              isLoading={isLoading}
+              testId="stat-contract-value"
+            />
+          )}
+          {widgets.has("monthlyRevenue") && (
+            <StatCard
+              label="Monthly Revenue"
+              value={formatCurrency(dash?.monthlyRevenue ?? 0)}
+              icon={DollarSign}
+              tone="warning"
+              href="/finance"
+              isLoading={isLoading}
+              testId="stat-monthly-revenue"
+            />
+          )}
+          {widgets.has("pendingApprovals") && (
+            <StatCard
+              label="Pending Approvals"
+              value={dash?.pendingApprovalsCount ?? 0}
+              icon={ClipboardCheck}
+              tone="danger"
+              href="/approvals"
+              isLoading={isLoading}
+              testId="stat-pending-approvals"
+            />
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
+          {widgets.has("upcomingDeadlines") && (
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-3">
@@ -154,8 +197,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+          )}
 
-          <div>
+          {widgets.has("teamLoad") && (
+          <div className={widgets.has("upcomingDeadlines") ? "" : "lg:col-span-3"}>
             <Card className="h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -194,8 +239,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
 
+        {widgets.has("recentActivity") && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -238,6 +285,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </AppLayout>
   );

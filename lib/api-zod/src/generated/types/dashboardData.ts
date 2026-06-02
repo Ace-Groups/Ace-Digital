@@ -14,6 +14,10 @@ export interface DashboardData {
   employeeCount: number;
   monthlyRevenue: number;
   pendingApprovalsCount: number;
+  activeClientsCount?: number;
+  contractValueTotal?: number;
+  myOpenTasksCount?: number;
+  widgets: string[];
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];
   teamLoad: TeamLoad[];

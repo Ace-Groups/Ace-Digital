@@ -1,13 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
-  "references": [{ "path": "../rbac" }],
   "compilerOptions": {
     "composite": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "types": ["node"]
+    "rootDir": "src"
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }

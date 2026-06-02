@@ -4,7 +4,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { canAccessRoute } from "@workspace/rbac";
 import NotFound from "@/pages/not-found";
+import ForbiddenPage from "@/pages/forbidden";
 import LoginPage from "@/pages/login";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
@@ -23,8 +25,14 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({
+  component: Component,
+  path,
+}: {
+  component: React.ComponentType;
+  path: string;
+}) {
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
 
   if (isLoading) {
@@ -34,6 +42,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   if (!isAuthenticated) {
     setLocation("/login");
     return null;
+  }
+
+  if (user && !canAccessRoute(user.role, path)) {
+    return <ForbiddenPage />;
   }
 
   return <Component />;
@@ -50,16 +62,40 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/" component={() => <ProtectedRoute component={DashboardPage} />} />
-      <Route path="/projects" component={() => <ProtectedRoute component={ProjectsPage} />} />
-      <Route path="/tasks" component={() => <ProtectedRoute component={TasksPage} />} />
-      <Route path="/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
-      <Route path="/finance" component={() => <ProtectedRoute component={FinancePage} />} />
-      <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
-      <Route path="/approvals" component={() => <ProtectedRoute component={ApprovalsPage} />} />
-      <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
-      <Route path="/channels" component={() => <ProtectedRoute component={ChannelsPage} />} />
-      <Route path="/activity" component={() => <ProtectedRoute component={ActivityPage} />} />
+      <Route path="/" component={() => <ProtectedRoute path="/" component={DashboardPage} />} />
+      <Route
+        path="/projects"
+        component={() => <ProtectedRoute path="/projects" component={ProjectsPage} />}
+      />
+      <Route path="/tasks" component={() => <ProtectedRoute path="/tasks" component={TasksPage} />} />
+      <Route
+        path="/employees"
+        component={() => <ProtectedRoute path="/employees" component={EmployeesPage} />}
+      />
+      <Route
+        path="/finance"
+        component={() => <ProtectedRoute path="/finance" component={FinancePage} />}
+      />
+      <Route
+        path="/clients"
+        component={() => <ProtectedRoute path="/clients" component={ClientsPage} />}
+      />
+      <Route
+        path="/approvals"
+        component={() => <ProtectedRoute path="/approvals" component={ApprovalsPage} />}
+      />
+      <Route
+        path="/reports"
+        component={() => <ProtectedRoute path="/reports" component={ReportsPage} />}
+      />
+      <Route
+        path="/channels"
+        component={() => <ProtectedRoute path="/channels" component={ChannelsPage} />}
+      />
+      <Route
+        path="/activity"
+        component={() => <ProtectedRoute path="/activity" component={ActivityPage} />}
+      />
       <Route component={NotFound} />
     </Switch>
   );

@@ -120,6 +120,44 @@ Blaze means **billing is attached**, not that you pay every month. For a small i
 
 There is **no** fixed “Blaze monthly fee” — you pay for usage above free tier only.
 
+## Role-based access control (RBAC)
+
+Permissions are defined in `lib/rbac` and enforced by the API (Cloud Functions). Firestore rules remain **deny-all** for clients; the browser never reads Firestore directly.
+
+### Roles (7)
+
+| Role | Summary |
+|------|---------|
+| `super_admin` | Full access; only role that can assign `super_admin` |
+| `management` | Org operations, projects, teams, most approvals, reports |
+| `finance` | Salaries, expenses, payroll; approves `EXPENSE`, `PROJECT_BUDGET` |
+| `hr` | Employee records **without salary fields**; approves `LEAVE`, `HIRING` |
+| `client_manager` | Clients CRUD; read linked projects |
+| `team_lead` | Team-scoped projects/tasks; approves team `LEAVE` |
+| `employee` | Own tasks, profile, payslip only (no employee directory) |
+
+### Approval types (single step)
+
+| Type | Approvers |
+|------|-----------|
+| `LEAVE` | Same-team `team_lead`, `hr`, `management`, `super_admin` |
+| `EXPENSE` | `finance`, `management`, `super_admin` |
+| `PROJECT_BUDGET` | `management`, `super_admin` |
+| `HIRING` | `hr`, `management`, `super_admin` |
+| `OTHER` | `management`, `super_admin` |
+
+### Manual smoke checklist (dev)
+
+After seeding test users (`pnpm --filter @workspace/scripts run seed:rbac-dev` with Firestore or local Postgres):
+
+1. **employee** — `GET /v1/employees` → 403; `GET /v1/me` → 200; dashboard has no revenue/headcount widgets.
+2. **team_lead** — cannot approve `EXPENSE`; can approve team `LEAVE`.
+3. **finance** — cannot approve `LEAVE`; can approve `EXPENSE`.
+4. **hr** — employee list has no `baseSalary` / `bonus` fields.
+5. **client_manager** — Clients write OK; no Tasks nav.
+
+Unit tests: `pnpm --filter @workspace/rbac run test`.
+
 ## GitHub
 
 Push application code to your org remote, then connect Firebase Hosting to GitHub for CI if desired (optional).

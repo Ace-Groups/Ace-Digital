@@ -2,6 +2,7 @@ import { Router } from "express";
 import { store } from "@workspace/db";
 import type { Client } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
+import { requirePermission } from "../lib/rbac-middleware";
 
 const router = Router();
 
@@ -22,12 +23,12 @@ async function clientWithRelations(c: Client) {
   };
 }
 
-router.get("/v1/clients", requireAuth, async (_req, res): Promise<void> => {
+router.get("/v1/clients", requireAuth, requirePermission("clients:read"), async (_req, res): Promise<void> => {
   const clients = await store.listClients();
   res.json(await Promise.all(clients.map(clientWithRelations)));
 });
 
-router.post("/v1/clients", requireAuth, async (req, res): Promise<void> => {
+router.post("/v1/clients", requireAuth, requirePermission("clients:write"), async (req, res): Promise<void> => {
   const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
     req.body;
   if (!contactName || !companyName || !email) {
@@ -47,7 +48,7 @@ router.post("/v1/clients", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(await clientWithRelations(client));
 });
 
-router.get("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/v1/clients/:id", requireAuth, requirePermission("clients:read"), async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const client = await store.findClientById(id);
   if (!client) {
@@ -57,7 +58,7 @@ router.get("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(await clientWithRelations(client));
 });
 
-router.patch("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/v1/clients/:id", requireAuth, requirePermission("clients:write"), async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
     req.body;
@@ -78,7 +79,7 @@ router.patch("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => 
   res.json(await clientWithRelations(client));
 });
 
-router.delete("/v1/clients/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/v1/clients/:id", requireAuth, requirePermission("clients:delete"), async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   await store.deleteClient(id);
   res.sendStatus(204);

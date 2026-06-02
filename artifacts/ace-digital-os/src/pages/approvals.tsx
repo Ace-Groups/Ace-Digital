@@ -22,7 +22,7 @@ import { z } from "zod";
 import { Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { statusColor, cn, formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const TYPES = ["LEAVE", "EXPENSE", "HIRING", "PROJECT_BUDGET", "OTHER"];
 
@@ -44,9 +44,8 @@ export default function ApprovalsPage() {
   const rejectApproval = useRejectApproval();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { canApprove } = usePermissions();
   const [open, setOpen] = useState(false);
-  const canReview = ["super_admin", "management", "finance"].includes(user?.role ?? "");
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
@@ -192,7 +191,14 @@ export default function ApprovalsPage() {
                   <Badge variant="outline" className={cn("text-xs", statusColor(a.status ?? ""))}>
                     {a.status}
                   </Badge>
-                  {canReview && a.status === "PENDING" && (
+                  {a.requestedById != null &&
+                  canApprove({
+                    type: a.type,
+                    requestedById: a.requestedById,
+                    teamId: a.teamId ?? null,
+                    status: a.status ?? "PENDING",
+                  }) &&
+                  a.status === "PENDING" && (
                     <div className="flex gap-1">
                       <button
                         data-testid={`btn-approve-${a.id}`}

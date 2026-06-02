@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
 import type { Project } from "@workspace/db";
+import { canWriteProject } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
+import { getAccessContext } from "../lib/access";
+import { requirePermission } from "../lib/rbac-middleware";
 
 const router = Router();
 
@@ -26,17 +29,33 @@ async function projectWithRelations(p: Project) {
   };
 }
 
-router.get("/v1/projects", requireAuth, async (req, res): Promise<void> => {
+router.get(
+  "/v1/projects",
+  requireAuth,
+  requirePermission("projects:read"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const { status, teamId } = req.query;
-  const projects = await store.listProjects({
+  const projects = await store.listProjectsForAccess(ctx, {
     status: status as string | undefined,
     teamId: teamId ? Number(teamId) : undefined,
   });
   res.json(await Promise.all(projects.map(projectWithRelations)));
-});
+  },
+);
 
-router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
+router.post(
+  "/v1/projects",
+  requireAuth,
+  requirePermission("projects:write"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const { name, description, teamId, priority, status, deadline, budget, clientId } = req.body;
+  const effectiveTeamId = teamId ?? ctx.teamId;
+  if (!canWriteProject(ctx, effectiveTeamId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   if (!name) {
     res.status(400).json({ error: "Name is required" });
     return;
@@ -79,20 +98,46 @@ router.post("/v1/projects", requireAuth, async (req, res): Promise<void> => {
   });
 
   res.status(201).json(await projectWithRelations(project));
-});
+  },
+);
 
-router.get("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
+router.get(
+  "/v1/projects/:id",
+  requireAuth,
+  requirePermission("projects:read"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const project = await store.findProjectById(id);
   if (!project) {
     res.status(404).json({ error: "Project not found" });
     return;
   }
+  const allowed = await store.listProjectsForAccess(ctx, {});
+  if (!allowed.some((p) => p.id === id)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   res.json(await projectWithRelations(project));
-});
+  },
+);
 
-router.patch("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch(
+  "/v1/projects/:id",
+  requireAuth,
+  requirePermission("projects:write"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const existing = await store.findProjectById(id);
+  if (!existing) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  if (!canWriteProject(ctx, existing.teamId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const { name, description, teamId, priority, status, progress, deadline, budget, clientId } = req.body;
   const project = await store.updateProject(id, {
     ...(name !== undefined && { name }),
@@ -110,16 +155,36 @@ router.patch("/v1/projects/:id", requireAuth, async (req, res): Promise<void> =>
     return;
   }
   res.json(await projectWithRelations(project));
-});
+  },
+);
 
-router.delete("/v1/projects/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete(
+  "/v1/projects/:id",
+  requireAuth,
+  requirePermission("projects:delete"),
+  async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   await store.deleteProject(id);
   res.sendStatus(204);
-});
+  },
+);
 
-router.patch("/v1/projects/:id/status", requireAuth, async (req, res): Promise<void> => {
+router.patch(
+  "/v1/projects/:id/status",
+  requireAuth,
+  requirePermission("projects:write"),
+  async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const existing = await store.findProjectById(id);
+  if (!existing) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  if (!canWriteProject(ctx, existing.teamId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const { status } = req.body;
   if (!status) {
     res.status(400).json({ error: "Status is required" });
@@ -138,6 +203,7 @@ router.patch("/v1/projects/:id/status", requireAuth, async (req, res): Promise<v
     metadata: { status },
   });
   res.json(await projectWithRelations(project));
-});
+  },
+);
 
 export default router;

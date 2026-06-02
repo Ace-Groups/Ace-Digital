@@ -292,6 +292,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/rbac':
+        specifier: workspace:*
+        version: link:../../lib/rbac
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -376,6 +379,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/rbac':
+        specifier: workspace:*
+        version: link:../../lib/rbac
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.3
@@ -394,6 +400,9 @@ importers:
       express-rate-limit:
         specifier: ^8.5.2
         version: 8.5.2(express@5.2.1)
+      firebase-admin:
+        specifier: ^13.6.0
+        version: 13.10.0
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -638,6 +647,9 @@ importers:
 
   lib/db:
     dependencies:
+      '@workspace/rbac':
+        specifier: workspace:*
+        version: link:../rbac
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(pg@8.20.0)
@@ -663,6 +675,15 @@ importers:
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
+
+  lib/rbac:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.2
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   scripts:
     dependencies:

@@ -32,6 +32,8 @@ export type {
   PayrollRun,
 };
 
+export type { AccessContext } from "./scoping";
+
 export type ActivityLogWithActor = ActivityLog & { actorName: string | null };
 export type MessageWithSender = Message & { senderName: string | null };
 export type SalaryRow = {
@@ -52,6 +54,11 @@ export type DashboardSnapshot = {
   recentActivity: ActivityLogWithActor[];
   upcomingDeadlines: Project[];
   teamLoad: { teamId: number; teamName: string; activeProjects: number; members: number }[];
+  /** Role-tailored optional metrics */
+  activeClientsCount?: number;
+  contractValueTotal?: number;
+  myOpenTasksCount?: number;
+  widgets: string[];
 };
 
 export type CreateUserInput = {
