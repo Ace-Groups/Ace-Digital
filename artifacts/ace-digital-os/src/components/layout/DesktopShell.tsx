@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -48,6 +49,7 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
             />
           </div>
           <ThemeToggle />
+          <HeaderRefreshButton variant="desktop" />
           <button
             type="button"
             data-testid="btn-notifications"

@@ -187,8 +187,13 @@ export default function EmployeesPage() {
             ? "Password reset; email not sent (set RESEND_API_KEY on the API function)."
             : "Share the new password with the employee securely.",
       });
-    } catch {
-      toast({ title: "Could not reset password", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Could not reset password",
+        description:
+          err instanceof Error ? err.message : "Something went wrong. Try again.",
+        variant: "destructive",
+      });
     }
   }
 
@@ -246,7 +251,7 @@ export default function EmployeesPage() {
                 employee={emp}
                 canEdit={canWrite}
                 canDelete={canRemove && emp.id !== user?.id}
-                canResetPassword={canResetPassword}
+                canResetPassword={canResetPassword && emp.id !== user?.id}
                 canViewSalaries={canViewSalaries}
                 onEdit={() => {
                   setEditing(emp);

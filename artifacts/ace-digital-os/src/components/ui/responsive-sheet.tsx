@@ -3,12 +3,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -18,6 +20,8 @@ interface ResponsiveSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  /** Accessible description (visually hidden when omitted from visible copy). */
+  description?: string;
   children: ReactNode;
   className?: string;
 }
@@ -26,6 +30,7 @@ export function ResponsiveSheet({
   open,
   onOpenChange,
   title,
+  description,
   children,
   className,
 }: ResponsiveSheetProps) {
@@ -37,6 +42,11 @@ export function ResponsiveSheet({
         <DrawerContent className={cn("max-h-[92dvh]", className)}>
           <DrawerHeader className="text-left">
             <DrawerTitle>{title}</DrawerTitle>
+            {description ? (
+              <DrawerDescription>{description}</DrawerDescription>
+            ) : (
+              <DrawerDescription className="sr-only">{title}</DrawerDescription>
+            )}
           </DrawerHeader>
           <div className="mobile-form touch-scroll overflow-y-auto overscroll-contain px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             {children}
@@ -51,6 +61,11 @@ export function ResponsiveSheet({
       <DialogContent className={cn("max-h-[min(92dvh,720px)] max-w-md overflow-y-auto", className)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">{title}</DialogDescription>
+          )}
         </DialogHeader>
         <div className="mobile-form">{children}</div>
       </DialogContent>

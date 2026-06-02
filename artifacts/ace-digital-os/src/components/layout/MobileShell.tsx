@@ -22,6 +22,7 @@ import { getListNotificationsQueryKey, useListNotifications } from "@workspace/a
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
 import { getMobileNavItems } from "@/lib/mobile-nav";
 import type { NavRoute } from "@workspace/rbac";
 import {
@@ -78,7 +79,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
-      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-3 border-b border-border/80 bg-card/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
+      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-card/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-4">
         <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
@@ -89,6 +90,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
           )}
         </div>
         <ThemeToggle className="h-11 w-11" />
+        <HeaderRefreshButton variant="mobile" />
         <button
           type="button"
           onClick={() => setLocation("/notifications")}

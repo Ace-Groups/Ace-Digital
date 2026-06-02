@@ -58,6 +58,7 @@ export function EmployeePasswordResetSheet({
       open={open}
       onOpenChange={handleOpenChange}
       title={employee ? `Reset password — ${employee.fullName}` : "Reset password"}
+      description="Reset an employee's password and optionally email them new credentials."
     >
       <form onSubmit={handleSubmit} className="mobile-form space-y-5">
         <p className="text-sm text-muted-foreground">
