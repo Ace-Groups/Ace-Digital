@@ -14,7 +14,6 @@ import {
   Loader2,
   Lock,
   Mail,
-  Sparkles,
   Shield,
   ShieldCheck,
   Clock3,
@@ -24,6 +23,7 @@ import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -58,8 +58,10 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const reducedMotion = useReducedMotion();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -90,9 +92,8 @@ export default function LoginPage() {
         {/* Brand — immersive hero panel */}
         <div className="hidden flex-1 flex-col items-center justify-center px-6 lg:flex lg:py-0 lg:pl-12 lg:pr-6 xl:pl-16">
           <div className="flex w-full max-w-2xl flex-col items-center justify-center text-center">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-[hsl(203_100%_87%/0.95)]">
-              <Sparkles className="size-3.5" aria-hidden />
-              Ace Digital Control Hub
+            <div className="mb-10 inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/[0.06] px-6 py-2.5 text-base font-semibold tracking-wide text-[hsl(203_100%_90%)] shadow-[0_0_28px_hsl(203_100%_87%/0.18)]">
+              Ace Digital
             </div>
             <div className="relative flex w-full items-center justify-center">
               <div
@@ -104,42 +105,53 @@ export default function LoginPage() {
                 aria-hidden
               />
               <AceLogoParticles
-                className="relative h-[min(460px,54vh)] w-full max-w-[600px] lg:max-w-[680px]"
-                size={500}
+                className="relative h-[min(520px,60vh)] w-full max-w-[680px] lg:max-w-[760px]"
+                size={560}
                 widthScale={1.38}
-                particleSize={2.75}
+                particleSize={2.9}
                 sampleStep={2}
                 quality="high"
               />
             </div>
             <div className="mt-8 max-w-[36rem] space-y-4 text-left">
-              <h1 className="text-3xl font-semibold tracking-tight text-white">
-                Operations, projects, and approvals in one secure workspace.
+              <h1 className="text-4xl font-semibold tracking-tight text-white">
+                Inspiring Youth
+                <br />
+                Empovering Nation
               </h1>
               <p className="text-sm leading-6 text-white/60">
-                Built for teams that move fast and need clean visibility across work, finance, and decisions.
+                A secure workspace for Ace Digital teams.
               </p>
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wider text-white/45">Latency</p>
-                  <p className="mt-1 text-sm font-semibold text-white">~120ms</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wider text-white/45">Availability</p>
-                  <p className="mt-1 text-sm font-semibold text-white">99.9%</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wider text-white/45">Scope</p>
-                  <p className="mt-1 text-sm font-semibold text-white">Company-wide</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Sign-in card */}
         <div className="flex min-h-dvh flex-1 shrink-0 items-center justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] lg:min-h-0 lg:w-[min(100%,480px)] lg:p-10 lg:pl-4 xl:w-[520px]">
-          <div className="w-full max-w-[420px] rounded-2xl border border-white/[0.1] bg-[hsl(218_40%_12%/0.55)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl sm:p-10">
+          <div
+            className="w-full max-w-[420px] rounded-2xl border border-white/[0.1] bg-[hsl(218_40%_12%/0.55)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl transition-transform duration-200 will-change-transform sm:p-10"
+            style={
+              reducedMotion
+                ? undefined
+                : {
+                    transform:
+                      "perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(0)",
+                    ["--rx" as never]: `${tilt.rx}deg`,
+                    ["--ry" as never]: `${tilt.ry}deg`,
+                  }
+            }
+            onMouseMove={(e) => {
+              if (reducedMotion) return;
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+              const px = (e.clientX - rect.left) / rect.width;
+              const py = (e.clientY - rect.top) / rect.height;
+              const max = 3.5;
+              const ry = (px - 0.5) * max * 2;
+              const rx = (0.5 - py) * max * 2;
+              setTilt({ rx, ry });
+            }}
+            onMouseLeave={() => setTilt({ rx: 0, ry: 0 })}
+          >
             <div className="mb-8 flex justify-center lg:hidden">
               <AceLogoParticles
                 className="h-[150px] w-[240px]"
@@ -256,7 +268,7 @@ export default function LoginPage() {
                   className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[hsl(211_42%_46%)] via-[hsl(211_45%_54%)] to-[hsl(203_70%_58%)] text-base font-semibold text-white shadow-[0_4px_28px_hsl(211_38%_52%/0.45)] transition-all hover:shadow-[0_8px_36px_hsl(211_38%_52%/0.55)] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:h-11 sm:text-sm"
                 >
                   <span
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                    className="pointer-events-none absolute -inset-y-2 left-[-40%] w-[70%] rotate-12 bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-0 blur-[0.5px] transition-opacity duration-200 group-hover:opacity-100 motion-safe:group-hover:animate-[shimmer_1.1s_ease-in-out_infinite]"
                     aria-hidden
                   />
                   {loading ? (
@@ -279,6 +291,14 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* local keyframes for shimmer */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-30%) rotate(12deg); }
+          100% { transform: translateX(220%) rotate(12deg); }
+        }
+      `}</style>
     </div>
   );
 }
