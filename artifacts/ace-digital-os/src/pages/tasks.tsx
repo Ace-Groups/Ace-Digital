@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -217,7 +218,7 @@ export default function TasksPage() {
           )} />
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <FormLabel className="text-sm">Assignees</FormLabel>
+              <Label className="text-sm">Assignees</Label>
               <button
                 type="button"
                 className="text-xs text-primary hover:underline"
