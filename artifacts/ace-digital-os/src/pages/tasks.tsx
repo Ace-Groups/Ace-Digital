@@ -325,6 +325,7 @@ export default function TasksPage() {
       </StaggerItem>
       <StaggerItem>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Filter size={14} className="shrink-0 text-muted-foreground" />
           <div className="flex gap-1">
@@ -346,6 +347,8 @@ export default function TasksPage() {
             ))}
           </div>
         </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <div className="flex items-center gap-1 overflow-x-auto pb-1">
           {OWNERSHIP_FILTERS.map((s) => (
             <button
@@ -364,9 +367,17 @@ export default function TasksPage() {
             </button>
           ))}
         </div>
+        <Button
+          data-testid="btn-create-task"
+          className="hidden shrink-0 gap-2 sm:inline-flex"
+          onClick={() => setOpen(true)}
+        >
+          <Plus size={16} /> New Task
+        </Button>
         <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
           {createForm}
         </ResponsiveSheet>
+        </div>
       </div>
       </StaggerItem>
 
