@@ -334,11 +334,20 @@ export const ListTasksResponseItem = zod.object({
   "projectName": zod.string().nullish(),
   "assigneeId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "assigneeIds": zod.array(zod.number()).optional(),
+  "assignees": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "completed": zod.boolean()
+})).optional(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "priority": zod.string(),
   "dueDate": zod.string().nullish(),
   "status": zod.string(),
+  "progress": zod.number(),
+  "createdById": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListTasksResponse = zod.array(ListTasksResponseItem)
@@ -354,6 +363,7 @@ export const CreateTaskBody = zod.object({
   "title": zod.string().min(1),
   "projectId": zod.number().optional(),
   "assigneeId": zod.number().optional(),
+  "assigneeIds": zod.array(zod.number()).optional(),
   "teamId": zod.number().optional(),
   "priority": zod.string().optional(),
   "dueDate": zod.string().optional(),
@@ -375,11 +385,20 @@ export const GetTaskResponse = zod.object({
   "projectName": zod.string().nullish(),
   "assigneeId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "assigneeIds": zod.array(zod.number()).optional(),
+  "assignees": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "completed": zod.boolean()
+})).optional(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "priority": zod.string(),
   "dueDate": zod.string().nullish(),
   "status": zod.string(),
+  "progress": zod.number(),
+  "createdById": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -395,6 +414,7 @@ export const UpdateTaskBody = zod.object({
   "title": zod.string().optional(),
   "projectId": zod.number().optional(),
   "assigneeId": zod.number().optional(),
+  "assigneeIds": zod.array(zod.number()).optional(),
   "teamId": zod.number().optional(),
   "priority": zod.string().optional(),
   "dueDate": zod.string().optional(),
@@ -408,11 +428,20 @@ export const UpdateTaskResponse = zod.object({
   "projectName": zod.string().nullish(),
   "assigneeId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "assigneeIds": zod.array(zod.number()).optional(),
+  "assignees": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "completed": zod.boolean()
+})).optional(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "priority": zod.string(),
   "dueDate": zod.string().nullish(),
   "status": zod.string(),
+  "progress": zod.number(),
+  "createdById": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -439,11 +468,20 @@ export const ToggleTaskResponse = zod.object({
   "projectName": zod.string().nullish(),
   "assigneeId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "assigneeIds": zod.array(zod.number()).optional(),
+  "assignees": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "completed": zod.boolean()
+})).optional(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "priority": zod.string(),
   "dueDate": zod.string().nullish(),
   "status": zod.string(),
+  "progress": zod.number(),
+  "createdById": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 

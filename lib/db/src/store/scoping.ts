@@ -18,19 +18,23 @@ export function scopeProjectList(ctx: AccessContext, projects: Project[]): Proje
   return projects;
 }
 
+function taskAssigneeIds(task: Task): number[] {
+  const fromJson = task.assigneeIds;
+  if (Array.isArray(fromJson) && fromJson.length > 0) return fromJson;
+  if (task.assigneeId != null) return [task.assigneeId];
+  return [];
+}
+
+/** Creator, any assignee, or org-wide admin (super_admin / management). */
+export function canSeeTask(ctx: AccessContext, task: Task): boolean {
+  if (canAccessOrgData(ctx)) return true;
+  if (task.createdById === ctx.userId) return true;
+  return taskAssigneeIds(task).includes(ctx.userId);
+}
+
 export function scopeTaskList(ctx: AccessContext, tasks: Task[]): Task[] {
-  if (canAccessOrgData(ctx) || ctx.role === "management") return tasks;
-  if (ctx.role === "finance" || ctx.role === "hr" || ctx.role === "client_manager") return tasks;
-  if (ctx.role === "team_lead") {
-    if (ctx.teamId == null) return [];
-    return tasks.filter((t) => t.teamId === ctx.teamId);
-  }
-  if (ctx.role === "employee") {
-    return tasks.filter(
-      (t) => t.assigneeId === ctx.userId || (ctx.teamId != null && t.teamId === ctx.teamId),
-    );
-  }
-  return tasks;
+  if (canAccessOrgData(ctx)) return tasks;
+  return tasks.filter((t) => canSeeTask(ctx, t));
 }
 
 export function filterApprovalsScoped(ctx: AccessContext, approvals: Approval[]): Approval[] {

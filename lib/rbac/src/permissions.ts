@@ -206,24 +206,63 @@ export function canWriteProject(ctx: AccessContext, projectTeamId: number | null
   return false;
 }
 
-export function canMutateTask(
+export function taskAssigneeIds(task: {
+  assigneeId: number | null;
+  assigneeIds?: number[] | null;
+}): number[] {
+  const ids = task.assigneeIds;
+  if (Array.isArray(ids) && ids.length > 0) return ids;
+  if (task.assigneeId != null) return [task.assigneeId];
+  return [];
+}
+
+/** Edit title, assignees, project, etc. — task creator or org-wide admin. */
+export function canEditTask(
   ctx: AccessContext,
-  task: { assigneeId: number | null; teamId: number | null },
+  task: { createdById: number | null; assigneeId: number | null; teamId: number | null },
 ): boolean {
   if (!hasPermission(ctx, "tasks:write")) return false;
-  if (isOrgWideRole(ctx.role) || ctx.role === "management" || ctx.role === "team_lead") {
-    if (ctx.role === "team_lead") return isSameTeam(ctx, task.teamId);
-    return true;
-  }
-  if (ctx.role === "employee") return task.assigneeId === ctx.userId;
-  return false;
+  if (isOrgWideRole(ctx.role)) return true;
+  return task.createdById === ctx.userId;
 }
 
 export function canDeleteTask(
   ctx: AccessContext,
-  task: { assigneeId: number | null; teamId: number | null },
+  task: { createdById: number | null; assigneeId: number | null; teamId: number | null },
 ): boolean {
   if (!hasPermission(ctx, "tasks:delete")) return false;
-  if (ctx.role === "employee") return false;
-  return canMutateTask(ctx, task);
+  if (isOrgWideRole(ctx.role)) return true;
+  return task.createdById === ctx.userId;
+}
+
+/** Mark own slice complete — assignees only; common tasks: creator only. */
+export function canToggleTaskCompletion(
+  ctx: AccessContext,
+  task: {
+    createdById: number | null;
+    assigneeId: number | null;
+    assigneeIds?: number[] | null;
+  },
+): boolean {
+  if (!hasPermission(ctx, "tasks:write")) return false;
+  const ids = taskAssigneeIds(task);
+  if (ids.length === 0) return task.createdById === ctx.userId;
+  return ids.includes(ctx.userId);
+}
+
+/** @deprecated Use canEditTask / canToggleTaskCompletion */
+export function canMutateTask(
+  ctx: AccessContext,
+  task: {
+    createdById?: number | null;
+    assigneeId: number | null;
+    teamId: number | null;
+    assigneeIds?: number[] | null;
+  },
+): boolean {
+  return canEditTask(ctx, {
+    createdById: task.createdById ?? null,
+    assigneeId: task.assigneeId,
+    teamId: task.teamId,
+  });
 }

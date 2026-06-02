@@ -10,6 +10,7 @@ export interface TaskUpdate {
   title?: string;
   projectId?: number;
   assigneeId?: number;
+  assigneeIds?: number[];
   teamId?: number;
   priority?: string;
   dueDate?: string;

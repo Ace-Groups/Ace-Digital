@@ -3,6 +3,7 @@ export * from "./users";
 export * from "./employee_profiles";
 export * from "./projects";
 export * from "./tasks";
+export * from "./task-assignees";
 export * from "./clients";
 export * from "./approvals";
 export * from "./expenses";

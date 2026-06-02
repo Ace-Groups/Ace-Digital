@@ -6,6 +6,7 @@ import {
   employeeProfilesTable,
   projectsTable,
   tasksTable,
+  taskAssigneesTable,
   clientsTable,
   approvalsTable,
   activityLogsTable,
@@ -50,6 +51,12 @@ import type {
   ChannelMemberRole,
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
+import {
+  buildInitialCompletions,
+  computeTaskProgress,
+  deriveTaskStatus,
+  normalizeAssigneeIds,
+} from "../tasks-logic";
 import {
   filterApprovalsScoped,
   scopeProjectList,
@@ -155,12 +162,17 @@ export function createPostgresStore() {
       const conditions = [];
       if (filters?.projectId != null) conditions.push(eq(tasksTable.projectId, filters.projectId));
       if (filters?.teamId != null) conditions.push(eq(tasksTable.teamId, filters.teamId));
-      if (filters?.assigneeId != null) conditions.push(eq(tasksTable.assigneeId, filters.assigneeId));
       if (filters?.status) conditions.push(eq(tasksTable.status, filters.status));
       const q = db.select().from(tasksTable);
-      return conditions.length
-        ? q.where(and(...conditions)).orderBy(sql`${tasksTable.createdAt} DESC`)
-        : q.orderBy(sql`${tasksTable.createdAt} DESC`);
+      let rows = conditions.length
+        ? await q.where(and(...conditions)).orderBy(sql`${tasksTable.createdAt} DESC`)
+        : await q.orderBy(sql`${tasksTable.createdAt} DESC`);
+      if (filters?.assigneeId != null) {
+        rows = rows.filter((t) =>
+          normalizeAssigneeIds(t.assigneeIds, t.assigneeId).includes(filters.assigneeId!),
+        );
+      }
+      return rows;
     },
     findTaskById: async (id: number) => {
       const [t] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
@@ -178,7 +190,78 @@ export function createPostgresStore() {
       return t ?? null;
     },
     deleteTask: async (id: number) => {
+      await db.delete(taskAssigneesTable).where(eq(taskAssigneesTable.taskId, id));
       await db.delete(tasksTable).where(eq(tasksTable.id, id));
+    },
+    toggleTaskAssigneeCompletion: async (taskId: number, userId: number) => {
+      const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId));
+      if (!task) return null;
+      const assigneeIds = normalizeAssigneeIds(task.assigneeIds, task.assigneeId);
+      const completions = { ...(task.assigneeCompletions ?? {}) };
+      if (assigneeIds.length === 0) {
+        const progress = (task.progress ?? 0) >= 100 ? 0 : 100;
+        const status = deriveTaskStatus(progress, assigneeIds, task.status);
+        const [t] = await db
+          .update(tasksTable)
+          .set({ progress, status })
+          .where(eq(tasksTable.id, taskId))
+          .returning();
+        return t ?? null;
+      }
+      if (!assigneeIds.includes(userId)) return null;
+      const key = String(userId);
+      completions[key] = !completions[key];
+      const progress = computeTaskProgress(assigneeIds, completions);
+      const status = deriveTaskStatus(progress, assigneeIds, task.status);
+      const [t] = await db
+        .update(tasksTable)
+        .set({ assigneeCompletions: completions, progress, status })
+        .where(eq(tasksTable.id, taskId))
+        .returning();
+      if (t) {
+        await db.delete(taskAssigneesTable).where(
+          and(eq(taskAssigneesTable.taskId, taskId), eq(taskAssigneesTable.userId, userId)),
+        );
+        await db.insert(taskAssigneesTable).values({
+          taskId,
+          userId,
+          completedAt: completions[key] ? new Date() : null,
+        });
+      }
+      return t ?? null;
+    },
+    replaceTaskAssignees: async (taskId: number, assigneeIds: number[], keepCompletions = false) => {
+      const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId));
+      if (!task) return null;
+      const ids = [...new Set(assigneeIds.filter((id) => Number.isFinite(id)))];
+      const completions = buildInitialCompletions(
+        ids,
+        keepCompletions ? (task.assigneeCompletions ?? {}) : undefined,
+      );
+      const progress = computeTaskProgress(ids, completions);
+      const status = deriveTaskStatus(progress, ids, task.status);
+      await db.delete(taskAssigneesTable).where(eq(taskAssigneesTable.taskId, taskId));
+      if (ids.length) {
+        await db.insert(taskAssigneesTable).values(
+          ids.map((userId) => ({
+            taskId,
+            userId,
+            completedAt: completions[String(userId)] ? new Date() : null,
+          })),
+        );
+      }
+      const [t] = await db
+        .update(tasksTable)
+        .set({
+          assigneeIds: ids,
+          assigneeId: ids[0] ?? null,
+          assigneeCompletions: completions,
+          progress,
+          status,
+        })
+        .where(eq(tasksTable.id, taskId))
+        .returning();
+      return t ?? null;
     },
     listProjects: async (filters?: { status?: string; teamId?: number }) => {
       const conditions = [];
@@ -221,7 +304,6 @@ export function createPostgresStore() {
       const conditions = [];
       if (filters?.projectId != null) conditions.push(eq(tasksTable.projectId, filters.projectId));
       if (filters?.teamId != null) conditions.push(eq(tasksTable.teamId, filters.teamId));
-      if (filters?.assigneeId != null) conditions.push(eq(tasksTable.assigneeId, filters.assigneeId));
       if (filters?.status) conditions.push(eq(tasksTable.status, filters.status));
       const q = db.select().from(tasksTable);
       const base = conditions.length

@@ -33,6 +33,12 @@ import type {
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
 import {
+  buildInitialCompletions,
+  computeTaskProgress,
+  deriveTaskStatus,
+  normalizeAssigneeIds,
+} from "../tasks-logic";
+import {
   filterApprovalsScoped,
   scopeProjectList,
   scopeTaskList,
@@ -46,6 +52,7 @@ const COL = {
   clients: "clients",
   projects: "projects",
   tasks: "tasks",
+  taskAssignees: "task_assignees",
   approvals: "approvals",
   expenses: "expenses",
   payrollRuns: "payroll_runs",
@@ -231,7 +238,9 @@ export function createFirestoreStore() {
       let q: FirebaseFirestore.Query = db.collection(COL.tasks);
       if (filters?.projectId != null) q = q.where("projectId", "==", filters.projectId);
       if (filters?.teamId != null) q = q.where("teamId", "==", filters.teamId);
-      if (filters?.assigneeId != null) q = q.where("assigneeId", "==", filters.assigneeId);
+      if (filters?.assigneeId != null) {
+        q = q.where("assigneeIds", "array-contains", filters.assigneeId);
+      }
       if (filters?.status) q = q.where("status", "==", filters.status);
       const snap = await q.get();
       const items = snap.docs.map((d) => mapTask(d.data(), d.id));
@@ -278,7 +287,69 @@ export function createFirestoreStore() {
     },
 
     async deleteTask(id: number): Promise<void> {
-      await db.collection(COL.tasks).doc(docId(id)).delete();
+      const batch = db.batch();
+      const assigneeSnap = await db.collection(COL.taskAssignees).where("taskId", "==", id).get();
+      assigneeSnap.docs.forEach((d) => batch.delete(d.ref));
+      batch.delete(db.collection(COL.tasks).doc(docId(id)));
+      await batch.commit();
+    },
+
+    async toggleTaskAssigneeCompletion(taskId: number, userId: number): Promise<Task | null> {
+      const task = await this.findTaskById(taskId);
+      if (!task) return null;
+      const assigneeIds = normalizeAssigneeIds(task.assigneeIds, task.assigneeId);
+      const completions = { ...(task.assigneeCompletions ?? {}) };
+      if (assigneeIds.length === 0) {
+        const progress = task.progress >= 100 ? 0 : 100;
+        const status = deriveTaskStatus(progress, assigneeIds, task.status);
+        return this.updateTask(taskId, { progress, status });
+      }
+      if (!assigneeIds.includes(userId)) return null;
+      const key = String(userId);
+      completions[key] = !completions[key];
+      const progress = computeTaskProgress(assigneeIds, completions);
+      const status = deriveTaskStatus(progress, assigneeIds, task.status);
+      return this.updateTask(taskId, {
+        assigneeCompletions: completions,
+        progress,
+        status,
+      });
+    },
+
+    async replaceTaskAssignees(
+      taskId: number,
+      assigneeIds: number[],
+      keepCompletions = false,
+    ): Promise<Task | null> {
+      const task = await this.findTaskById(taskId);
+      if (!task) return null;
+      const ids = [...new Set(assigneeIds.filter((id) => Number.isFinite(id)))];
+      const completions = buildInitialCompletions(
+        ids,
+        keepCompletions ? (task.assigneeCompletions ?? {}) : undefined,
+      );
+      const progress = computeTaskProgress(ids, completions);
+      const status = deriveTaskStatus(progress, ids, task.status);
+      const db = fs();
+      const batch = db.batch();
+      const existing = await db.collection(COL.taskAssignees).where("taskId", "==", taskId).get();
+      existing.docs.forEach((d) => batch.delete(d.ref));
+      for (const userId of ids) {
+        const ref = db.collection(COL.taskAssignees).doc(`${taskId}_${userId}`);
+        batch.set(ref, {
+          taskId,
+          userId,
+          completedAt: completions[String(userId)] ? new Date().toISOString() : null,
+        });
+      }
+      await batch.commit();
+      return this.updateTask(taskId, {
+        assigneeIds: ids,
+        assigneeId: ids[0] ?? null,
+        assigneeCompletions: completions,
+        progress,
+        status,
+      });
     },
 
     async listProjects(filters?: { status?: string; teamId?: number }): Promise<Project[]> {
@@ -796,15 +867,23 @@ function serializeProject(p: Partial<Project>): Record<string, unknown> {
 }
 
 function mapTask(data: FirebaseFirestore.DocumentData, id: string): Task {
+  const assigneeIds = Array.isArray(data.assigneeIds)
+    ? (data.assigneeIds as number[])
+    : data.assigneeId != null
+      ? [data.assigneeId as number]
+      : [];
   return {
     id: Number(id),
     title: data.title as string,
     projectId: (data.projectId as number) ?? null,
-    assigneeId: (data.assigneeId as number) ?? null,
+    assigneeId: (data.assigneeId as number) ?? assigneeIds[0] ?? null,
+    assigneeIds,
     teamId: (data.teamId as number) ?? null,
     priority: data.priority as string,
     dueDate: data.dueDate ? toDate(data.dueDate) : null,
     status: data.status as string,
+    progress: typeof data.progress === "number" ? data.progress : 0,
+    assigneeCompletions: (data.assigneeCompletions as Record<string, boolean>) ?? {},
     createdById: (data.createdById as number) ?? null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { projectsTable } from "./projects";
@@ -14,6 +14,10 @@ export const tasksTable = pgTable("tasks", {
   priority: text("priority").notNull().default("MEDIUM"),
   dueDate: timestamp("due_date", { withTimezone: true }),
   status: text("status").notNull().default("PENDING"),
+  progress: integer("progress").notNull().default(0),
+  /** Denormalized for Firestore listing; source of truth is task_assignees when using Postgres. */
+  assigneeIds: jsonb("assignee_ids").$type<number[]>().default([]),
+  assigneeCompletions: jsonb("assignee_completions").$type<Record<string, boolean>>().default({}),
   createdById: integer("created_by_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

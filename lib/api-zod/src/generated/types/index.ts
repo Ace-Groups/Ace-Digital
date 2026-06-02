@@ -55,6 +55,7 @@ export * from './report';
 export * from './reportInput';
 export * from './salaryRecord';
 export * from './task';
+export * from './taskAssignee';
 export * from './taskInput';
 export * from './taskUpdate';
 export * from './team';

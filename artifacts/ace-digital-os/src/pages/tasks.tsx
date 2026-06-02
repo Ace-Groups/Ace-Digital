@@ -5,11 +5,18 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
-  useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams, useUpdateTask,
+  useListTasks,
+  useCreateTask,
+  useToggleTask,
+  useListProjects,
+  useListEmployees,
+  useListTeams,
+  useUpdateTask,
+  useDeleteTask,
   getListTasksQueryKey,
   type Task,
 } from "@workspace/api-client-react";
-import { canMutateTask } from "@workspace/rbac";
+import { canDeleteTask, canEditTask, canToggleTaskCompletion } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2, Pencil } from "lucide-react";
+import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2, Pencil, Trash2 } from "lucide-react";
 import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -96,6 +103,7 @@ export default function TasksPage() {
   const { data: teams } = useListTeams();
   const toggleTask = useToggleTask();
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
   const createTask = useCreateTask();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -134,12 +142,39 @@ export default function TasksPage() {
     [user],
   );
 
-  function canEditTask(task: Task) {
-    if (!accessCtx || !canWriteTasks) return false;
-    return canMutateTask(accessCtx, {
+  function canManageTask(task: Task) {
+    if (!accessCtx) return false;
+    return canEditTask(accessCtx, {
+      createdById: task.createdById ?? null,
       assigneeId: task.assigneeId ?? null,
       teamId: task.teamId ?? null,
     });
+  }
+
+  function canCompleteTask(task: Task) {
+    if (!accessCtx) return false;
+    return canToggleTaskCompletion(accessCtx, {
+      createdById: task.createdById ?? null,
+      assigneeId: task.assigneeId ?? null,
+      assigneeIds: task.assigneeIds,
+    });
+  }
+
+  function canRemoveTask(task: Task) {
+    if (!accessCtx) return false;
+    return canDeleteTask(accessCtx, {
+      createdById: task.createdById ?? null,
+      assigneeId: task.assigneeId ?? null,
+      teamId: task.teamId ?? null,
+    });
+  }
+
+  function isMyPartDone(task: Task) {
+    if (!user) return task.status === "DONE";
+    const mine = task.assignees?.find((a) => a.userId === user.id);
+    if (mine) return mine.completed;
+    if ((task.assignees?.length ?? 0) === 0) return task.status === "DONE";
+    return false;
   }
 
   const activeProjects = useMemo(() => {
@@ -201,58 +236,55 @@ export default function TasksPage() {
     const assigneeIds = selectedAssigneeIds;
     const projectId = resolveProjectId(data.projectId);
 
-    if (assigneeIds.length === 0) {
-      await createTask.mutateAsync({
-        data: {
-          title: data.title,
-          projectId,
-          assigneeId: undefined,
-          teamId,
-          priority: data.priority,
-          dueDate: data.dueDate || undefined,
-          status: data.status,
-        },
-      });
-    } else {
-      for (const assigneeId of assigneeIds) {
-        await createTask.mutateAsync({
-          data: {
-            title: data.title,
-            projectId,
-            assigneeId,
-            teamId,
-            priority: data.priority,
-            dueDate: data.dueDate || undefined,
-            status: data.status,
-          },
-        });
-      }
-    }
+    await createTask.mutateAsync({
+      data: {
+        title: data.title,
+        projectId,
+        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+        teamId,
+        priority: data.priority,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+      },
+    });
 
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
     toast({
-      title: assigneeIds.length > 1 ? "Tasks created!" : "Task created!",
+      title: "Task created",
       description:
         assigneeIds.length > 1
-          ? `${assigneeIds.length} tasks were assigned successfully.`
+          ? `One shared task for ${assigneeIds.length} people.`
           : assigneeIds.length === 1
-            ? "Task assigned successfully."
-            : "Common task created without assignee.",
+            ? "Task assigned."
+            : "Common task created.",
     });
     setOpen(false);
     resetCreateForm();
   }
 
   async function handleToggle(task: Task, checked: boolean) {
-    if (!canEditTask(task)) {
-      toast({ title: "You can't update this task", variant: "destructive" });
+    if (!canCompleteTask(task)) {
+      toast({ title: "Only assignees can mark their part done", variant: "destructive" });
       return;
     }
     const queryKey = getListTasksQueryKey(taskParams);
     const previous = queryClient.getQueryData<Task[]>(queryKey);
-    const nextStatus = checked ? "DONE" : "PENDING";
     queryClient.setQueryData<Task[]>(queryKey, (old) =>
-      old?.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
+      old?.map((t) => {
+        if (t.id !== task.id || !user) return t;
+        const assignees = (t.assignees ?? []).map((a) =>
+          a.userId === user.id ? { ...a, completed: checked } : a,
+        );
+        const done = assignees.filter((a) => a.completed).length;
+        const total = assignees.length || 1;
+        const progress = assignees.length ? Math.round((done / total) * 100) : checked ? 100 : 0;
+        return {
+          ...t,
+          assignees,
+          progress,
+          status: progress >= 100 ? "DONE" : progress > 0 ? "IN_PROGRESS" : "PENDING",
+        };
+      }),
     );
     try {
       await toggleTask.mutateAsync({ id: task.id });
@@ -263,12 +295,25 @@ export default function TasksPage() {
     }
   }
 
+  async function handleDeleteTask(task: Task) {
+    if (!canRemoveTask(task)) return;
+    if (!window.confirm(`Delete "${task.title}"?`)) return;
+    try {
+      await deleteTask.mutateAsync({ id: task.id });
+      queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+      toast({ title: "Task deleted" });
+    } catch {
+      toast({ title: "Couldn't delete task", variant: "destructive" });
+    }
+  }
+
   function openEditTask(task: Task) {
     setEditingTask(task);
+    const primaryAssignee = task.assigneeIds?.[0] ?? task.assigneeId;
     editForm.reset({
       title: task.title,
       projectId: task.projectId ? String(task.projectId) : NO_PROJECT_VALUE,
-      assigneeId: task.assigneeId ? String(task.assigneeId) : COMMON_TASK_VALUE,
+      assigneeId: primaryAssignee ? String(primaryAssignee) : COMMON_TASK_VALUE,
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
       status: task.status,
@@ -278,17 +323,19 @@ export default function TasksPage() {
 
   async function onEditSubmit(data: EditForm) {
     if (!editingTask) return;
+    const assigneeIds =
+      data.assigneeId === COMMON_TASK_VALUE ? [] : [Number(data.assigneeId)];
     try {
       await updateTask.mutateAsync({
         id: editingTask.id,
         data: {
           title: data.title,
           projectId: resolveProjectId(data.projectId),
-          assigneeId: data.assigneeId === COMMON_TASK_VALUE ? null : Number(data.assigneeId),
+          assigneeIds,
           priority: data.priority,
           dueDate: data.dueDate || undefined,
           status: data.status,
-        } as never,
+        },
       });
       queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
       toast({ title: "Task updated" });
@@ -300,7 +347,7 @@ export default function TasksPage() {
   }
 
   async function handleAssignTask(task: Task, assigneeIdValue: string) {
-    if (!canEditTask(task)) return;
+    if (!canManageTask(task)) return;
     await updateTask.mutateAsync({
       id: task.id,
       data: {
@@ -312,7 +359,7 @@ export default function TasksPage() {
   }
 
   async function handleProjectTask(task: Task, projectIdValue: string) {
-    if (!canEditTask(task)) return;
+    if (!canManageTask(task)) return;
     await updateTask.mutateAsync({
       id: task.id,
       data: {
@@ -326,16 +373,24 @@ export default function TasksPage() {
   const visibleTasks = useMemo(() => {
     const source = tasks ?? [];
     if (!user) return source;
-    if (ownershipFilter === "mine") return source.filter((t) => t.assigneeId === user.id);
-    if (ownershipFilter === "common") return source.filter((t) => t.assigneeId == null);
+    if (ownershipFilter === "mine") {
+      return source.filter((t) => t.assigneeIds?.includes(user.id) || t.assigneeId === user.id);
+    }
+    if (ownershipFilter === "common") {
+      return source.filter((t) => (t.assigneeIds?.length ?? 0) === 0 && t.assigneeId == null);
+    }
     return source;
   }, [tasks, ownershipFilter, user]);
 
   const stats = useMemo(() => {
     const source = visibleTasks;
     const done = source.filter((t) => t.status === "DONE").length;
-    const mine = user ? source.filter((t) => t.assigneeId === user.id).length : 0;
-    const common = source.filter((t) => t.assigneeId == null).length;
+    const mine = user
+      ? source.filter((t) => t.assigneeIds?.includes(user.id) || t.assigneeId === user.id).length
+      : 0;
+    const common = source.filter(
+      (t) => (t.assigneeIds?.length ?? 0) === 0 && t.assigneeId == null,
+    ).length;
     return { total: source.length, done, mine, common };
   }, [visibleTasks, user]);
 
@@ -438,7 +493,7 @@ export default function TasksPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Leave empty to create a common task. Select multiple users to assign one task to each.
+              One shared task for all selected people. Each person marks their part done.
             </p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -697,8 +752,8 @@ export default function TasksPage() {
                 >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
-                    checked={task.status === "DONE"}
-                    disabled={!canEditTask(task) || toggleTask.isPending}
+                    checked={isMyPartDone(task)}
+                    disabled={!canCompleteTask(task) || toggleTask.isPending}
                     onCheckedChange={(checked) => {
                       if (checked === "indeterminate") return;
                       void handleToggle(task, checked === true);
@@ -706,20 +761,28 @@ export default function TasksPage() {
                     className="size-5 shrink-0 border-border sm:size-4"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-medium", task.status === "DONE" && "line-through text-muted-foreground")}>
+                    <p className={cn("text-sm font-medium", task.progress >= 100 && "line-through text-muted-foreground")}>
                       {task.title}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
                       {task.projectName && (
                         <span className="text-xs text-muted-foreground">{task.projectName}</span>
                       )}
                       {task.teamName && (
                         <span className="text-xs text-muted-foreground">• {task.teamName}</span>
                       )}
+                      {(task.assignees?.length ?? 0) > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          • {task.assignees!.map((a) => a.fullName.split(" ")[0]).join(", ")}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                    {canEditTask(task) && (
+                    <Badge variant="outline" className="text-xs tabular-nums">
+                      {task.progress}%
+                    </Badge>
+                    {canManageTask(task) && (
                       <>
                         <Button
                           type="button"
@@ -732,6 +795,19 @@ export default function TasksPage() {
                         >
                           <Pencil size={16} />
                         </Button>
+                        {canRemoveTask(task) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 text-destructive sm:h-8 sm:w-8"
+                            data-testid={`task-delete-${task.id}`}
+                            onClick={() => void handleDeleteTask(task)}
+                            aria-label="Delete task"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
                         <Select
                           value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
                           onValueChange={(value) => void handleProjectTask(task, value)}

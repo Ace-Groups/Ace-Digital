@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
 import type { Task } from "@workspace/db";
-import { canDeleteTask, canMutateTask } from "@workspace/rbac";
+import {
+  canDeleteTask,
+  canEditTask,
+  canToggleTaskCompletion,
+} from "@workspace/rbac";
+import { canSeeTask, normalizeAssigneeIds } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
@@ -9,21 +14,39 @@ import { requirePermission } from "../lib/rbac-middleware";
 const router = Router();
 
 async function taskWithRelations(t: Task) {
-  const assignee = t.assigneeId ? await store.findUserById(t.assigneeId) : null;
+  const ids = normalizeAssigneeIds(t.assigneeIds, t.assigneeId);
+  const completions = t.assigneeCompletions ?? {};
+  const assignees = await Promise.all(
+    ids.map(async (userId) => {
+      const u = await store.findUserById(userId);
+      return {
+        userId,
+        fullName: u?.fullName ?? "Unknown",
+        completed: completions[String(userId)] === true,
+      };
+    }),
+  );
+  const creator = t.createdById ? await store.findUserById(t.createdById) : null;
   const team = t.teamId ? await store.findTeamById(t.teamId) : null;
   const project = t.projectId ? await store.findProjectById(t.projectId) : null;
+  const legacyAssignee = t.assigneeId ? await store.findUserById(t.assigneeId) : null;
   return {
     id: t.id,
     title: t.title,
     projectId: t.projectId,
     projectName: project?.name ?? null,
     assigneeId: t.assigneeId,
-    assigneeName: assignee?.fullName ?? null,
+    assigneeName: legacyAssignee?.fullName ?? assignees[0]?.fullName ?? null,
+    assigneeIds: ids,
+    assignees,
     teamId: t.teamId,
     teamName: team?.name ?? null,
     priority: t.priority,
     dueDate: t.dueDate?.toISOString() ?? null,
     status: t.status,
+    progress: t.progress ?? 0,
+    createdById: t.createdById,
+    createdByName: creator?.fullName ?? null,
     createdAt: t.createdAt.toISOString(),
   };
 }
@@ -31,9 +54,7 @@ async function taskWithRelations(t: Task) {
 async function assertTaskAccess(ctx: ReturnType<typeof getAccessContext>, taskId: number) {
   const task = await store.findTaskById(taskId);
   if (!task) return { task: null as Task | null, allowed: false };
-  const list = await store.listTasksForAccess(ctx, {});
-  const allowed = list.some((t) => t.id === taskId);
-  return { task, allowed };
+  return { task, allowed: canSeeTask(ctx, task) };
 }
 
 router.get(
@@ -59,27 +80,34 @@ router.post(
   requirePermission("tasks:write"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
-    const { title, projectId, assigneeId, teamId, priority, dueDate, status } = req.body;
+    const { title, projectId, assigneeId, assigneeIds, teamId, priority, dueDate, status } =
+      req.body;
     if (!title) {
       res.status(400).json({ error: "Title is required" });
       return;
     }
+    const ids = normalizeAssigneeIds(
+      Array.isArray(assigneeIds) ? assigneeIds : undefined,
+      assigneeId ?? null,
+    );
     const effectiveTeamId = teamId ?? ctx.teamId;
-    if (!canMutateTask(ctx, { assigneeId: assigneeId ?? ctx.userId, teamId: effectiveTeamId })) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
     const task = await store.createTask({
       title,
       projectId: projectId ?? null,
-      assigneeId: assigneeId ?? null,
+      assigneeId: ids[0] ?? null,
+      assigneeIds: ids,
+      assigneeCompletions: {},
+      progress: 0,
       teamId: effectiveTeamId ?? null,
       priority: priority ?? "MEDIUM",
       dueDate: dueDate ? new Date(dueDate) : null,
       status: status ?? "PENDING",
-      createdById: req.user!.userId,
+      createdById: ctx.userId,
     });
-    res.status(201).json(await taskWithRelations(task));
+    const withAssignees = ids.length
+      ? await store.replaceTaskAssignees(task.id, ids)
+      : task;
+    res.status(201).json(await taskWithRelations(withAssignees ?? task));
   },
 );
 
@@ -115,20 +143,27 @@ router.patch(
       res.status(404).json({ error: "Task not found" });
       return;
     }
-    if (!canMutateTask(ctx, existing)) {
+    if (!canEditTask(ctx, existing)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const { title, projectId, assigneeId, teamId, priority, dueDate, status } = req.body;
-    const task = await store.updateTask(id, {
+    const { title, projectId, assigneeId, assigneeIds, teamId, priority, dueDate, status } =
+      req.body;
+    let task = await store.updateTask(id, {
       ...(title !== undefined && { title }),
       ...(projectId !== undefined && { projectId }),
-      ...(assigneeId !== undefined && { assigneeId }),
       ...(teamId !== undefined && { teamId }),
       ...(priority !== undefined && { priority }),
       ...(dueDate !== undefined && { dueDate: new Date(dueDate) }),
       ...(status !== undefined && { status }),
     });
+    if (assigneeIds !== undefined || assigneeId !== undefined) {
+      const ids = normalizeAssigneeIds(
+        Array.isArray(assigneeIds) ? assigneeIds : undefined,
+        assigneeId ?? null,
+      );
+      task = await store.replaceTaskAssignees(id, ids, true);
+    }
     if (!task) {
       res.status(404).json({ error: "Task not found" });
       return;
@@ -170,12 +205,15 @@ router.patch(
       res.status(404).json({ error: "Task not found" });
       return;
     }
-    if (!canMutateTask(ctx, task)) {
+    if (!canSeeTask(ctx, task)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const newStatus = task.status === "DONE" ? "PENDING" : "DONE";
-    const updated = await store.updateTask(id, { status: newStatus });
+    if (!canToggleTaskCompletion(ctx, task)) {
+      res.status(403).json({ error: "Only assignees can update their completion" });
+      return;
+    }
+    const updated = await store.toggleTaskAssigneeCompletion(id, ctx.userId);
     if (!updated) {
       res.status(404).json({ error: "Task not found" });
       return;
@@ -183,11 +221,14 @@ router.patch(
 
     if (task.projectId) {
       const allTasks = await store.listTasksByProjectId(task.projectId);
-      const doneCount = allTasks.filter((t) =>
-        t.id === id ? newStatus === "DONE" : t.status === "DONE",
-      ).length;
-      const progress = allTasks.length > 0 ? Math.round((doneCount / allTasks.length) * 100) : 0;
-      await store.updateProject(task.projectId, { progress });
+      const avgProgress =
+        allTasks.length > 0
+          ? Math.round(
+              allTasks.reduce((sum, t) => sum + (t.id === id ? updated.progress : t.progress), 0) /
+                allTasks.length,
+            )
+          : 0;
+      await store.updateProject(task.projectId, { progress: avgProgress });
     }
 
     res.json(await taskWithRelations(updated));

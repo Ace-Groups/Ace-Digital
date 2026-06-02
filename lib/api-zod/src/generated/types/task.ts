@@ -5,6 +5,7 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskAssignee } from './taskAssignee';
 
 export interface Task {
   id: number;
@@ -17,6 +18,8 @@ export interface Task {
   assigneeId?: number | null;
   /** @nullable */
   assigneeName?: string | null;
+  assigneeIds?: number[];
+  assignees?: TaskAssignee[];
   /** @nullable */
   teamId?: number | null;
   /** @nullable */
@@ -25,5 +28,10 @@ export interface Task {
   /** @nullable */
   dueDate?: string | null;
   status: string;
+  progress: number;
+  /** @nullable */
+  createdById?: number | null;
+  /** @nullable */
+  createdByName?: string | null;
   createdAt?: string;
 }

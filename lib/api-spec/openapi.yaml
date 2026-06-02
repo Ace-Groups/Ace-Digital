@@ -1425,9 +1425,20 @@ components:
           type: string
 
     # TASKS
+    TaskAssignee:
+      type: object
+      required: [userId, fullName, completed]
+      properties:
+        userId:
+          type: integer
+        fullName:
+          type: string
+        completed:
+          type: boolean
+
     Task:
       type: object
-      required: [id, title, status, priority]
+      required: [id, title, status, priority, progress]
       properties:
         id:
           type: integer
@@ -1441,6 +1452,14 @@ components:
           type: ["integer", "null"]
         assigneeName:
           type: ["string", "null"]
+        assigneeIds:
+          type: array
+          items:
+            type: integer
+        assignees:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskAssignee"
         teamId:
           type: ["integer", "null"]
         teamName:
@@ -1451,6 +1470,12 @@ components:
           type: ["string", "null"]
         status:
           type: string
+        progress:
+          type: integer
+        createdById:
+          type: ["integer", "null"]
+        createdByName:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1465,6 +1490,10 @@ components:
           type: integer
         assigneeId:
           type: integer
+        assigneeIds:
+          type: array
+          items:
+            type: integer
         teamId:
           type: integer
         priority:
@@ -1483,6 +1512,10 @@ components:
           type: integer
         assigneeId:
           type: integer
+        assigneeIds:
+          type: array
+          items:
+            type: integer
         teamId:
           type: integer
         priority:

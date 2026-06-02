@@ -157,6 +157,12 @@ export interface ProjectStatusUpdate {
   status: string;
 }
 
+export interface TaskAssignee {
+  userId: number;
+  fullName: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -168,6 +174,8 @@ export interface Task {
   assigneeId?: number | null;
   /** @nullable */
   assigneeName?: string | null;
+  assigneeIds?: number[];
+  assignees?: TaskAssignee[];
   /** @nullable */
   teamId?: number | null;
   /** @nullable */
@@ -176,6 +184,11 @@ export interface Task {
   /** @nullable */
   dueDate?: string | null;
   status: string;
+  progress: number;
+  /** @nullable */
+  createdById?: number | null;
+  /** @nullable */
+  createdByName?: string | null;
   createdAt?: string;
 }
 
@@ -184,6 +197,7 @@ export interface TaskInput {
   title: string;
   projectId?: number;
   assigneeId?: number;
+  assigneeIds?: number[];
   teamId?: number;
   priority?: string;
   dueDate?: string;
@@ -194,6 +208,7 @@ export interface TaskUpdate {
   title?: string;
   projectId?: number;
   assigneeId?: number;
+  assigneeIds?: number[];
   teamId?: number;
   priority?: string;
   dueDate?: string;
