@@ -45,7 +45,7 @@ export function MobileLoginScreen({
   const passwordRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-background brand-gradient-subtle">
+    <div className="relative flex min-h-dvh w-full flex-col bg-background text-foreground brand-gradient-subtle">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/10 to-transparent"
         aria-hidden
@@ -59,7 +59,7 @@ export function MobileLoginScreen({
           </p>
         </div>
 
-        <section className="rounded-2xl border border-border/80 bg-card/95 p-6 shadow-brand-sm backdrop-blur-sm">
+        <section className="rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-brand-sm">
           <div className="mb-6 flex size-11 items-center justify-center rounded-xl border border-border/80 bg-primary/10">
             <Shield className="size-5 text-primary" strokeWidth={1.75} aria-hidden />
           </div>
