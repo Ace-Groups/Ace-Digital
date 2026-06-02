@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useListTasks,
   useCreateTask,
@@ -110,6 +111,7 @@ export default function TasksPage() {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
@@ -295,13 +297,18 @@ export default function TasksPage() {
     }
   }
 
-  async function handleDeleteTask(task: Task) {
+  function requestDeleteTask(task: Task) {
     if (!canRemoveTask(task)) return;
-    if (!window.confirm(`Delete "${task.title}"?`)) return;
+    setTaskToDelete(task);
+  }
+
+  async function confirmDeleteTask() {
+    if (!taskToDelete) return;
     try {
-      await deleteTask.mutateAsync({ id: task.id });
+      await deleteTask.mutateAsync({ id: taskToDelete.id });
       queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
       toast({ title: "Task deleted" });
+      setTaskToDelete(null);
     } catch {
       toast({ title: "Couldn't delete task", variant: "destructive" });
     }
@@ -802,7 +809,7 @@ export default function TasksPage() {
                             size="icon"
                             className="h-10 w-10 shrink-0 text-destructive sm:h-8 sm:w-8"
                             data-testid={`task-delete-${task.id}`}
-                            onClick={() => void handleDeleteTask(task)}
+                            onClick={() => requestDeleteTask(task)}
                             aria-label="Delete task"
                           >
                             <Trash2 size={16} />
@@ -893,6 +900,24 @@ export default function TasksPage() {
       </StaggerItem>
       )}
       </StaggerList>
+
+      <ConfirmDialog
+        open={taskToDelete !== null}
+        onOpenChange={(open) => !open && setTaskToDelete(null)}
+        title="Delete task?"
+        description={
+          taskToDelete ? (
+            <>
+              This permanently removes <strong>{taskToDelete.title}</strong>. This cannot be undone.
+            </>
+          ) : undefined
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        loading={deleteTask.isPending}
+        onConfirm={confirmDeleteTask}
+      />
     </AppLayout>
   );
 }

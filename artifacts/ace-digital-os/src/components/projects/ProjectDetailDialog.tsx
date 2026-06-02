@@ -15,16 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -505,27 +496,22 @@ export function ProjectDetailDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete project?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes <strong>{project.name}</strong>
-              {totalTasks > 0 && ` and unlinks ${totalTasks} task(s)`}. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDelete}
-              disabled={deleteProject.isPending}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete project?"
+        description={
+          <>
+            This permanently removes <strong>{project.name}</strong>
+            {totalTasks > 0 && ` and unlinks ${totalTasks} task(s)`}. This cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        loading={deleteProject.isPending}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }
