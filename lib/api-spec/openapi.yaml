@@ -463,6 +463,55 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Team"
+    post:
+      operationId: createTeam
+      tags: [teams]
+      summary: Create a team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInput"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  /v1/job-titles:
+    get:
+      operationId: listJobTitles
+      tags: [employees]
+      summary: List job title presets
+      responses:
+        "200":
+          description: Job titles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+    post:
+      operationId: createJobTitle
+      tags: [employees]
+      summary: Add a job title preset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobTitleInput"
+      responses:
+        "201":
+          description: Job title saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobTitleInput"
 
   /v1/teams/{id}/members:
     get:
@@ -526,6 +575,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EmployeeCreateResponse"
+
+  /v1/employees/next-employee-code:
+    get:
+      operationId: getNextEmployeeCode
+      tags: [employees]
+      summary: Preview next auto-generated employee ID
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Next employee code preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextEmployeeCode"
 
   /v1/employees/{id}:
     get:
@@ -1611,6 +1679,33 @@ components:
         color:
           type: ["string", "null"]
         memberCount:
+          type: integer
+
+    TeamInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+
+    JobTitleInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    NextEmployeeCode:
+      type: object
+      required: [employeeCode, year, sequence]
+      properties:
+        employeeCode:
+          type: string
+        year:
+          type: integer
+        sequence:
           type: integer
 
     # EMPLOYEES

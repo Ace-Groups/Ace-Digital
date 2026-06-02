@@ -127,3 +127,12 @@ export type ChannelMemberWithUser = ChannelMember & {
   avatarUrl: string | null;
   email: string;
 };
+
+export type CreateTeamInput = {
+  name: string;
+  color?: string | null;
+};
+
+export type CreateJobTitleInput = {
+  name: string;
+};

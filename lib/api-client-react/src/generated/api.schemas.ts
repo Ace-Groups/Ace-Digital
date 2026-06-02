@@ -236,6 +236,21 @@ export interface Team {
   memberCount?: number;
 }
 
+export interface TeamInput {
+  name: string;
+  color?: string;
+}
+
+export interface JobTitleInput {
+  name: string;
+}
+
+export interface NextEmployeeCode {
+  employeeCode: string;
+  year: number;
+  sequence: number;
+}
+
 export interface Employee {
   id: number;
   fullName: string;
@@ -623,6 +638,10 @@ status?: string;
 export type ListEmployeesParams = {
 teamId?: number;
 status?: string;
+};
+
+export type GetNextEmployeeCodeParams = {
+startDate?: string;
 };
 
 export type PatchExpenseStatusBodyStatus = typeof PatchExpenseStatusBodyStatus[keyof typeof PatchExpenseStatusBodyStatus];

@@ -31,7 +31,7 @@ export default defineConfig({
       ],
       manifest: false,
       workbox: {
-        cacheId: "ace-digital-os-v12",
+        cacheId: "ace-digital-os-v13",
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

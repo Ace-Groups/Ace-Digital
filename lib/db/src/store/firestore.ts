@@ -64,7 +64,10 @@ const COL = {
   messages: "messages",
   activityLogs: "activity_logs",
   notifications: "notifications",
+  jobTitles: "job_titles",
 } as const;
+
+const EMPLOYEE_CODE_SEQ_KEY = "employeeCodeSeq";
 
 function app(): App {
   if (!getApps().length) initializeApp();
@@ -95,6 +98,24 @@ async function nextId(collection: string): Promise<number> {
     const data = snap.data() ?? {};
     const next = ((data[collection] as number) ?? 0) + 1;
     tx.set(ref, { [collection]: next }, { merge: true });
+    return next;
+  });
+}
+
+async function readEmployeeCodeSeq(): Promise<number> {
+  const ref = fs().collection(COL.meta).doc("counters");
+  const snap = await ref.get();
+  const data = snap.data() ?? {};
+  return (data[EMPLOYEE_CODE_SEQ_KEY] as number) ?? 0;
+}
+
+async function bumpEmployeeCodeSeq(): Promise<number> {
+  const ref = fs().collection(COL.meta).doc("counters");
+  return fs().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data() ?? {};
+    const next = ((data[EMPLOYEE_CODE_SEQ_KEY] as number) ?? 0) + 1;
+    tx.set(ref, { [EMPLOYEE_CODE_SEQ_KEY]: next }, { merge: true });
     return next;
   });
 }
@@ -140,7 +161,9 @@ export function createFirestoreStore() {
         teamId: data.teamId ?? null,
         jobTitle: data.jobTitle ?? null,
         phone: data.phone ?? null,
-        employeeCode: data.employeeCode ?? null,
+        employeeCode: data.employeeCode
+          ? String(data.employeeCode).trim().toUpperCase()
+          : null,
         startDate: data.startDate ? data.startDate.toISOString() : null,
         mustChangePassword: data.mustChangePassword ?? true,
         avatarUrl: null,
@@ -233,6 +256,83 @@ export function createFirestoreStore() {
       const snap = await db.collection(COL.teams).doc(docId(id)).get();
       if (!snap.exists) return null;
       return mapTeam(snap.data()!, snap.id);
+    },
+
+    async createTeam(data: { name: string; color?: string | null }): Promise<Team> {
+      const normalized = data.name.trim();
+      const existing = await db
+        .collection(COL.teams)
+        .where("name", "==", normalized)
+        .limit(1)
+        .get();
+      if (!existing.empty) {
+        const doc = existing.docs[0]!;
+        return mapTeam(doc.data(), doc.id);
+      }
+      const id = await nextId(COL.teams);
+      const now = new Date();
+      const row = {
+        name: normalized,
+        color: data.color ?? null,
+        createdAt: now.toISOString(),
+      };
+      await db.collection(COL.teams).doc(docId(id)).set(row);
+      return mapTeam(row, String(id));
+    },
+
+    async peekEmployeeCodeSequence(): Promise<number> {
+      return (await readEmployeeCodeSeq()) + 1;
+    },
+
+    async allocateEmployeeCodeSequence(): Promise<number> {
+      return bumpEmployeeCodeSeq();
+    },
+
+    async isEmployeeCodeTaken(code: string, excludeUserId?: number): Promise<boolean> {
+      const normalized = code.trim().toUpperCase();
+      const snap = await db
+        .collection(COL.users)
+        .where("employeeCode", "==", normalized)
+        .limit(2)
+        .get();
+      for (const doc of snap.docs) {
+        const uid = Number(doc.id);
+        if (excludeUserId != null && uid === excludeUserId) continue;
+        return true;
+      }
+      return false;
+    },
+
+    async listJobTitlePresets(): Promise<string[]> {
+      const snap = await db.collection(COL.jobTitles).get();
+      const fromCatalog = snap.docs.map((d) => String(d.data().name ?? "")).filter(Boolean);
+      const users = await db.collection(COL.users).get();
+      const fromUsers = users.docs
+        .map((d) => (d.data().jobTitle as string) ?? "")
+        .filter(Boolean);
+      const set = new Set<string>();
+      for (const n of [...fromCatalog, ...fromUsers]) {
+        set.add(n.trim());
+      }
+      return [...set].sort((a, b) => a.localeCompare(b));
+    },
+
+    async createJobTitle(name: string): Promise<string> {
+      const normalized = name.trim();
+      if (!normalized) return normalized;
+      const existing = await db
+        .collection(COL.jobTitles)
+        .where("name", "==", normalized)
+        .limit(1)
+        .get();
+      if (!existing.empty) return normalized;
+      const id = await nextId(COL.jobTitles);
+      const now = new Date();
+      await db
+        .collection(COL.jobTitles)
+        .doc(docId(id))
+        .set({ name: normalized, createdAt: now.toISOString() });
+      return normalized;
     },
 
     async listTasks(filters?: {

@@ -547,6 +547,30 @@ export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
 
 
 /**
+ * @summary Create a team
+ */
+export const CreateTeamBody = zod.object({
+  "name": zod.string(),
+  "color": zod.string().optional()
+})
+
+
+/**
+ * @summary List job title presets
+ */
+export const ListJobTitlesResponseItem = zod.string()
+export const ListJobTitlesResponse = zod.array(ListJobTitlesResponseItem)
+
+
+/**
+ * @summary Add a job title preset
+ */
+export const CreateJobTitleBody = zod.object({
+  "name": zod.string()
+})
+
+
+/**
  * @summary Get team members
  */
 export const GetTeamMembersParams = zod.object({
@@ -623,6 +647,20 @@ export const CreateEmployeeBody = zod.object({
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
   "sendWelcomeEmail": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Preview next auto-generated employee ID
+ */
+export const GetNextEmployeeCodeQueryParams = zod.object({
+  "startDate": zod.date().optional()
+})
+
+export const GetNextEmployeeCodeResponse = zod.object({
+  "employeeCode": zod.string(),
+  "year": zod.number(),
+  "sequence": zod.number()
 })
 
 

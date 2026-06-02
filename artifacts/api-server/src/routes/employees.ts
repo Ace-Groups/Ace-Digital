@@ -7,6 +7,11 @@ import { requirePermission } from "../lib/rbac-middleware";
 import { employeeWithProfile } from "../lib/employee-serializer";
 import { generateTemporaryPassword } from "../lib/password";
 import { sendCredentialsEmail } from "../lib/email";
+import {
+  allocateEmployeeCode,
+  peekNextEmployeeCode,
+  validateEmployeeCode,
+} from "../lib/employee-code";
 
 const router = Router();
 
@@ -29,6 +34,29 @@ router.get(
       status: status as string | undefined,
     });
     res.json(await Promise.all(users.map((u) => employeeWithProfile(u, ctx))));
+  },
+);
+
+router.get(
+  "/v1/employees/next-employee-code",
+  requireAuth,
+  requirePermission("employees:write"),
+  async (req, res): Promise<void> => {
+    const startDateRaw = req.query.startDate;
+    const parsedStart =
+      startDateRaw !== undefined && startDateRaw !== ""
+        ? parseStartDate(startDateRaw)
+        : undefined;
+    if (
+      startDateRaw !== undefined &&
+      startDateRaw !== "" &&
+      parsedStart === undefined
+    ) {
+      res.status(400).json({ error: "Invalid start date" });
+      return;
+    }
+    const preview = await peekNextEmployeeCode(parsedStart ?? null);
+    res.json(preview);
   },
 );
 
@@ -85,6 +113,18 @@ router.post(
       return;
     }
 
+    let resolvedCode: string;
+    if (typeof employeeCode === "string" && employeeCode.trim()) {
+      const check = await validateEmployeeCode(employeeCode);
+      if (!check.ok) {
+        res.status(check.status).json({ error: check.error });
+        return;
+      }
+      resolvedCode = employeeCode.trim().toUpperCase();
+    } else {
+      resolvedCode = await allocateEmployeeCode(parsedStart ?? null);
+    }
+
     const passwordHash = await hashPassword(plainPassword);
     const user = await store.createUser({
       email,
@@ -94,7 +134,7 @@ router.post(
       teamId: teamId ?? null,
       jobTitle: jobTitle ?? null,
       phone: phone ?? null,
-      employeeCode: employeeCode ?? null,
+      employeeCode: resolvedCode,
       startDate: parsedStart ?? null,
       mustChangePassword: true,
     });
@@ -176,6 +216,31 @@ router.patch(
       return;
     }
 
+    const existingUser = await store.findUserById(id);
+    if (!existingUser) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    if (email !== undefined) {
+      const normalizedEmail = email.toLowerCase();
+      if (normalizedEmail !== existingUser.email) {
+        const dup = await store.findUserByEmail(normalizedEmail);
+        if (dup && dup.id !== id) {
+          res.status(409).json({ error: "Email already in use" });
+          return;
+        }
+      }
+    }
+
+    if (employeeCode !== undefined && employeeCode !== null && employeeCode !== "") {
+      const check = await validateEmployeeCode(employeeCode, id);
+      if (!check.ok) {
+        res.status(check.status).json({ error: check.error });
+        return;
+      }
+    }
+
     const user = await store.updateUser(id, {
       ...(fullName !== undefined && { fullName }),
       ...(email !== undefined && { email: email.toLowerCase() }),
@@ -183,7 +248,9 @@ router.patch(
       ...(teamId !== undefined && { teamId }),
       ...(jobTitle !== undefined && { jobTitle }),
       ...(phone !== undefined && { phone: phone || null }),
-      ...(employeeCode !== undefined && { employeeCode: employeeCode || null }),
+      ...(employeeCode !== undefined && {
+        employeeCode: employeeCode ? String(employeeCode).trim().toUpperCase() : null,
+      }),
       ...(parsedStart !== undefined && { startDate: parsedStart }),
       ...(status !== undefined && { status }),
     });

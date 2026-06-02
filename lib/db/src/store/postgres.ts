@@ -3,6 +3,8 @@ import { getPgDb } from "../pg";
 import {
   usersTable,
   teamsTable,
+  jobTitlesTable,
+  appMetaTable,
   employeeProfilesTable,
   projectsTable,
   tasksTable,
@@ -164,6 +166,72 @@ export function createPostgresStore() {
     findTeamById: async (id: number) => {
       const [t] = await db.select().from(teamsTable).where(eq(teamsTable.id, id));
       return t ?? null;
+    },
+    createTeam: async (data: { name: string; color?: string | null }) => {
+      const name = data.name.trim();
+      const [existing] = await db.select().from(teamsTable).where(eq(teamsTable.name, name));
+      if (existing) return existing;
+      const [t] = await db
+        .insert(teamsTable)
+        .values({ name, color: data.color ?? null })
+        .returning();
+      return t;
+    },
+    peekEmployeeCodeSequence: async () => {
+      const [row] = await db
+        .select()
+        .from(appMetaTable)
+        .where(eq(appMetaTable.key, "employeeCodeSeq"));
+      return (row?.value ?? 0) + 1;
+    },
+    allocateEmployeeCodeSequence: async () => {
+      return db.transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(appMetaTable)
+          .where(eq(appMetaTable.key, "employeeCodeSeq"));
+        const next = (row?.value ?? 0) + 1;
+        if (row) {
+          await tx
+            .update(appMetaTable)
+            .set({ value: next })
+            .where(eq(appMetaTable.key, "employeeCodeSeq"));
+        } else {
+          await tx.insert(appMetaTable).values({ key: "employeeCodeSeq", value: next });
+        }
+        return next;
+      });
+    },
+    isEmployeeCodeTaken: async (code: string, excludeUserId?: number) => {
+      const normalized = code.trim().toUpperCase();
+      const rows = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.employeeCode, normalized));
+      return rows.some((r) => r.id !== excludeUserId);
+    },
+    listJobTitlePresets: async () => {
+      const catalog = await db.select({ name: jobTitlesTable.name }).from(jobTitlesTable);
+      const users = await db.select({ jobTitle: usersTable.jobTitle }).from(usersTable);
+      const set = new Set<string>();
+      for (const r of catalog) if (r.name?.trim()) set.add(r.name.trim());
+      for (const r of users) if (r.jobTitle?.trim()) set.add(r.jobTitle.trim());
+      return [...set].sort((a, b) => a.localeCompare(b));
+    },
+    createJobTitle: async (name: string) => {
+      const normalized = name.trim();
+      if (!normalized) return normalized;
+      const [existing] = await db
+        .select()
+        .from(jobTitlesTable)
+        .where(eq(jobTitlesTable.name, normalized));
+      if (existing) return normalized;
+      try {
+        await db.insert(jobTitlesTable).values({ name: normalized });
+      } catch {
+        /* unique conflict — already exists */
+      }
+      return normalized;
     },
     listTasks: async (filters?: {
       projectId?: number;

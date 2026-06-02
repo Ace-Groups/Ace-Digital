@@ -122,9 +122,9 @@ export function EmployeeCard({
                   {employee.phone}
                 </p>
               )}
-              {employee.employeeCode && (
-                <p className="text-[11px]">ID: {employee.employeeCode}</p>
-              )}
+              <p className="text-[11px] font-mono">
+                ID: {employee.employeeCode ?? "—"}
+              </p>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ export const usersTable = pgTable("users", {
   teamId: integer("team_id").references(() => teamsTable.id),
   jobTitle: text("job_title"),
   phone: text("phone"),
-  employeeCode: text("employee_code"),
+  employeeCode: text("employee_code").unique(),
   startDate: timestamp("start_date", { withTimezone: true }),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
   status: text("status").notNull().default("active"),

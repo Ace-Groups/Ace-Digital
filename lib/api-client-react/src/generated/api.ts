@@ -43,7 +43,9 @@ import type {
   Expense,
   ExpenseInput,
   FinanceSummary,
+  GetNextEmployeeCodeParams,
   HealthStatus,
+  JobTitleInput,
   ListActivityParams,
   ListApprovalsParams,
   ListEmployeesParams,
@@ -53,6 +55,7 @@ import type {
   Message,
   MessageInput,
   MyProfileUpdate,
+  NextEmployeeCode,
   Notification,
   PatchExpenseStatusBody,
   PayrollRun,
@@ -71,6 +74,7 @@ import type {
   TaskInput,
   TaskUpdate,
   Team,
+  TeamInput,
   User
 } from './api.schemas';
 
@@ -1792,6 +1796,225 @@ export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TErr
 
 
 
+export const getCreateTeamUrl = () => {
+
+
+
+
+  return `/api/v1/teams`
+}
+
+/**
+ * @summary Create a team
+ */
+export const createTeam = async (teamInput: TeamInput, options?: RequestInit): Promise<Team> => {
+
+  return customFetch<Team>(getCreateTeamUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      teamInput,)
+  }
+);}
+
+
+
+
+export const getCreateTeamMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,{data: BodyType<TeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,{data: BodyType<TeamInput>}, TContext> => {
+
+const mutationKey = ['createTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTeam>>, {data: BodyType<TeamInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTeam(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createTeam>>>
+    export type CreateTeamMutationBody = BodyType<TeamInput>
+    export type CreateTeamMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a team
+ */
+export const useCreateTeam = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,{data: BodyType<TeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTeam>>,
+        TError,
+        {data: BodyType<TeamInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTeamMutationOptions(options));
+    }
+
+export const getListJobTitlesUrl = () => {
+
+
+
+
+  return `/api/v1/job-titles`
+}
+
+/**
+ * @summary List job title presets
+ */
+export const listJobTitles = async ( options?: RequestInit): Promise<string[]> => {
+
+  return customFetch<string[]>(getListJobTitlesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListJobTitlesQueryKey = () => {
+    return [
+    `/api/v1/job-titles`
+    ] as const;
+    }
+
+
+export const getListJobTitlesQueryOptions = <TData = Awaited<ReturnType<typeof listJobTitles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listJobTitles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListJobTitlesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listJobTitles>>> = ({ signal }) => listJobTitles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listJobTitles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListJobTitlesQueryResult = NonNullable<Awaited<ReturnType<typeof listJobTitles>>>
+export type ListJobTitlesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List job title presets
+ */
+
+export function useListJobTitles<TData = Awaited<ReturnType<typeof listJobTitles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listJobTitles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListJobTitlesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateJobTitleUrl = () => {
+
+
+
+
+  return `/api/v1/job-titles`
+}
+
+/**
+ * @summary Add a job title preset
+ */
+export const createJobTitle = async (jobTitleInput: JobTitleInput, options?: RequestInit): Promise<JobTitleInput> => {
+
+  return customFetch<JobTitleInput>(getCreateJobTitleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      jobTitleInput,)
+  }
+);}
+
+
+
+
+export const getCreateJobTitleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createJobTitle>>, TError,{data: BodyType<JobTitleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createJobTitle>>, TError,{data: BodyType<JobTitleInput>}, TContext> => {
+
+const mutationKey = ['createJobTitle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createJobTitle>>, {data: BodyType<JobTitleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createJobTitle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateJobTitleMutationResult = NonNullable<Awaited<ReturnType<typeof createJobTitle>>>
+    export type CreateJobTitleMutationBody = BodyType<JobTitleInput>
+    export type CreateJobTitleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a job title preset
+ */
+export const useCreateJobTitle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createJobTitle>>, TError,{data: BodyType<JobTitleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createJobTitle>>,
+        TError,
+        {data: BodyType<JobTitleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateJobTitleMutationOptions(options));
+    }
+
 export const getGetTeamMembersUrl = (id: number,) => {
 
 
@@ -2023,6 +2246,90 @@ export const useCreateEmployee = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateEmployeeMutationOptions(options));
     }
+
+export const getGetNextEmployeeCodeUrl = (params?: GetNextEmployeeCodeParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/employees/next-employee-code?${stringifiedParams}` : `/api/v1/employees/next-employee-code`
+}
+
+/**
+ * @summary Preview next auto-generated employee ID
+ */
+export const getNextEmployeeCode = async (params?: GetNextEmployeeCodeParams, options?: RequestInit): Promise<NextEmployeeCode> => {
+
+  return customFetch<NextEmployeeCode>(getGetNextEmployeeCodeUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNextEmployeeCodeQueryKey = (params?: GetNextEmployeeCodeParams,) => {
+    return [
+    `/api/v1/employees/next-employee-code`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetNextEmployeeCodeQueryOptions = <TData = Awaited<ReturnType<typeof getNextEmployeeCode>>, TError = ErrorType<unknown>>(params?: GetNextEmployeeCodeParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextEmployeeCode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNextEmployeeCodeQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNextEmployeeCode>>> = ({ signal }) => getNextEmployeeCode(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNextEmployeeCode>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNextEmployeeCodeQueryResult = NonNullable<Awaited<ReturnType<typeof getNextEmployeeCode>>>
+export type GetNextEmployeeCodeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Preview next auto-generated employee ID
+ */
+
+export function useGetNextEmployeeCode<TData = Awaited<ReturnType<typeof getNextEmployeeCode>>, TError = ErrorType<unknown>>(
+ params?: GetNextEmployeeCodeParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextEmployeeCode>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNextEmployeeCodeQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetEmployeeUrl = (id: number,) => {
 

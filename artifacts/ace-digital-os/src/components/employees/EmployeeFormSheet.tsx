@@ -1,8 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Employee } from "@workspace/api-client-react";
+import {
+  useGetNextEmployeeCode,
+  getListTeamsQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { TeamCreateDialog } from "@/components/teams/TeamCreateDialog";
+import { JobTitleCombobox } from "@/components/employees/JobTitleCombobox";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -147,6 +154,34 @@ export function EmployeeFormSheet({
   });
 
   const passwordMode = createForm.watch("passwordMode");
+  const startDateWatch = createForm.watch("startDate");
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const employeeCodeTouched = useRef(false);
+  const queryClient = useQueryClient();
+
+  const { data: nextCode } = useGetNextEmployeeCode(
+    { startDate: startDateWatch || undefined },
+    {
+      query: {
+        enabled: open && mode === "create",
+        staleTime: 0,
+      },
+    },
+  );
+
+  useEffect(() => {
+    if (!open || mode !== "create") {
+      employeeCodeTouched.current = false;
+      return;
+    }
+  }, [open, mode]);
+
+  useEffect(() => {
+    if (!open || mode !== "create" || employeeCodeTouched.current) return;
+    if (nextCode?.employeeCode) {
+      createForm.setValue("employeeCode", nextCode.employeeCode);
+    }
+  }, [nextCode, open, mode, createForm]);
 
   useEffect(() => {
     if (!open || mode !== "edit" || !employee) return;
@@ -219,6 +254,11 @@ export function EmployeeFormSheet({
               teams={teams}
               roles={assignableRoles}
               canViewSalaries={canViewSalaries}
+              isCreate
+              onEmployeeCodeManualEdit={() => {
+                employeeCodeTouched.current = true;
+              }}
+              onCreateTeamClick={() => setTeamDialogOpen(true)}
             />
             <Separator />
             <p className="text-sm font-medium">Account</p>
@@ -286,6 +326,7 @@ export function EmployeeFormSheet({
               roles={assignableRoles}
               canViewSalaries={canViewSalaries}
               isEdit
+              onCreateTeamClick={() => setTeamDialogOpen(true)}
             />
             <Button type="submit" className="h-11 w-full" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
@@ -293,6 +334,18 @@ export function EmployeeFormSheet({
           </form>
         </Form>
       )}
+      <TeamCreateDialog
+        open={teamDialogOpen}
+        onOpenChange={setTeamDialogOpen}
+        onCreated={(team) => {
+          void queryClient.invalidateQueries({ queryKey: getListTeamsQueryKey() });
+          if (mode === "create") {
+            createForm.setValue("teamId", String(team.id));
+          } else {
+            editForm.setValue("teamId", String(team.id));
+          }
+        }}
+      />
     </ResponsiveSheet>
   );
 }
@@ -303,6 +356,9 @@ function FormFields({
   roles,
   canViewSalaries,
   isEdit,
+  isCreate,
+  onEmployeeCodeManualEdit,
+  onCreateTeamClick,
 }: {
   form: {
     control: never;
@@ -311,6 +367,9 @@ function FormFields({
   roles: string[];
   canViewSalaries: boolean;
   isEdit?: boolean;
+  isCreate?: boolean;
+  onEmployeeCodeManualEdit?: () => void;
+  onCreateTeamClick?: () => void;
 }) {
   const f = form as ReturnType<typeof useForm<CreateForm>>;
   return (
@@ -336,8 +395,13 @@ function FormFields({
           <FormItem>
             <FormLabel>Email</FormLabel>
             <FormControl>
-              <Input type="email" className="min-h-11" {...field} disabled={isEdit} />
+              <Input type="email" className="min-h-11" {...field} />
             </FormControl>
+            {isEdit && (
+              <p className="text-xs text-muted-foreground">
+                Changing email updates the employee&apos;s login address.
+              </p>
+            )}
             <FormMessage />
           </FormItem>
         )}
@@ -362,8 +426,20 @@ function FormFields({
             <FormItem>
               <FormLabel>Employee ID</FormLabel>
               <FormControl>
-                <Input className="min-h-11" {...field} />
+                <Input
+                  className="min-h-11 font-mono uppercase"
+                  {...field}
+                  onChange={(e) => {
+                    onEmployeeCodeManualEdit?.();
+                    field.onChange(e.target.value.toUpperCase());
+                  }}
+                />
               </FormControl>
+              {isCreate && (
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated — you can edit before save (format 26ACE001).
+                </p>
+              )}
             </FormItem>
           )}
         />
@@ -393,7 +469,7 @@ function FormFields({
           name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Role</FormLabel>
+              <FormLabel>Access role</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="min-h-11">
@@ -431,6 +507,16 @@ function FormFields({
                   ))}
                 </SelectContent>
               </Select>
+              {onCreateTeamClick && (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto px-0 text-xs"
+                  onClick={onCreateTeamClick}
+                >
+                  + Create team
+                </Button>
+              )}
             </FormItem>
           )}
         />
@@ -442,7 +528,7 @@ function FormFields({
           <FormItem>
             <FormLabel>Job title</FormLabel>
             <FormControl>
-              <Input className="min-h-11" {...field} />
+              <JobTitleCombobox value={field.value ?? ""} onChange={field.onChange} />
             </FormControl>
           </FormItem>
         )}
