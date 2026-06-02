@@ -11,7 +11,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProfileDialog, getStoredAvatar } from "@/components/ProfileDialog";
-import aceLogo from "@assets/ace_logo_1780335102216.png";
+import aceLogo from "@/assets/ace-logo.png";
 
 const NAV_ICONS = {
   dashboard: LayoutDashboard,

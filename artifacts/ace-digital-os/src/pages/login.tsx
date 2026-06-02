@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import aceLogo from "@assets/ace_logo_1780335102216.png";
+import aceLogo from "@/assets/ace-logo.png";
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),

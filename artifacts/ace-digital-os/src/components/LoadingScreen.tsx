@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import aceLogo from "@assets/ace_logo_1780335102216.png";
+import aceLogo from "@/assets/ace-logo.png";
 import "./loading-animation.css";
 
 export function LoadingScreen() {

@@ -19,7 +19,15 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "ace-logo.png", "robots.txt"],
+      includeAssets: [
+        "favicon-16.png",
+        "favicon-32.png",
+        "ace-logo.png",
+        "icons/icon-192.png",
+        "icons/icon-512.png",
+        "icons/icon-512-maskable.png",
+        "robots.txt",
+      ],
       manifest: false,
       workbox: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,

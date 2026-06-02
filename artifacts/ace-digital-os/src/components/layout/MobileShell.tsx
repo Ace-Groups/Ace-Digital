@@ -30,7 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ProfileDialog, getStoredAvatar } from "@/components/ProfileDialog";
-import aceLogo from "@assets/ace_logo_1780335102216.png";
+import aceLogo from "@/assets/ace-logo.png";
 
 const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
