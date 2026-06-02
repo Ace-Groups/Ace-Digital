@@ -31,6 +31,10 @@ export default defineConfig({
       ],
       manifest: false,
       workbox: {
+        cacheId: "ace-digital-os-v2",
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallback: "/index.html",
