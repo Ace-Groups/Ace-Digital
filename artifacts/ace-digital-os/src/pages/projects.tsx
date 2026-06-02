@@ -32,7 +32,6 @@ import {
   Timer,
   ShieldCheck,
   CheckCircle2,
-  Sparkles,
   Target,
   Layers3,
 } from "lucide-react";
@@ -299,34 +298,6 @@ export default function ProjectsPage() {
     <AppLayout title="Projects">
       <StaggerList className="page-stack">
       <StaggerItem>
-        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-primary/30 via-primary/15 to-background p-5 sm:p-6">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
-          <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" />
-          <div className="relative flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                <Sparkles size={12} />
-                Project Command Board
-              </p>
-              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-                Plan, prioritize, and ship faster
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Move work across stages with drag and drop. Open any card to update details, team, and budget.
-              </p>
-            </div>
-            <Button
-              data-testid="btn-create-project"
-              className="hidden gap-2 sm:inline-flex active:scale-[0.98]"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus size={16} /> New Project
-            </Button>
-          </div>
-        </section>
-      </StaggerItem>
-
-      <StaggerItem>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Total Projects</p>
@@ -345,7 +316,7 @@ export default function ProjectsPage() {
       </StaggerItem>
 
       <StaggerItem>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">
               {totalProjects} total projects
@@ -354,6 +325,13 @@ export default function ProjectsPage() {
               Drag a card to move status, or tap any card to edit details.
             </p>
           </div>
+          <Button
+            data-testid="btn-create-project"
+            className="hidden shrink-0 gap-2 sm:inline-flex active:scale-[0.98]"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus size={16} /> New Project
+          </Button>
           <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
             {createForm}
           </ResponsiveSheet>
