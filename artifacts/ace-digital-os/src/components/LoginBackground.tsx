@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import loginBg from "@/assets/login-bg.png";
 
 type LoginBackgroundProps = {
   className?: string;
@@ -7,7 +8,15 @@ type LoginBackgroundProps = {
 export function LoginBackground({ className }: LoginBackgroundProps) {
   return (
     <div className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)} aria-hidden>
-      <div className="absolute inset-0 bg-[hsl(220_60%_5%)]" />
+      <img
+        src={loginBg}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        fetchPriority="high"
+        decoding="async"
+      />
+
+      <div className="absolute inset-0 bg-[hsl(220_60%_5%/0.42)]" />
 
       {/* Main cinematic light field */}
       <div
@@ -20,7 +29,7 @@ export function LoginBackground({ className }: LoginBackgroundProps) {
 
       {/* Soft vertical beam */}
       <div
-        className="absolute inset-y-0 left-[12%] w-[42rem] opacity-40 blur-3xl"
+        className="absolute inset-y-0 left-[12%] w-[42rem] opacity-28 blur-3xl"
         style={{
           background:
             "linear-gradient(95deg, transparent 0%, hsl(203 100% 78% / 0.3) 45%, transparent 100%)",
