@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Mic, Send, Smile, Trash2, X } from "lucide-react";
+import { Mic, Paperclip, Send, Trash2, X } from "lucide-react";
 import type { MessageAttachment } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import {
@@ -7,12 +7,14 @@ import {
   fileToMessageAttachment,
   formatFileSize,
 } from "@/lib/chat-media";
-import { EmojiPickerSheet } from "@/components/channels/EmojiPickerSheet";
-import { ComposerAttachMenu } from "@/components/channels/ComposerAttachMenu";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_ATTACHMENTS = 5;
+
+/** Single picker: photos, videos, documents, and other files. */
+const ATTACH_ACCEPT =
+  "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar";
 
 interface MessageComposerProps {
   channelName: string;
@@ -36,9 +38,7 @@ export function MessageComposer({
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
-  const [emojiOpen, setEmojiOpen] = useState(false);
-  const mediaInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const voice = useVoiceRecorder();
@@ -53,6 +53,8 @@ export function MessageComposer({
 
   const canSend =
     !disabled && !sending && !isRecording && (hasText || hasAttachments);
+
+  const attachDisabled = disabled || attachments.length >= MAX_ATTACHMENTS;
 
   async function addFiles(files: FileList | null) {
     if (!files?.length || disabled) return;
@@ -85,6 +87,7 @@ export function MessageComposer({
       await onSend(payload);
       setMessage("");
       setAttachments([]);
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch {
       /* parent shows toast */
     }
@@ -156,6 +159,10 @@ export function MessageComposer({
                   <Mic size={18} className="text-primary" />
                   <span className="text-[9px] text-muted-foreground">Voice</span>
                 </div>
+              ) : att.type === "video" ? (
+                <div className="flex h-14 w-14 items-center justify-center bg-violet-500/10 text-[10px] font-medium text-violet-400">
+                  Video
+                </div>
               ) : (
                 <div className="flex h-14 min-w-[5.5rem] max-w-[7rem] flex-col justify-center px-2">
                   <p className="truncate text-xs font-medium">{att.name}</p>
@@ -193,7 +200,7 @@ export function MessageComposer({
             <span className="text-sm tabular-nums text-foreground">
               {formatRecordTime(voice.seconds)}
             </span>
-            <span className="truncate text-xs text-muted-foreground">Recording voice…</span>
+            <span className="truncate text-xs text-muted-foreground">Slide to cancel · tap send when done</span>
           </div>
           <button
             type="button"
@@ -206,32 +213,27 @@ export function MessageComposer({
           </button>
         </div>
       ) : (
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            data-testid="btn-attach"
+            disabled={attachDisabled}
+            onClick={() => attachInputRef.current?.click()}
+            className={cn(
+              "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+              "text-muted-foreground transition-colors hover:bg-muted/60 active:bg-muted disabled:opacity-40",
+            )}
+            aria-label="Attach photos, videos, or files"
+          >
+            <Paperclip size={22} />
+          </button>
+
           <div
             className={cn(
-              "flex min-h-11 flex-1 items-end gap-0.5 rounded-3xl border border-border/80",
-              "bg-muted/30 pl-1 pr-1 py-1 shadow-sm",
+              "flex min-h-11 min-w-0 flex-1 items-center rounded-3xl border border-border/80",
+              "bg-muted/30 px-3 py-1.5 shadow-sm",
             )}
           >
-            <EmojiPickerSheet
-              open={emojiOpen}
-              onOpenChange={setEmojiOpen}
-              onPick={(emoji) => {
-                setMessage((m) => m + emoji);
-                requestAnimationFrame(autoResize);
-              }}
-              trigger={
-                <button
-                  type="button"
-                  disabled={disabled}
-                  className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/80 active:bg-muted disabled:opacity-40"
-                  aria-label="Emoji"
-                >
-                  <Smile size={22} className="text-amber-500/90" />
-                </button>
-              }
-            />
-
             <textarea
               ref={textareaRef}
               data-testid="input-message"
@@ -244,14 +246,7 @@ export function MessageComposer({
                 autoResize();
               }}
               onKeyDown={handleKeyDown}
-              className="max-h-32 min-h-[2.25rem] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base leading-snug shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
-            />
-
-            <ComposerAttachMenu
-              disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
-              onOpenMedia={() => mediaInputRef.current?.click()}
-              onOpenFiles={() => fileInputRef.current?.click()}
-              className="mb-0.5"
+              className="max-h-32 min-h-[2.25rem] w-full resize-none border-0 bg-transparent py-1.5 text-base leading-snug shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
             />
           </div>
 
@@ -283,19 +278,10 @@ export function MessageComposer({
       )}
 
       <input
-        ref={mediaInputRef}
+        ref={attachInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept={ATTACH_ACCEPT}
         multiple
-        className="hidden"
-        onChange={(e) => {
-          void addFiles(e.target.files);
-          e.target.value = "";
-        }}
-      />
-      <input
-        ref={fileInputRef}
-        type="file"
         className="hidden"
         onChange={(e) => {
           void addFiles(e.target.files);
