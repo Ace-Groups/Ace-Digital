@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Bell, Search } from "lucide-react";
-import { useListNotifications } from "@workspace/api-client-react";
+import { getListNotificationsQueryKey, useListNotifications } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
@@ -13,7 +13,14 @@ interface DesktopShellProps {
 }
 
 export function DesktopShell({ children, title }: DesktopShellProps) {
-  const { data: notifications } = useListNotifications();
+  const { data: notifications } = useListNotifications({
+    query: {
+      queryKey: getListNotificationsQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  });
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
 
   return (

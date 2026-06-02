@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useGetDashboard } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, useGetDashboard } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency, formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useMemo } from "react";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -22,10 +23,26 @@ function getGreeting(): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: dash, isLoading } = useGetDashboard();
+  const { data: dash, isLoading, isFetching } = useGetDashboard({
+    query: {
+      queryKey: getGetDashboardQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  });
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
-  const widgets = new Set(dash?.widgets ?? []);
+  const widgets = useMemo(() => new Set(dash?.widgets ?? []), [dash?.widgets]);
   const isMobile = useIsMobile();
+  const dashboardDate = useMemo(
+    () =>
+      new Date().toLocaleDateString("en-IN", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    [],
+  );
 
   const statCards = (
     <>
@@ -112,19 +129,19 @@ export default function DashboardPage() {
   return (
     <AppLayout title="Dashboard">
       <div className="page-stack">
-        <section className="brand-gradient relative overflow-hidden rounded-2xl p-6 text-white shadow-brand-md sm:p-8">
+        <section className="brand-gradient relative overflow-hidden rounded-2xl border border-white/10 p-6 text-white shadow-brand-md sm:p-8">
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl"
             aria-hidden
           />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]" />
           <div className="relative">
-            <p className="text-sm font-medium text-white/70">
-              {new Date().toLocaleDateString("en-IN", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-white/70">{dashboardDate}</p>
+              <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/80">
+                {isFetching ? "Syncing..." : "Live"}
+              </span>
+            </div>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl text-balance">
               {getGreeting()}, {firstName}
             </h2>
@@ -246,6 +263,11 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 )}
+                {!isLoading && (dash?.teamLoad?.length ?? 0) === 0 && (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Team load appears once active teams are available.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -292,6 +314,11 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
+            )}
+            {!isLoading && (dash?.recentActivity?.length ?? 0) === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No recent activity yet. Updates appear here as your team works.
+              </p>
             )}
           </CardContent>
         </Card>

@@ -39,62 +39,87 @@ export async function buildDashboardSnapshot(
     ctx.role === "team_lead" || ctx.role === "employee"
       ? { teamId: ctx.teamId ?? undefined }
       : undefined;
-  const allProjects = await deps.listProjects(projectFilters);
+  const allProjectsPromise = deps.listProjects(projectFilters);
+  const myTasksPromise = deps.listTasks({ assigneeId: ctx.userId });
+  const pendingApprovalsPromise = deps.listApprovals({ status: "PENDING" });
+
+  const employeeCountPromise = dashboardShowsWidget(ctx.role, "employeeCount")
+    ? deps.countActiveUsers()
+    : Promise.resolve(0);
+  const monthlyRevenuePromise = dashboardShowsWidget(ctx.role, "monthlyRevenue")
+    ? deps.sumActiveClientRevenue()
+    : Promise.resolve(0);
+  const clientsPromise = dashboardShowsWidget(ctx.role, "activeClients")
+    ? deps.listClients()
+    : Promise.resolve([]);
+  const upcomingDeadlinesPromise = dashboardShowsWidget(ctx.role, "upcomingDeadlines")
+    ? deps.listUpcomingDeadlines(10)
+    : Promise.resolve([]);
+  const recentActivityPromise = dashboardShowsWidget(ctx.role, "recentActivity")
+    ? deps.listActivityLogs(10)
+    : Promise.resolve([]);
+  const teamLoadPromise: Promise<DashboardSnapshot["teamLoad"]> = dashboardShowsWidget(ctx.role, "teamLoad")
+    ? (async () => {
+        const teams = await deps.listTeams();
+        const teamsToShow =
+          ctx.role === "team_lead" && ctx.teamId != null
+            ? teams.filter((t) => t.id === ctx.teamId)
+            : teams;
+        return Promise.all(
+          teamsToShow.map(async (team) => {
+            const [activeProjects, members] = await Promise.all([
+              deps.countActiveProjectsByTeam(team.id),
+              deps.countUsersByTeam(team.id),
+            ]);
+            return {
+              teamId: team.id,
+              teamName: team.name,
+              activeProjects,
+              members,
+            };
+          }),
+        );
+      })()
+    : Promise.resolve([]);
+
+  const [
+    allProjects,
+    myTasks,
+    pendingApprovals,
+    employeeCount,
+    monthlyRevenue,
+    clients,
+    rawUpcomingDeadlines,
+    recentActivity,
+    teamLoad,
+  ] = await Promise.all([
+    allProjectsPromise,
+    myTasksPromise,
+    pendingApprovalsPromise,
+    employeeCountPromise,
+    monthlyRevenuePromise,
+    clientsPromise,
+    upcomingDeadlinesPromise,
+    recentActivityPromise,
+    teamLoadPromise,
+  ]);
+
   const scopedProjects = scopeProjectList(ctx, allProjects);
   const activeProjectsCount = scopedProjects.filter((p) => p.status !== "DONE").length;
 
-  const myTasks = await deps.listTasks({ assigneeId: ctx.userId });
   const myOpenTasksCount = myTasks.filter((t) => t.status !== "DONE").length;
 
-  const pendingApprovals = await deps.listApprovals({ status: "PENDING" });
   const pendingApprovalsCount = countPendingApprovalsForContext(ctx, pendingApprovals);
-
-  let employeeCount = 0;
-  if (dashboardShowsWidget(ctx.role, "employeeCount")) {
-    employeeCount = await deps.countActiveUsers();
-  }
-
-  let monthlyRevenue = 0;
-  if (dashboardShowsWidget(ctx.role, "monthlyRevenue")) {
-    monthlyRevenue = await deps.sumActiveClientRevenue();
-  }
 
   let activeClientsCount = 0;
   let contractValueTotal = 0;
-  if (dashboardShowsWidget(ctx.role, "activeClients")) {
-    const clients = await deps.listClients();
+  if (clients.length > 0) {
     const active = clients.filter((c) => c.status === "ACTIVE");
     activeClientsCount = active.length;
     contractValueTotal = active.reduce((s, c) => s + (c.contractValue ? Number(c.contractValue) : 0), 0);
   }
 
-  let upcomingDeadlines: Project[] = [];
-  if (dashboardShowsWidget(ctx.role, "upcomingDeadlines")) {
-    const raw = await deps.listUpcomingDeadlines(10);
-    upcomingDeadlines = scopeProjectList(ctx, raw).slice(0, 5);
-  }
-
-  let teamLoad: DashboardSnapshot["teamLoad"] = [];
-  if (dashboardShowsWidget(ctx.role, "teamLoad")) {
-    const teams = await deps.listTeams();
-    const teamsToShow =
-      ctx.role === "team_lead" && ctx.teamId != null
-        ? teams.filter((t) => t.id === ctx.teamId)
-        : teams;
-    teamLoad = await Promise.all(
-      teamsToShow.map(async (team) => ({
-        teamId: team.id,
-        teamName: team.name,
-        activeProjects: await deps.countActiveProjectsByTeam(team.id),
-        members: await deps.countUsersByTeam(team.id),
-      })),
-    );
-  }
-
-  let recentActivity: ActivityLogWithActor[] = [];
-  if (dashboardShowsWidget(ctx.role, "recentActivity")) {
-    recentActivity = await deps.listActivityLogs(10);
-  }
+  const upcomingDeadlines: Project[] = scopeProjectList(ctx, rawUpcomingDeadlines).slice(0, 5);
 
   return {
     activeProjectsCount,

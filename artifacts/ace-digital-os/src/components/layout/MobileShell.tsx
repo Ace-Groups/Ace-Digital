@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useListNotifications } from "@workspace/api-client-react";
+import { getListNotificationsQueryKey, useListNotifications } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -54,7 +54,14 @@ interface MobileShellProps {
 export function MobileShell({ children, title }: MobileShellProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
-  const { data: notifications } = useListNotifications();
+  const { data: notifications } = useListNotifications({
+    query: {
+      queryKey: getListNotificationsQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  });
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
