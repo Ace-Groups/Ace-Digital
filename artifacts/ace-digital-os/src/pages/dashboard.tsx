@@ -9,6 +9,7 @@ import {
   TrendingUp, Clock, Building2, CheckSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency, formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -24,10 +25,93 @@ export default function DashboardPage() {
   const { data: dash, isLoading } = useGetDashboard();
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
   const widgets = new Set(dash?.widgets ?? []);
+  const isMobile = useIsMobile();
+
+  const statCards = (
+    <>
+      {widgets.has("activeProjects") && (
+        <StatCard
+          label="Active Projects"
+          value={dash?.activeProjectsCount ?? 0}
+          icon={FolderKanban}
+          tone="brand"
+          href="/projects"
+          isLoading={isLoading}
+          testId="stat-active-projects"
+        />
+      )}
+      {widgets.has("myOpenTasks") && (
+        <StatCard
+          label="My Open Tasks"
+          value={dash?.myOpenTasksCount ?? 0}
+          icon={CheckSquare}
+          tone="brand"
+          href="/tasks"
+          isLoading={isLoading}
+          testId="stat-my-tasks"
+        />
+      )}
+      {widgets.has("employeeCount") && (
+        <StatCard
+          label="Total Employees"
+          value={dash?.employeeCount ?? 0}
+          icon={Users}
+          tone="success"
+          href="/employees"
+          isLoading={isLoading}
+          testId="stat-total-employees"
+        />
+      )}
+      {widgets.has("activeClients") && (
+        <StatCard
+          label="Active Clients"
+          value={dash?.activeClientsCount ?? 0}
+          icon={Building2}
+          tone="success"
+          href="/clients"
+          isLoading={isLoading}
+          testId="stat-active-clients"
+        />
+      )}
+      {widgets.has("contractValue") && (
+        <StatCard
+          label="Contract Value"
+          value={formatCurrency(dash?.contractValueTotal ?? 0)}
+          icon={DollarSign}
+          tone="warning"
+          href="/clients"
+          isLoading={isLoading}
+          testId="stat-contract-value"
+        />
+      )}
+      {widgets.has("monthlyRevenue") && (
+        <StatCard
+          label="Monthly Revenue"
+          value={formatCurrency(dash?.monthlyRevenue ?? 0)}
+          icon={DollarSign}
+          tone="warning"
+          href="/finance"
+          isLoading={isLoading}
+          testId="stat-monthly-revenue"
+        />
+      )}
+      {widgets.has("pendingApprovals") && (
+        <StatCard
+          label="Pending Approvals"
+          value={dash?.pendingApprovalsCount ?? 0}
+          icon={ClipboardCheck}
+          tone="danger"
+          href="/approvals"
+          isLoading={isLoading}
+          testId="stat-pending-approvals"
+        />
+      )}
+    </>
+  );
 
   return (
     <AppLayout title="Dashboard">
-      <div className="space-y-6">
+      <div className="page-stack">
         <section className="brand-gradient relative overflow-hidden rounded-2xl p-6 text-white shadow-brand-md sm:p-8">
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl"
@@ -50,85 +134,11 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {widgets.has("activeProjects") && (
-            <StatCard
-              label="Active Projects"
-              value={dash?.activeProjectsCount ?? 0}
-              icon={FolderKanban}
-              tone="brand"
-              href="/projects"
-              isLoading={isLoading}
-              testId="stat-active-projects"
-            />
-          )}
-          {widgets.has("myOpenTasks") && (
-            <StatCard
-              label="My Open Tasks"
-              value={dash?.myOpenTasksCount ?? 0}
-              icon={CheckSquare}
-              tone="brand"
-              href="/tasks"
-              isLoading={isLoading}
-              testId="stat-my-tasks"
-            />
-          )}
-          {widgets.has("employeeCount") && (
-            <StatCard
-              label="Total Employees"
-              value={dash?.employeeCount ?? 0}
-              icon={Users}
-              tone="success"
-              href="/employees"
-              isLoading={isLoading}
-              testId="stat-total-employees"
-            />
-          )}
-          {widgets.has("activeClients") && (
-            <StatCard
-              label="Active Clients"
-              value={dash?.activeClientsCount ?? 0}
-              icon={Building2}
-              tone="success"
-              href="/clients"
-              isLoading={isLoading}
-              testId="stat-active-clients"
-            />
-          )}
-          {widgets.has("contractValue") && (
-            <StatCard
-              label="Contract Value"
-              value={formatCurrency(dash?.contractValueTotal ?? 0)}
-              icon={DollarSign}
-              tone="warning"
-              href="/clients"
-              isLoading={isLoading}
-              testId="stat-contract-value"
-            />
-          )}
-          {widgets.has("monthlyRevenue") && (
-            <StatCard
-              label="Monthly Revenue"
-              value={formatCurrency(dash?.monthlyRevenue ?? 0)}
-              icon={DollarSign}
-              tone="warning"
-              href="/finance"
-              isLoading={isLoading}
-              testId="stat-monthly-revenue"
-            />
-          )}
-          {widgets.has("pendingApprovals") && (
-            <StatCard
-              label="Pending Approvals"
-              value={dash?.pendingApprovalsCount ?? 0}
-              icon={ClipboardCheck}
-              tone="danger"
-              href="/approvals"
-              isLoading={isLoading}
-              testId="stat-pending-approvals"
-            />
-          )}
-        </div>
+        {isMobile ? (
+          <div className="mobile-stat-scroll">{statCards}</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{statCards}</div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {widgets.has("upcomingDeadlines") && (

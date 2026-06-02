@@ -1,23 +1,26 @@
+import { lazy, Suspense, type ComponentType } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { canAccessRoute } from "@workspace/rbac";
-import NotFound from "@/pages/not-found";
-import ForbiddenPage from "@/pages/forbidden";
-import LoginPage from "@/pages/login";
-import DashboardPage from "@/pages/dashboard";
-import ProjectsPage from "@/pages/projects";
-import TasksPage from "@/pages/tasks";
-import EmployeesPage from "@/pages/employees";
-import FinancePage from "@/pages/finance";
-import ClientsPage from "@/pages/clients";
-import ApprovalsPage from "@/pages/approvals";
-import ReportsPage from "@/pages/reports";
-import ChannelsPage from "@/pages/channels";
-import ActivityPage from "@/pages/activity";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const ForbiddenPage = lazy(() => import("@/pages/forbidden"));
+const LoginPage = lazy(() => import("@/pages/login"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const ProjectsPage = lazy(() => import("@/pages/projects"));
+const TasksPage = lazy(() => import("@/pages/tasks"));
+const EmployeesPage = lazy(() => import("@/pages/employees"));
+const FinancePage = lazy(() => import("@/pages/finance"));
+const ClientsPage = lazy(() => import("@/pages/clients"));
+const ApprovalsPage = lazy(() => import("@/pages/approvals"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const ChannelsPage = lazy(() => import("@/pages/channels"));
+const ActivityPage = lazy(() => import("@/pages/activity"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,11 +28,15 @@ const queryClient = new QueryClient({
   },
 });
 
+function PageFallback() {
+  return <LoadingScreen />;
+}
+
 function ProtectedRoute({
   component: Component,
   path,
 }: {
-  component: React.ComponentType;
+  component: ComponentType;
   path: string;
 }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -45,10 +52,18 @@ function ProtectedRoute({
   }
 
   if (user && !canAccessRoute(user.role, path)) {
-    return <ForbiddenPage />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <ForbiddenPage />
+      </Suspense>
+    );
   }
 
-  return <Component />;
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Component />
+    </Suspense>
+  );
 }
 
 function AppRouter() {
@@ -60,44 +75,46 @@ function AppRouter() {
   }
 
   return (
-    <Switch>
-      <Route path="/login" component={LoginPage} />
-      <Route path="/" component={() => <ProtectedRoute path="/" component={DashboardPage} />} />
-      <Route
-        path="/projects"
-        component={() => <ProtectedRoute path="/projects" component={ProjectsPage} />}
-      />
-      <Route path="/tasks" component={() => <ProtectedRoute path="/tasks" component={TasksPage} />} />
-      <Route
-        path="/employees"
-        component={() => <ProtectedRoute path="/employees" component={EmployeesPage} />}
-      />
-      <Route
-        path="/finance"
-        component={() => <ProtectedRoute path="/finance" component={FinancePage} />}
-      />
-      <Route
-        path="/clients"
-        component={() => <ProtectedRoute path="/clients" component={ClientsPage} />}
-      />
-      <Route
-        path="/approvals"
-        component={() => <ProtectedRoute path="/approvals" component={ApprovalsPage} />}
-      />
-      <Route
-        path="/reports"
-        component={() => <ProtectedRoute path="/reports" component={ReportsPage} />}
-      />
-      <Route
-        path="/channels"
-        component={() => <ProtectedRoute path="/channels" component={ChannelsPage} />}
-      />
-      <Route
-        path="/activity"
-        component={() => <ProtectedRoute path="/activity" component={ActivityPage} />}
-      />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageFallback />}>
+      <Switch>
+        <Route path="/login" component={LoginPage} />
+        <Route path="/" component={() => <ProtectedRoute path="/" component={DashboardPage} />} />
+        <Route
+          path="/projects"
+          component={() => <ProtectedRoute path="/projects" component={ProjectsPage} />}
+        />
+        <Route path="/tasks" component={() => <ProtectedRoute path="/tasks" component={TasksPage} />} />
+        <Route
+          path="/employees"
+          component={() => <ProtectedRoute path="/employees" component={EmployeesPage} />}
+        />
+        <Route
+          path="/finance"
+          component={() => <ProtectedRoute path="/finance" component={FinancePage} />}
+        />
+        <Route
+          path="/clients"
+          component={() => <ProtectedRoute path="/clients" component={ClientsPage} />}
+        />
+        <Route
+          path="/approvals"
+          component={() => <ProtectedRoute path="/approvals" component={ApprovalsPage} />}
+        />
+        <Route
+          path="/reports"
+          component={() => <ProtectedRoute path="/reports" component={ReportsPage} />}
+        />
+        <Route
+          path="/channels"
+          component={() => <ProtectedRoute path="/channels" component={ChannelsPage} />}
+        />
+        <Route
+          path="/activity"
+          component={() => <ProtectedRoute path="/activity" component={ActivityPage} />}
+        />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -108,6 +125,7 @@ function App() {
         <AuthProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AppRouter />
+            <InstallPrompt />
           </WouterRouter>
           <Toaster />
         </AuthProvider>

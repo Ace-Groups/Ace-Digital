@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
   useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams,
   getListTasksQueryKey,
@@ -11,9 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +46,7 @@ function getProjectIdFromUrl(): number | undefined {
 }
 
 export default function TasksPage() {
+  const isMobile = useIsMobile();
   const projectIdFilter = getProjectIdFromUrl();
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
@@ -107,8 +107,69 @@ export default function TasksPage() {
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
   }
 
+  const createForm = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField control={form.control} name="title" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Task Title</FormLabel>
+            <FormControl><Input data-testid="input-task-title" {...field} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField control={form.control} name="teamId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Team</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="assigneeId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assignee</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField control={form.control} name="priority" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="dueDate" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Due Date</FormLabel>
+              <FormControl><Input type="date" data-testid="input-task-due" {...field} /></FormControl>
+            </FormItem>
+          )} />
+        </div>
+        <Button data-testid="btn-submit-task" type="submit" className="h-11 w-full sm:h-10" disabled={createTask.isPending}>
+          Create Task
+        </Button>
+      </form>
+    </Form>
+  );
+
   return (
     <AppLayout title="Tasks">
+      <div className="page-stack">
       {projectIdFilter && filteredProject && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5 text-sm">
           <span>
@@ -121,20 +182,21 @@ export default function TasksPage() {
           </Link>
         </div>
       )}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Filter size={14} className="text-muted-foreground" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <Filter size={14} className="shrink-0 text-muted-foreground" />
           <div className="flex gap-1">
             {["all", ...STATUSES].map((s) => (
               <button
                 key={s}
+                type="button"
                 data-testid={`filter-${s.toLowerCase()}`}
                 onClick={() => setFilterStatus(s)}
                 className={cn(
-                  "px-3 py-1.5 text-xs rounded-full font-medium transition-colors",
+                  "min-h-9 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   filterStatus === s
                     ? "bg-primary text-primary-foreground"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
                 )}
               >
                 {s === "all" ? "All" : s.replace("_", " ")}
@@ -142,73 +204,16 @@ export default function TasksPage() {
             ))}
           </div>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="btn-create-task" className="gap-2">
-              <Plus size={16} /> New Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Task Title</FormLabel>
-                    <FormControl><Input data-testid="input-task-title" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="teamId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="assigneeId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assignee</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="priority" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="dueDate" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Due Date</FormLabel>
-                      <FormControl><Input type="date" data-testid="input-task-due" {...field} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-                <Button data-testid="btn-submit-task" type="submit" className="w-full" disabled={createTask.isPending}>
-                  Create Task
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button
+          data-testid="btn-create-task"
+          className="hidden gap-2 sm:inline-flex"
+          onClick={() => setOpen(true)}
+        >
+          <Plus size={16} /> New Task
+        </Button>
+        <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
+          {createForm}
+        </ResponsiveSheet>
       </div>
 
       <Card>
@@ -225,7 +230,7 @@ export default function TasksPage() {
                 <div
                   key={task.id}
                   data-testid={`task-row-${task.id}`}
-                  className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
                 >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
@@ -246,7 +251,7 @@ export default function TasksPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                     {task.assigneeName && (
                       <div className="flex items-center gap-1.5">
                         <Avatar className="h-6 w-6">
@@ -276,6 +281,19 @@ export default function TasksPage() {
           )}
         </CardContent>
       </Card>
+
+      {isMobile && (
+        <Button
+          data-testid="btn-create-task-fab"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setOpen(true)}
+          aria-label="New task"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+      </div>
     </AppLayout>
   );
 }

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { ProjectDetailDialog } from "@/components/projects/ProjectDetailDialog";
 import {
   useListProjects,
@@ -14,13 +16,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +53,7 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function ProjectsPage() {
+  const isMobile = useIsMobile();
   const { data: projects, isLoading } = useListProjects();
   const { data: teams } = useListTeams();
   const { data: clients } = useListClients();
@@ -132,23 +128,8 @@ export default function ProjectsPage() {
     return acc;
   }, {} as Record<string, typeof projects>);
 
-  return (
-    <AppLayout title="Projects">
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-muted-foreground">
-          {projects?.length ?? 0} total projects · click a card to edit
-        </p>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="btn-create-project" className="gap-2">
-              <Plus size={16} /> New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create Project</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
+  const createForm = (
+    <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
@@ -281,9 +262,26 @@ export default function ProjectsPage() {
                   Create Project
                 </Button>
               </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+    </Form>
+  );
+
+  return (
+    <AppLayout title="Projects">
+      <div className="page-stack">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          {projects?.length ?? 0} total projects · tap a card to edit
+        </p>
+        <Button
+          data-testid="btn-create-project"
+          className="hidden gap-2 sm:inline-flex"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus size={16} /> New Project
+        </Button>
+        <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
+          {createForm}
+        </ResponsiveSheet>
       </div>
 
       <ProjectDetailDialog
@@ -295,6 +293,46 @@ export default function ProjectsPage() {
         onDuplicate={handleDuplicate}
       />
 
+      {isMobile ? (
+        <div className="space-y-6">
+          {STATUSES.map((status) => (
+            <section key={status}>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h3>
+                <Badge variant="secondary" className="text-xs">
+                  {byStatus[status]?.length ?? 0}
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                {isLoading
+                  ? [1, 2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)
+                  : byStatus[status]?.map((project) => (
+                      <button
+                        key={project.id}
+                        type="button"
+                        data-testid={`project-card-${project.id}`}
+                        onClick={() => openProject(project)}
+                        className="w-full rounded-xl border border-border bg-card p-4 text-left shadow-brand-sm transition-transform active:scale-[0.99]"
+                      >
+                        <p className="text-sm font-medium text-foreground">{project.name}</p>
+                        {project.teamName && (
+                          <p className="mt-1 text-xs text-muted-foreground">{project.teamName}</p>
+                        )}
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
+                            {project.priority}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {project.progress}%
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 min-h-96">
         {STATUSES.map((status) => (
           <div
@@ -400,6 +438,20 @@ export default function ProjectsPage() {
             )}
           </div>
         ))}
+      </div>
+      )}
+
+      {isMobile && (
+        <Button
+          data-testid="btn-create-project-mobile"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setCreateOpen(true)}
+          aria-label="New project"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
       </div>
     </AppLayout>
   );

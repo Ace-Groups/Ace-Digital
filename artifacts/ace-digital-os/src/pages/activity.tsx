@@ -34,6 +34,7 @@ export default function ActivityPage() {
 
   return (
     <AppLayout title="Activity Log">
+      <div className="page-stack">
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -88,6 +89,7 @@ export default function ActivityPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </AppLayout>
   );
 }

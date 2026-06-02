@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export default function ForbiddenPage() {
   return (
     <AppLayout title="Access denied">
-      <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="flex min-h-[50dvh] flex-col items-center justify-center px-4 py-16 text-center sm:py-24">
         <p className="text-6xl font-semibold text-muted-foreground/40">403</p>
         <h2 className="mt-4 text-xl font-semibold">You don&apos;t have access to this page</h2>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">

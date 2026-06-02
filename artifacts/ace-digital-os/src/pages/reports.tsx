@@ -61,7 +61,8 @@ export default function ReportsPage() {
 
   return (
     <AppLayout title="Reports">
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-stack">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{reports?.length ?? 0} reports generated</p>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -105,7 +106,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-5 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {REPORT_TYPES.map(({ value, label, icon: Icon, color, bg }) => (
           <button
             key={value}
@@ -170,6 +171,7 @@ export default function ReportsPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </AppLayout>
   );
 }

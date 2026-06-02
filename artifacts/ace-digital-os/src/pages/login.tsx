@@ -94,8 +94,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-[400px]">
+      <div className="flex flex-1 flex-col justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:p-10">
+        <div className="w-full max-w-[400px] sm:mx-auto">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <img src={aceLogo} alt="Ace Digital" className="h-10 w-10 object-contain" />
             <span className="text-xl font-semibold tracking-tight text-foreground">
@@ -126,7 +126,7 @@ export default function LoginPage() {
                         type="email"
                         placeholder="you@acedigital.com"
                         autoComplete="email"
-                        className="h-10"
+                        className="h-11 text-base sm:h-10 sm:text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -146,7 +146,7 @@ export default function LoginPage() {
                         type="password"
                         placeholder="••••••••"
                         autoComplete="current-password"
-                        className="h-10"
+                        className="h-11 text-base sm:h-10 sm:text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -157,7 +157,7 @@ export default function LoginPage() {
               <Button
                 data-testid="button-submit"
                 type="submit"
-                className="h-10 w-full font-medium"
+                className="h-12 w-full text-base font-medium sm:h-10 sm:text-sm"
                 disabled={loading}
               >
                 {loading ? (

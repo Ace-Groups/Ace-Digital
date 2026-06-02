@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
   useListApprovals, useCreateApproval, useApproveApproval, useRejectApproval,
   getListApprovalsQueryKey,
@@ -9,9 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +34,7 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function ApprovalsPage() {
+  const isMobile = useIsMobile();
   const [filterStatus, setFilterStatus] = useState("all");
   const { data: approvals, isLoading } = useListApprovals(
     filterStatus !== "all" ? { status: filterStatus } : {}
@@ -83,7 +83,8 @@ export default function ApprovalsPage() {
 
   return (
     <AppLayout title="Approvals">
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-stack">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {pending > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
@@ -107,14 +108,14 @@ export default function ApprovalsPage() {
             ))}
           </div>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="btn-create-approval" className="gap-2">
-              <Plus size={16} /> New Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Submit Approval Request</DialogTitle></DialogHeader>
+        <Button
+          data-testid="btn-create-approval"
+          className="hidden gap-2 sm:inline-flex"
+          onClick={() => setOpen(true)}
+        >
+          <Plus size={16} /> New Request
+        </Button>
+        <ResponsiveSheet open={open} onOpenChange={setOpen} title="Submit Approval Request">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="type" render={({ field }) => (
@@ -152,8 +153,7 @@ export default function ApprovalsPage() {
                 </Button>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+        </ResponsiveSheet>
       </div>
 
       <div className="space-y-3">
@@ -162,9 +162,9 @@ export default function ApprovalsPage() {
         ) : approvals?.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-sm">No approval requests found</div>
         ) : approvals?.map((a) => (
-          <Card key={a.id} data-testid={`approval-card-${a.id}`} className="hover:shadow-sm transition-shadow">
+          <Card key={a.id} data-testid={`approval-card-${a.id}`} className="transition-shadow hover:shadow-brand-sm">
             <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">{a.type?.replace("_", " ")}</Badge>
@@ -187,8 +187,8 @@ export default function ApprovalsPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="outline" className={cn("text-xs", statusColor(a.status ?? ""))}>
+                <div className="flex flex-col gap-2 sm:items-end sm:shrink-0">
+                  <Badge variant="outline" className={cn("w-fit text-xs", statusColor(a.status ?? ""))}>
                     {a.status}
                   </Badge>
                   {a.requestedById != null &&
@@ -199,23 +199,32 @@ export default function ApprovalsPage() {
                     status: a.status ?? "PENDING",
                   }) &&
                   a.status === "PENDING" && (
-                    <div className="flex gap-1">
-                      <button
+                    <div className={cn("flex gap-2", isMobile && "w-full")}>
+                      <Button
+                        type="button"
                         data-testid={`btn-approve-${a.id}`}
                         onClick={() => handleApprove(a.id)}
-                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors"
-                        title="Approve"
+                        className={cn(
+                          "gap-2 bg-emerald-600 hover:bg-emerald-700",
+                          isMobile && "min-h-11 flex-1",
+                        )}
                       >
-                        <CheckCircle2 size={16} />
-                      </button>
-                      <button
+                        <CheckCircle2 size={18} />
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
                         data-testid={`btn-reject-${a.id}`}
                         onClick={() => handleReject(a.id)}
-                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                        title="Reject"
+                        className={cn(
+                          "gap-2 border-red-200 text-red-600 hover:bg-red-50",
+                          isMobile && "min-h-11 flex-1",
+                        )}
                       >
-                        <XCircle size={16} />
-                      </button>
+                        <XCircle size={18} />
+                        Reject
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -223,6 +232,19 @@ export default function ApprovalsPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {isMobile && (
+        <Button
+          data-testid="btn-create-approval-mobile"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setOpen(true)}
+          aria-label="New approval request"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
       </div>
     </AppLayout>
   );

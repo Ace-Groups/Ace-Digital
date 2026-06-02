@@ -118,7 +118,7 @@ export default function FinancePage() {
 
   return (
     <AppLayout title="Finance & Payroll">
-      <div className="space-y-6">
+      <div className="page-stack">
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis.map(({ label, value, icon: Icon, color, bg }) => (

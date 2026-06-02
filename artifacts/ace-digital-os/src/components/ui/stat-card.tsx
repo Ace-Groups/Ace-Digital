@@ -1,15 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SurfaceCard } from "@/components/design";
 import { cn } from "@/lib/utils";
 
 type StatTone = "brand" | "success" | "warning" | "danger";
 
-const toneStyles: Record<
-  StatTone,
-  { icon: string; surface: string }
-> = {
+const toneStyles: Record<StatTone, { icon: string; surface: string }> = {
   brand: {
     icon: "text-primary",
     surface: "bg-primary/10",
@@ -49,36 +46,32 @@ export function StatCard({
 }: StatCardProps) {
   const styles = toneStyles[tone];
   const content = (
-    <Card
+    <SurfaceCard
       data-testid={testId}
       className={cn(
-        "border-border/80 shadow-sm transition-all duration-200",
-        href && "cursor-pointer hover:border-primary/25 hover:shadow-md hover:-translate-y-0.5"
+        "p-5 transition-transform duration-200",
+        href && "cursor-pointer active:scale-[0.98] md:hover:border-primary/25 md:hover:shadow-brand-sm",
       )}
     >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24 mt-2" />
-            ) : (
-              <p className="text-2xl font-semibold tracking-tight text-foreground mt-1 tabular-nums">
-                {value}
-              </p>
-            )}
-          </div>
-          <div
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-              styles.surface
-            )}
-          >
-            <Icon size={20} className={styles.icon} aria-hidden />
-          </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-label text-muted-foreground">{label}</p>
+          {isLoading ? (
+            <Skeleton className="mt-2 h-8 w-24" />
+          ) : (
+            <p className="text-display-sm mt-1 tabular-nums text-foreground">{value}</p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div
+          className={cn(
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+            styles.surface,
+          )}
+        >
+          <Icon size={20} className={styles.icon} aria-hidden />
+        </div>
+      </div>
+    </SurfaceCard>
   );
 
   if (href) {
