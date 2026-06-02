@@ -5,7 +5,6 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -30,39 +29,163 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-type LoginFormProps = {
-  variant: "mobile" | "desktop";
-  loading: boolean;
-  showPassword: boolean;
-  onTogglePassword: () => void;
-  onSubmit: (data: FormData) => void | Promise<void>;
-  form: ReturnType<typeof useForm<FormData>>;
-  onForgotPassword: () => void;
-};
+const underlineInputClass =
+  "h-12 rounded-none border-0 border-b-2 border-border bg-transparent px-0 pl-9 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0";
 
-function LoginFormFields({
-  variant,
+function LoginWaveHeader() {
+  return (
+    <div className="relative min-h-[38dvh] shrink-0 overflow-hidden brand-gradient">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.14]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54 0c-6 8-18 12-30 12S0 8 0 0' fill='none' stroke='white' stroke-width='0.6'/%3E%3C/svg%3E")`,
+          backgroundSize: "48px 48px",
+        }}
+        aria-hidden
+      />
+      <div className="relative flex h-full min-h-[200px] items-center justify-center pb-10 pt-[max(2rem,env(safe-area-inset-top))]">
+        <img
+          src={aceLogo}
+          alt=""
+          className="size-20 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+        />
+      </div>
+      <svg
+        className="absolute bottom-0 left-0 block h-[52px] w-full text-card"
+        viewBox="0 0 1440 52"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path
+          fill="currentColor"
+          d="M0,28 C240,52 420,8 720,24 C1020,40 1200,48 1440,20 L1440,52 L0,52 Z"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function LoginMobileForm({
+  form,
   loading,
   showPassword,
   onTogglePassword,
   onSubmit,
-  form,
-  onForgotPassword,
-}: LoginFormProps) {
-  const isMobile = variant === "mobile";
-  const inputClass = cn(
-    "min-h-11 text-base sm:text-sm",
-    isMobile ? "h-12 rounded-xl bg-background" : "h-12 rounded-xl pl-11",
-  );
-  const iconClass = isMobile
-    ? "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-    : "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/40";
-
+}: {
+  form: ReturnType<typeof useForm<FormData>>;
+  loading: boolean;
+  showPassword: boolean;
+  onTogglePassword: () => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
+}) {
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn("space-y-4", !isMobile && "space-y-5")}
+        className="flex flex-col gap-8"
+        autoComplete="on"
+        aria-label="Sign in"
+      >
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem className="space-y-2">
+              <FormLabel className="sr-only">Email</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Mail
+                    className="pointer-events-none absolute left-0 top-1/2 size-[18px] -translate-y-1/2 text-primary"
+                    aria-hidden
+                  />
+                  <Input
+                    data-testid="input-email"
+                    type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoComplete="username"
+                    placeholder="Email"
+                    className={underlineInputClass}
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem className="space-y-2">
+              <FormLabel className="sr-only">Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Lock
+                    className="pointer-events-none absolute left-0 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    data-testid="input-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Password"
+                    className={cn(underlineInputClass, "pr-10")}
+                    {...field}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-muted-foreground touch-manipulation"
+                    onClick={onTogglePassword}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-[18px]" aria-hidden />
+                    ) : (
+                      <Eye className="size-[18px]" aria-hidden />
+                    )}
+                  </button>
+                </div>
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <Button
+          data-testid="button-submit"
+          type="submit"
+          disabled={loading}
+          className="mt-2 h-12 w-full rounded-full text-base font-semibold shadow-brand-sm touch-manipulation"
+          size="lg"
+        >
+          {loading ? <Loader2 className="size-5 animate-spin" aria-hidden /> : "Login"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+function LoginDesktopForm({
+  form,
+  loading,
+  showPassword,
+  onTogglePassword,
+  onSubmit,
+  onForgotPassword,
+}: {
+  form: ReturnType<typeof useForm<FormData>>;
+  loading: boolean;
+  showPassword: boolean;
+  onTogglePassword: () => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
+  onForgotPassword: () => void;
+}) {
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-5"
         autoComplete="off"
       >
         <FormField
@@ -70,21 +193,24 @@ function LoginFormFields({
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={isMobile ? undefined : "text-white/60"}>Email</FormLabel>
+              <FormLabel className="text-white/60">Email</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Mail className={iconClass} aria-hidden />
+                  <Mail
+                    className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/40"
+                    aria-hidden
+                  />
                   <Input
                     data-testid="input-email"
                     type="email"
                     placeholder="you@acedigital.com"
                     autoComplete="username"
-                    className={cn(inputClass, "pl-10")}
+                    className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
                     {...field}
                   />
                 </div>
               </FormControl>
-              <FormMessage className={isMobile ? undefined : "text-red-300"} />
+              <FormMessage className="text-red-300" />
             </FormItem>
           )}
         />
@@ -94,15 +220,10 @@ function LoginFormFields({
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel className={isMobile ? undefined : "text-white/60"}>Password</FormLabel>
+                <FormLabel className="text-white/60">Password</FormLabel>
                 <button
                   type="button"
-                  className={cn(
-                    "text-xs font-medium",
-                    isMobile
-                      ? "text-primary hover:underline"
-                      : "text-[hsl(203_100%_87%/0.85)] hover:text-white",
-                  )}
+                  className="text-xs font-medium text-[hsl(203_100%_87%/0.85)] hover:text-white"
                   onClick={onForgotPassword}
                 >
                   Forgot password?
@@ -110,23 +231,21 @@ function LoginFormFields({
               </div>
               <FormControl>
                 <div className="relative">
-                  <Lock className={iconClass} aria-hidden />
+                  <Lock
+                    className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/40"
+                    aria-hidden
+                  />
                   <Input
                     data-testid="input-password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     autoComplete="current-password"
-                    className={cn(inputClass, "pl-10 pr-11")}
+                    className="h-12 rounded-xl border-white/10 bg-white/[0.06] pr-11 pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
                     {...field}
                   />
                   <button
                     type="button"
-                    className={cn(
-                      "absolute right-3 top-1/2 -translate-y-1/2",
-                      isMobile
-                        ? "text-muted-foreground hover:text-foreground"
-                        : "text-white/40 hover:text-white",
-                    )}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
                     onClick={onTogglePassword}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
@@ -138,30 +257,18 @@ function LoginFormFields({
                   </button>
                 </div>
               </FormControl>
-              <FormMessage className={isMobile ? undefined : "text-red-300"} />
+              <FormMessage className="text-red-300" />
             </FormItem>
           )}
         />
-        <Button
+        <button
           data-testid="button-submit"
           type="submit"
           disabled={loading}
-          className={cn(
-            "w-full min-h-11 text-base font-semibold sm:text-sm",
-            !isMobile &&
-              "h-12 rounded-xl bg-gradient-to-r from-[hsl(211_42%_46%)] via-[hsl(211_45%_54%)] to-[hsl(203_70%_58%)] shadow-[0_4px_28px_hsl(211_38%_52%/0.45)] hover:shadow-[0_8px_36px_hsl(211_38%_52%/0.55)]",
-          )}
-          size={isMobile ? "lg" : "default"}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[hsl(211_42%_46%)] via-[hsl(211_45%_54%)] to-[hsl(203_70%_58%)] text-base font-semibold text-white shadow-[0_4px_28px_hsl(211_38%_52%/0.45)] transition-all hover:shadow-[0_8px_36px_hsl(211_38%_52%/0.55)] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:h-11 sm:text-sm"
         >
-          {loading ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-              Signing in…
-            </>
-          ) : (
-            "Sign in"
-          )}
-        </Button>
+          {loading ? <Loader2 size={18} className="animate-spin" aria-hidden /> : "Sign in"}
+        </button>
       </form>
     </Form>
   );
@@ -173,47 +280,24 @@ function LoginMobileLayout({
   showPassword,
   setShowPassword,
   onSubmit,
-  onForgotPassword,
-}: Omit<LoginFormProps, "variant" | "onTogglePassword"> & {
+}: {
+  form: ReturnType<typeof useForm<FormData>>;
+  loading: boolean;
+  showPassword: boolean;
   setShowPassword: (v: boolean | ((p: boolean) => boolean)) => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-background brand-gradient-subtle">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.75rem,env(safe-area-inset-top))]">
-        <header className="mb-8 flex flex-col items-center gap-4 text-center">
-          <div className="flex size-16 items-center justify-center rounded-2xl border border-border/80 bg-card shadow-sm">
-            <img src={aceLogo} alt="" className="size-11 object-contain" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Ace Digital
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sign in</h1>
-            <p className="text-sm text-muted-foreground">Use your work email to continue</p>
-          </div>
-        </header>
-
-        <Card className="border-border/80 bg-card/95 shadow-sm backdrop-blur-sm">
-          <CardHeader className="sr-only">
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Enter your Ace Digital credentials</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <LoginFormFields
-              variant="mobile"
-              form={form}
-              loading={loading}
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword((v) => !v)}
-              onSubmit={onSubmit}
-              onForgotPassword={onForgotPassword}
-            />
-          </CardContent>
-        </Card>
-
-        <p className="mt-auto pt-8 text-center text-xs text-muted-foreground">
-          Authorized personnel only
-        </p>
+    <div className="flex min-h-dvh flex-col bg-card">
+      <LoginWaveHeader />
+      <div className="flex flex-1 flex-col justify-center px-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4">
+        <LoginMobileForm
+          form={form}
+          loading={loading}
+          showPassword={showPassword}
+          onTogglePassword={() => setShowPassword((v) => !v)}
+          onSubmit={onSubmit}
+        />
       </div>
     </div>
   );
@@ -226,8 +310,13 @@ function LoginDesktopLayout({
   setShowPassword,
   onSubmit,
   onForgotPassword,
-}: Omit<LoginFormProps, "variant" | "onTogglePassword"> & {
+}: {
+  form: ReturnType<typeof useForm<FormData>>;
+  loading: boolean;
+  showPassword: boolean;
   setShowPassword: (v: boolean | ((p: boolean) => boolean)) => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
+  onForgotPassword: () => void;
 }) {
   return (
     <div className="relative flex min-h-dvh overflow-hidden">
@@ -272,8 +361,7 @@ function LoginDesktopLayout({
               <h2 className="text-2xl font-semibold tracking-tight text-white">Welcome back</h2>
               <p className="mt-1.5 text-sm text-white/50">Sign in to Ace Digital OS</p>
             </div>
-            <LoginFormFields
-              variant="desktop"
+            <LoginDesktopForm
               form={form}
               loading={loading}
               showPassword={showPassword}
@@ -330,20 +418,28 @@ export default function LoginPage() {
     }
   }
 
-  const layoutProps = {
-    form,
-    loading,
-    showPassword,
-    setShowPassword,
-    onSubmit,
-    onForgotPassword,
-  };
-
   const showMobile = !layoutReady || isMobile;
 
   if (showMobile) {
-    return <LoginMobileLayout {...layoutProps} />;
+    return (
+      <LoginMobileLayout
+        form={form}
+        loading={loading}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+        onSubmit={onSubmit}
+      />
+    );
   }
 
-  return <LoginDesktopLayout {...layoutProps} />;
+  return (
+    <LoginDesktopLayout
+      form={form}
+      loading={loading}
+      showPassword={showPassword}
+      setShowPassword={setShowPassword}
+      onSubmit={onSubmit}
+      onForgotPassword={onForgotPassword}
+    />
+  );
 }
