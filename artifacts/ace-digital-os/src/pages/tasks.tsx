@@ -45,6 +45,13 @@ const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
 const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
 const COMMON_TASK_VALUE = "__common__";
 const ALL_TEAMS_VALUE = "__all_teams__";
+const NO_PROJECT_VALUE = "__no_project__";
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  TODO: "To Do",
+  IN_PROGRESS: "In Progress",
+  REVIEW: "Review",
+};
 
 function getProjectIdFromUrl(): number | undefined {
   const id = new URLSearchParams(window.location.search).get("projectId");
@@ -88,10 +95,18 @@ export default function TasksPage() {
       title: "",
       priority: "MEDIUM",
       status: "PENDING",
-      projectId: projectIdFilter ? String(projectIdFilter) : "",
+      projectId: projectIdFilter ? String(projectIdFilter) : NO_PROJECT_VALUE,
       teamId: ALL_TEAMS_VALUE,
     },
   });
+
+  const activeProjects = useMemo(() => {
+    const active = (projects ?? []).filter((p) => p.status !== "DONE");
+    const current = projectIdFilter ? projects?.find((p) => p.id === projectIdFilter) : undefined;
+    const merged =
+      current && !active.some((p) => p.id === current.id) ? [current, ...active] : active;
+    return merged.sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects, projectIdFilter]);
 
   useEffect(() => {
     if (projectIdFilter) {
@@ -100,6 +115,15 @@ export default function TasksPage() {
   }, [projectIdFilter, form]);
 
   const selectedTeamId = form.watch("teamId");
+  const selectedProjectId = form.watch("projectId");
+
+  useEffect(() => {
+    if (!selectedProjectId || selectedProjectId === NO_PROJECT_VALUE) return;
+    const project = projects?.find((p) => p.id === Number(selectedProjectId));
+    if (project?.teamId) {
+      form.setValue("teamId", String(project.teamId));
+    }
+  }, [selectedProjectId, projects, form]);
 
   const assignableEmployees = useMemo(() => {
     const list = employees ?? [];
@@ -114,15 +138,32 @@ export default function TasksPage() {
     setSelectedAssigneeIds((prev) => prev.filter((id) => allowed.has(id)));
   }, [assignableEmployees]);
 
+  function resolveProjectId(value: string | undefined) {
+    return value && value !== NO_PROJECT_VALUE ? Number(value) : undefined;
+  }
+
+  function resetCreateForm() {
+    form.reset({
+      title: "",
+      priority: "MEDIUM",
+      status: "PENDING",
+      projectId: projectIdFilter ? String(projectIdFilter) : NO_PROJECT_VALUE,
+      teamId: ALL_TEAMS_VALUE,
+      dueDate: "",
+    });
+    setSelectedAssigneeIds([]);
+  }
+
   async function onSubmit(data: CreateForm) {
     const teamId = data.teamId && data.teamId !== ALL_TEAMS_VALUE ? Number(data.teamId) : undefined;
     const assigneeIds = selectedAssigneeIds;
+    const projectId = resolveProjectId(data.projectId);
 
     if (assigneeIds.length === 0) {
       await createTask.mutateAsync({
         data: {
           title: data.title,
-          projectId: data.projectId ? Number(data.projectId) : undefined,
+          projectId,
           assigneeId: undefined,
           teamId,
           priority: data.priority,
@@ -135,7 +176,7 @@ export default function TasksPage() {
         await createTask.mutateAsync({
           data: {
             title: data.title,
-            projectId: data.projectId ? Number(data.projectId) : undefined,
+            projectId,
             assigneeId,
             teamId,
             priority: data.priority,
@@ -157,8 +198,7 @@ export default function TasksPage() {
             : "Common task created without assignee.",
     });
     setOpen(false);
-    form.reset();
-    setSelectedAssigneeIds([]);
+    resetCreateForm();
   }
 
   async function handleToggle(id: number) {
@@ -176,6 +216,18 @@ export default function TasksPage() {
     });
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
     toast({ title: "Task assignment updated" });
+  }
+
+  async function handleProjectTask(taskId: number, projectIdValue: string) {
+    if (!canWriteTasks) return;
+    await updateTask.mutateAsync({
+      id: taskId,
+      data: {
+        projectId: projectIdValue === NO_PROJECT_VALUE ? null : Number(projectIdValue),
+      } as never,
+    });
+    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+    toast({ title: "Task project updated" });
   }
 
   const visibleTasks = useMemo(() => {
@@ -202,6 +254,40 @@ export default function TasksPage() {
             <FormLabel>Task Title</FormLabel>
             <FormControl><Input data-testid="input-task-title" {...field} /></FormControl>
             <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="projectId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Project</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              value={field.value && field.value.length > 0 ? field.value : NO_PROJECT_VALUE}
+            >
+              <FormControl>
+                <SelectTrigger data-testid="select-task-project">
+                  <SelectValue placeholder="Select active project" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT_VALUE}>No project</SelectItem>
+                {activeProjects.length === 0 ? (
+                  <SelectItem value="__empty__" disabled>
+                    No active projects
+                  </SelectItem>
+                ) : (
+                  activeProjects.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                      {p.teamName ? ` · ${p.teamName}` : ""}
+                      {` (${PROJECT_STATUS_LABELS[p.status] ?? p.status})`}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Link the task to an active project (To Do, In Progress, or Review). Completed projects are hidden.
+            </p>
           </FormItem>
         )} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -434,22 +520,46 @@ export default function TasksPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                     {canWriteTasks && (
-                      <Select
-                        value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
-                        onValueChange={(value) => void handleAssignTask(task.id, value)}
-                      >
-                        <SelectTrigger className="h-8 w-[9.5rem] text-xs">
-                          <SelectValue placeholder="Assign" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
-                          {employees?.map((e) => (
-                            <SelectItem key={e.id} value={String(e.id)}>
-                              {e.fullName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <>
+                        <Select
+                          value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
+                          onValueChange={(value) => void handleProjectTask(task.id, value)}
+                        >
+                          <SelectTrigger className="h-8 w-[10.5rem] text-xs" data-testid={`task-project-${task.id}`}>
+                            <SelectValue placeholder="Project" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_PROJECT_VALUE}>No project</SelectItem>
+                            {activeProjects.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                            {task.projectId != null &&
+                              !activeProjects.some((p) => p.id === task.projectId) && (
+                                <SelectItem value={String(task.projectId)}>
+                                  {task.projectName ?? `Project #${task.projectId}`}
+                                </SelectItem>
+                              )}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
+                          onValueChange={(value) => void handleAssignTask(task.id, value)}
+                        >
+                          <SelectTrigger className="h-8 w-[9.5rem] text-xs">
+                            <SelectValue placeholder="Assign" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
+                            {employees?.map((e) => (
+                              <SelectItem key={e.id} value={String(e.id)}>
+                                {e.fullName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </>
                     )}
                     {task.assigneeName && (
                       <div className="flex items-center gap-1.5">
