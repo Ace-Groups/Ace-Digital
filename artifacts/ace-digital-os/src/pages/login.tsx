@@ -14,12 +14,16 @@ import {
   Loader2,
   Lock,
   Mail,
+  Sparkles,
   Shield,
   ShieldCheck,
+  Clock3,
+  Building2,
 } from "lucide-react";
 import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -83,9 +87,13 @@ export default function LoginPage() {
       <LoginBackground />
 
       <div className="relative z-10 flex w-full flex-col lg:flex-row">
-        {/* Brand — wide particle hero (desktop) */}
+        {/* Brand — immersive hero panel */}
         <div className="hidden flex-1 flex-col items-center justify-center px-6 lg:flex lg:py-0 lg:pl-12 lg:pr-6 xl:pl-16">
           <div className="flex w-full max-w-2xl flex-col items-center justify-center text-center">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-[hsl(203_100%_87%/0.95)]">
+              <Sparkles className="size-3.5" aria-hidden />
+              Ace Digital Control Hub
+            </div>
             <div className="relative flex w-full items-center justify-center">
               <div
                 className="pointer-events-none absolute aspect-[4/5] h-[min(500px,58vh)] w-[min(520px,85vw)] rounded-[40%] bg-[hsl(203_90%_70%/0.1)] blur-[90px]"
@@ -104,10 +112,32 @@ export default function LoginPage() {
                 quality="high"
               />
             </div>
+            <div className="mt-8 max-w-[36rem] space-y-4 text-left">
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Operations, projects, and approvals in one secure workspace.
+              </h1>
+              <p className="text-sm leading-6 text-white/60">
+                Built for teams that move fast and need clean visibility across work, finance, and decisions.
+              </p>
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wider text-white/45">Latency</p>
+                  <p className="mt-1 text-sm font-semibold text-white">~120ms</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wider text-white/45">Availability</p>
+                  <p className="mt-1 text-sm font-semibold text-white">99.9%</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wider text-white/45">Scope</p>
+                  <p className="mt-1 text-sm font-semibold text-white">Company-wide</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Sign-in — frosted glass card */}
+        {/* Sign-in card */}
         <div className="flex min-h-dvh flex-1 shrink-0 items-center justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] lg:min-h-0 lg:w-[min(100%,480px)] lg:p-10 lg:pl-4 xl:w-[520px]">
           <div className="w-full max-w-[420px] rounded-2xl border border-white/[0.1] bg-[hsl(218_40%_12%/0.55)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl sm:p-10">
             <div className="mb-8 flex justify-center lg:hidden">
@@ -127,11 +157,21 @@ export default function LoginPage() {
                 <Shield className="size-5 text-[hsl(203_100%_87%)]" strokeWidth={1.75} aria-hidden />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight text-white">
-                Welcome back <span aria-hidden>👋</span>
+                Welcome back
               </h2>
               <p className="mt-1.5 text-sm text-white/50">
-                Sign in to your account
+                Sign in to continue to Ace Digital OS
               </p>
+              <div className="mt-4 flex items-center gap-3 text-xs text-white/45">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock3 className="size-3.5" aria-hidden />
+                  Session timeout: 7 days
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Building2 className="size-3.5" aria-hidden />
+                  Internal access only
+                </span>
+              </div>
             </div>
 
             <Form {...form}>
@@ -231,7 +271,8 @@ export default function LoginPage() {
               </form>
             </Form>
 
-            <p className="mt-8 flex items-center gap-2 text-xs text-white/40">
+            <Separator className="mt-7 bg-white/10" />
+            <p className="mt-5 flex items-center gap-2 text-xs text-white/40">
               <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
               Secure access. Authorized personnel only.
             </p>
