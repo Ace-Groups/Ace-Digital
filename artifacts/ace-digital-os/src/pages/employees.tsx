@@ -182,9 +182,9 @@ export default function EmployeesPage() {
       toast({
         title: data.mode === "email" ? "Reset email queued" : "Password updated",
         description: result.emailSent
-          ? "Credentials will be sent via Firebase email."
+          ? "Credentials emailed to the employee."
           : data.mode === "email"
-            ? "Password reset; email could not be queued (check Firebase Trigger Email extension)."
+            ? "Password reset; email not sent (set RESEND_API_KEY on the API function)."
             : "Share the new password with the employee securely.",
       });
     } catch {

@@ -6,12 +6,14 @@ import type { Express } from "express";
 initializeApp();
 
 const jwtSecret = defineSecret("JWT_SECRET");
+const resendApiKey = defineSecret("RESEND_API_KEY");
+const emailFrom = defineSecret("EMAIL_FROM");
 
 process.env.USE_FIRESTORE = "true";
 
 let cachedApp: Express | null = null;
 
-function applyJwtSecret(): void {
+function applyRuntimeSecrets(): void {
   const secret = jwtSecret.value()?.trim();
   if (!secret || secret.length < 32) {
     throw new Error(
@@ -21,11 +23,17 @@ function applyJwtSecret(): void {
   }
   process.env.JWT_SECRET = secret;
   process.env.NODE_ENV = "production";
+
+  const resend = resendApiKey.value()?.trim();
+  if (resend) process.env.RESEND_API_KEY = resend;
+
+  const from = emailFrom.value()?.trim();
+  if (from) process.env.EMAIL_FROM = from;
 }
 
 async function getApp(): Promise<Express> {
   if (!cachedApp) {
-    applyJwtSecret();
+    applyRuntimeSecrets();
     // @ts-expect-error — api-app.mjs is the predeploy-bundled Express app
     const mod = (await import("../api-app.mjs")) as { default: Express };
     cachedApp = mod.default;
@@ -40,7 +48,7 @@ export const api = functions
     memory: "512MB",
     timeoutSeconds: 60,
     maxInstances: 10,
-    secrets: [jwtSecret],
+    secrets: [jwtSecret, resendApiKey, emailFrom],
     serviceAccount: "ace-digital-os@appspot.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {

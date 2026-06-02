@@ -74,7 +74,7 @@ export function EmployeePasswordResetSheet({
             <div>
               <p className="text-sm font-medium">Send reset email</p>
               <p className="text-xs text-muted-foreground">
-                Generates a temporary password and emails it via Firebase (forgot-password flow).
+                Generates a temporary password and emails it to the employee (forgot-password flow).
               </p>
             </div>
           </label>

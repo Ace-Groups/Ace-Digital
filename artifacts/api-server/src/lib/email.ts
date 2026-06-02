@@ -1,9 +1,10 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { Resend } from "resend";
 
 const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://ace-digital-os.web.app/login";
 const DEFAULT_FROM =
-  process.env.EMAIL_FROM ?? "Ace-Digital <noreply@ace-digital-os.web.app>";
+  process.env.EMAIL_FROM ?? "Ace-Digital <onboarding@acedigital.com>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";
 
 export type CredentialsEmailParams = {
@@ -64,7 +65,36 @@ function buildCredentialsContent(params: CredentialsEmailParams): {
   return { subject, text, html };
 }
 
-/** Queue email via Firebase Extension "Trigger Email from Firestore" (mail collection). */
+async function sendViaResend(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return false;
+
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: DEFAULT_FROM,
+      to,
+      subject,
+      text,
+      html,
+    });
+    if (error) {
+      console.error("[email] Resend error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] Resend send failed:", err);
+    return false;
+  }
+}
+
+/** Fallback: Firebase Extension "Trigger Email from Firestore" (mail collection). */
 async function queueFirebaseMail(
   to: string,
   subject: string,
@@ -72,7 +102,6 @@ async function queueFirebaseMail(
   html: string,
 ): Promise<boolean> {
   if (process.env.USE_FIRESTORE !== "true") {
-    console.warn("[email] USE_FIRESTORE is not true; cannot queue Firebase mail");
     return false;
   }
 
@@ -93,7 +122,23 @@ async function queueFirebaseMail(
 
 export async function sendCredentialsEmail(params: CredentialsEmailParams): Promise<boolean> {
   const { subject, text, html } = buildCredentialsContent(params);
-  return queueFirebaseMail(params.to, subject, text, html);
+
+  if (await sendViaResend(params.to, subject, text, html)) {
+    return true;
+  }
+
+  if (process.env.RESEND_API_KEY?.trim()) {
+    console.warn("[email] Resend failed; not falling back to Firebase mail");
+    return false;
+  }
+
+  const queued = await queueFirebaseMail(params.to, subject, text, html);
+  if (!queued) {
+    console.warn(
+      "[email] No RESEND_API_KEY and Firebase mail queue failed — set RESEND_API_KEY (recommended) or install firestore-send-email extension",
+    );
+  }
+  return queued;
 }
 
 /** @deprecated Use sendCredentialsEmail */

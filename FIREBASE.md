@@ -105,25 +105,38 @@ npx firebase-tools deploy --only functions --project ace-digital-os
 
 Login and API calls will fail until `JWT_SECRET` is set and functions are redeployed.
 
-### Employee email (Firebase Trigger Email)
+### Employee email (Resend — recommended)
 
-Welcome and password-reset emails are queued in Firestore collection `mail`. The [**Trigger Email from Firestore**](https://extensions.dev/extensions/firebase/firestore-send-email) extension sends them using your project's default SMTP (configure during install).
+The API sends welcome and password-reset mail through **Resend** when `RESEND_API_KEY` is set. This is simpler than the Firebase Trigger Email extension (no SMTP/OAuth wizard).
 
-**One-time install (Firebase console or CLI):**
+**1. Create a Resend API key** at https://resend.com/api-keys and verify your sending domain (e.g. `mybexo.com` so `hr@mybexo.com` works).
+
+**2. Store secrets on Firebase (do not commit keys to git):**
 
 ```bash
-firebase ext:install firebase/firestore-send-email --project ace-digital-os
+firebase functions:secrets:set RESEND_API_KEY --project ace-digital-os
+# paste re_... when prompted
+
+firebase functions:secrets:set EMAIL_FROM --project ace-digital-os
+# e.g. Ace-Digital <hr@mybexo.com>
 ```
 
-Use `firebase/extensions/firestore-send-email.env` as a reference. Set **DEFAULT_FROM** to your verified sender (e.g. `Ace-Digital <noreply@ace-digital-os.web.app>`).
+**3. Redeploy functions:**
 
-| Env (optional on `api` function) | Purpose |
-|----------------------------------|---------|
-| `EMAIL_FROM` | From address on queued mail docs (default `noreply@ace-digital-os.web.app`) |
-| `APP_LOGIN_URL` | Login link in emails (default `https://ace-digital-os.web.app/login`) |
-| `FIREBASE_MAIL_COLLECTION` | Collection name (default `mail`) |
+```bash
+pnpm run build:api
+cp artifacts/api-server/dist/api-app.mjs firebase/functions/api-app.mjs
+cd firebase/functions && npm run build && cd ../..
+npx firebase-tools deploy --only functions --project ace-digital-os
+```
 
-Without the extension, users are still created/reset but `emailSent` is `false`.
+| Secret / env | Purpose |
+|--------------|---------|
+| `RESEND_API_KEY` | Resend API key (required for email) |
+| `EMAIL_FROM` | Verified sender, e.g. `Ace-Digital <hr@mybexo.com>` |
+| `APP_LOGIN_URL` | Optional; defaults to `https://ace-digital-os.web.app/login` |
+
+If `RESEND_API_KEY` is missing, the API falls back to queuing docs in Firestore collection `mail` (only works if you installed [Trigger Email from Firestore](https://extensions.dev/extensions/firebase/firestore-send-email) with valid SMTP). **You can skip that extension entirely if you use Resend.**
 
 **Who can reset passwords:** `super_admin`, `management`, and `hr` (`employees:password_reset`) — send reset email or set a manual temporary password from the employee card menu.
 
