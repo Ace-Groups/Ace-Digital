@@ -13,4 +13,5 @@ export const MessageAttachmentType = {
   image: 'image',
   file: 'file',
   video: 'video',
+  audio: 'audio',
 } as const;

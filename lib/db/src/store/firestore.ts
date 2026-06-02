@@ -26,6 +26,8 @@ import type {
   DashboardSnapshot,
   MessageWithSender,
   SalaryRow,
+  SalaryPostingRow,
+  CreateSalaryPostingInput,
   UpdateProfileInput,
   UpdateUserInput,
   CreateChannelInput,
@@ -65,6 +67,7 @@ const COL = {
   activityLogs: "activity_logs",
   notifications: "notifications",
   jobTitles: "job_titles",
+  salaryPostings: "salary_postings",
 } as const;
 
 const EMPLOYEE_CODE_SEQ_KEY = "employeeCodeSeq";
@@ -894,6 +897,49 @@ export function createFirestoreStore() {
       const row = { ...data, totalAmount: String(data.totalAmount), createdAt: new Date().toISOString() };
       await db.collection(COL.payrollRuns).doc(docId(id)).set(row);
       return mapPayroll(row, String(id));
+    },
+
+    async createSalaryPosting(data: CreateSalaryPostingInput) {
+      const id = await nextId(COL.salaryPostings);
+      const row = {
+        userId: data.userId,
+        allocationType: data.allocationType,
+        projectId: data.projectId ?? null,
+        month: data.month,
+        year: data.year,
+        baseSalary: data.baseSalary,
+        bonus: data.bonus,
+        createdById: data.createdById,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection(COL.salaryPostings).doc(docId(id)).set(row);
+      return { id, ...row };
+    },
+
+    async listSalaryPostings(): Promise<SalaryPostingRow[]> {
+      const items = await allDocs(COL.salaryPostings, (data, id) => ({
+        id: Number(id),
+        userId: Number(data.userId),
+        allocationType: String(data.allocationType) as "MONTHLY" | "PROJECT",
+        projectId: data.projectId != null ? Number(data.projectId) : null,
+        month: Number(data.month),
+        year: Number(data.year),
+        baseSalary: Number(data.baseSalary ?? 0),
+        bonus: Number(data.bonus ?? 0),
+        createdAt: toDate(data.createdAt),
+      }));
+      const users = await this.listUsers();
+      const projects = await this.listProjects();
+      const userMap = Object.fromEntries(users.map((u) => [u.id, u.fullName]));
+      const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+      return items
+        .map((item) => ({
+          ...item,
+          fullName: userMap[item.userId] ?? "Unknown",
+          projectName: item.projectId != null ? projectMap[item.projectId] ?? null : null,
+          totalPay: item.baseSalary + item.bonus,
+        }))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
     async getDashboardSnapshot(ctx: AccessContext): Promise<DashboardSnapshot> {

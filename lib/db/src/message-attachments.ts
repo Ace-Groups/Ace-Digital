@@ -1,4 +1,4 @@
-export type MessageAttachmentType = "image" | "file" | "video";
+export type MessageAttachmentType = "image" | "file" | "video" | "audio";
 
 export type MessageAttachment = {
   type: MessageAttachmentType;
@@ -20,7 +20,7 @@ export function normalizeMessageAttachments(
     if (!item || typeof item !== "object") continue;
     const type = (item as MessageAttachment).type;
     const url = (item as MessageAttachment).url;
-    if (type !== "image" && type !== "file" && type !== "video") continue;
+    if (type !== "image" && type !== "file" && type !== "video" && type !== "audio") continue;
     if (typeof url !== "string" || !url.trim()) continue;
     out.push({
       type,

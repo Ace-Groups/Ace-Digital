@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
+import { hasPermission } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
@@ -81,6 +82,119 @@ router.get(
 );
 
 router.get(
+  "/v1/finance/salary-postings",
+  requireAuth,
+  requirePermission("finance:salaries_all"),
+  async (_req, res): Promise<void> => {
+    const rows = await store.listSalaryPostings();
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        fullName: r.fullName,
+        allocationType: r.allocationType,
+        projectId: r.projectId,
+        projectName: r.projectName,
+        month: r.month,
+        year: r.year,
+        baseSalary: r.baseSalary,
+        bonus: r.bonus,
+        totalPay: r.totalPay,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    );
+  },
+);
+
+router.post(
+  "/v1/finance/salary-postings",
+  requireAuth,
+  requirePermission("finance:payroll"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const { userId, allocationType, projectId, month, year, baseSalary, bonus } = req.body;
+
+    if (!userId || !allocationType || month == null || year == null || baseSalary == null || bonus == null) {
+      res.status(400).json({ error: "userId, allocationType, month, year, baseSalary, and bonus are required" });
+      return;
+    }
+    if (!["MONTHLY", "PROJECT"].includes(allocationType)) {
+      res.status(400).json({ error: "allocationType must be MONTHLY or PROJECT" });
+      return;
+    }
+    if (allocationType === "PROJECT" && !projectId) {
+      res.status(400).json({ error: "projectId is required for PROJECT allocation" });
+      return;
+    }
+
+    const user = await store.findUserById(Number(userId));
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (allocationType === "PROJECT") {
+      const project = await store.findProjectById(Number(projectId));
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+    }
+
+    const baseStr = String(baseSalary);
+    const bonusStr = String(bonus);
+
+    if (allocationType === "MONTHLY") {
+      let profile = await store.findProfileByUserId(Number(userId));
+      if (!profile) {
+        profile = await store.createProfile({
+          userId: Number(userId),
+          baseSalary: baseStr,
+          bonus: bonusStr,
+        });
+      } else {
+        await store.updateProfileByUserId(Number(userId), {
+          baseSalary: baseStr,
+          bonus: bonusStr,
+          payrollStatus: "PENDING",
+        });
+      }
+    }
+
+    const row = await store.createSalaryPosting({
+      userId: Number(userId),
+      allocationType,
+      projectId: allocationType === "PROJECT" ? Number(projectId) : null,
+      month: Number(month),
+      year: Number(year),
+      baseSalary: baseStr,
+      bonus: bonusStr,
+      createdById: ctx.userId,
+    });
+
+    const projects =
+      allocationType === "PROJECT" && projectId
+        ? await store.findProjectById(Number(projectId))
+        : null;
+
+    res.status(201).json({
+      id: row.id,
+      userId: Number(userId),
+      fullName: user.fullName,
+      allocationType,
+      projectId: allocationType === "PROJECT" ? Number(projectId) : null,
+      projectName: projects?.name ?? null,
+      month: Number(month),
+      year: Number(year),
+      baseSalary: Number(baseStr),
+      bonus: Number(bonusStr),
+      totalPay: Number(baseStr) + Number(bonusStr),
+      createdAt: new Date(row.createdAt as string | Date).toISOString(),
+    });
+  },
+);
+
+router.get(
   "/v1/finance/expenses",
   requireAuth,
   requirePermission("finance:expenses_read"),
@@ -112,27 +226,48 @@ router.post(
   requirePermission("finance:expenses_write"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
-    const { description, amount, teamId } = req.body;
+    const { description, amount, teamId, submittedById } = req.body;
     if (!description || amount == null) {
       res.status(400).json({ error: "Description and amount are required" });
       return;
     }
+
+    let submitterId = ctx.userId;
+    if (submittedById != null && Number(submittedById) !== ctx.userId) {
+      if (!hasPermission(ctx, "employees:read")) {
+        res.status(403).json({ error: "Cannot assign expense to another user" });
+        return;
+      }
+      const target = await store.findUserById(Number(submittedById));
+      if (!target) {
+        res.status(404).json({ error: "Submitted-by user not found" });
+        return;
+      }
+      submitterId = target.id;
+    } else if (submittedById != null) {
+      submitterId = Number(submittedById);
+    }
+
     const expense = await store.createExpense({
       description,
       amount: String(amount),
       teamId: teamId ?? ctx.teamId,
-      submittedById: ctx.userId,
+      submittedById: submitterId,
       status: "PENDING",
       receiptUrl: null,
     });
+
+    const submitter = await store.findUserById(submitterId);
+    const team = expense.teamId ? await store.findTeamById(expense.teamId) : null;
+
     res.status(201).json({
       id: expense.id,
       description: expense.description,
       amount: Number(expense.amount),
       teamId: expense.teamId,
-      teamName: null,
+      teamName: team?.name ?? null,
       submittedById: expense.submittedById,
-      submitterName: null,
+      submitterName: submitter?.fullName ?? null,
       status: expense.status,
       createdAt: expense.createdAt.toISOString(),
     });
@@ -191,11 +326,15 @@ router.post(
   requirePermission("finance:payroll"),
   async (req, res): Promise<void> => {
     const { month, year } = req.body;
+    if (month == null || year == null) {
+      res.status(400).json({ error: "month and year are required" });
+      return;
+    }
     const profiles = await store.listProfiles();
     const totalAmount = profiles.reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
     const run = await store.createPayrollRun({
-      month,
-      year,
+      month: Number(month),
+      year: Number(year),
       totalAmount: String(totalAmount),
       status: "PENDING",
       approvedById: null,

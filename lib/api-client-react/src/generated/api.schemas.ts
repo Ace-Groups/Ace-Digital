@@ -398,6 +398,50 @@ export interface ExpenseInput {
   description: string;
   amount: number;
   teamId?: number;
+  submittedById?: number;
+}
+
+export type SalaryPostingRecordAllocationType = typeof SalaryPostingRecordAllocationType[keyof typeof SalaryPostingRecordAllocationType];
+
+
+export const SalaryPostingRecordAllocationType = {
+  MONTHLY: 'MONTHLY',
+  PROJECT: 'PROJECT',
+} as const;
+
+export interface SalaryPostingRecord {
+  id: number;
+  userId: number;
+  fullName: string;
+  allocationType: SalaryPostingRecordAllocationType;
+  /** @nullable */
+  projectId?: number | null;
+  /** @nullable */
+  projectName?: string | null;
+  month: number;
+  year: number;
+  baseSalary: number;
+  bonus: number;
+  totalPay: number;
+  createdAt?: string;
+}
+
+export type SalaryPostingInputAllocationType = typeof SalaryPostingInputAllocationType[keyof typeof SalaryPostingInputAllocationType];
+
+
+export const SalaryPostingInputAllocationType = {
+  MONTHLY: 'MONTHLY',
+  PROJECT: 'PROJECT',
+} as const;
+
+export interface SalaryPostingInput {
+  userId: number;
+  allocationType: SalaryPostingInputAllocationType;
+  projectId?: number;
+  month: number;
+  year: number;
+  baseSalary: number;
+  bonus: number;
 }
 
 export interface PayrollRun {
@@ -585,6 +629,7 @@ export const MessageAttachmentType = {
   image: 'image',
   file: 'file',
   video: 'video',
+  audio: 'audio',
 } as const;
 
 export interface MessageAttachment {

@@ -19,6 +19,7 @@ import {
   reportsTable,
   expensesTable,
   payrollRunsTable,
+  salaryPostingsTable,
 } from "../schema";
 import type {
   User,
@@ -46,6 +47,8 @@ import type {
   DashboardSnapshot,
   MessageWithSender,
   SalaryRow,
+  SalaryPostingRow,
+  CreateSalaryPostingInput,
   UpdateProfileInput,
   UpdateUserInput,
   CreateChannelInput,
@@ -753,6 +756,60 @@ export function createPostgresStore() {
     createPayrollRun: async (data: Omit<PayrollRun, "id" | "createdAt">) => {
       const [p] = await db.insert(payrollRunsTable).values(data).returning();
       return p;
+    },
+    createSalaryPosting: async (data: CreateSalaryPostingInput) => {
+      const [row] = await db
+        .insert(salaryPostingsTable)
+        .values({
+          userId: data.userId,
+          allocationType: data.allocationType,
+          projectId: data.projectId ?? null,
+          month: data.month,
+          year: data.year,
+          baseSalary: data.baseSalary,
+          bonus: data.bonus,
+          createdById: data.createdById,
+        })
+        .returning();
+      return row;
+    },
+    listSalaryPostings: async (): Promise<SalaryPostingRow[]> => {
+      const rows = await db
+        .select({
+          id: salaryPostingsTable.id,
+          userId: salaryPostingsTable.userId,
+          fullName: usersTable.fullName,
+          allocationType: salaryPostingsTable.allocationType,
+          projectId: salaryPostingsTable.projectId,
+          projectName: projectsTable.name,
+          month: salaryPostingsTable.month,
+          year: salaryPostingsTable.year,
+          baseSalary: salaryPostingsTable.baseSalary,
+          bonus: salaryPostingsTable.bonus,
+          createdAt: salaryPostingsTable.createdAt,
+        })
+        .from(salaryPostingsTable)
+        .innerJoin(usersTable, eq(salaryPostingsTable.userId, usersTable.id))
+        .leftJoin(projectsTable, eq(salaryPostingsTable.projectId, projectsTable.id))
+        .orderBy(sql`${salaryPostingsTable.createdAt} DESC`);
+      return rows.map((r) => {
+        const base = r.baseSalary ? Number(r.baseSalary) : 0;
+        const bonus = r.bonus ? Number(r.bonus) : 0;
+        return {
+          id: r.id,
+          userId: r.userId,
+          fullName: r.fullName,
+          allocationType: r.allocationType as "MONTHLY" | "PROJECT",
+          projectId: r.projectId,
+          projectName: r.projectName,
+          month: r.month,
+          year: r.year,
+          baseSalary: base,
+          bonus,
+          totalPay: base + bonus,
+          createdAt: r.createdAt,
+        };
+      });
     },
     getDashboardSnapshot: async (ctx: AccessContext): Promise<DashboardSnapshot> => {
       const snapshotStore = createPostgresStore();

@@ -1,4 +1,5 @@
 import { Download, FileText } from "lucide-react";
+import { VoiceMessagePlayer } from "@/components/channels/VoiceMessagePlayer";
 import type { Message } from "@workspace/api-client-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
@@ -110,6 +111,10 @@ function AttachmentPreview({
         />
       </div>
     );
+  }
+
+  if (attachment.type === "audio") {
+    return <VoiceMessagePlayer url={attachment.url} isMe={isMe} />;
   }
 
   return (

@@ -14,6 +14,7 @@ import type {
   Report,
   Expense,
   PayrollRun,
+  SalaryPosting,
 } from "../schema";
 
 export type {
@@ -32,6 +33,33 @@ export type {
   Report,
   Expense,
   PayrollRun,
+  SalaryPosting,
+};
+
+export type SalaryPostingRow = {
+  id: number;
+  userId: number;
+  fullName: string;
+  allocationType: "MONTHLY" | "PROJECT";
+  projectId: number | null;
+  projectName: string | null;
+  month: number;
+  year: number;
+  baseSalary: number;
+  bonus: number;
+  totalPay: number;
+  createdAt: Date;
+};
+
+export type CreateSalaryPostingInput = {
+  userId: number;
+  allocationType: "MONTHLY" | "PROJECT";
+  projectId?: number | null;
+  month: number;
+  year: number;
+  baseSalary: string;
+  bonus: string;
+  createdById: number;
 };
 
 export type { AccessContext } from "./scoping";

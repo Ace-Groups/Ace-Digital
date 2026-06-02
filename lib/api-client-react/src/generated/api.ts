@@ -69,6 +69,8 @@ import type {
   Report,
   ReportInput,
   ResetPasswordInput,
+  SalaryPostingInput,
+  SalaryPostingRecord,
   SalaryRecord,
   Task,
   TaskInput,
@@ -3071,6 +3073,154 @@ export const usePatchExpenseStatus = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPatchExpenseStatusMutationOptions(options));
+    }
+
+export const getListSalaryPostingsUrl = () => {
+
+
+
+
+  return `/api/v1/finance/salary-postings`
+}
+
+/**
+ * @summary List salary postings (monthly and project allocations)
+ */
+export const listSalaryPostings = async ( options?: RequestInit): Promise<SalaryPostingRecord[]> => {
+
+  return customFetch<SalaryPostingRecord[]>(getListSalaryPostingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSalaryPostingsQueryKey = () => {
+    return [
+    `/api/v1/finance/salary-postings`
+    ] as const;
+    }
+
+
+export const getListSalaryPostingsQueryOptions = <TData = Awaited<ReturnType<typeof listSalaryPostings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSalaryPostings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSalaryPostingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSalaryPostings>>> = ({ signal }) => listSalaryPostings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSalaryPostings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSalaryPostingsQueryResult = NonNullable<Awaited<ReturnType<typeof listSalaryPostings>>>
+export type ListSalaryPostingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List salary postings (monthly and project allocations)
+ */
+
+export function useListSalaryPostings<TData = Awaited<ReturnType<typeof listSalaryPostings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSalaryPostings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSalaryPostingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSalaryPostingUrl = () => {
+
+
+
+
+  return `/api/v1/finance/salary-postings`
+}
+
+/**
+ * @summary Post salary (monthly profile update or project allocation)
+ */
+export const createSalaryPosting = async (salaryPostingInput: SalaryPostingInput, options?: RequestInit): Promise<SalaryPostingRecord> => {
+
+  return customFetch<SalaryPostingRecord>(getCreateSalaryPostingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      salaryPostingInput,)
+  }
+);}
+
+
+
+
+export const getCreateSalaryPostingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSalaryPosting>>, TError,{data: BodyType<SalaryPostingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSalaryPosting>>, TError,{data: BodyType<SalaryPostingInput>}, TContext> => {
+
+const mutationKey = ['createSalaryPosting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSalaryPosting>>, {data: BodyType<SalaryPostingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSalaryPosting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSalaryPostingMutationResult = NonNullable<Awaited<ReturnType<typeof createSalaryPosting>>>
+    export type CreateSalaryPostingMutationBody = BodyType<SalaryPostingInput>
+    export type CreateSalaryPostingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Post salary (monthly profile update or project allocation)
+ */
+export const useCreateSalaryPosting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSalaryPosting>>, TError,{data: BodyType<SalaryPostingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSalaryPosting>>,
+        TError,
+        {data: BodyType<SalaryPostingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSalaryPostingMutationOptions(options));
     }
 
 export const getListPayrollRunsUrl = () => {

@@ -10,6 +10,7 @@ export * from "./clients";
 export * from "./approvals";
 export * from "./expenses";
 export * from "./payroll";
+export * from "./salary_postings";
 export * from "./reports";
 export * from "./channels";
 export * from "./activity";

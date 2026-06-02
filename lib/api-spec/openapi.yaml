@@ -786,6 +786,38 @@ paths:
         "404":
           description: Not found
 
+  /v1/finance/salary-postings:
+    get:
+      operationId: listSalaryPostings
+      tags: [finance]
+      summary: List salary postings (monthly and project allocations)
+      responses:
+        "200":
+          description: Salary postings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalaryPostingRecord"
+    post:
+      operationId: createSalaryPosting
+      tags: [finance]
+      summary: Post salary (monthly profile update or project allocation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalaryPostingInput"
+      responses:
+        "201":
+          description: Salary posting created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalaryPostingRecord"
+
   /v1/finance/payroll-runs:
     get:
       operationId: listPayrollRuns
@@ -1915,6 +1947,58 @@ components:
           type: number
         teamId:
           type: integer
+        submittedById:
+          type: integer
+
+    SalaryPostingRecord:
+      type: object
+      required: [id, userId, fullName, allocationType, month, year, baseSalary, bonus, totalPay]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        fullName:
+          type: string
+        allocationType:
+          type: string
+          enum: [MONTHLY, PROJECT]
+        projectId:
+          type: ["integer", "null"]
+        projectName:
+          type: ["string", "null"]
+        month:
+          type: integer
+        year:
+          type: integer
+        baseSalary:
+          type: number
+        bonus:
+          type: number
+        totalPay:
+          type: number
+        createdAt:
+          type: string
+
+    SalaryPostingInput:
+      type: object
+      required: [userId, allocationType, month, year, baseSalary, bonus]
+      properties:
+        userId:
+          type: integer
+        allocationType:
+          type: string
+          enum: [MONTHLY, PROJECT]
+        projectId:
+          type: integer
+        month:
+          type: integer
+        year:
+          type: integer
+        baseSalary:
+          type: number
+        bonus:
+          type: number
 
     PayrollRun:
       type: object
@@ -2190,7 +2274,7 @@ components:
       properties:
         type:
           type: string
-          enum: [image, file, video]
+          enum: [image, file, video, audio]
         url:
           type: string
         name:

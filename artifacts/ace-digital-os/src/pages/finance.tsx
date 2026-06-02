@@ -1,22 +1,29 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { StaggerList } from "@/components/design";
+import { FinanceKpiGrid } from "@/components/finance/FinanceKpiGrid";
+import { FinanceSalariesTab } from "@/components/finance/FinanceSalariesTab";
+import { FinanceExpensesTab } from "@/components/finance/FinanceExpensesTab";
+import { FinancePayrollTab } from "@/components/finance/FinancePayrollTab";
+import { RecordExpenseSheet, type RecordExpenseFormValues } from "@/components/finance/RecordExpenseSheet";
+import { PostSalarySheet, type PostSalaryFormValues } from "@/components/finance/PostSalarySheet";
+import { RunPayrollSheet, type RunPayrollFormValues } from "@/components/finance/RunPayrollSheet";
 import {
   useGetFinanceSummary,
   useGetMyPayslip,
   useListSalaries,
+  useListSalaryPostings,
   useListExpenses,
   useListPayrollRuns,
   useCreatePayrollRun,
   useCreateExpense,
-  useListTeams,
+  useCreateSalaryPosting,
   usePatchExpenseStatus,
   getListPayrollRunsQueryKey,
   getGetMyPayslipQueryKey,
   getGetFinanceSummaryQueryKey,
   getListSalariesQueryKey,
+  getListSalaryPostingsQueryKey,
   getListExpensesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,78 +32,120 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  TrendingUp, TrendingDown, DollarSign, Wallet, Users, FileText, Plus,
-} from "lucide-react";
-import { formatCurrency, statusColor, cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import { statusColor, cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/contexts/AuthContext";
 
+function parsePeriod(period: string): { month: number; year: number } {
+  const [yearStr, monthStr] = period.split("-");
+  return { year: Number(yearStr), month: Number(monthStr) };
+}
 
 export default function FinancePage() {
   const { can } = usePermissions();
-  const payslipOnly = can("finance:salaries_self") && !can("finance:summary");
-  const { data: myPayslip, isLoading: payslipLoading } = useGetMyPayslip({
-    query: { enabled: payslipOnly, queryKey: getGetMyPayslipQueryKey() },
-  });
-  const { data: summary, isLoading: summaryLoading } = useGetFinanceSummary({
-    query: { enabled: !payslipOnly, queryKey: getGetFinanceSummaryQueryKey() },
-  });
-  const { data: salaries } = useListSalaries({
-    query: { enabled: !payslipOnly, queryKey: getListSalariesQueryKey() },
-  });
-  const { data: expenses } = useListExpenses({
-    query: { enabled: !payslipOnly, queryKey: getListExpensesQueryKey() },
-  });
-  const { data: payrollRuns } = useListPayrollRuns({
-    query: { enabled: !payslipOnly, queryKey: getListPayrollRunsQueryKey() },
-  });
-  const createPayrollRun = useCreatePayrollRun();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
-  const { data: teams } = useListTeams();
+  const payslipOnly = can("finance:salaries_self") && !can("finance:summary");
+  const canSummary = can("finance:summary");
+  const canSalaries = can("finance:salaries_all");
+  const canExpenses = can("finance:expenses_read");
+  const canWriteExpense = can("finance:expenses_write");
+  const canApproveExpense = can("finance:expenses_approve");
+  const canPayroll = can("finance:payroll");
+  const showSubmitterPicker = canWriteExpense && can("employees:read");
+
+  const queryOpts = { retry: false as const };
+
+  const { data: myPayslip, isLoading: payslipLoading } = useGetMyPayslip({
+    query: { enabled: payslipOnly, queryKey: getGetMyPayslipQueryKey(), ...queryOpts },
+  });
+
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+  } = useGetFinanceSummary({
+    query: { enabled: canSummary, queryKey: getGetFinanceSummaryQueryKey(), ...queryOpts },
+  });
+
+  const {
+    data: salaries,
+    isLoading: salariesLoading,
+    isError: salariesError,
+    refetch: refetchSalaries,
+  } = useListSalaries({
+    query: { enabled: canSalaries, queryKey: getListSalariesQueryKey(), ...queryOpts },
+  });
+
+  const {
+    data: postings,
+    isLoading: postingsLoading,
+    refetch: refetchPostings,
+  } = useListSalaryPostings({
+    query: { enabled: canSalaries, queryKey: getListSalaryPostingsQueryKey(), ...queryOpts },
+  });
+
+  const {
+    data: expenses,
+    isLoading: expensesLoading,
+    isError: expensesError,
+    refetch: refetchExpenses,
+  } = useListExpenses({
+    query: { enabled: canExpenses, queryKey: getListExpensesQueryKey(), ...queryOpts },
+  });
+
+  const {
+    data: payrollRuns,
+    isLoading: payrollLoading,
+    isError: payrollError,
+    refetch: refetchPayroll,
+  } = useListPayrollRuns({
+    query: { enabled: canPayroll, queryKey: getListPayrollRunsQueryKey(), ...queryOpts },
+  });
+
+  const createPayrollRun = useCreatePayrollRun();
   const createExpense = useCreateExpense();
+  const createSalaryPosting = useCreateSalaryPosting();
+  const patchExpenseStatus = usePatchExpenseStatus();
 
-  const expenseSchema = z.object({
-    description: z.string().min(1, "Description is required"),
-    amount: z.string().min(1, "Amount is required").refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-      message: "Amount must be a positive number",
-    }),
-    teamId: z.string().optional(),
-  });
-  type ExpenseFormValues = z.infer<typeof expenseSchema>;
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [salaryOpen, setSalaryOpen] = useState(false);
+  const [payrollOpen, setPayrollOpen] = useState(false);
 
-  const expenseForm = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      description: "",
-      amount: "",
-      teamId: "",
-    },
-  });
+  const defaultTab = useMemo(() => {
+    if (canSalaries) return "salaries";
+    if (canExpenses) return "expenses";
+    if (canPayroll) return "payroll";
+    return "salaries";
+  }, [canSalaries, canExpenses, canPayroll]);
 
-  async function onExpenseSubmit(data: ExpenseFormValues) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  function invalidateFinance() {
+    void queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListSalariesQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListSalaryPostingsQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListPayrollRunsQueryKey() });
+  }
+
+  async function onExpenseSubmit(data: RecordExpenseFormValues) {
     try {
       await createExpense.mutateAsync({
         data: {
           description: data.description,
           amount: Number(data.amount),
           teamId: data.teamId ? Number(data.teamId) : undefined,
+          submittedById: Number(data.submittedById),
         },
       });
-      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
-      toast({ title: "Expense recorded successfully!" });
-      setExpenseDialogOpen(false);
-      expenseForm.reset();
+      invalidateFinance();
+      toast({ title: "Expense recorded" });
+      setExpenseOpen(false);
     } catch (error) {
       toast({
         title: "Failed to record expense",
@@ -106,17 +155,64 @@ export default function FinancePage() {
     }
   }
 
-  const patchExpenseStatus = usePatchExpenseStatus();
+  async function onSalarySubmit(data: PostSalaryFormValues) {
+    const { month, year } = parsePeriod(data.period);
+    try {
+      await createSalaryPosting.mutateAsync({
+        data: {
+          userId: Number(data.userId),
+          allocationType: data.allocationType,
+          month,
+          year,
+          baseSalary: Number(data.baseSalary),
+          bonus: Number(data.bonus || 0),
+          projectId:
+            data.allocationType === "PROJECT" && data.projectId
+              ? Number(data.projectId)
+              : undefined,
+        },
+      });
+      invalidateFinance();
+      toast({
+        title:
+          data.allocationType === "MONTHLY"
+            ? "Monthly salary posted"
+            : "Project allocation recorded",
+      });
+      setSalaryOpen(false);
+    } catch (error) {
+      toast({
+        title: "Failed to post salary",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function onPayrollSubmit(data: RunPayrollFormValues) {
+    const { month, year } = parsePeriod(data.period);
+    try {
+      await createPayrollRun.mutateAsync({ data: { month, year } });
+      invalidateFinance();
+      toast({ title: "Payroll run created" });
+      setPayrollOpen(false);
+    } catch (error) {
+      toast({
+        title: "Failed to run payroll",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }
 
   async function handleApproveExpense(id: number) {
     try {
       await patchExpenseStatus.mutateAsync({ id, data: { status: "APPROVED" } });
-      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
-      toast({ title: "Expense approved!" });
+      invalidateFinance();
+      toast({ title: "Expense approved" });
     } catch (error) {
       toast({
-        title: "Failed to approve expense",
+        title: "Failed to approve",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
@@ -126,12 +222,11 @@ export default function FinancePage() {
   async function handleRejectExpense(id: number) {
     try {
       await patchExpenseStatus.mutateAsync({ id, data: { status: "REJECTED" } });
-      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
-      toast({ title: "Expense rejected!", variant: "destructive" });
+      invalidateFinance();
+      toast({ title: "Expense rejected", variant: "destructive" });
     } catch (error) {
       toast({
-        title: "Failed to reject expense",
+        title: "Failed to reject",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
@@ -141,338 +236,193 @@ export default function FinancePage() {
   if (payslipOnly) {
     return (
       <AppLayout title="My Payslip">
-        {payslipLoading ? (
-          <Skeleton className="h-48 w-full max-w-md" />
-        ) : myPayslip ? (
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle className="text-lg">{myPayslip.fullName}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
-              </p>
-              <p>Base salary: {formatCurrency(myPayslip.baseSalary)}</p>
-              <p>Bonus: {formatCurrency(myPayslip.bonus)}</p>
-              <p className="text-base font-semibold pt-2">
-                Total: {formatCurrency(myPayslip.totalPay)}
-              </p>
-              <Badge variant="outline" className={cn("mt-2", statusColor(myPayslip.payrollStatus))}>
-                {myPayslip.payrollStatus}
-              </Badge>
-            </CardContent>
-          </Card>
-        ) : null}
+        <div className="page-stack max-w-md">
+          {payslipLoading ? (
+            <Skeleton className="h-48 w-full rounded-xl" />
+          ) : myPayslip ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{myPayslip.fullName}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
+                </p>
+                <p>Base salary: {formatCurrency(myPayslip.baseSalary)}</p>
+                <p>Bonus: {formatCurrency(myPayslip.bonus)}</p>
+                <p className="text-base font-semibold pt-2">
+                  Total: {formatCurrency(myPayslip.totalPay)}
+                </p>
+                <Badge variant="outline" className={cn("mt-2", statusColor(myPayslip.payrollStatus))}>
+                  {myPayslip.payrollStatus}
+                </Badge>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
       </AppLayout>
     );
   }
 
-  async function handleRunPayroll() {
-    const now = new Date();
-    await createPayrollRun.mutateAsync({
-      data: { month: now.getMonth() + 1, year: now.getFullYear() },
-    });
-    queryClient.invalidateQueries({ queryKey: getListPayrollRunsQueryKey() });
-    toast({ title: "Payroll run created!" });
-  }
-
-  const kpis = [
-    {
-      label: "Total Revenue",
-      value: formatCurrency(summary?.totalRevenue ?? 0),
-      icon: TrendingUp,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-    {
-      label: "Total Expenses",
-      value: formatCurrency(summary?.totalExpenses ?? 0),
-      icon: TrendingDown,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
-    {
-      label: "Net Profit",
-      value: formatCurrency(summary?.netProfit ?? 0),
-      icon: DollarSign,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "Monthly Payroll",
-      value: formatCurrency(summary?.totalPayroll ?? 0),
-      icon: Users,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-  ];
+  const tabActions = (
+    <>
+      {activeTab === "salaries" && canPayroll && (
+        <Button
+          data-testid="btn-post-salary"
+          className="hidden min-h-11 gap-2 sm:inline-flex"
+          onClick={() => setSalaryOpen(true)}
+        >
+          <Plus size={16} /> Post Salary
+        </Button>
+      )}
+      {activeTab === "expenses" && canWriteExpense && (
+        <Button
+          data-testid="btn-add-expense"
+          className="hidden min-h-11 gap-2 sm:inline-flex"
+          onClick={() => setExpenseOpen(true)}
+        >
+          <Plus size={16} /> Record Expense
+        </Button>
+      )}
+      {activeTab === "payroll" && canPayroll && (
+        <Button
+          data-testid="btn-run-payroll"
+          className="hidden min-h-11 gap-2 sm:inline-flex"
+          onClick={() => setPayrollOpen(true)}
+        >
+          <Plus size={16} /> Run Payroll
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <AppLayout title="Finance & Payroll">
-      <div className="page-stack">
-        {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map(({ label, value, icon: Icon, color, bg }) => (
-            <Card key={label} data-testid={`finance-stat-${label.toLowerCase().replace(/ /g, "-")}`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    {summaryLoading ? (
-                      <Skeleton className="h-7 w-28 mt-1" />
-                    ) : (
-                      <p className="text-xl font-bold text-foreground mt-1">{value}</p>
-                    )}
-                  </div>
-                  <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                    <Icon size={18} className={color} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <StaggerList className="page-stack pb-24 sm:pb-8">
+        {canSummary && <FinanceKpiGrid summary={summary} isLoading={summaryLoading} />}
 
-        <Tabs defaultValue="salaries">
-          <TabsList>
-            <TabsTrigger value="salaries">Salaries</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="payroll">Payroll Runs</TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className="h-auto w-full justify-start overflow-x-auto p-1 sm:w-auto">
+              {canSalaries && (
+                <TabsTrigger value="salaries" className="min-h-11 shrink-0 px-4">
+                  Salaries
+                </TabsTrigger>
+              )}
+              {canExpenses && (
+                <TabsTrigger value="expenses" className="min-h-11 shrink-0 px-4">
+                  Expenses
+                </TabsTrigger>
+              )}
+              {canPayroll && (
+                <TabsTrigger value="payroll" className="min-h-11 shrink-0 px-4">
+                  Payroll Runs
+                </TabsTrigger>
+              )}
+            </TabsList>
+            {tabActions}
+          </div>
 
-          {/* Salaries tab */}
-          <TabsContent value="salaries">
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/40">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Team</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Job Title</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Base Salary</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bonus</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
-                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {salaries?.map((s) => (
-                        <tr key={s.userId} data-testid={`salary-row-${s.userId}`} className="hover:bg-muted/40">
-                          <td className="px-4 py-3 font-medium">{s.fullName}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{s.teamName ?? "—"}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{s.jobTitle ?? "—"}</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(s.baseSalary ?? 0)}</td>
-                          <td className="px-4 py-3 text-right text-emerald-600">{formatCurrency(s.bonus ?? 0)}</td>
-                          <td className="px-4 py-3 text-right font-semibold">{formatCurrency(s.totalPay ?? 0)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge variant="outline" className={cn("text-xs", statusColor(s.payrollStatus ?? ""))}>
-                              {s.payrollStatus}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {canSalaries && (
+            <TabsContent value="salaries" className="mt-0">
+              <FinanceSalariesTab
+                salaries={salaries}
+                postings={postings}
+                isLoading={salariesLoading || postingsLoading}
+                isError={salariesError}
+                onRetry={() => {
+                  void refetchSalaries();
+                  void refetchPostings();
+                }}
+              />
+            </TabsContent>
+          )}
 
-          {/* Expenses tab */}
-          <TabsContent value="expenses">
-            <div className="flex justify-end mb-3">
-              <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button data-testid="btn-add-expense" className="gap-2">
-                    <Plus size={16} /> Record Expense
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Record Expense</DialogTitle>
-                    <DialogDescription>
-                      Submit a new business expense. It will be recorded as PENDING.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...expenseForm}>
-                    <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="mobile-form space-y-4">
-                      <FormField
-                        control={expenseForm.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-expense-desc" placeholder="e.g. AWS Hosting Bill" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={expenseForm.control}
-                        name="amount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Amount (₹)</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-expense-amount" type="number" step="0.01" placeholder="e.g. 45000" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={expenseForm.control}
-                        name="teamId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Team</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select team" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {teams?.map((t) => (
-                                  <SelectItem key={t.id} value={String(t.id)}>
-                                    {t.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        data-testid="btn-submit-expense"
-                        type="submit"
-                        className="w-full"
-                        disabled={createExpense.isPending}
-                      >
-                        Record Expense
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/40">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Description</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Team</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Submitted By</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Amount</th>
-                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
-                        {can("finance:expenses_approve") && (
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Actions</th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {expenses?.map((e) => (
-                        <tr key={e.id} data-testid={`expense-row-${e.id}`} className="hover:bg-muted/40">
-                          <td className="px-4 py-3 font-medium">{e.description}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{e.teamName ?? "—"}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{e.submitterName ?? "—"}</td>
-                          <td className="px-4 py-3 text-right font-semibold">{formatCurrency(e.amount ?? 0)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge variant="outline" className={cn("text-xs", statusColor(e.status ?? ""))}>
-                              {e.status}
-                            </Badge>
-                          </td>
-                          {can("finance:expenses_approve") && (
-                            <td className="px-4 py-3 text-center">
-                              {e.status === "PENDING" ? (
-                                <div className="flex justify-center gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-xs bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
-                                    onClick={() => handleApproveExpense(e.id)}
-                                  >
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-xs bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                    onClick={() => handleRejectExpense(e.id)}
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {canExpenses && (
+            <TabsContent value="expenses" className="mt-0">
+              <FinanceExpensesTab
+                expenses={expenses}
+                isLoading={expensesLoading}
+                isError={expensesError}
+                onRetry={() => void refetchExpenses()}
+                canApprove={canApproveExpense}
+                onApprove={handleApproveExpense}
+                onReject={handleRejectExpense}
+              />
+            </TabsContent>
+          )}
 
-          {/* Payroll runs tab */}
-          <TabsContent value="payroll">
-            <div className="flex justify-end mb-3">
-              <Button
-                data-testid="btn-run-payroll"
-                onClick={handleRunPayroll}
-                disabled={createPayrollRun.isPending}
-                className="gap-2"
-              >
-                <Plus size={16} /> Run Payroll
-              </Button>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/40">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Period</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total Amount</th>
-                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {payrollRuns?.map((r) => (
-                        <tr key={r.id} data-testid={`payroll-row-${r.id}`} className="hover:bg-muted/40">
-                          <td className="px-4 py-3 font-medium">
-                            {new Date(r.year, r.month - 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold">{formatCurrency(r.totalAmount ?? 0)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge variant="outline" className={cn("text-xs", statusColor(r.status ?? ""))}>
-                              {r.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {canPayroll && (
+            <TabsContent value="payroll" className="mt-0">
+              <FinancePayrollTab
+                payrollRuns={payrollRuns}
+                isLoading={payrollLoading}
+                isError={payrollError}
+                onRetry={() => void refetchPayroll()}
+              />
+            </TabsContent>
+          )}
         </Tabs>
-      </div>
+      </StaggerList>
+
+      {canPayroll && activeTab === "salaries" && (
+        <Button
+          data-testid="btn-post-salary-fab"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setSalaryOpen(true)}
+          aria-label="Post salary"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+      {canWriteExpense && activeTab === "expenses" && (
+        <Button
+          data-testid="btn-add-expense-fab"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setExpenseOpen(true)}
+          aria-label="Record expense"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+      {canPayroll && activeTab === "payroll" && (
+        <Button
+          data-testid="btn-run-payroll-fab"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setPayrollOpen(true)}
+          aria-label="Run payroll"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+
+      {user && (
+        <RecordExpenseSheet
+          open={expenseOpen}
+          onOpenChange={setExpenseOpen}
+          defaultSubmitterId={user.id}
+          showSubmitterPicker={showSubmitterPicker}
+          saving={createExpense.isPending}
+          onSubmit={onExpenseSubmit}
+        />
+      )}
+
+      <PostSalarySheet
+        open={salaryOpen}
+        onOpenChange={setSalaryOpen}
+        saving={createSalaryPosting.isPending}
+        onSubmit={onSalarySubmit}
+      />
+
+      <RunPayrollSheet
+        open={payrollOpen}
+        onOpenChange={setPayrollOpen}
+        saving={createPayrollRun.isPending}
+        onSubmit={onPayrollSubmit}
+      />
     </AppLayout>
   );
 }

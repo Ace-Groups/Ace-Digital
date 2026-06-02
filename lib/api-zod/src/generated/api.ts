@@ -849,7 +849,8 @@ export const ListExpensesResponse = zod.array(ListExpensesResponseItem)
 export const CreateExpenseBody = zod.object({
   "description": zod.string(),
   "amount": zod.number(),
-  "teamId": zod.number().optional()
+  "teamId": zod.number().optional(),
+  "submittedById": zod.number().optional()
 })
 
 
@@ -874,6 +875,40 @@ export const PatchExpenseStatusResponse = zod.object({
   "submitterName": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List salary postings (monthly and project allocations)
+ */
+export const ListSalaryPostingsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "allocationType": zod.enum(['MONTHLY', 'PROJECT']),
+  "projectId": zod.number().nullish(),
+  "projectName": zod.string().nullish(),
+  "month": zod.number(),
+  "year": zod.number(),
+  "baseSalary": zod.number(),
+  "bonus": zod.number(),
+  "totalPay": zod.number(),
+  "createdAt": zod.string().optional()
+})
+export const ListSalaryPostingsResponse = zod.array(ListSalaryPostingsResponseItem)
+
+
+/**
+ * @summary Post salary (monthly profile update or project allocation)
+ */
+export const CreateSalaryPostingBody = zod.object({
+  "userId": zod.number(),
+  "allocationType": zod.enum(['MONTHLY', 'PROJECT']),
+  "projectId": zod.number().optional(),
+  "month": zod.number(),
+  "year": zod.number(),
+  "baseSalary": zod.number(),
+  "bonus": zod.number()
 })
 
 
@@ -1268,7 +1303,7 @@ export const GetChannelMessagesResponseItem = zod.object({
   "senderAvatar": zod.string().nullish(),
   "body": zod.string(),
   "attachments": zod.array(zod.object({
-  "type": zod.enum(['image', 'file', 'video']),
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
   "url": zod.string(),
   "name": zod.string().optional(),
   "mimeType": zod.string().optional(),
@@ -1289,7 +1324,7 @@ export const SendMessageParams = zod.object({
 export const SendMessageBody = zod.object({
   "body": zod.string().optional(),
   "attachments": zod.array(zod.object({
-  "type": zod.enum(['image', 'file', 'video']),
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
   "url": zod.string(),
   "name": zod.string().optional(),
   "mimeType": zod.string().optional(),

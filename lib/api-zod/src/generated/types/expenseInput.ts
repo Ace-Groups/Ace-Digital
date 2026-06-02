@@ -10,4 +10,5 @@ export interface ExpenseInput {
   description: string;
   amount: number;
   teamId?: number;
+  submittedById?: number;
 }

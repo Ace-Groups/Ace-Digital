@@ -9,6 +9,7 @@ import {
 } from "./index";
 
 const superAdmin = { userId: 1, role: "super_admin", teamId: 1 };
+const management = { userId: 5, role: "management", teamId: 1 };
 const teamLead = { userId: 2, role: "team_lead", teamId: 1 };
 const finance = { userId: 3, role: "finance", teamId: 4 };
 const employee = { userId: 4, role: "employee", teamId: 1 };
@@ -20,6 +21,12 @@ describe("hasPermission", () => {
   it("employee cannot read employee directory", () => {
     assert.equal(hasPermission(employee, "employees:read"), false);
     assert.equal(hasPermission(employee, "employees:read_self"), true);
+  });
+  it("management can read salaries and payroll but not approve expenses", () => {
+    assert.equal(hasPermission(management, "finance:salaries_all"), true);
+    assert.equal(hasPermission(management, "finance:payroll"), true);
+    assert.equal(hasPermission(management, "finance:expenses_write"), true);
+    assert.equal(hasPermission(management, "finance:expenses_approve"), false);
   });
 });
 
