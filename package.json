@@ -10,6 +10,7 @@
     "build:web": "BASE_PATH=/ PORT=5173 pnpm --filter @workspace/ace-digital-os run build",
     "build:api": "pnpm --filter @workspace/api-server run build",
     "seed:firestore": "USE_FIRESTORE=true npx tsx scripts/src/seed-firestore.ts",
+    "clear:prod": "USE_FIRESTORE=true npx tsx scripts/src/clear-db-for-prod.ts",
     "deploy:firebase": "pnpm run build:web && pnpm run build:api && npx firebase-tools@latest deploy --project ace-digital-os"
   },
   "private": true,

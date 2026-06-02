@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
-
-const JWT_SECRET = process.env.JWT_SECRET ?? "ace-digital-secret-2024";
+import { JWT_SECRET } from "./jwt-secret";
 const SALT_ROUNDS = 10;
 
 export interface AuthPayload {

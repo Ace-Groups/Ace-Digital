@@ -27,7 +27,7 @@ const NAV_ICONS = {
 } as const;
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -51,17 +51,23 @@ export function Sidebar() {
     <>
       <aside
         data-testid="sidebar"
+        data-collapsed={collapsed ? "true" : "false"}
         className={cn(
-          "flex h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
-          collapsed ? "w-[4.25rem]" : "w-64"
+          "flex h-screen shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
+          collapsed ? "w-[4.25rem]" : "w-64",
         )}
       >
-        <div className="flex items-center gap-2 border-b border-sidebar-border px-3 py-4">
+        <div
+          className={cn(
+            "flex shrink-0 items-center border-b border-sidebar-border py-4",
+            collapsed ? "flex-col gap-2 px-2" : "gap-2 px-3",
+          )}
+        >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent/50">
             <img
               src={aceLogo}
               alt="Ace Digital"
-              className="h-7 w-7 object-contain"
+              className="h-7 w-7 bg-transparent object-contain"
             />
           </div>
           {!collapsed && (
@@ -85,81 +91,113 @@ export function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
+        <nav className="flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
           {navItems.map(({ icon: Icon, label, href }) => {
             const active =
               location === href || (href !== "/" && location.startsWith(href));
+
+            const linkClass = cn(
+              "flex items-center rounded-lg text-sm font-medium transition-all duration-200",
+              collapsed
+                ? "mx-auto h-10 w-10 justify-center p-0"
+                : "gap-3 px-3 py-2.5",
+              active
+                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            );
+
+            const link = (
+              <Link
+                href={href}
+                data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                className={linkClass}
+                aria-label={label}
+              >
+                <Icon size={18} className="shrink-0" strokeWidth={active ? 2.25 : 2} />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </Link>
+            );
+
+            if (!collapsed) {
+              return <div key={href}>{link}</div>;
+            }
+
             return (
               <Tooltip key={href} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={href}
-                    data-testid={`nav-${label.toLowerCase()}`}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      active
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    )}
-                  >
-                    <Icon size={18} className="shrink-0" strokeWidth={active ? 2.25 : 2} />
-                    {!collapsed && <span className="truncate">{label}</span>}
-                  </Link>
-                </TooltipTrigger>
-                {collapsed && (
-                  <TooltipContent side="right">{label}</TooltipContent>
-                )}
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  {label}
+                </TooltipContent>
               </Tooltip>
             );
           })}
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-2">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
+          {collapsed ? (
+            <>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    data-testid="btn-profile"
+                    onClick={() => setProfileOpen(true)}
+                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-sidebar-accent"
+                    aria-label="Profile"
+                  >
+                    <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
+                      {storedAvatar.type === "image" && storedAvatar.value ? (
+                        <AvatarImage src={storedAvatar.value} key={avatarKey} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Profile</TooltipContent>
+              </Tooltip>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    data-testid="btn-logout"
+                    onClick={logout}
+                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    aria-label="Sign out"
+                  >
+                    <LogOut size={18} className="shrink-0" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sign Out</TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
+            <>
               <button
                 type="button"
                 data-testid="btn-profile"
                 onClick={() => setProfileOpen(true)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-sidebar-accent",
-                  !collapsed && "text-left"
-                )}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
               >
-                {storedAvatar.type === "image" && storedAvatar.value ? (
-                  <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
+                <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
+                  {storedAvatar.type === "image" && storedAvatar.value ? (
                     <AvatarImage src={storedAvatar.value} key={avatarKey} className="object-cover" />
-                    <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
-                    <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                {!collapsed && (
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium leading-tight text-sidebar-foreground">
-                      {user?.fullName}
-                    </p>
-                    <p className="truncate text-xs capitalize text-sidebar-foreground/50">
-                      {user?.role?.replace("_", " ")}
-                    </p>
-                  </div>
-                )}
-                {!collapsed && (
-                  <UserCircle size={14} className="shrink-0 text-sidebar-foreground/40" />
-                )}
+                  ) : null}
+                  <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium leading-tight text-sidebar-foreground">
+                    {user?.fullName}
+                  </p>
+                  <p className="truncate text-xs capitalize text-sidebar-foreground/50">
+                    {user?.role?.replace("_", " ")}
+                  </p>
+                </div>
+                <UserCircle size={14} className="shrink-0 text-sidebar-foreground/40" />
               </button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Profile</TooltipContent>}
-          </Tooltip>
-
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
               <button
                 type="button"
                 data-testid="btn-logout"
@@ -167,11 +205,10 @@ export function Sidebar() {
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
               >
                 <LogOut size={16} className="shrink-0" />
-                {!collapsed && <span>Sign Out</span>}
+                <span>Sign Out</span>
               </button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Sign Out</TooltipContent>}
-          </Tooltip>
+            </>
+          )}
         </div>
       </aside>
 

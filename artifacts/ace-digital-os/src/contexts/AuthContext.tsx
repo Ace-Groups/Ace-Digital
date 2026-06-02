@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
-
 interface AuthUser {
   id: number;
   email: string;
@@ -33,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthTokenGetter(() => getAuthToken());
   }, []);
 
-  const { data: rawUser, isLoading } = useGetMe({
+  const { data: rawUser, isLoading, isError } = useGetMe({
     query: {
       enabled: !!token,
       retry: false,
@@ -55,6 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : null;
 
+  useEffect(() => {
+    if (token && !isLoading && isError) {
+      clearAuthToken();
+      setToken(null);
+    }
+  }, [token, isLoading, isError]);
+
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
 
@@ -64,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(result.token);
       setToken(result.token);
     },
-    [loginMutation]
+    [loginMutation],
   );
 
   const logout = useCallback(async () => {

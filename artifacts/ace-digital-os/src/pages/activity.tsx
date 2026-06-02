@@ -25,7 +25,7 @@ function entityColor(type: string) {
     case "client": return "bg-purple-50 text-purple-600";
     case "approval": return "bg-amber-50 text-amber-600";
     case "payroll_run": return "bg-green-50 text-green-600";
-    default: return "bg-gray-50 text-gray-600";
+    default: return "bg-muted text-muted-foreground";
   }
 }
 
@@ -52,7 +52,7 @@ export default function ActivityPage() {
           ) : logs?.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground text-sm">No activity recorded yet</div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border">
               {logs?.map((log) => {
                 const Icon = entityIcon(log.entityType ?? "");
                 const iconColor = entityColor(log.entityType ?? "");
@@ -60,7 +60,7 @@ export default function ActivityPage() {
                   <div
                     key={log.id}
                     data-testid={`activity-log-${log.id}`}
-                    className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors"
+                    className="flex items-start gap-4 px-6 py-4 hover:bg-muted/50 transition-colors"
                   >
                     <Avatar className="h-9 w-9 shrink-0">
                       <AvatarFallback className="text-xs bg-primary/15 text-primary">
@@ -68,11 +68,11 @@ export default function ActivityPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm text-foreground">
                         <span className="font-semibold">{log.actorName}</span>{" "}
-                        <span className="text-gray-600">{log.action}</span>
+                        <span className="text-muted-foreground">{log.action}</span>
                         {log.entityId && (
-                          <span className="text-gray-500"> #{log.entityId}</span>
+                          <span className="text-muted-foreground"> #{log.entityId}</span>
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">

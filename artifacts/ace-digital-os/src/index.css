@@ -168,7 +168,7 @@
   --secondary-border: hsl(215 35% 28%);
 
   --muted: 215 40% 16%;
-  --muted-foreground: 215 20% 56%;
+  --muted-foreground: 215 18% 62%;
   --muted-border: hsl(215 30% 24%);
 
   --accent: 215 45% 20%;
@@ -227,6 +227,14 @@ body {
       180deg,
       hsl(var(--ace-sky) / 0.35) 0%,
       hsl(var(--background)) 42%
+    );
+  }
+
+  .dark .brand-gradient-subtle {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--ace-navy) / 0.55) 0%,
+      hsl(var(--background)) 48%
     );
   }
 

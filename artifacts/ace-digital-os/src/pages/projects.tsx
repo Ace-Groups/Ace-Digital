@@ -35,10 +35,10 @@ const STATUS_LABELS: Record<string, string> = {
   DONE: "Done",
 };
 const STATUS_COLORS: Record<string, string> = {
-  TODO: "bg-gray-50 border-gray-200",
-  IN_PROGRESS: "bg-blue-50 border-blue-200",
-  REVIEW: "bg-purple-50 border-purple-200",
-  DONE: "bg-emerald-50 border-emerald-200",
+  TODO: "bg-muted/50 border-border",
+  IN_PROGRESS: "bg-blue-500/10 border-blue-500/25 dark:bg-blue-500/15",
+  REVIEW: "bg-purple-500/10 border-purple-500/25 dark:bg-purple-500/15",
+  DONE: "bg-emerald-500/10 border-emerald-500/25 dark:bg-emerald-500/15",
 };
 
 const createSchema = z.object({
@@ -351,7 +351,7 @@ export default function ProjectsPage() {
             }}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-gray-700">{STATUS_LABELS[status]}</span>
+              <span className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</span>
               <Badge variant="secondary" className="text-xs">
                 {byStatus[status]?.length ?? 0}
               </Badge>
@@ -370,7 +370,7 @@ export default function ProjectsPage() {
                     key={project.id}
                     data-testid={`project-card-${project.id}`}
                     className={cn(
-                      "bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow group",
+                      "rounded-lg border border-border bg-card shadow-brand-sm transition-shadow group hover:shadow-brand-md",
                       dragging === project.id && "opacity-50 ring-2 ring-primary/30",
                     )}
                   >
@@ -389,7 +389,7 @@ export default function ProjectsPage() {
                       onClick={() => openProject(project)}
                       className="w-full text-left px-3 pb-3 pt-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-b-lg"
                     >
-                      <p className="text-sm font-medium text-gray-900 leading-tight pr-1">
+                      <p className="text-sm font-medium text-foreground leading-tight pr-1">
                         {project.name}
                       </p>
                       {project.teamName && (
@@ -407,7 +407,7 @@ export default function ProjectsPage() {
                         </span>
                       </div>
                       <div className="mt-2">
-                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-1 overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full bg-primary transition-all"
                             style={{ width: `${project.progress}%` }}

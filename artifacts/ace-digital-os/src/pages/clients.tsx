@@ -169,7 +169,7 @@ export default function ClientsPage() {
                     <Building2 size={18} className="text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm text-gray-900">{client.companyName}</p>
+                    <p className="font-semibold text-sm text-foreground">{client.companyName}</p>
                     <p className="text-xs text-muted-foreground">{client.contactName}</p>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function ClientsPage() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                 <div>
                   <p className="text-xs text-muted-foreground">Assigned to</p>
                   <p className="text-sm font-medium">{client.assignedTeamName ?? "—"}</p>

@@ -1,6 +1,6 @@
 /**
  * Wipes all Firestore app data and seeds a clean production baseline:
- * one Operations team, one super_admin (Kavin), empty projects/tasks/clients, etc.
+ * one Operations team, one super_admin (Kavin), no demo projects/tasks/clients/payroll.
  *
  * Run (requires Application Default Credentials for ace-digital-os):
  *   CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
@@ -101,29 +101,6 @@ async function main() {
     updatedAt: now,
   });
 
-  await db.collection("channels").doc("1").set({
-    name: "general",
-    type: "ANNOUNCEMENT",
-    teamId: null,
-    createdAt: now,
-  });
-
-  await db.collection("messages").doc("1").set({
-    channelId: 1,
-    senderId: 1,
-    body: "Ace Digital OS is ready. Add projects, clients, and team members from the dashboard.",
-    createdAt: now,
-  });
-
-  await db.collection("activity_logs").doc("1").set({
-    actorId: 1,
-    action: "reset production database",
-    entityType: "system",
-    entityId: null,
-    metadata: { environment: "production" },
-    createdAt: now,
-  });
-
   await db.collection("_meta").doc("counters").set({
     teams: 1,
     users: 1,
@@ -135,17 +112,16 @@ async function main() {
     expenses: 0,
     payroll_runs: 0,
     reports: 0,
-    channels: 1,
-    messages: 1,
-    activity_logs: 1,
+    channels: 0,
+    messages: 0,
+    activity_logs: 0,
     notifications: 0,
   });
 
-  console.log("\n✅ Production baseline ready");
+  console.log("\n✅ Production baseline ready (admin only, no demo data)");
   console.log(`   Login: ${EMAIL}`);
   console.log(`   Password: ${PASSWORD}`);
   console.log(`   Role: ${ROLE} (${JOB_TITLE})`);
-  console.log("   All demo projects, tasks, users, and clients were removed.");
 }
 
 main().catch((err) => {

@@ -74,6 +74,17 @@ npx firebase-tools@latest deploy --only functions --project ace-digital-os
 npx firebase-tools@latest deploy --only hosting --project ace-digital-os
 ```
 
+## Security (production)
+
+Set a strong JWT secret (32+ random characters) before deploying functions:
+
+```bash
+firebase functions:config:set app.jwt_secret="YOUR_LONG_RANDOM_SECRET" --project ace-digital-os
+pnpm run deploy:firebase
+```
+
+Without this, the API falls back to a dev-only secret and logs a warning. CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
+
 ## Deploy troubleshooting
 
 - **Hosting** `Assertion failed: resolving hosting target...` — `firebase.json` must include `"site": "ace-digital-os"` under `hosting`.

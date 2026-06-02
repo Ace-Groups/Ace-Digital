@@ -9,6 +9,7 @@
     "seed:firestore": "tsx ./src/seed-firestore.ts",
     "upsert:kavin": "tsx ./src/upsert-kavin-admin.ts",
     "reset:production": "tsx ./src/reset-firestore-production.ts",
+    "clear:prod": "tsx ./src/clear-db-for-prod.ts",
     "seed:rbac-dev": "tsx ./src/seed-rbac-dev.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -16,6 +17,7 @@
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "catalog:",
+    "firebase-admin": "^13.6.0",
     "pg": "^8.20.0"
   },
   "devDependencies": {

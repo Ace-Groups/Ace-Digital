@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useGetFinanceSummary,
@@ -6,6 +10,9 @@ import {
   useListExpenses,
   useListPayrollRuns,
   useCreatePayrollRun,
+  useCreateExpense,
+  useListTeams,
+  usePatchExpenseStatus,
   getListPayrollRunsQueryKey,
   getGetMyPayslipQueryKey,
   getGetFinanceSummaryQueryKey,
@@ -19,11 +26,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
   TrendingUp, TrendingDown, DollarSign, Wallet, Users, FileText, Plus,
 } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+
 
 export default function FinancePage() {
   const { can } = usePermissions();
@@ -46,6 +60,83 @@ export default function FinancePage() {
   const createPayrollRun = useCreatePayrollRun();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const { data: teams } = useListTeams();
+  const createExpense = useCreateExpense();
+
+  const expenseSchema = z.object({
+    description: z.string().min(1, "Description is required"),
+    amount: z.string().min(1, "Amount is required").refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: "Amount must be a positive number",
+    }),
+    teamId: z.string().optional(),
+  });
+  type ExpenseFormValues = z.infer<typeof expenseSchema>;
+
+  const expenseForm = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      description: "",
+      amount: "",
+      teamId: "",
+    },
+  });
+
+  async function onExpenseSubmit(data: ExpenseFormValues) {
+    try {
+      await createExpense.mutateAsync({
+        data: {
+          description: data.description,
+          amount: Number(data.amount),
+          teamId: data.teamId ? Number(data.teamId) : undefined,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
+      toast({ title: "Expense recorded successfully!" });
+      setExpenseDialogOpen(false);
+      expenseForm.reset();
+    } catch (error) {
+      toast({
+        title: "Failed to record expense",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }
+
+  const patchExpenseStatus = usePatchExpenseStatus();
+
+  async function handleApproveExpense(id: number) {
+    try {
+      await patchExpenseStatus.mutateAsync({ id, data: { status: "APPROVED" } });
+      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
+      toast({ title: "Expense approved!" });
+    } catch (error) {
+      toast({
+        title: "Failed to approve expense",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleRejectExpense(id: number) {
+    try {
+      await patchExpenseStatus.mutateAsync({ id, data: { status: "REJECTED" } });
+      queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey() });
+      toast({ title: "Expense rejected!", variant: "destructive" });
+    } catch (error) {
+      toast({
+        title: "Failed to reject expense",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }
 
   if (payslipOnly) {
     return (
@@ -156,7 +247,7 @@ export default function FinancePage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-gray-50/50">
+                      <tr className="border-b bg-muted/40">
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Team</th>
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Job Title</th>
@@ -166,9 +257,9 @@ export default function FinancePage() {
                         <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-border">
                       {salaries?.map((s) => (
-                        <tr key={s.userId} data-testid={`salary-row-${s.userId}`} className="hover:bg-gray-50/50">
+                        <tr key={s.userId} data-testid={`salary-row-${s.userId}`} className="hover:bg-muted/40">
                           <td className="px-4 py-3 font-medium">{s.fullName}</td>
                           <td className="px-4 py-3 text-muted-foreground">{s.teamName ?? "—"}</td>
                           <td className="px-4 py-3 text-muted-foreground">{s.jobTitle ?? "—"}</td>
@@ -191,22 +282,104 @@ export default function FinancePage() {
 
           {/* Expenses tab */}
           <TabsContent value="expenses">
+            <div className="flex justify-end mb-3">
+              <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="btn-add-expense" className="gap-2">
+                    <Plus size={16} /> Record Expense
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Record Expense</DialogTitle>
+                    <DialogDescription>
+                      Submit a new business expense. It will be recorded as PENDING.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...expenseForm}>
+                    <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
+                      <FormField
+                        control={expenseForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input data-testid="input-expense-desc" placeholder="e.g. AWS Hosting Bill" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={expenseForm.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amount (₹)</FormLabel>
+                            <FormControl>
+                              <Input data-testid="input-expense-amount" type="number" step="0.01" placeholder="e.g. 45000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={expenseForm.control}
+                        name="teamId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Team</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select team" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {teams?.map((t) => (
+                                  <SelectItem key={t.id} value={String(t.id)}>
+                                    {t.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        data-testid="btn-submit-expense"
+                        type="submit"
+                        className="w-full"
+                        disabled={createExpense.isPending}
+                      >
+                        Record Expense
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-gray-50/50">
+                      <tr className="border-b bg-muted/40">
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Description</th>
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Team</th>
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Submitted By</th>
                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">Amount</th>
                         <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
+                        {can("finance:expenses_approve") && (
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                        )}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-border">
                       {expenses?.map((e) => (
-                        <tr key={e.id} data-testid={`expense-row-${e.id}`} className="hover:bg-gray-50/50">
+                        <tr key={e.id} data-testid={`expense-row-${e.id}`} className="hover:bg-muted/40">
                           <td className="px-4 py-3 font-medium">{e.description}</td>
                           <td className="px-4 py-3 text-muted-foreground">{e.teamName ?? "—"}</td>
                           <td className="px-4 py-3 text-muted-foreground">{e.submitterName ?? "—"}</td>
@@ -216,6 +389,32 @@ export default function FinancePage() {
                               {e.status}
                             </Badge>
                           </td>
+                          {can("finance:expenses_approve") && (
+                            <td className="px-4 py-3 text-center">
+                              {e.status === "PENDING" ? (
+                                <div className="flex justify-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
+                                    onClick={() => handleApproveExpense(e.id)}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                    onClick={() => handleRejectExpense(e.id)}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -242,16 +441,16 @@ export default function FinancePage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-gray-50/50">
+                      <tr className="border-b bg-muted/40">
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Period</th>
                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total Amount</th>
                         <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-border">
                       {payrollRuns?.map((r) => (
-                        <tr key={r.id} data-testid={`payroll-row-${r.id}`} className="hover:bg-gray-50/50">
+                        <tr key={r.id} data-testid={`payroll-row-${r.id}`} className="hover:bg-muted/40">
                           <td className="px-4 py-3 font-medium">
                             {new Date(r.year, r.month - 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
                           </td>

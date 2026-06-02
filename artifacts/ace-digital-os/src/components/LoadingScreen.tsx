@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import aceLogo from "@/assets/ace-logo.png";
 import "./loading-animation.css";
 
 export function LoadingScreen() {
@@ -55,15 +54,7 @@ export function LoadingScreen() {
             <LargeShadows />
           </div>
         </div>
-        <div className="ace-loader-brand">
-          <img src={aceLogo} alt="Ace Digital" className="ace-loader-logo" />
-          <span className="ace-loader-text">Ace Digital OS</span>
-        </div>
-        <div className="ace-loader-dots">
-          <span />
-          <span />
-          <span />
-        </div>
+        <p className="ace-loader-text">Ace Digital OS</p>
       </div>
     </div>
   );

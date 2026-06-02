@@ -119,12 +119,12 @@ export default function ReportsPage() {
                 toast({ title: `${label} generated for ${period}` });
               });
             }}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md transition-all group"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:shadow-brand-md transition-all group"
           >
             <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center`}>
               <Icon size={18} className={color} />
             </div>
-            <span className="text-xs font-medium text-gray-700 text-center leading-tight">{label}</span>
+            <span className="text-xs font-medium text-foreground text-center leading-tight">{label}</span>
           </button>
         ))}
       </div>
@@ -139,17 +139,17 @@ export default function ReportsPage() {
           ) : reports?.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-sm">No reports generated yet</div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border">
               {reports?.map((report) => {
                 const meta = getReportMeta(report.type ?? "");
                 const Icon = meta.icon;
                 return (
-                  <div key={report.id} data-testid={`report-row-${report.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div key={report.id} data-testid={`report-row-${report.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors">
                     <div className={`w-9 h-9 rounded-lg ${meta.bg} flex items-center justify-center shrink-0`}>
                       <Icon size={16} className={meta.color} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{report.title}</p>
+                      <p className="text-sm font-medium text-foreground">{report.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Period: {report.period} · Generated {formatRelativeTime(report.generatedAt)}
                       </p>
@@ -159,7 +159,7 @@ export default function ReportsPage() {
                     </Badge>
                     <button
                       data-testid={`btn-download-report-${report.id}`}
-                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       title="Download"
                     >
                       <Download size={15} />

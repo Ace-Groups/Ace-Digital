@@ -58,8 +58,8 @@ async function main() {
   await db.collection("employee_profiles").doc(String(userId)).set(
     {
       userId,
-      baseSalary: "300000",
-      bonus: "50000",
+      baseSalary: "0",
+      bonus: "0",
       payrollStatus: "PAID",
       createdAt: now,
       updatedAt: now,

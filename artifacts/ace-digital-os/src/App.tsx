@@ -1,13 +1,13 @@
-import { lazy, Suspense, type ComponentType } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { lazy, Suspense, useEffect, type ComponentType } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { canAccessRoute } from "@workspace/rbac";
-
 const NotFound = lazy(() => import("@/pages/not-found"));
 const ForbiddenPage = lazy(() => import("@/pages/forbidden"));
 const LoginPage = lazy(() => import("@/pages/login"));
@@ -40,15 +40,13 @@ function ProtectedRoute({
   path: string;
 }) {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   if (!isAuthenticated) {
-    setLocation("/login");
-    return null;
+    return <Redirect to="/login" />;
   }
 
   if (user && !canAccessRoute(user.role, path)) {
@@ -70,9 +68,11 @@ function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
-  if (!isLoading && isAuthenticated && location === "/login") {
-    setLocation("/");
-  }
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && location === "/login") {
+      setLocation("/");
+    }
+  }, [isLoading, isAuthenticated, location, setLocation]);
 
   return (
     <Suspense fallback={<PageFallback />}>
@@ -120,17 +120,19 @@ function AppRouter() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <AppRouter />
-            <InstallPrompt />
-          </WouterRouter>
-          <Toaster />
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <AppRouter />
+              <InstallPrompt />
+            </WouterRouter>
+            <Toaster />
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

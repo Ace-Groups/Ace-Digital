@@ -4,7 +4,6 @@ import { canAssignRole, getPermissionsForRole } from "@workspace/rbac";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
-
 const router = Router();
 
 router.post("/v1/auth/login", async (req, res): Promise<void> => {
@@ -23,6 +22,11 @@ router.post("/v1/auth/login", async (req, res): Promise<void> => {
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  if (user.status && user.status !== "active") {
+    res.status(403).json({ error: "Account is not active" });
     return;
   }
 

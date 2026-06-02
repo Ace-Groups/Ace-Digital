@@ -21,6 +21,7 @@ import { useListNotifications } from "@workspace/api-client-react";
 import { cn, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PageTransition } from "@/components/design";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getMobileNavItems } from "@/lib/mobile-nav";
 import type { NavRoute } from "@workspace/rbac";
 import {
@@ -70,7 +71,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <header className="sticky top-0 z-40 flex shrink-0 items-center gap-3 border-b border-border/80 bg-card/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
-        <img src={aceLogo} alt="" className="h-8 w-8 rounded-lg object-contain" />
+        <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             Ace Digital
@@ -79,6 +80,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
             <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
           )}
         </div>
+        <ThemeToggle className="h-11 w-11" />
         <button
           type="button"
           className="relative flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"

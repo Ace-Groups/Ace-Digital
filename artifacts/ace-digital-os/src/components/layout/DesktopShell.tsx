@@ -5,6 +5,7 @@ import { useListNotifications } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -37,6 +38,7 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
               className="h-9 w-56 border-border/80 bg-muted/40 pl-9 text-sm focus-visible:ring-primary/30 lg:w-72"
             />
           </div>
+          <ThemeToggle />
           <button
             type="button"
             data-testid="btn-notifications"

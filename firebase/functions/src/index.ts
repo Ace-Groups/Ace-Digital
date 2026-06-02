@@ -5,8 +5,14 @@ import type { Express } from "express";
 initializeApp();
 
 process.env.USE_FIRESTORE = "true";
-process.env.JWT_SECRET =
-  functions.config().app?.jwt_secret ?? process.env.JWT_SECRET ?? "ace-digital-os-jwt-secret";
+const configuredSecret =
+  functions.config().app?.jwt_secret ?? process.env.JWT_SECRET;
+if (!configuredSecret || String(configuredSecret).length < 32) {
+  console.warn(
+    "[ace-digital-os] JWT_SECRET is missing or too short. Set functions config: app.jwt_secret (32+ chars).",
+  );
+}
+process.env.JWT_SECRET = configuredSecret ?? "ace-digital-os-jwt-secret-dev-only";
 
 let cachedApp: Express | null = null;
 

@@ -128,14 +128,14 @@ export default function EmployeesPage() {
     <AppLayout title="Employees">
       <div className="flex items-center justify-between mb-6">
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             data-testid="input-search-employees"
             type="text"
             placeholder="Search employees..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-[#5483B3]/30"
+            className="w-64 rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         {can("employees:write") && (
@@ -233,7 +233,7 @@ export default function EmployeesPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-gray-900">{emp.fullName}</p>
+                  <p className="font-semibold text-sm text-foreground">{emp.fullName}</p>
                   {emp.jobTitle && <p className="text-xs text-muted-foreground mt-0.5">{emp.jobTitle}</p>}
                   <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
                     <Mail size={11} />
@@ -244,7 +244,7 @@ export default function EmployeesPage() {
                   {emp.status}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                 <div>
                   <p className="text-xs text-muted-foreground">Team</p>
                   <p className="text-sm font-medium">{emp.teamName ?? "—"}</p>

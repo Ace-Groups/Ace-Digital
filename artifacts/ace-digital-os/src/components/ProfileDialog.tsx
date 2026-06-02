@@ -12,6 +12,7 @@ import {
   Settings, Users, Smile, Upload, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const PRESET_AVATARS = [
   { id: "user", icon: User, label: "Default", color: "bg-slate-500" },
@@ -42,6 +43,7 @@ interface ProfileDialogProps {
 
 export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarData, setAvatarData] = useState<string | null>(localStorage.getItem(AVATAR_KEY));
   const [selectedPreset, setSelectedPreset] = useState<string | null>(localStorage.getItem(PRESET_KEY));
@@ -52,6 +54,14 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please choose an image under 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result as string;
@@ -99,7 +109,7 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
 
         <div className="space-y-5">
           {/* Current avatar preview */}
-          <div className="flex flex-col items-center gap-3 py-4 bg-gray-50 rounded-xl">
+          <div className="flex flex-col items-center gap-3 rounded-xl bg-muted/50 py-4">
             <div className="relative group">
               {avatarData ? (
                 <Avatar className="h-20 w-20 ring-4 ring-[#5483B3]/30">
@@ -123,7 +133,7 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
               </button>
             </div>
             <div className="text-center">
-              <p className="font-semibold text-gray-900">{user?.fullName}</p>
+              <p className="font-semibold text-foreground">{user?.fullName}</p>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               <Badge variant="secondary" className="mt-1 text-xs capitalize">
                 {user?.role?.replace("_", " ")}
@@ -133,7 +143,7 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
 
           {/* Upload section */}
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Upload Photo</p>
+            <p className="mb-2 text-sm font-medium text-foreground">Upload Photo</p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -161,7 +171,7 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
 
           {/* Preset icons */}
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Or choose an icon</p>
+            <p className="mb-2 text-sm font-medium text-foreground">Or choose an icon</p>
             <div className="grid grid-cols-4 gap-2">
               {PRESET_AVATARS.map((preset) => {
                 const Icon = preset.icon;
@@ -174,13 +184,13 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all",
                       active
                         ? "border-primary bg-primary/10"
-                        : "border-transparent bg-gray-50 hover:bg-gray-100"
+                        : "border-transparent bg-muted/50 hover:bg-muted"
                     )}
                   >
                     <div className={`w-9 h-9 rounded-full ${preset.color} flex items-center justify-center`}>
                       <Icon size={18} className="text-white" />
                     </div>
-                    <span className="text-xs text-gray-600">{preset.label}</span>
+                    <span className="text-xs text-muted-foreground">{preset.label}</span>
                   </button>
                 );
               })}
@@ -189,13 +199,13 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
 
           {/* Info row */}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="rounded-lg bg-muted/50 p-3">
               <p className="text-xs text-muted-foreground mb-0.5">Team</p>
-              <p className="font-medium">{user?.teamName ?? "—"}</p>
+              <p className="font-medium text-foreground">{user?.teamName ?? "—"}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="rounded-lg bg-muted/50 p-3">
               <p className="text-xs text-muted-foreground mb-0.5">Job Title</p>
-              <p className="font-medium">{user?.jobTitle ?? "—"}</p>
+              <p className="font-medium text-foreground">{user?.jobTitle ?? "—"}</p>
             </div>
           </div>
 

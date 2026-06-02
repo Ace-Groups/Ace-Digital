@@ -225,7 +225,7 @@ export default function TasksPage() {
           ) : tasks?.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-sm">No tasks found</div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border">
               {tasks?.map((task) => (
                 <div
                   key={task.id}
@@ -236,7 +236,7 @@ export default function TasksPage() {
                     data-testid={`task-toggle-${task.id}`}
                     checked={task.status === "DONE"}
                     onCheckedChange={() => handleToggle(task.id)}
-                    className="border-gray-300"
+                    className="border-border"
                   />
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-medium", task.status === "DONE" && "line-through text-muted-foreground")}>

@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "kavin@acedigital.com", password: "" },
+    defaultValues: { email: "", password: "" },
   });
 
   async function onSubmit(data: FormData) {
@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div className="relative">
           <div className="mb-14 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sidebar-accent/60">
-              <img src={aceLogo} alt="" className="h-8 w-8 object-contain" />
+              <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
             </div>
             <span className="text-xl font-semibold tracking-tight">Ace Digital</span>
           </div>
@@ -97,7 +97,7 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:p-10">
         <div className="w-full max-w-[400px] sm:mx-auto">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <img src={aceLogo} alt="Ace Digital" className="h-10 w-10 object-contain" />
+            <img src={aceLogo} alt="Ace Digital" className="h-10 w-10 bg-transparent object-contain" />
             <span className="text-xl font-semibold tracking-tight text-foreground">
               Ace Digital OS
             </span>
@@ -113,7 +113,7 @@ export default function LoginPage() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
               <FormField
                 control={form.control}
                 name="email"
@@ -125,7 +125,8 @@ export default function LoginPage() {
                         data-testid="input-email"
                         type="email"
                         placeholder="you@acedigital.com"
-                        autoComplete="email"
+                        autoComplete="off"
+                        name="ace-login-email"
                         className="h-11 text-base sm:h-10 sm:text-sm"
                         {...field}
                       />

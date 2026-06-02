@@ -168,15 +168,15 @@ export default function ApprovalsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">{a.type?.replace("_", " ")}</Badge>
-                    <span className="font-semibold text-sm text-gray-900">{a.title}</span>
+                    <span className="font-semibold text-sm text-foreground">{a.title}</span>
                   </div>
                   {a.description && (
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{a.description}</p>
                   )}
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span>By <span className="font-medium text-gray-700">{a.requesterName}</span></span>
+                    <span>By <span className="font-medium text-foreground">{a.requesterName}</span></span>
                     {a.teamName && <span>· {a.teamName}</span>}
-                    {a.amount != null && <span>· <span className="font-medium text-gray-700">{formatCurrency(a.amount)}</span></span>}
+                    {a.amount != null && <span>· <span className="font-medium text-foreground">{formatCurrency(a.amount)}</span></span>}
                     {a.createdAt && <span>· {formatRelativeTime(a.createdAt)}</span>}
                   </div>
                   {a.status !== "PENDING" && a.reviewerName && (
