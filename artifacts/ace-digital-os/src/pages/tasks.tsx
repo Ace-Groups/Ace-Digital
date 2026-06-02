@@ -42,6 +42,7 @@ type CreateForm = z.infer<typeof createSchema>;
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
 const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
 const COMMON_TASK_VALUE = "__common__";
+const ALL_TEAMS_VALUE = "__all_teams__";
 
 function getProjectIdFromUrl(): number | undefined {
   const id = new URLSearchParams(window.location.search).get("projectId");
@@ -58,6 +59,7 @@ export default function TasksPage() {
   const projectIdFilter = getProjectIdFromUrl();
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [ownershipFilter, setOwnershipFilter] = useState<(typeof OWNERSHIP_FILTERS)[number]>("all");
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
 
   const taskParams = useMemo(() => {
     const base: { status?: string; projectId?: number } = {};
@@ -85,6 +87,7 @@ export default function TasksPage() {
       priority: "MEDIUM",
       status: "PENDING",
       projectId: projectIdFilter ? String(projectIdFilter) : "",
+      teamId: ALL_TEAMS_VALUE,
     },
   });
 
@@ -94,27 +97,66 @@ export default function TasksPage() {
     }
   }, [projectIdFilter, form]);
 
+  const selectedTeamId = form.watch("teamId");
+
+  const assignableEmployees = useMemo(() => {
+    const list = employees ?? [];
+    if (!selectedTeamId || selectedTeamId === ALL_TEAMS_VALUE) return list;
+    const teamId = Number(selectedTeamId);
+    if (!Number.isFinite(teamId)) return list;
+    return list.filter((e) => e.teamId === teamId);
+  }, [employees, selectedTeamId]);
+
+  useEffect(() => {
+    const allowed = new Set(assignableEmployees.map((e) => e.id));
+    setSelectedAssigneeIds((prev) => prev.filter((id) => allowed.has(id)));
+  }, [assignableEmployees]);
+
   async function onSubmit(data: CreateForm) {
-    await createTask.mutateAsync({
-      data: {
-        title: data.title,
-        projectId: data.projectId ? Number(data.projectId) : undefined,
-        assigneeId:
-          data.assigneeId === COMMON_TASK_VALUE
-            ? undefined
-            : data.assigneeId
-              ? Number(data.assigneeId)
-              : undefined,
-        teamId: data.teamId ? Number(data.teamId) : undefined,
-        priority: data.priority,
-        dueDate: data.dueDate || undefined,
-        status: data.status,
-      },
-    });
+    const teamId = data.teamId && data.teamId !== ALL_TEAMS_VALUE ? Number(data.teamId) : undefined;
+    const assigneeIds = selectedAssigneeIds;
+
+    if (assigneeIds.length === 0) {
+      await createTask.mutateAsync({
+        data: {
+          title: data.title,
+          projectId: data.projectId ? Number(data.projectId) : undefined,
+          assigneeId: undefined,
+          teamId,
+          priority: data.priority,
+          dueDate: data.dueDate || undefined,
+          status: data.status,
+        },
+      });
+    } else {
+      for (const assigneeId of assigneeIds) {
+        await createTask.mutateAsync({
+          data: {
+            title: data.title,
+            projectId: data.projectId ? Number(data.projectId) : undefined,
+            assigneeId,
+            teamId,
+            priority: data.priority,
+            dueDate: data.dueDate || undefined,
+            status: data.status,
+          },
+        });
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-    toast({ title: "Task created!" });
+    toast({
+      title: assigneeIds.length > 1 ? "Tasks created!" : "Task created!",
+      description:
+        assigneeIds.length > 1
+          ? `${assigneeIds.length} tasks were assigned successfully.`
+          : assigneeIds.length === 1
+            ? "Task assigned successfully."
+            : "Common task created without assignee.",
+    });
     setOpen(false);
     form.reset();
+    setSelectedAssigneeIds([]);
   }
 
   async function handleToggle(id: number) {
@@ -167,23 +209,54 @@ export default function TasksPage() {
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl><SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger></FormControl>
                 <SelectContent>
+                  <SelectItem value={ALL_TEAMS_VALUE}>All teams</SelectItem>
                   {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </FormItem>
           )} />
-          <FormField control={form.control} name="assigneeId" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Assignee</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  <SelectItem value={COMMON_TASK_VALUE}>Common task (unassigned)</SelectItem>
-                  {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <FormLabel className="text-sm">Assignees</FormLabel>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline"
+                onClick={() => {
+                  if (selectedAssigneeIds.length === assignableEmployees.length) {
+                    setSelectedAssigneeIds([]);
+                  } else {
+                    setSelectedAssigneeIds(assignableEmployees.map((e) => e.id));
+                  }
+                }}
+              >
+                {selectedAssigneeIds.length === assignableEmployees.length && assignableEmployees.length > 0
+                  ? "Clear all"
+                  : "Select all"}
+              </button>
+            </div>
+            <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg border border-border/70 p-2">
+              {assignableEmployees.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No users available for selected team.</p>
+              ) : (
+                assignableEmployees.map((e) => (
+                  <label key={e.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/50">
+                    <Checkbox
+                      checked={selectedAssigneeIds.includes(e.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedAssigneeIds((prev) =>
+                          checked ? [...prev, e.id] : prev.filter((id) => id !== e.id),
+                        );
+                      }}
+                    />
+                    <span className="text-sm">{e.fullName}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Leave empty to create a common task. Select multiple users to assign one task to each.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField control={form.control} name="priority" render={({ field }) => (
