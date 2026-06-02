@@ -6,8 +6,6 @@ import type { Express } from "express";
 initializeApp();
 
 const jwtSecret = defineSecret("JWT_SECRET");
-const resendApiKey = defineSecret("RESEND_API_KEY");
-const emailFrom = defineSecret("EMAIL_FROM");
 
 process.env.USE_FIRESTORE = "true";
 
@@ -23,12 +21,9 @@ function applyRuntimeSecrets(): void {
   }
   process.env.JWT_SECRET = secret;
   process.env.NODE_ENV = "production";
-
-  const resend = resendApiKey.value()?.trim();
-  if (resend) process.env.RESEND_API_KEY = resend;
-
-  const from = emailFrom.value()?.trim();
-  if (from) process.env.EMAIL_FROM = from;
+  // RESEND_API_KEY and EMAIL_FROM: set via Secret Manager after deploy (see FIREBASE.md).
+  // Bound with: firebase functions:secrets:set RESEND_API_KEY && redeploy with secrets in runWith,
+  // or add as env vars on the `api` function in Google Cloud Console.
 }
 
 async function getApp(): Promise<Express> {
@@ -48,7 +43,7 @@ export const api = functions
     memory: "512MB",
     timeoutSeconds: 60,
     maxInstances: 10,
-    secrets: [jwtSecret, resendApiKey, emailFrom],
+    secrets: [jwtSecret],
     serviceAccount: "ace-digital-os@appspot.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {

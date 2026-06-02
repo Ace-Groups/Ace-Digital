@@ -111,17 +111,18 @@ The API sends welcome and password-reset mail through **Resend** when `RESEND_AP
 
 **1. Create a Resend API key** at https://resend.com/api-keys and verify your sending domain (e.g. `mybexo.com` so `hr@mybexo.com` works).
 
-**2. Store secrets on Firebase (do not commit keys to git):**
+**2. Store secrets (do not commit keys to git).** Run these in your terminal and paste values when prompted:
 
 ```bash
 firebase functions:secrets:set RESEND_API_KEY --project ace-digital-os
-# paste re_... when prompted
-
 firebase functions:secrets:set EMAIL_FROM --project ace-digital-os
-# e.g. Ace-Digital <hr@mybexo.com>
 ```
 
-**3. Redeploy functions:**
+For `EMAIL_FROM`, use a **verified** Resend sender, e.g. `Ace-Digital <hr@mybexo.com>` (must match a domain you verified in Resend).
+
+**3. Bind secrets to the `api` function** (Google Cloud Console → Cloud Functions → `api` → Edit → Secrets, add `RESEND_API_KEY` and `EMAIL_FROM` as environment variables sourced from Secret Manager). Or redeploy after secrets exist:
+
+**4. Redeploy functions:**
 
 ```bash
 pnpm run build:api
