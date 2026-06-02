@@ -163,13 +163,19 @@ export default function LoginPage() {
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-white/60">Password</FormLabel>
-                        <a
-                          href="#"
+                        <button
+                          type="button"
                           className="text-xs font-medium text-[hsl(203_100%_87%/0.85)] hover:text-white"
-                          onClick={(e) => e.preventDefault()}
+                          onClick={() =>
+                            toast({
+                              title: "Password reset",
+                              description:
+                                "Please contact your administrator to reset your password.",
+                            })
+                          }
                         >
                           Forgot password?
-                        </a>
+                        </button>
                       </div>
                       <FormControl>
                         <div className="relative">
