@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
-  useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams,
+  useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams, useUpdateTask,
   getListTasksQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,10 +20,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, User, Filter } from "lucide-react";
+import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, Sparkles, UserPlus2 } from "lucide-react";
 import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 import { getInitials } from "@/lib/utils";
 
 const createSchema = z.object({
@@ -37,6 +40,8 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
+const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
+const COMMON_TASK_VALUE = "__common__";
 
 function getProjectIdFromUrl(): number | undefined {
   const id = new URLSearchParams(window.location.search).get("projectId");
@@ -47,8 +52,12 @@ function getProjectIdFromUrl(): number | undefined {
 
 export default function TasksPage() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const { can } = usePermissions();
+  const canWriteTasks = can("tasks:write");
   const projectIdFilter = getProjectIdFromUrl();
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [ownershipFilter, setOwnershipFilter] = useState<(typeof OWNERSHIP_FILTERS)[number]>("all");
 
   const taskParams = useMemo(() => {
     const base: { status?: string; projectId?: number } = {};
@@ -63,6 +72,7 @@ export default function TasksPage() {
   const { data: employees } = useListEmployees({});
   const { data: teams } = useListTeams();
   const toggleTask = useToggleTask();
+  const updateTask = useUpdateTask();
   const createTask = useCreateTask();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -89,7 +99,12 @@ export default function TasksPage() {
       data: {
         title: data.title,
         projectId: data.projectId ? Number(data.projectId) : undefined,
-        assigneeId: data.assigneeId ? Number(data.assigneeId) : undefined,
+        assigneeId:
+          data.assigneeId === COMMON_TASK_VALUE
+            ? undefined
+            : data.assigneeId
+              ? Number(data.assigneeId)
+              : undefined,
         teamId: data.teamId ? Number(data.teamId) : undefined,
         priority: data.priority,
         dueDate: data.dueDate || undefined,
@@ -106,6 +121,34 @@ export default function TasksPage() {
     await toggleTask.mutateAsync({ id });
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
   }
+
+  async function handleAssignTask(taskId: number, assigneeIdValue: string) {
+    if (!canWriteTasks) return;
+    await updateTask.mutateAsync({
+      id: taskId,
+      data: {
+        assigneeId: assigneeIdValue === COMMON_TASK_VALUE ? null : Number(assigneeIdValue),
+      } as never,
+    });
+    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+    toast({ title: "Task assignment updated" });
+  }
+
+  const visibleTasks = useMemo(() => {
+    const source = tasks ?? [];
+    if (!user) return source;
+    if (ownershipFilter === "mine") return source.filter((t) => t.assigneeId === user.id);
+    if (ownershipFilter === "common") return source.filter((t) => t.assigneeId == null);
+    return source;
+  }, [tasks, ownershipFilter, user]);
+
+  const stats = useMemo(() => {
+    const source = visibleTasks;
+    const done = source.filter((t) => t.status === "DONE").length;
+    const mine = user ? source.filter((t) => t.assigneeId === user.id).length : 0;
+    const common = source.filter((t) => t.assigneeId == null).length;
+    return { total: source.length, done, mine, common };
+  }, [visibleTasks, user]);
 
   const createForm = (
     <Form {...form}>
@@ -135,6 +178,7 @@ export default function TasksPage() {
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl><SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger></FormControl>
                 <SelectContent>
+                  <SelectItem value={COMMON_TASK_VALUE}>Common task (unassigned)</SelectItem>
                   {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -169,7 +213,57 @@ export default function TasksPage() {
 
   return (
     <AppLayout title="Tasks">
-      <div className="page-stack">
+      <StaggerList className="page-stack">
+      <StaggerItem>
+        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-primary/30 via-primary/10 to-background p-5 sm:p-6">
+          <div className="pointer-events-none absolute -right-10 -top-8 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                <Sparkles size={12} />
+                Task Control Center
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                Personal, common, and team tasks in one flow
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                Assign tasks to teammates or keep them common. Filters instantly reflect work ownership by account.
+              </p>
+            </div>
+            <Button
+              data-testid="btn-create-task"
+              className="hidden gap-2 sm:inline-flex"
+              onClick={() => setOpen(true)}
+            >
+              <Plus size={16} /> New Task
+            </Button>
+          </div>
+        </section>
+      </StaggerItem>
+
+      <StaggerItem>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Visible Tasks</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.total}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 size={13} /> Done</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.done}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><UserPlus2 size={13} /> Assigned to me</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.mine}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users2 size={13} /> Common</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.common}</p>
+          </div>
+        </div>
+      </StaggerItem>
+
+      <StaggerItem>
       {projectIdFilter && filteredProject && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5 text-sm">
           <span>
@@ -182,6 +276,8 @@ export default function TasksPage() {
           </Link>
         </div>
       )}
+      </StaggerItem>
+      <StaggerItem>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Filter size={14} className="shrink-0 text-muted-foreground" />
@@ -204,29 +300,47 @@ export default function TasksPage() {
             ))}
           </div>
         </div>
-        <Button
-          data-testid="btn-create-task"
-          className="hidden gap-2 sm:inline-flex"
-          onClick={() => setOpen(true)}
-        >
-          <Plus size={16} /> New Task
-        </Button>
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {OWNERSHIP_FILTERS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              data-testid={`ownership-${s}`}
+              onClick={() => setOwnershipFilter(s)}
+              className={cn(
+                "min-h-9 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                ownershipFilter === s
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
+            >
+              {s === "all" ? "All tasks" : s === "mine" ? "Assigned to me" : "Common"}
+            </button>
+          ))}
+        </div>
         <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
           {createForm}
         </ResponsiveSheet>
       </div>
+      </StaggerItem>
 
+      <StaggerItem>
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
             </div>
-          ) : tasks?.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-sm">No tasks found</div>
+          ) : visibleTasks.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">No tasks found for this filter.</p>
+              <Button className="mt-4 gap-2" onClick={() => setOpen(true)}>
+                <Plus size={14} /> Create Task
+              </Button>
+            </div>
           ) : (
             <div className="divide-y divide-border">
-              {tasks?.map((task) => (
+              {visibleTasks.map((task) => (
                 <div
                   key={task.id}
                   data-testid={`task-row-${task.id}`}
@@ -252,6 +366,24 @@ export default function TasksPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                    {canWriteTasks && (
+                      <Select
+                        value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
+                        onValueChange={(value) => void handleAssignTask(task.id, value)}
+                      >
+                        <SelectTrigger className="h-8 w-[9.5rem] text-xs">
+                          <SelectValue placeholder="Assign" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
+                          {employees?.map((e) => (
+                            <SelectItem key={e.id} value={String(e.id)}>
+                              {e.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     {task.assigneeName && (
                       <div className="flex items-center gap-1.5">
                         <Avatar className="h-6 w-6">
@@ -281,8 +413,10 @@ export default function TasksPage() {
           )}
         </CardContent>
       </Card>
+      </StaggerItem>
 
       {isMobile && (
+      <StaggerItem>
         <Button
           data-testid="btn-create-task-fab"
           size="lg"
@@ -292,8 +426,9 @@ export default function TasksPage() {
         >
           <Plus size={22} />
         </Button>
+      </StaggerItem>
       )}
-      </div>
+      </StaggerList>
     </AppLayout>
   );
 }
