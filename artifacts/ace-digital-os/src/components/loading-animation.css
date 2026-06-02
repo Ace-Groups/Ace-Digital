@@ -28,11 +28,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(88vw, 22rem);
-  height: min(52vw, 16rem);
+  width: min(92vw, 26rem);
+  height: min(68vw, 20rem);
   flex-shrink: 0;
+  overflow: visible;
   isolation: isolate;
-  overflow: hidden;
+  /* Room for isometric cube faces + ground shadows (do not clip with overflow:hidden) */
+  padding: clamp(0.5rem, 3vw, 1.25rem);
 }
 
 .ace-loader {
@@ -59,17 +61,20 @@
 }
 
 @media (max-width: 767px) {
-  .ace-loader-stage .ace-loader {
-    transform: scale(0.88);
-    transform-origin: center center;
+  .ace-loader-stage {
+    width: min(94vw, 24rem);
+    height: min(62vw, 18rem);
+    padding: clamp(0.25rem, 2vw, 0.75rem);
   }
 
-  .ace-loader-stage {
-    height: min(48vw, 14rem);
+  .ace-loader-stage .ace-loader {
+    transform: scale(0.92);
+    transform-origin: center center;
   }
 
   .ace-loader-text {
     font-size: clamp(1.5rem, 6vw, 2rem);
+    margin-top: clamp(0.75rem, 3vw, 1.25rem);
   }
 }
 
