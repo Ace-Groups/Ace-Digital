@@ -287,6 +287,41 @@ body {
   .safe-pb-tabs {
     padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
+
+  .calendar-panel-large .rdp-root {
+    width: 100%;
+  }
+
+  .calendar-panel-large .rdp-month {
+    width: 100%;
+  }
+
+  .calendar-panel-large .rdp-month_caption {
+    min-height: 3rem;
+  }
+
+  .calendar-panel-large .rdp-dropdown_root {
+    min-height: 2.75rem;
+    min-width: 5.5rem;
+  }
+
+  .calendar-panel-large .rdp-caption_label {
+    font-size: 1rem;
+  }
+
+  .mobile-form {
+    @apply space-y-4;
+  }
+
+  @media (max-width: 767px) {
+    .mobile-form [data-slot="form-label"] {
+      @apply text-sm font-medium;
+    }
+
+    .mobile-form .touch-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }
 
 :root {

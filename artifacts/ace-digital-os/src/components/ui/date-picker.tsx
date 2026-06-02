@@ -2,12 +2,19 @@ import * as React from "react";
 import { CalendarIcon } from "lucide-react";
 import { cn, formatDateLabel, parseDateInput, toDateInputValue } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { DatePickerCalendarPanel } from "@/components/ui/date-picker-calendar-panel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface DatePickerProps {
   value?: string;
@@ -16,7 +23,7 @@ export interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  /** Use inside Dialog/Sheet so focus trap does not block the popover. */
+  /** Use inside Dialog/Sheet — on mobile opens an inline calendar instead of a nested drawer. */
   inModal?: boolean;
   "data-testid"?: string;
   id?: string;
@@ -37,25 +44,114 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     },
     ref,
   ) => {
+    const isMobile = useIsMobile();
     const [open, setOpen] = React.useState(false);
     const selected = parseDateInput(value);
+    const useInlinePanel = isMobile && inModal;
+    const calendarSize = isMobile || inModal ? "large" : "default";
+
+    const close = () => {
+      setOpen(false);
+      onBlur?.();
+    };
 
     const handleSelect = (date: Date | undefined) => {
       onChange?.(toDateInputValue(date));
-      if (date) setOpen(false);
+      if (date) close();
     };
 
     const handleClear = () => {
       onChange?.("");
-      setOpen(false);
+      close();
     };
 
     const handleToday = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       onChange?.(toDateInputValue(today));
-      setOpen(false);
+      close();
     };
+
+    const usePopover = !useInlinePanel && !isMobile;
+
+    const trigger = (
+      <Button
+        ref={ref}
+        id={id}
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        data-testid={dataTestId}
+        aria-expanded={open}
+        onClick={
+          usePopover
+            ? undefined
+            : () => {
+                if (!disabled) setOpen((prev) => !prev);
+              }
+        }
+        className={cn(
+          "h-11 w-full justify-between gap-2 px-3 text-base font-normal shadow-xs md:h-10 md:text-sm",
+          !selected && "text-muted-foreground",
+          open && useInlinePanel && "border-primary/50 ring-1 ring-primary/30",
+          className,
+        )}
+      >
+        <span className="truncate text-left">
+          {selected ? formatDateLabel(value) : placeholder}
+        </span>
+        <CalendarIcon className="size-5 shrink-0 opacity-70 md:size-4" aria-hidden />
+      </Button>
+    );
+
+    const panel = (
+      <DatePickerCalendarPanel
+        selected={selected}
+        onSelect={handleSelect}
+        onClear={handleClear}
+        onToday={handleToday}
+        size={calendarSize}
+      />
+    );
+
+    if (useInlinePanel) {
+      return (
+        <div className="w-full">
+          {trigger}
+          {open && (
+            <div
+              className="mt-2 overflow-hidden rounded-xl border border-border/80 bg-card shadow-brand-md animate-in fade-in-0 slide-in-from-top-1 duration-200"
+              role="dialog"
+              aria-label="Choose date"
+            >
+              {panel}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <>
+          {trigger}
+          <Drawer
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (!next) onBlur?.();
+            }}
+          >
+            <DrawerContent className="z-[120] max-h-[min(92dvh,640px)] pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <DrawerHeader className="border-b border-border/60 pb-3 text-left">
+                <DrawerTitle>Select date</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-2 pt-2">{panel}</div>
+            </DrawerContent>
+          </Drawer>
+        </>
+      );
+    }
 
     return (
       <Popover
@@ -66,62 +162,14 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
         }}
         modal={!inModal}
       >
-        <PopoverTrigger asChild>
-          <Button
-            ref={ref}
-            id={id}
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            data-testid={dataTestId}
-            className={cn(
-              "h-10 w-full justify-between gap-2 px-3 font-normal shadow-xs",
-              !selected && "text-muted-foreground",
-              className,
-            )}
-          >
-            <span className="truncate">
-              {selected ? formatDateLabel(value) : placeholder}
-            </span>
-            <CalendarIcon className="size-4 shrink-0 opacity-60" aria-hidden />
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent
-          className="z-[100] w-auto overflow-hidden rounded-xl border-border/80 p-0 shadow-brand-md"
+          className="z-[100] w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-xl border-border/80 p-0 shadow-brand-md"
           align="start"
-          sideOffset={6}
+          sideOffset={8}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <Calendar
-            mode="single"
-            selected={selected}
-            onSelect={handleSelect}
-            defaultMonth={selected}
-            captionLayout="dropdown"
-            fromYear={new Date().getFullYear() - 5}
-            toYear={new Date().getFullYear() + 10}
-            className="[--cell-size:2.35rem] p-3"
-          />
-          <div className="flex items-center justify-between gap-2 border-t border-border/80 bg-muted/30 px-3 py-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2.5 text-xs text-muted-foreground"
-              onClick={handleClear}
-            >
-              Clear
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2.5 text-xs font-medium text-primary"
-              onClick={handleToday}
-            >
-              Today
-            </Button>
-          </div>
+          {panel}
         </PopoverContent>
       </Popover>
     );

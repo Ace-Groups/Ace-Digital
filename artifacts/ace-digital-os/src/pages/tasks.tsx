@@ -248,7 +248,7 @@ export default function TasksPage() {
 
   const createForm = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4 sm:space-y-4">
         <FormField control={form.control} name="title" render={({ field }) => (
           <FormItem>
             <FormLabel>Task Title</FormLabel>
@@ -290,22 +290,21 @@ export default function TasksPage() {
             </p>
           </FormItem>
         )} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField control={form.control} name="teamId" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Team</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  <SelectItem value={ALL_TEAMS_VALUE}>All teams</SelectItem>
-                  {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
-          <div className="space-y-2">
+        <FormField control={form.control} name="teamId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Team</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl><SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger></FormControl>
+              <SelectContent>
+                <SelectItem value={ALL_TEAMS_VALUE}>All teams</SelectItem>
+                {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )} />
+        <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm">Assignees</Label>
+              <Label className="text-sm font-medium">Assignees</Label>
               <button
                 type="button"
                 className="text-xs text-primary hover:underline"
@@ -322,13 +321,17 @@ export default function TasksPage() {
                   : "Select all"}
               </button>
             </div>
-            <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg border border-border/70 p-2">
+            <div className="touch-scroll max-h-44 space-y-1 overflow-y-auto rounded-xl border border-border/70 p-2 sm:max-h-36">
               {assignableEmployees.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No users available for selected team.</p>
               ) : (
                 assignableEmployees.map((e) => (
-                  <label key={e.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/50">
+                  <label
+                    key={e.id}
+                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 active:bg-muted/60 hover:bg-muted/50"
+                  >
                     <Checkbox
+                      className="size-5"
                       checked={selectedAssigneeIds.includes(e.id)}
                       onCheckedChange={(checked) => {
                         setSelectedAssigneeIds((prev) =>
@@ -336,7 +339,7 @@ export default function TasksPage() {
                         );
                       }}
                     />
-                    <span className="text-sm">{e.fullName}</span>
+                    <span className="text-sm font-medium">{e.fullName}</span>
                   </label>
                 ))
               )}
@@ -344,7 +347,6 @@ export default function TasksPage() {
             <p className="text-xs text-muted-foreground">
               Leave empty to create a common task. Select multiple users to assign one task to each.
             </p>
-          </div>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField control={form.control} name="priority" render={({ field }) => (
@@ -374,7 +376,7 @@ export default function TasksPage() {
             </FormItem>
           )} />
         </div>
-        <Button data-testid="btn-submit-task" type="submit" className="h-11 w-full sm:h-10" disabled={createTask.isPending}>
+        <Button data-testid="btn-submit-task" type="submit" className="h-12 w-full text-base sm:h-10 sm:text-sm" disabled={createTask.isPending}>
           Create Task
         </Button>
       </form>
@@ -385,20 +387,20 @@ export default function TasksPage() {
     <AppLayout title="Tasks">
       <StaggerList className="page-stack">
       <StaggerItem>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+        <div className={cn("grid gap-3", isMobile ? "mobile-stat-scroll" : "grid-cols-2 sm:grid-cols-4")}>
+          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Visible Tasks</p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{stats.total}</p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 size={13} /> Done</p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{stats.done}</p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><UserPlus2 size={13} /> Assigned to me</p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{stats.mine}</p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users2 size={13} /> Common</p>
             <p className="mt-1 text-lg font-semibold tabular-nums">{stats.common}</p>
           </div>
@@ -525,7 +527,7 @@ export default function TasksPage() {
                           value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
                           onValueChange={(value) => void handleProjectTask(task.id, value)}
                         >
-                          <SelectTrigger className="h-8 w-[10.5rem] text-xs" data-testid={`task-project-${task.id}`}>
+                          <SelectTrigger className="h-10 w-full min-w-[9.5rem] text-xs sm:h-8 sm:w-[10.5rem]" data-testid={`task-project-${task.id}`}>
                             <SelectValue placeholder="Project" />
                           </SelectTrigger>
                           <SelectContent>
@@ -547,7 +549,7 @@ export default function TasksPage() {
                           value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
                           onValueChange={(value) => void handleAssignTask(task.id, value)}
                         >
-                          <SelectTrigger className="h-8 w-[9.5rem] text-xs">
+                          <SelectTrigger className="h-10 w-full min-w-[9rem] text-xs sm:h-8 sm:w-[9.5rem]">
                             <SelectValue placeholder="Assign" />
                           </SelectTrigger>
                           <SelectContent>
