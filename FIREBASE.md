@@ -120,9 +120,7 @@ firebase functions:secrets:set EMAIL_FROM --project ace-digital-os
 
 For `EMAIL_FROM`, use a **verified** Resend sender, e.g. `Ace-Digital <hr@mybexo.com>` (must match a domain you verified in Resend).
 
-**3. Bind secrets to the `api` function** (Google Cloud Console → Cloud Functions → `api` → Edit → Secrets, add `RESEND_API_KEY` and `EMAIL_FROM` as environment variables sourced from Secret Manager). Or redeploy after secrets exist:
-
-**4. Redeploy functions:**
+**3. Redeploy functions** (this binds the secrets to the `api` function):
 
 ```bash
 pnpm run build:api
