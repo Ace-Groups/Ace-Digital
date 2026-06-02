@@ -228,11 +228,13 @@ export function createFirestoreStore() {
       assigneeId?: number;
       status?: string;
     }): Promise<Task[]> {
-      let items = await allDocs(COL.tasks, mapTask);
-      if (filters?.projectId != null) items = items.filter((t) => t.projectId === filters.projectId);
-      if (filters?.teamId != null) items = items.filter((t) => t.teamId === filters.teamId);
-      if (filters?.assigneeId != null) items = items.filter((t) => t.assigneeId === filters.assigneeId);
-      if (filters?.status) items = items.filter((t) => t.status === filters.status);
+      let q: FirebaseFirestore.Query = db.collection(COL.tasks);
+      if (filters?.projectId != null) q = q.where("projectId", "==", filters.projectId);
+      if (filters?.teamId != null) q = q.where("teamId", "==", filters.teamId);
+      if (filters?.assigneeId != null) q = q.where("assigneeId", "==", filters.assigneeId);
+      if (filters?.status) q = q.where("status", "==", filters.status);
+      const snap = await q.get();
+      const items = snap.docs.map((d) => mapTask(d.data(), d.id));
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
@@ -280,9 +282,11 @@ export function createFirestoreStore() {
     },
 
     async listProjects(filters?: { status?: string; teamId?: number }): Promise<Project[]> {
-      let items = await allDocs(COL.projects, mapProject);
-      if (filters?.status) items = items.filter((p) => p.status === filters.status);
-      if (filters?.teamId != null) items = items.filter((p) => p.teamId === filters.teamId);
+      let q: FirebaseFirestore.Query = db.collection(COL.projects);
+      if (filters?.status) q = q.where("status", "==", filters.status);
+      if (filters?.teamId != null) q = q.where("teamId", "==", filters.teamId);
+      const snap = await q.get();
+      const items = snap.docs.map((d) => mapProject(d.data(), d.id));
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
@@ -329,13 +333,23 @@ export function createFirestoreStore() {
     },
 
     async countActiveProjectsByTeam(teamId: number): Promise<number> {
-      const projects = await this.listProjects({ teamId });
-      return projects.filter((p) => p.status !== "DONE").length;
+      const snap = await db
+        .collection(COL.projects)
+        .where("teamId", "==", teamId)
+        .where("status", "in", ["TODO", "IN_PROGRESS", "REVIEW"])
+        .get();
+      return snap.size;
     },
 
     async listUpcomingDeadlines(limit = 5): Promise<Project[]> {
       const now = Date.now();
-      const projects = await allDocs(COL.projects, mapProject);
+      const snap = await db
+        .collection(COL.projects)
+        .where("deadline", ">", new Date(now).toISOString())
+        .orderBy("deadline", "asc")
+        .limit(Math.max(limit * 3, 12))
+        .get();
+      const projects = snap.docs.map((d) => mapProject(d.data(), d.id));
       return projects
         .filter((p) => p.deadline && p.deadline.getTime() > now && p.status !== "DONE")
         .sort((a, b) => (a.deadline!.getTime() - b.deadline!.getTime()))
@@ -381,8 +395,10 @@ export function createFirestoreStore() {
     },
 
     async listApprovals(filters?: { status?: string }): Promise<Approval[]> {
-      let items = await allDocs(COL.approvals, mapApproval);
-      if (filters?.status) items = items.filter((a) => a.status === filters.status);
+      let q: FirebaseFirestore.Query = db.collection(COL.approvals);
+      if (filters?.status) q = q.where("status", "==", filters.status);
+      const snap = await q.get();
+      const items = snap.docs.map((d) => mapApproval(d.data(), d.id));
       return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
@@ -431,10 +447,15 @@ export function createFirestoreStore() {
     },
 
     async listActivityLogs(limit = 20): Promise<ActivityLogWithActor[]> {
-      const logs = await allDocs(COL.activityLogs, mapActivity);
-      const sorted = logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit);
-      const users = await this.listUsers();
-      const userMap = new Map(users.map((u) => [u.id, u.fullName]));
+      const snap = await db
+        .collection(COL.activityLogs)
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+      const sorted = snap.docs.map((d) => mapActivity(d.data(), d.id));
+      const actorIds = [...new Set(sorted.map((l) => l.actorId).filter((id): id is number => id != null))];
+      const users = await Promise.all(actorIds.map((id) => this.findUserById(id)));
+      const userMap = new Map(users.filter((u): u is User => u != null).map((u) => [u.id, u.fullName]));
       return sorted.map((l) => ({
         ...l,
         actorName: l.actorId ? userMap.get(l.actorId) ?? null : null,

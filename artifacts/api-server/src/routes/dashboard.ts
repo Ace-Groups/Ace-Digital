@@ -5,6 +5,8 @@ import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 
 const router = Router();
+const DASHBOARD_CACHE_TTL_MS = 15_000;
+const dashboardCache = new Map<string, { expiresAt: number; payload: unknown }>();
 
 router.get(
   "/v1/dashboard",
@@ -12,9 +14,16 @@ router.get(
   requirePermission("dashboard:view"),
   async (req, res): Promise<void> => {
   const ctx = getAccessContext(req);
-  const dash = await store.getDashboardSnapshot(ctx);
+  const cacheKey = `${ctx.userId}:${ctx.role}:${ctx.teamId ?? "none"}`;
+  const now = Date.now();
+  const cached = dashboardCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    res.json(cached.payload);
+    return;
+  }
 
-  res.json({
+  const dash = await store.getDashboardSnapshot(ctx);
+  const payload = {
     activeProjectsCount: dash.activeProjectsCount,
     employeeCount: dash.employeeCount,
     monthlyRevenue: dash.monthlyRevenue,
@@ -50,7 +59,9 @@ router.get(
       createdAt: p.createdAt.toISOString(),
     })),
     teamLoad: dash.teamLoad,
-  });
+  };
+  dashboardCache.set(cacheKey, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
+  res.json(payload);
   },
 );
 

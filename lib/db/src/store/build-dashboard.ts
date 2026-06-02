@@ -35,18 +35,19 @@ export async function buildDashboardSnapshot(
   const profile = getDashboardProfile(ctx.role);
   const widgets = profile.widgets;
 
-  const allProjects = await deps.listProjects();
+  const projectFilters =
+    ctx.role === "team_lead" || ctx.role === "employee"
+      ? { teamId: ctx.teamId ?? undefined }
+      : undefined;
+  const allProjects = await deps.listProjects(projectFilters);
   const scopedProjects = scopeProjectList(ctx, allProjects);
   const activeProjectsCount = scopedProjects.filter((p) => p.status !== "DONE").length;
 
-  const allTasks = await deps.listTasks();
-  const scopedTasks = scopeTaskList(ctx, allTasks as Parameters<typeof scopeTaskList>[1]);
-  const myOpenTasksCount = scopedTasks.filter(
-    (t) => t.status !== "DONE" && t.assigneeId === ctx.userId,
-  ).length;
+  const myTasks = await deps.listTasks({ assigneeId: ctx.userId });
+  const myOpenTasksCount = myTasks.filter((t) => t.status !== "DONE").length;
 
-  const allApprovals = await deps.listApprovals();
-  const pendingApprovalsCount = countPendingApprovalsForContext(ctx, allApprovals);
+  const pendingApprovals = await deps.listApprovals({ status: "PENDING" });
+  const pendingApprovalsCount = countPendingApprovalsForContext(ctx, pendingApprovals);
 
   let employeeCount = 0;
   if (dashboardShowsWidget(ctx.role, "employeeCount")) {
