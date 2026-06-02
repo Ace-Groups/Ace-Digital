@@ -46,6 +46,29 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const WEB_APP_URL = "https://ace-digital-os.web.app";
+
+function sendServiceRoot(_req: express.Request, res: express.Response): void {
+  res.json({
+    service: "Ace Digital OS API",
+    status: "ok",
+    webApp: WEB_APP_URL,
+    health: "/api/healthz",
+    apiPrefix: "/api",
+    hint: "Use the web app URL for the UI. API routes live under /api/v1/...",
+  });
+}
+
+/** Cloud Function URL ends at /api — Express sees path / */
+app.get("/", sendServiceRoot);
+app.get("/api", sendServiceRoot);
+app.get("/api/", sendServiceRoot);
+
+/** Convenience when testing the function URL directly (…/api/api/healthz → path /api/healthz) */
+app.get("/healthz", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.use("/api", apiLimiter);
 app.use("/api/v1/auth/login", loginLimiter);
 app.use("/api", router);

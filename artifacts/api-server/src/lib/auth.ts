@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
-import { JWT_SECRET } from "./jwt-secret";
+import { getJwtSecret } from "./jwt-secret";
 const SALT_ROUNDS = 10;
 
 export interface AuthPayload {
@@ -19,11 +19,11 @@ export function comparePassword(password: string, hash: string): Promise<boolean
 }
 
 export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): AuthPayload {
-  return jwt.verify(token, JWT_SECRET) as AuthPayload;
+  return jwt.verify(token, getJwtSecret()) as AuthPayload;
 }
 
 declare global {

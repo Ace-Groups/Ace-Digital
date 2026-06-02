@@ -74,16 +74,49 @@ npx firebase-tools@latest deploy --only functions --project ace-digital-os
 npx firebase-tools@latest deploy --only hosting --project ace-digital-os
 ```
 
-## Security (production)
+## Security (production) — JWT secret
 
-Set a strong JWT secret (32+ random characters) before deploying functions:
+Firebase **deprecated** `functions.config()` in 2026. This project uses **Secret Manager** via `firebase-functions/params`.
+
+### 1. Generate a secret (once)
 
 ```bash
-firebase functions:config:set app.jwt_secret="YOUR_LONG_RANDOM_SECRET" --project ace-digital-os
-pnpm run deploy:firebase
+openssl rand -base64 48
 ```
 
-Without this, the API falls back to a dev-only secret and logs a warning. CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
+Copy the output (it will be longer than 32 characters).
+
+### 2. Store it in Firebase (interactive — paste the generated value, not a placeholder)
+
+```bash
+firebase functions:secrets:set JWT_SECRET --project ace-digital-os
+```
+
+When prompted, paste the value from step 1.
+
+### 3. Deploy functions (required after setting or rotating the secret)
+
+```bash
+pnpm run build:api
+cp artifacts/api-server/dist/api-app.mjs firebase/functions/api-app.mjs
+cd firebase/functions && npm run build && cd ../..
+npx firebase-tools deploy --only functions --project ace-digital-os
+```
+
+Login and API calls will fail until `JWT_SECRET` is set and functions are redeployed.
+
+CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
+
+### API URLs (do not open the function root in a browser for the app)
+
+| Use | URL |
+|-----|-----|
+| **Web app (login here)** | https://ace-digital-os.web.app |
+| **API via hosting** | https://ace-digital-os.web.app/api/v1/... |
+| **Function health check** | https://asia-south1-ace-digital-os.cloudfunctions.net/api/api/healthz |
+| **Function root (info JSON only)** | https://asia-south1-ace-digital-os.cloudfunctions.net/api |
+
+Opening `…cloudfunctions.net/api` in Safari shows API metadata JSON after deploy — not the React app.
 
 ## Deploy troubleshooting
 
