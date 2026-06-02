@@ -10,6 +10,7 @@ import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
+import { messageToJson, validateMessagePayload } from "../lib/message-attachments";
 
 const router = Router();
 
@@ -358,15 +359,13 @@ router.get(
     const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
 
     res.json(
-      messages.map((m) => ({
-        id: m.id,
-        channelId: m.channelId,
-        senderId: m.senderId,
-        senderName: m.senderName ?? "Unknown",
-        senderAvatar: avatarMap[m.senderId] ?? null,
-        body: m.body,
-        createdAt: m.createdAt.toISOString(),
-      })),
+      messages.map((m) =>
+        messageToJson(
+          m,
+          m.senderName ?? "Unknown",
+          avatarMap[m.senderId] ?? null,
+        ),
+      ),
     );
   },
 );
@@ -392,26 +391,27 @@ router.post(
       return;
     }
 
-    const { body } = req.body;
-    if (!body) {
-      res.status(400).json({ error: "Message body is required" });
+    let payload: ReturnType<typeof validateMessagePayload>;
+    try {
+      payload = validateMessagePayload(req.body?.body, req.body?.attachments);
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : "Invalid message" });
       return;
     }
     const message = await store.createMessage({
       channelId: id,
       senderId: ctx.userId,
-      body,
+      body: payload.body,
+      attachments: payload.attachments ?? null,
     });
     const sender = await store.findUserById(ctx.userId);
-    res.status(201).json({
-      id: message.id,
-      channelId: message.channelId,
-      senderId: message.senderId,
-      senderName: sender?.fullName ?? "Unknown",
-      senderAvatar: sender?.avatarUrl ?? null,
-      body: message.body,
-      createdAt: message.createdAt.toISOString(),
-    });
+    res.status(201).json(
+      messageToJson(
+        message,
+        sender?.fullName ?? "Unknown",
+        sender?.avatarUrl ?? null,
+      ),
+    );
   },
 );
 

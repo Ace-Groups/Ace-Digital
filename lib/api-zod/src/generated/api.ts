@@ -1116,6 +1116,13 @@ export const GetChannelMessagesResponseItem = zod.object({
   "senderName": zod.string().optional(),
   "senderAvatar": zod.string().nullish(),
   "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional()
+})).optional(),
   "createdAt": zod.string()
 })
 export const GetChannelMessagesResponse = zod.array(GetChannelMessagesResponseItem)
@@ -1128,11 +1135,15 @@ export const SendMessageParams = zod.object({
   "id": zod.coerce.number()
 })
 
-
-
-
 export const SendMessageBody = zod.object({
-  "body": zod.string().min(1)
+  "body": zod.string().optional(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional()
+})).optional()
 })
 
 

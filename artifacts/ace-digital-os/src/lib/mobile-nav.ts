@@ -4,7 +4,7 @@ const PRIMARY_ORDER: NavRoute[] = [
   "dashboard",
   "projects",
   "tasks",
-  "approvals",
+  "channels",
   "employees",
   "finance",
   "clients",
@@ -19,6 +19,7 @@ export type MobileNavItem = {
 };
 
 function labelForRoute(route: NavRoute, role: string): string {
+  if (route === "channels") return "Chat";
   if (route === "employees" && role === "employee") return "Profile";
   if (route === "finance" && role === "employee") return "Payslip";
   const item = NAV_ROUTES.find((n) => n.route === route);

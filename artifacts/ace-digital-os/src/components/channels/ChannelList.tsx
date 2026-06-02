@@ -27,11 +27,11 @@ export function ChannelList({
     <div
       className={cn(
         "flex flex-col bg-sidebar text-sidebar-foreground",
-        isMobile ? "min-h-[50dvh] w-full rounded-xl" : "w-64 shrink-0 border-r border-sidebar-border",
+        isMobile ? "min-h-0 w-full flex-1" : "w-64 shrink-0 border-r border-sidebar-border",
       )}
     >
       <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-4">
-        <h2 className="text-sm font-semibold">Channels</h2>
+        <h2 className="text-sm font-semibold">Chat</h2>
         {canCreate && (
           <Button
             type="button"

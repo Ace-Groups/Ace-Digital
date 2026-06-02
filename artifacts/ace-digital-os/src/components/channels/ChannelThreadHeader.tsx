@@ -16,7 +16,7 @@ export function ChannelThreadHeader({
   onOpenSettings,
 }: ChannelThreadHeaderProps) {
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-3 sm:gap-3 sm:px-4">
       {isMobile && onBack && (
         <Button
           type="button"

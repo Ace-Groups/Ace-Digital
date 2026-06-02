@@ -16,6 +16,7 @@ import type {
   PayrollRun,
   EmployeeProfile,
 } from "../schema";
+import { normalizeMessageAttachments } from "../message-attachments";
 import type {
   ActivityLogWithActor,
   AccessContext,
@@ -1006,7 +1007,8 @@ function mapMessage(data: FirebaseFirestore.DocumentData, id: string): Message {
     id: Number(id),
     channelId: data.channelId as number,
     senderId: data.senderId as number,
-    body: data.body as string,
+    body: (data.body as string) ?? "",
+    attachments: normalizeMessageAttachments(data.attachments) ?? null,
     createdAt: toDate(data.createdAt),
   };
 }

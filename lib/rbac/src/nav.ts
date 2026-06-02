@@ -24,7 +24,7 @@ export const NAV_ROUTES: { route: NavRoute; href: string; label: string }[] = [
   { route: "clients", href: "/clients", label: "Clients" },
   { route: "approvals", href: "/approvals", label: "Approvals" },
   { route: "reports", href: "/reports", label: "Reports" },
-  { route: "channels", href: "/channels", label: "Channels" },
+  { route: "channels", href: "/channels", label: "Chat" },
   { route: "activity", href: "/activity", label: "Activity" },
 ];
 

@@ -496,6 +496,23 @@ export interface ChannelMemberInput {
   role?: ChannelMemberInputRole;
 }
 
+export type MessageAttachmentType = typeof MessageAttachmentType[keyof typeof MessageAttachmentType];
+
+
+export const MessageAttachmentType = {
+  image: 'image',
+  file: 'file',
+  video: 'video',
+} as const;
+
+export interface MessageAttachment {
+  type: MessageAttachmentType;
+  url: string;
+  name?: string;
+  mimeType?: string;
+  size?: number;
+}
+
 export interface Message {
   id: number;
   channelId: number;
@@ -504,12 +521,13 @@ export interface Message {
   /** @nullable */
   senderAvatar?: string | null;
   body: string;
+  attachments?: MessageAttachment[];
   createdAt: string;
 }
 
 export interface MessageInput {
-  /** @minLength 1 */
-  body: string;
+  body?: string;
+  attachments?: MessageAttachment[];
 }
 
 export interface Notification {

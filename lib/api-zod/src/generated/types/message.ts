@@ -5,6 +5,7 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageAttachment } from './messageAttachment';
 
 export interface Message {
   id: number;
@@ -14,5 +15,6 @@ export interface Message {
   /** @nullable */
   senderAvatar?: string | null;
   body: string;
+  attachments?: MessageAttachment[];
   createdAt: string;
 }

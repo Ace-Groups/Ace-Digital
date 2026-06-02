@@ -5,8 +5,9 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageAttachment } from './messageAttachment';
 
 export interface MessageInput {
-  /** @minLength 1 */
-  body: string;
+  body?: string;
+  attachments?: MessageAttachment[];
 }

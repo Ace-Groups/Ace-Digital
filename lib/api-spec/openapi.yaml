@@ -1961,6 +1961,22 @@ components:
           type: string
           enum: [owner, member, viewer]
 
+    MessageAttachment:
+      type: object
+      required: [type, url]
+      properties:
+        type:
+          type: string
+          enum: [image, file, video]
+        url:
+          type: string
+        name:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+
     Message:
       type: object
       required: [id, channelId, senderId, body, createdAt]
@@ -1977,16 +1993,22 @@ components:
           type: ["string", "null"]
         body:
           type: string
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
         createdAt:
           type: string
 
     MessageInput:
       type: object
-      required: [body]
       properties:
         body:
           type: string
-          minLength: 1
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageAttachment"
 
     # ACTIVITY & NOTIFICATIONS
     ActivityLog:

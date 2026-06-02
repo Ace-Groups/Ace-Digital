@@ -38,6 +38,8 @@ export * from './listProjectsParams';
 export * from './listTasksParams';
 export * from './loginInput';
 export * from './message';
+export * from './messageAttachment';
+export * from './messageAttachmentType';
 export * from './messageInput';
 export * from './myProfileUpdate';
 export * from './notification';

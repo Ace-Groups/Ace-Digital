@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
+import { useMobileChrome } from "@/contexts/MobileChromeContext";
 import aceLogo from "@/assets/ace-logo.png";
 
 const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
@@ -67,6 +68,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const { primary, overflow } = getMobileNavItems(user?.role ?? "");
+  const { hideBottomNav, immersivePage } = useMobileChrome();
 
   function isActive(href: string) {
     if (href === "/") return location === "/";
@@ -112,10 +114,18 @@ export function MobileShell({ children, title }: MobileShellProps) {
         </button>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-        <PageTransition>{children}</PageTransition>
+      <main
+        className={cn(
+          "min-h-0 flex-1 overscroll-contain",
+          immersivePage
+            ? "flex flex-col overflow-hidden p-0"
+            : "overflow-y-auto px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]",
+        )}
+      >
+        {immersivePage ? children : <PageTransition>{children}</PageTransition>}
       </main>
 
+      {!hideBottomNav && (
       <nav
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card/95 backdrop-blur-lg"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -156,6 +166,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
           )}
         </div>
       </nav>
+      )}
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-[env(safe-area-inset-bottom)]">

@@ -603,6 +603,7 @@ export function createPostgresStore() {
           channelId: messagesTable.channelId,
           senderId: messagesTable.senderId,
           body: messagesTable.body,
+          attachments: messagesTable.attachments,
           createdAt: messagesTable.createdAt,
           senderName: usersTable.fullName,
         })
@@ -616,6 +617,7 @@ export function createPostgresStore() {
         channelId: r.channelId,
         senderId: r.senderId,
         body: r.body,
+        attachments: r.attachments ?? null,
         createdAt: r.createdAt,
         senderName: r.senderName,
       }));

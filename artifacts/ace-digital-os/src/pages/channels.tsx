@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
@@ -8,19 +9,20 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Send } from "lucide-react";
-import { formatRelativeTime, cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { canManageChannel, canPostInChannel } from "@workspace/rbac";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileChromeFlags } from "@/contexts/MobileChromeContext";
 import { ChannelList } from "@/components/channels/ChannelList";
 import { CreateChannelDialog } from "@/components/channels/CreateChannelDialog";
 import { ChannelSettingsSheet } from "@/components/channels/ChannelSettingsSheet";
 import { ChannelThreadHeader } from "@/components/channels/ChannelThreadHeader";
+import { MessageBubble } from "@/components/channels/MessageBubble";
+import { MessageComposer } from "@/components/channels/MessageComposer";
+import { cn } from "@/lib/utils";
+import type { MessageAttachment } from "@workspace/api-client-react";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -32,12 +34,16 @@ export default function ChannelsPage() {
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [message, setMessage] = useState("");
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const sendMessage = useSendMessage();
   const queryClient = useQueryClient();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useMobileChromeFlags({
+    immersivePage: isMobile,
+    hideBottomNav: isMobile && mobileThreadOpen,
+  });
 
   const selectedChannel = channels?.find((c) => c.id === selectedChannelId);
 
@@ -66,7 +72,7 @@ export default function ChannelsPage() {
       query: {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0),
-        refetchInterval: selectedChannelId && (!isMobile || mobileThreadOpen) ? 15_000 : false,
+        refetchInterval: selectedChannelId && (!isMobile || mobileThreadOpen) ? 12_000 : false,
         refetchIntervalInBackground: false,
       },
     },
@@ -88,35 +94,27 @@ export default function ChannelsPage() {
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
-
     const onScroll = () => {
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       setShouldAutoScroll(distanceFromBottom < 96);
     };
-
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [selectedChannelId, isMobile, mobileThreadOpen]);
+  }, [selectedChannelId, mobileThreadOpen]);
 
-  async function handleSend() {
-    if (!message.trim() || !selectedChannelId || !canPost) return;
-    const body = message.trim();
-    setMessage("");
+  async function handleSend(payload: { body: string; attachments?: MessageAttachment[] }) {
+    if (!selectedChannelId || !canPost) return;
     try {
-      await sendMessage.mutateAsync({ id: selectedChannelId, data: { body } });
+      await sendMessage.mutateAsync({
+        id: selectedChannelId,
+        data: payload,
+      });
+      setShouldAutoScroll(true);
       queryClient.invalidateQueries({
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId),
       });
     } catch {
       toast({ title: "Failed to send message", variant: "destructive" });
-      setMessage(body);
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void handleSend();
     }
   }
 
@@ -133,15 +131,8 @@ export default function ChannelsPage() {
   const showThread = !isMobile || mobileThreadOpen;
   const canCreate = can("channels:write");
 
-  const threadView = (
-    <div
-      className={cn(
-        "flex min-w-0 flex-1 flex-col bg-card",
-        isMobile &&
-          mobileThreadOpen &&
-          "fixed inset-0 z-50 flex min-h-[100dvh] flex-col pt-[env(safe-area-inset-top)]",
-      )}
-    >
+  const threadContent = (
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
       {selectedChannel && (
         <ChannelThreadHeader
           channel={selectedChannel}
@@ -153,7 +144,7 @@ export default function ChannelsPage() {
 
       <div
         ref={messagesContainerRef}
-        className="touch-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6"
+        className="touch-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
       >
         {!selectedChannelId ? (
           <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
@@ -163,113 +154,44 @@ export default function ChannelsPage() {
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-3">
-                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-12 w-64 max-w-full" />
-                </div>
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                <Skeleton className="h-16 w-64 max-w-full rounded-2xl" />
               </div>
             ))}
           </div>
         ) : messages?.length === 0 ? (
-          <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
-            No messages yet. Be the first to say hello!
+          <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+            <p>No messages yet</p>
+            <p className="text-xs">Say hello to the team</p>
           </div>
         ) : (
           messages?.map((msg, idx) => {
             const isMe = msg.senderId === user?.id;
-            const showAvatar =
+            const showMeta =
               idx === 0 || messages[idx - 1]?.senderId !== msg.senderId;
             return (
-              <div
+              <MessageBubble
                 key={msg.id}
-                data-testid={`message-${msg.id}`}
-                className={cn("flex gap-3", isMe && "flex-row-reverse")}
-              >
-                {showAvatar ? (
-                  <UserAvatar
-                    avatarUrl={msg.senderAvatar}
-                    fullName={msg.senderName}
-                    className="h-8 w-8 shrink-0"
-                    fallbackClassName={cn(
-                      "text-xs",
-                      isMe
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                    iconSize={14}
-                  />
-                ) : (
-                  <div className="w-8 shrink-0" />
-                )}
-                <div
-                  className={cn(
-                    "max-w-[85%] sm:max-w-md lg:max-w-lg",
-                    isMe && "flex flex-col items-end",
-                  )}
-                >
-                  {showAvatar && (
-                    <div
-                      className={cn(
-                        "mb-1 flex items-center gap-2",
-                        isMe && "flex-row-reverse",
-                      )}
-                    >
-                      <p className="text-xs font-medium text-foreground">
-                        {msg.senderName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatRelativeTime(msg.createdAt)}
-                      </p>
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      "rounded-2xl px-4 py-3 text-[0.9375rem] leading-relaxed",
-                      isMe
-                        ? "rounded-tr-sm bg-primary text-primary-foreground"
-                        : "rounded-tl-sm bg-muted text-foreground",
-                    )}
-                  >
-                    {msg.body}
-                  </div>
-                </div>
-              </div>
+                msg={msg}
+                isMe={isMe}
+                showMeta={showMeta}
+              />
             );
           })
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {selectedChannelId && canPost && (
-        <div className="shrink-0 border-t border-border px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4">
-          <div className="flex items-end gap-2 rounded-2xl border border-border bg-muted/40 p-2 sm:gap-3 sm:px-3">
-            <Textarea
-              data-testid="input-message"
-              rows={1}
-              placeholder={`Message #${selectedChannel?.name ?? "channel"}...`}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onFocus={() => setShouldAutoScroll(false)}
-              onBlur={() => setShouldAutoScroll(true)}
-              onKeyDown={handleKeyDown}
-              className="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-base shadow-none focus-visible:ring-0 sm:min-h-10 sm:text-sm"
-            />
-            <button
-              type="button"
-              data-testid="btn-send-message"
-              onClick={() => void handleSend()}
-              disabled={!message.trim() || sendMessage.isPending}
-              className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors active:scale-[0.97] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Send size={20} />
-            </button>
-          </div>
-        </div>
+      {selectedChannelId && canPost && selectedChannel && (
+        <MessageComposer
+          channelName={selectedChannel.name}
+          sending={sendMessage.isPending}
+          onSend={handleSend}
+        />
       )}
 
       {selectedChannelId && !canPost && selectedChannel && (
-        <div className="shrink-0 border-t border-border px-4 py-3 text-center text-xs text-muted-foreground">
+        <div className="shrink-0 border-t border-border px-4 py-4 text-center text-sm text-muted-foreground">
           {selectedChannel.archived
             ? "This channel is archived."
             : "You have read-only access in this channel."}
@@ -278,12 +200,27 @@ export default function ChannelsPage() {
     </div>
   );
 
+  const mobileThreadPortal =
+    isMobile &&
+    mobileThreadOpen &&
+    selectedChannelId &&
+    typeof document !== "undefined"
+      ? createPortal(
+          <div className="fixed inset-0 z-[100] flex flex-col bg-background pt-[env(safe-area-inset-top)]">
+            {threadContent}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
-    <AppLayout title="Channels">
+    <AppLayout title="Chat">
       <div
         className={cn(
-          "flex overflow-hidden rounded-xl border border-border",
-          isMobile ? "min-h-[calc(100dvh-11rem)] flex-col" : "min-h-[calc(100dvh-8rem)]",
+          "flex overflow-hidden",
+          isMobile
+            ? "min-h-[calc(100dvh-5rem)] flex-col"
+            : "min-h-[calc(100dvh-8rem)] rounded-xl border border-border",
         )}
       >
         {isMobile ? (
@@ -299,7 +236,6 @@ export default function ChannelsPage() {
                 isMobile
               />
             )}
-            {showThread && threadView}
           </>
         ) : (
           <>
@@ -311,10 +247,12 @@ export default function ChannelsPage() {
               onCreateClick={() => setCreateOpen(true)}
               canCreate={canCreate}
             />
-            {threadView}
+            <div className="flex min-w-0 flex-1 flex-col bg-card">{threadContent}</div>
           </>
         )}
       </div>
+
+      {mobileThreadPortal}
 
       <CreateChannelDialog
         open={createOpen}

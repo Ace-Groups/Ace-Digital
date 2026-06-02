@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, unique, jsonb } from "drizzle-orm/pg-core";
+import type { MessageAttachment } from "../message-attachments";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { teamsTable } from "./teams";
@@ -36,7 +37,8 @@ export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
   channelId: integer("channel_id").notNull().references(() => channelsTable.id),
   senderId: integer("sender_id").notNull().references(() => usersTable.id),
-  body: text("body").notNull(),
+  body: text("body").notNull().default(""),
+  attachments: jsonb("attachments").$type<MessageAttachment[]>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
