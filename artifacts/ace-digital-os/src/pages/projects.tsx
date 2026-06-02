@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
@@ -23,7 +23,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, IndianRupee, GripVertical, CircleDashed, Timer, ShieldCheck, CheckCircle2 } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  IndianRupee,
+  GripVertical,
+  CircleDashed,
+  Timer,
+  ShieldCheck,
+  CheckCircle2,
+  Sparkles,
+  Target,
+  Layers3,
+} from "lucide-react";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -138,6 +150,13 @@ export default function ProjectsPage() {
     acc[s] = projects?.filter((p) => p.status === s) ?? [];
     return acc;
   }, {} as Record<string, typeof projects>);
+  const totalProjects = projects?.length ?? 0;
+  const avgProgress = useMemo(() => {
+    if (!projects || projects.length === 0) return 0;
+    return Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length);
+  }, [projects]);
+  const doneProjects = byStatus.DONE?.length ?? 0;
+  const inFlightProjects = (byStatus.IN_PROGRESS?.length ?? 0) + (byStatus.REVIEW?.length ?? 0);
 
   const createForm = (
     <Form {...form}>
@@ -280,22 +299,61 @@ export default function ProjectsPage() {
     <AppLayout title="Projects">
       <StaggerList className="page-stack">
       <StaggerItem>
+        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-primary/30 via-primary/15 to-background p-5 sm:p-6">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                <Sparkles size={12} />
+                Project Command Board
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                Plan, prioritize, and ship faster
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                Move work across stages with drag and drop. Open any card to update details, team, and budget.
+              </p>
+            </div>
+            <Button
+              data-testid="btn-create-project"
+              className="hidden gap-2 sm:inline-flex active:scale-[0.98]"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus size={16} /> New Project
+            </Button>
+          </div>
+        </section>
+      </StaggerItem>
+
+      <StaggerItem>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Total Projects</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{totalProjects}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Target size={13} /> Active Pipeline</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{inFlightProjects}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 size={13} /> Completion</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{totalProjects === 0 ? "0%" : `${Math.round((doneProjects / totalProjects) * 100)}%`}</p>
+            <p className="text-xs text-muted-foreground">Avg progress {avgProgress}%</p>
+          </div>
+        </div>
+      </StaggerItem>
+
+      <StaggerItem>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">
-              {projects?.length ?? 0} total projects
+              {totalProjects} total projects
             </p>
             <p className="mt-1 text-xs text-muted-foreground/90">
               Drag a card to move status, or tap any card to edit details.
             </p>
           </div>
-          <Button
-            data-testid="btn-create-project"
-            className="hidden gap-2 sm:inline-flex active:scale-[0.98]"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus size={16} /> New Project
-          </Button>
           <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
             {createForm}
           </ResponsiveSheet>
@@ -312,6 +370,17 @@ export default function ProjectsPage() {
       />
 
       <StaggerItem>
+        {!isLoading && totalProjects === 0 && (
+          <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
+            <h3 className="text-base font-semibold">No projects yet</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Start by creating your first project. It will appear in To Do and can then be moved across the workflow.
+            </p>
+            <Button className="mt-4 gap-2" onClick={() => setCreateOpen(true)}>
+              <Plus size={16} /> Create First Project
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATUSES.map((status) => (
             <section
@@ -413,7 +482,16 @@ export default function ProjectsPage() {
                     ))}
                 {!isLoading && (byStatus[status]?.length ?? 0) === 0 && (
                   <div className="rounded-xl border border-dashed border-border/70 bg-background/40 p-4 text-center text-xs text-muted-foreground">
-                    No projects in {STATUS_LABELS[status].toLowerCase()}.
+                    <p>No projects in {STATUS_LABELS[status].toLowerCase()}.</p>
+                    {status === "TODO" && (
+                      <button
+                        type="button"
+                        onClick={() => setCreateOpen(true)}
+                        className="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <Plus size={12} /> Add project
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
