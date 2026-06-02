@@ -27,7 +27,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,10 +34,10 @@ import { z } from "zod";
 import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2, Pencil, Trash2 } from "lucide-react";
 import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AssigneeMultiSelect } from "@/components/tasks/AssigneeMultiSelect";
+import { TaskAssigneesDisplay } from "@/components/tasks/TaskAssigneesDisplay";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
-import { getInitials } from "@/lib/utils";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title required"),
@@ -54,7 +53,6 @@ type CreateForm = z.infer<typeof createSchema>;
 const editSchema = z.object({
   title: z.string().min(1, "Title required"),
   projectId: z.string(),
-  assigneeId: z.string(),
   priority: z.string(),
   dueDate: z.string().optional(),
   status: z.string(),
@@ -63,7 +61,6 @@ type EditForm = z.infer<typeof editSchema>;
 
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
 const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
-const COMMON_TASK_VALUE = "__common__";
 const ALL_TEAMS_VALUE = "__all_teams__";
 const NO_PROJECT_VALUE = "__no_project__";
 
@@ -89,6 +86,7 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [ownershipFilter, setOwnershipFilter] = useState<(typeof OWNERSHIP_FILTERS)[number]>("all");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);
+  const [editSelectedAssigneeIds, setEditSelectedAssigneeIds] = useState<number[]>([]);
 
   const taskParams = useMemo(() => {
     const base: { status?: string; projectId?: number } = {};
@@ -129,7 +127,6 @@ export default function TasksPage() {
     defaultValues: {
       title: "",
       projectId: NO_PROJECT_VALUE,
-      assigneeId: COMMON_TASK_VALUE,
       priority: "MEDIUM",
       status: "PENDING",
       dueDate: "",
@@ -316,11 +313,16 @@ export default function TasksPage() {
 
   function openEditTask(task: Task) {
     setEditingTask(task);
-    const primaryAssignee = task.assigneeIds?.[0] ?? task.assigneeId;
+    setEditSelectedAssigneeIds(
+      task.assigneeIds?.length
+        ? [...task.assigneeIds]
+        : task.assigneeId != null
+          ? [task.assigneeId]
+          : [],
+    );
     editForm.reset({
       title: task.title,
       projectId: task.projectId ? String(task.projectId) : NO_PROJECT_VALUE,
-      assigneeId: primaryAssignee ? String(primaryAssignee) : COMMON_TASK_VALUE,
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
       status: task.status,
@@ -330,8 +332,7 @@ export default function TasksPage() {
 
   async function onEditSubmit(data: EditForm) {
     if (!editingTask) return;
-    const assigneeIds =
-      data.assigneeId === COMMON_TASK_VALUE ? [] : [Number(data.assigneeId)];
+    const assigneeIds = editSelectedAssigneeIds;
     try {
       await updateTask.mutateAsync({
         id: editingTask.id,
@@ -351,18 +352,6 @@ export default function TasksPage() {
     } catch {
       toast({ title: "Couldn't save task", variant: "destructive" });
     }
-  }
-
-  async function handleAssignTask(task: Task, assigneeIdValue: string) {
-    if (!canManageTask(task)) return;
-    await updateTask.mutateAsync({
-      id: task.id,
-      data: {
-        assigneeId: assigneeIdValue === COMMON_TASK_VALUE ? null : Number(assigneeIdValue),
-      } as never,
-    });
-    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-    toast({ title: "Task assignment updated" });
   }
 
   async function handleProjectTask(task: Task, projectIdValue: string) {
@@ -457,52 +446,12 @@ export default function TasksPage() {
             </Select>
           </FormItem>
         )} />
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Assignees</Label>
-              <button
-                type="button"
-                className="text-xs text-primary hover:underline"
-                onClick={() => {
-                  if (selectedAssigneeIds.length === assignableEmployees.length) {
-                    setSelectedAssigneeIds([]);
-                  } else {
-                    setSelectedAssigneeIds(assignableEmployees.map((e) => e.id));
-                  }
-                }}
-              >
-                {selectedAssigneeIds.length === assignableEmployees.length && assignableEmployees.length > 0
-                  ? "Clear all"
-                  : "Select all"}
-              </button>
-            </div>
-            <div className="touch-scroll max-h-44 space-y-1 overflow-y-auto rounded-xl border border-border/70 p-2 sm:max-h-36">
-              {assignableEmployees.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No users available for selected team.</p>
-              ) : (
-                assignableEmployees.map((e) => (
-                  <label
-                    key={e.id}
-                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 active:bg-muted/60 hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      className="size-5"
-                      checked={selectedAssigneeIds.includes(e.id)}
-                      onCheckedChange={(checked) => {
-                        setSelectedAssigneeIds((prev) =>
-                          checked ? [...prev, e.id] : prev.filter((id) => id !== e.id),
-                        );
-                      }}
-                    />
-                    <span className="text-sm font-medium">{e.fullName}</span>
-                  </label>
-                ))
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              One shared task for all selected people. Each person marks their part done.
-            </p>
-        </div>
+        <AssigneeMultiSelect
+          employees={assignableEmployees}
+          selectedIds={selectedAssigneeIds}
+          onChange={setSelectedAssigneeIds}
+          emptyLabel="No users available for selected team."
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField control={form.control} name="priority" render={({ field }) => (
             <FormItem>
@@ -564,22 +513,11 @@ export default function TasksPage() {
             </Select>
           </FormItem>
         )} />
-        <FormField control={editForm.control} name="assigneeId" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Assignee</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value}>
-              <FormControl>
-                <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
-                {employees?.map((e) => (
-                  <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormItem>
-        )} />
+        <AssigneeMultiSelect
+          employees={employees ?? []}
+          selectedIds={editSelectedAssigneeIds}
+          onChange={setEditSelectedAssigneeIds}
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField control={editForm.control} name="priority" render={({ field }) => (
             <FormItem>
@@ -778,11 +716,6 @@ export default function TasksPage() {
                       {task.teamName && (
                         <span className="text-xs text-muted-foreground">• {task.teamName}</span>
                       )}
-                      {(task.assignees?.length ?? 0) > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          • {task.assignees!.map((a) => a.fullName.split(" ")[0]).join(", ")}
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
@@ -837,34 +770,9 @@ export default function TasksPage() {
                               )}
                           </SelectContent>
                         </Select>
-                        <Select
-                          value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
-                          onValueChange={(value) => void handleAssignTask(task, value)}
-                        >
-                          <SelectTrigger className="h-10 w-full min-w-[9rem] text-xs sm:h-8 sm:w-[9.5rem]">
-                            <SelectValue placeholder="Assign" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
-                            {employees?.map((e) => (
-                              <SelectItem key={e.id} value={String(e.id)}>
-                                {e.fullName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       </>
                     )}
-                    {task.assigneeName && (
-                      <div className="flex items-center gap-1.5">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs bg-primary/15 text-primary">
-                            {getInitials(task.assigneeName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground hidden sm:block">{task.assigneeName}</span>
-                      </div>
-                    )}
+                    <TaskAssigneesDisplay assignees={task.assignees} />
                     {task.dueDate && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar size={11} />
