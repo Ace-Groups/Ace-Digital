@@ -19,6 +19,7 @@ import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
 import { MobileLoginScreen } from "@/components/login/MobileLoginScreen";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { consumeLoginNotice } from "@/lib/login-notice";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -240,6 +241,19 @@ export default function LoginPage() {
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   });
+
+  useEffect(() => {
+    const notice = consumeLoginNotice();
+    if (notice?.type === "password-updated") {
+      toast({
+        title: "Password updated",
+        description: "Sign in with your new password to continue.",
+      });
+      if (notice.email) {
+        form.setValue("email", notice.email);
+      }
+    }
+  }, [form, toast]);
 
   function onForgotPassword() {
     toast({

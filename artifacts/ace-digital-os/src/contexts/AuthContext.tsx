@@ -89,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     clearAuthToken();
     setToken(null);
-  }, [logoutMutation]);
+    queryClient.clear();
+  }, [logoutMutation, queryClient]);
 
   const refreshUser = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["getMe"] });

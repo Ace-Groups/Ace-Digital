@@ -180,12 +180,18 @@ export default function EmployeesPage() {
       });
       setResetTarget(null);
       toast({
-        title: data.mode === "email" ? "Reset email queued" : "Password updated",
+        title:
+          data.mode === "email"
+            ? result.emailSent
+              ? "Reset email sent"
+              : "Password reset — email not sent"
+            : "Password updated",
         description: result.emailSent
-          ? "Credentials emailed to the employee."
+          ? "The employee should receive their new temporary password shortly. Check spam if it does not arrive."
           : data.mode === "email"
-            ? "Password reset; email not sent (set RESEND_API_KEY on the API function)."
+            ? "Password was changed on the server, but the email could not be delivered. Share the new password manually or check RESEND_API_KEY on the API."
             : "Share the new password with the employee securely.",
+        variant: data.mode === "email" && !result.emailSent ? "destructive" : undefined,
       });
     } catch (err) {
       toast({

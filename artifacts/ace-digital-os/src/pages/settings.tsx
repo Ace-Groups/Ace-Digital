@@ -8,6 +8,9 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
+import { setLoginNotice } from "@/lib/login-notice";
+import { PasswordChangeForm } from "@/components/account/PasswordChangeForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +22,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Camera } from "lucide-react";
+import { Camera, KeyRound } from "lucide-react";
 
 const NOTIF_PREFS_KEY = "ace-digital-notification-prefs";
 
@@ -39,7 +42,8 @@ function loadNotifPrefs(): NotificationPrefs {
 }
 
 export default function SettingsPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateProfile = useUpdateMyProfile();
@@ -48,9 +52,6 @@ export default function SettingsPage() {
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotifPrefs);
 
@@ -78,25 +79,20 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (newPassword.length < 8) {
-      toast({ title: "Password must be at least 8 characters", variant: "destructive" });
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords do not match", variant: "destructive" });
-      return;
-    }
+  async function handleChangePassword({
+    currentPassword,
+    newPassword,
+  }: {
+    currentPassword: string;
+    newPassword: string;
+  }) {
     try {
       await changePassword.mutateAsync({
         data: { currentPassword, newPassword },
       });
-      await refreshUser();
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      toast({ title: "Password updated" });
+      setLoginNotice({ type: "password-updated", email: user?.email });
+      await logout();
+      setLocation("/login");
     } catch {
       toast({ title: "Current password is incorrect", variant: "destructive" });
     }
@@ -161,50 +157,24 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/80">
           <CardHeader>
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg border border-border/80 bg-primary/10">
+              <KeyRound className="size-4 text-primary" aria-hidden />
+            </div>
             <CardTitle>Password</CardTitle>
-            <CardDescription>Update your sign-in password</CardDescription>
+            <CardDescription>
+              After updating, you will be signed out and asked to sign in with your new password.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={(e) => void handleChangePassword(e)} className="mobile-form space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="settings-current-pw">Current password</Label>
-                <Input
-                  id="settings-current-pw"
-                  type="password"
-                  autoComplete="current-password"
-                  className="min-h-11"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-new-pw">New password</Label>
-                <Input
-                  id="settings-new-pw"
-                  type="password"
-                  autoComplete="new-password"
-                  className="min-h-11"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-confirm-pw">Confirm new password</Label>
-                <Input
-                  id="settings-confirm-pw"
-                  type="password"
-                  autoComplete="new-password"
-                  className="min-h-11"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="min-h-11 w-full" disabled={changePassword.isPending}>
-                {changePassword.isPending ? "Updating…" : "Update password"}
-              </Button>
-            </form>
+            <PasswordChangeForm
+              showCurrentPassword
+              loading={changePassword.isPending}
+              submitLabel="Update password"
+              onValidationError={(message) => toast({ title: message, variant: "destructive" })}
+              onSubmit={handleChangePassword}
+            />
           </CardContent>
         </Card>
 
