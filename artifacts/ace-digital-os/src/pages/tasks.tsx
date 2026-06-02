@@ -7,7 +7,9 @@ import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
   useListTasks, useCreateTask, useToggleTask, useListProjects, useListEmployees, useListTeams, useUpdateTask,
   getListTasksQueryKey,
+  type Task,
 } from "@workspace/api-client-react";
+import { canMutateTask } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2 } from "lucide-react";
+import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2, Pencil } from "lucide-react";
 import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +42,16 @@ const createSchema = z.object({
   status: z.string(),
 });
 type CreateForm = z.infer<typeof createSchema>;
+
+const editSchema = z.object({
+  title: z.string().min(1, "Title required"),
+  projectId: z.string(),
+  assigneeId: z.string(),
+  priority: z.string(),
+  dueDate: z.string().optional(),
+  status: z.string(),
+});
+type EditForm = z.infer<typeof editSchema>;
 
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
 const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
@@ -88,6 +100,8 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
@@ -99,6 +113,34 @@ export default function TasksPage() {
       teamId: ALL_TEAMS_VALUE,
     },
   });
+
+  const editForm = useForm<EditForm>({
+    resolver: zodResolver(editSchema),
+    defaultValues: {
+      title: "",
+      projectId: NO_PROJECT_VALUE,
+      assigneeId: COMMON_TASK_VALUE,
+      priority: "MEDIUM",
+      status: "PENDING",
+      dueDate: "",
+    },
+  });
+
+  const accessCtx = useMemo(
+    () =>
+      user
+        ? { userId: user.id, role: user.role, teamId: user.teamId ?? null }
+        : null,
+    [user],
+  );
+
+  function canEditTask(task: Task) {
+    if (!accessCtx || !canWriteTasks) return false;
+    return canMutateTask(accessCtx, {
+      assigneeId: task.assigneeId ?? null,
+      teamId: task.teamId ?? null,
+    });
+  }
 
   const activeProjects = useMemo(() => {
     const active = (projects ?? []).filter((p) => p.status !== "DONE");
@@ -201,15 +243,66 @@ export default function TasksPage() {
     resetCreateForm();
   }
 
-  async function handleToggle(id: number) {
-    await toggleTask.mutateAsync({ id });
-    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+  async function handleToggle(task: Task, checked: boolean) {
+    if (!canEditTask(task)) {
+      toast({ title: "You can't update this task", variant: "destructive" });
+      return;
+    }
+    const queryKey = getListTasksQueryKey(taskParams);
+    const previous = queryClient.getQueryData<Task[]>(queryKey);
+    const nextStatus = checked ? "DONE" : "PENDING";
+    queryClient.setQueryData<Task[]>(queryKey, (old) =>
+      old?.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
+    );
+    try {
+      await toggleTask.mutateAsync({ id: task.id });
+      await queryClient.invalidateQueries({ queryKey });
+    } catch {
+      queryClient.setQueryData(queryKey, previous);
+      toast({ title: "Couldn't update task", variant: "destructive" });
+    }
   }
 
-  async function handleAssignTask(taskId: number, assigneeIdValue: string) {
-    if (!canWriteTasks) return;
+  function openEditTask(task: Task) {
+    setEditingTask(task);
+    editForm.reset({
+      title: task.title,
+      projectId: task.projectId ? String(task.projectId) : NO_PROJECT_VALUE,
+      assigneeId: task.assigneeId ? String(task.assigneeId) : COMMON_TASK_VALUE,
+      priority: task.priority,
+      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
+      status: task.status,
+    });
+    setEditOpen(true);
+  }
+
+  async function onEditSubmit(data: EditForm) {
+    if (!editingTask) return;
+    try {
+      await updateTask.mutateAsync({
+        id: editingTask.id,
+        data: {
+          title: data.title,
+          projectId: resolveProjectId(data.projectId),
+          assigneeId: data.assigneeId === COMMON_TASK_VALUE ? null : Number(data.assigneeId),
+          priority: data.priority,
+          dueDate: data.dueDate || undefined,
+          status: data.status,
+        } as never,
+      });
+      queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+      toast({ title: "Task updated" });
+      setEditOpen(false);
+      setEditingTask(null);
+    } catch {
+      toast({ title: "Couldn't save task", variant: "destructive" });
+    }
+  }
+
+  async function handleAssignTask(task: Task, assigneeIdValue: string) {
+    if (!canEditTask(task)) return;
     await updateTask.mutateAsync({
-      id: taskId,
+      id: task.id,
       data: {
         assigneeId: assigneeIdValue === COMMON_TASK_VALUE ? null : Number(assigneeIdValue),
       } as never,
@@ -218,10 +311,10 @@ export default function TasksPage() {
     toast({ title: "Task assignment updated" });
   }
 
-  async function handleProjectTask(taskId: number, projectIdValue: string) {
-    if (!canWriteTasks) return;
+  async function handleProjectTask(task: Task, projectIdValue: string) {
+    if (!canEditTask(task)) return;
     await updateTask.mutateAsync({
-      id: taskId,
+      id: task.id,
       data: {
         projectId: projectIdValue === NO_PROJECT_VALUE ? null : Number(projectIdValue),
       } as never,
@@ -383,6 +476,97 @@ export default function TasksPage() {
     </Form>
   );
 
+  const editFormContent = (
+    <Form {...editForm}>
+      <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="mobile-form space-y-4">
+        <FormField control={editForm.control} name="title" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl><Input data-testid="input-edit-task-title" {...field} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={editForm.control} name="projectId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Project</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT_VALUE}>No project</SelectItem>
+                {activeProjects.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )} />
+        <FormField control={editForm.control} name="assigneeId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Assignee</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value={COMMON_TASK_VALUE}>Common task</SelectItem>
+                {employees?.map((e) => (
+                  <SelectItem key={e.id} value={String(e.id)}>{e.fullName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField control={editForm.control} name="priority" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+          <FormField control={editForm.control} name="status" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )} />
+        </div>
+        <FormField control={editForm.control} name="dueDate" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Due date</FormLabel>
+            <FormControl>
+              <DatePicker
+                inModal
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Select due date"
+              />
+            </FormControl>
+          </FormItem>
+        )} />
+        <Button type="submit" className="h-12 w-full sm:h-10" disabled={updateTask.isPending}>
+          Save changes
+        </Button>
+      </form>
+    </Form>
+  );
+
   return (
     <AppLayout title="Tasks">
       <StaggerList className="page-stack">
@@ -475,6 +659,16 @@ export default function TasksPage() {
         <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
           {createForm}
         </ResponsiveSheet>
+        <ResponsiveSheet
+          open={editOpen}
+          onOpenChange={(v) => {
+            setEditOpen(v);
+            if (!v) setEditingTask(null);
+          }}
+          title="Edit Task"
+        >
+          {editFormContent}
+        </ResponsiveSheet>
         </div>
       </div>
       </StaggerItem>
@@ -504,8 +698,12 @@ export default function TasksPage() {
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
                     checked={task.status === "DONE"}
-                    onCheckedChange={() => handleToggle(task.id)}
-                    className="border-border"
+                    disabled={!canEditTask(task) || toggleTask.isPending}
+                    onCheckedChange={(checked) => {
+                      if (checked === "indeterminate") return;
+                      void handleToggle(task, checked === true);
+                    }}
+                    className="size-5 shrink-0 border-border sm:size-4"
                   />
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-medium", task.status === "DONE" && "line-through text-muted-foreground")}>
@@ -521,11 +719,22 @@ export default function TasksPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                    {canWriteTasks && (
+                    {canEditTask(task) && (
                       <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 sm:h-8 sm:w-8"
+                          data-testid={`task-edit-${task.id}`}
+                          onClick={() => openEditTask(task)}
+                          aria-label="Edit task"
+                        >
+                          <Pencil size={16} />
+                        </Button>
                         <Select
                           value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
-                          onValueChange={(value) => void handleProjectTask(task.id, value)}
+                          onValueChange={(value) => void handleProjectTask(task, value)}
                         >
                           <SelectTrigger className="h-10 w-full min-w-[9.5rem] text-xs sm:h-8 sm:w-[10.5rem]" data-testid={`task-project-${task.id}`}>
                             <SelectValue placeholder="Project" />
@@ -547,7 +756,7 @@ export default function TasksPage() {
                         </Select>
                         <Select
                           value={task.assigneeId == null ? COMMON_TASK_VALUE : String(task.assigneeId)}
-                          onValueChange={(value) => void handleAssignTask(task.id, value)}
+                          onValueChange={(value) => void handleAssignTask(task, value)}
                         >
                           <SelectTrigger className="h-10 w-full min-w-[9rem] text-xs sm:h-8 sm:w-[9.5rem]">
                             <SelectValue placeholder="Assign" />
