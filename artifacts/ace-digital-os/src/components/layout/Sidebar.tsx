@@ -5,7 +5,7 @@ import {
   Building2, ClipboardCheck, BarChart3, MessageSquare, Activity,
   LogOut, ChevronLeft, ChevronRight, UserCircle, Settings,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,10 +27,16 @@ const NAV_ICONS = {
 } as const;
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(true);
+  const [pinned, setPinned] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const expanded = pinned || hovering;
+  const collapsed = !expanded;
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const handleMouseEnter = useCallback(() => setHovering(true), []);
+  const handleMouseLeave = useCallback(() => setHovering(false), []);
 
   const allowedRoutes = new Set(getNavRoutesForRole(user?.role ?? ""));
   const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
@@ -45,14 +51,22 @@ export function Sidebar() {
 
   return (
     <>
-      <aside
-        data-testid="sidebar"
-        data-collapsed={collapsed ? "true" : "false"}
+      <div
         className={cn(
-          "sticky top-0 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
-          collapsed ? "w-[4.25rem]" : "w-64",
+          "relative shrink-0",
+          collapsed && "-ml-3 pl-3",
         )}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
+        <aside
+          data-testid="sidebar"
+          data-collapsed={collapsed ? "true" : "false"}
+          className={cn(
+            "sticky top-0 flex h-[100dvh] flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
+            collapsed ? "w-[4.25rem]" : "w-64",
+          )}
+        >
         <div
           className={cn(
             "flex shrink-0 items-center border-b border-sidebar-border py-4",
@@ -79,9 +93,10 @@ export function Sidebar() {
           <button
             type="button"
             data-testid="sidebar-toggle"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setPinned((p) => !p)}
             className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+            aria-pressed={pinned}
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
@@ -225,7 +240,8 @@ export function Sidebar() {
             </>
           )}
         </div>
-      </aside>
+        </aside>
+      </div>
 
       <ProfileDialog open={profileOpen} onClose={handleProfileClose} />
     </>
