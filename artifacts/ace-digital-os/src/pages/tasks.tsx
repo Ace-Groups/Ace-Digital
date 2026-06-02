@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, Sparkles, UserPlus2 } from "lucide-react";
+import { Plus, Calendar, Filter, Layers3, CheckCircle2, Users2, UserPlus2 } from "lucide-react";
 import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -288,34 +288,6 @@ export default function TasksPage() {
   return (
     <AppLayout title="Tasks">
       <StaggerList className="page-stack">
-      <StaggerItem>
-        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-primary/30 via-primary/10 to-background p-5 sm:p-6">
-          <div className="pointer-events-none absolute -right-10 -top-8 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
-          <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]" />
-          <div className="relative flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                <Sparkles size={12} />
-                Task Control Center
-              </p>
-              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-                Personal, common, and team tasks in one flow
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Assign tasks to teammates or keep them common. Filters instantly reflect work ownership by account.
-              </p>
-            </div>
-            <Button
-              data-testid="btn-create-task"
-              className="hidden gap-2 sm:inline-flex"
-              onClick={() => setOpen(true)}
-            >
-              <Plus size={16} /> New Task
-            </Button>
-          </div>
-        </section>
-      </StaggerItem>
-
       <StaggerItem>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
