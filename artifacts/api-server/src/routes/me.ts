@@ -44,7 +44,9 @@ router.get("/v1/me", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/v1/me", requireAuth, async (req, res): Promise<void> => {
   const ctx = getAccessContext(req);
-  const { avatarUrl } = req.body ?? {};
+  const { avatarUrl, fullName, phone } = req.body ?? {};
+
+  const patch: Parameters<typeof store.updateUser>[1] = {};
 
   if (avatarUrl !== undefined) {
     const validated = validateAvatarUrl(avatarUrl);
@@ -52,16 +54,32 @@ router.patch("/v1/me", requireAuth, async (req, res): Promise<void> => {
       res.status(400).json({ error: "Invalid avatarUrl" });
       return;
     }
-    const updated = await store.updateUser(ctx.userId, { avatarUrl: validated });
-    if (!updated) {
-      res.status(404).json({ error: "User not found" });
+    patch.avatarUrl = validated;
+  }
+
+  if (fullName !== undefined) {
+    if (typeof fullName !== "string" || !fullName.trim()) {
+      res.status(400).json({ error: "Invalid fullName" });
       return;
     }
-    res.json(await employeeWithProfile(updated, ctx));
+    patch.fullName = fullName.trim();
+  }
+
+  if (phone !== undefined) {
+    patch.phone = phone === null || phone === "" ? null : String(phone);
+  }
+
+  if (Object.keys(patch).length === 0) {
+    res.status(400).json({ error: "No valid fields to update" });
     return;
   }
 
-  res.status(400).json({ error: "No valid fields to update" });
+  const updated = await store.updateUser(ctx.userId, patch);
+  if (!updated) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json(await employeeWithProfile(updated, ctx));
 });
 
 export default router;

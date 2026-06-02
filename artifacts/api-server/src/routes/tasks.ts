@@ -10,6 +10,7 @@ import { canSeeTask, normalizeAssigneeIds } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import { assigneeIdsFromTask, notifyTaskAssignees } from "../lib/notify";
 
 const router = Router();
 
@@ -107,7 +108,11 @@ router.post(
     const withAssignees = ids.length
       ? await store.replaceTaskAssignees(task.id, ids)
       : task;
-    res.status(201).json(await taskWithRelations(withAssignees ?? task));
+    const finalTask = withAssignees ?? task;
+    if (ids.length) {
+      await notifyTaskAssignees(ids, title, ctx.userId);
+    }
+    res.status(201).json(await taskWithRelations(finalTask));
   },
 );
 
@@ -158,11 +163,16 @@ router.patch(
       ...(status !== undefined && { status }),
     });
     if (assigneeIds !== undefined || assigneeId !== undefined) {
+      const oldIds = assigneeIdsFromTask(existing);
       const ids = normalizeAssigneeIds(
         Array.isArray(assigneeIds) ? assigneeIds : undefined,
         assigneeId ?? null,
       );
       task = await store.replaceTaskAssignees(id, ids, true);
+      const added = ids.filter((uid) => !oldIds.includes(uid));
+      if (added.length && task) {
+        await notifyTaskAssignees(added, task.title, ctx.userId);
+      }
     }
     if (!task) {
       res.status(404).json({ error: "Task not found" });

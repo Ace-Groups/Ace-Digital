@@ -20,5 +20,12 @@ export interface User {
   /** @nullable */
   avatarUrl?: string | null;
   status?: string;
+  mustChangePassword?: boolean;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  employeeCode?: string | null;
+  /** @nullable */
+  startDate?: string | null;
   createdAt?: string;
 }

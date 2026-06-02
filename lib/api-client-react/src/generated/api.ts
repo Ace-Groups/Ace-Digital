@@ -26,6 +26,7 @@ import type {
   ApprovalReviewInput,
   AuthPermissions,
   AuthResponse,
+  ChangePasswordInput,
   Channel,
   ChannelInput,
   ChannelMember,
@@ -36,6 +37,7 @@ import type {
   ClientUpdate,
   DashboardData,
   Employee,
+  EmployeeCreateResponse,
   EmployeeInput,
   EmployeeUpdate,
   Expense,
@@ -63,6 +65,7 @@ import type {
   RegisterInput,
   Report,
   ReportInput,
+  ResetPasswordInput,
   SalaryRecord,
   Task,
   TaskInput,
@@ -454,6 +457,77 @@ export function useGetAuthPermissions<TData = Awaited<ReturnType<typeof getAuthP
 
 
 
+
+export const getChangePasswordUrl = () => {
+
+
+
+
+  return `/api/v1/auth/change-password`
+}
+
+/**
+ * @summary Change password (required on first login when mustChangePassword is true)
+ */
+export const changePassword = async (changePasswordInput: ChangePasswordInput, options?: RequestInit): Promise<User> => {
+
+  return customFetch<User>(getChangePasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      changePasswordInput,)
+  }
+);}
+
+
+
+
+export const getChangePasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext> => {
+
+const mutationKey = ['changePassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePassword>>, {data: BodyType<ChangePasswordInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  changePassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>
+    export type ChangePasswordMutationBody = BodyType<ChangePasswordInput>
+    export type ChangePasswordMutationError = ErrorType<void>
+
+    /**
+ * @summary Change password (required on first login when mustChangePassword is true)
+ */
+export const useChangePassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changePassword>>,
+        TError,
+        {data: BodyType<ChangePasswordInput>},
+        TContext
+      > => {
+      return useMutation(getChangePasswordMutationOptions(options));
+    }
 
 export const getGetMyProfileUrl = () => {
 
@@ -1890,9 +1964,9 @@ export const getCreateEmployeeUrl = () => {
 /**
  * @summary Create employee
  */
-export const createEmployee = async (employeeInput: EmployeeInput, options?: RequestInit): Promise<Employee> => {
+export const createEmployee = async (employeeInput: EmployeeInput, options?: RequestInit): Promise<EmployeeCreateResponse> => {
 
-  return customFetch<Employee>(getCreateEmployeeUrl(),
+  return customFetch<EmployeeCreateResponse>(getCreateEmployeeUrl(),
   {
     ...options,
     method: 'POST',
@@ -2167,6 +2241,78 @@ export const useDeleteEmployee = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteEmployeeMutationOptions(options));
+    }
+
+export const getResetEmployeePasswordUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/employees/${id}/reset-password`
+}
+
+/**
+ * @summary Reset employee password and require change on next login
+ */
+export const resetEmployeePassword = async (id: number,
+    resetPasswordInput?: ResetPasswordInput, options?: RequestInit): Promise<EmployeeCreateResponse> => {
+
+  return customFetch<EmployeeCreateResponse>(getResetEmployeePasswordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      resetPasswordInput,)
+  }
+);}
+
+
+
+
+export const getResetEmployeePasswordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetEmployeePassword>>, TError,{id: number;data?: BodyType<ResetPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetEmployeePassword>>, TError,{id: number;data?: BodyType<ResetPasswordInput>}, TContext> => {
+
+const mutationKey = ['resetEmployeePassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetEmployeePassword>>, {id: number;data?: BodyType<ResetPasswordInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resetEmployeePassword(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetEmployeePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetEmployeePassword>>>
+    export type ResetEmployeePasswordMutationBody = BodyType<ResetPasswordInput> | undefined
+    export type ResetEmployeePasswordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reset employee password and require change on next login
+ */
+export const useResetEmployeePassword = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetEmployeePassword>>, TError,{id: number;data?: BodyType<ResetPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetEmployeePassword>>,
+        TError,
+        {id: number;data?: BodyType<ResetPasswordInput>},
+        TContext
+      > => {
+      return useMutation(getResetEmployeePasswordMutationOptions(options));
     }
 
 export const getGetFinanceSummaryUrl = () => {
@@ -4479,6 +4625,76 @@ export function useListNotifications<TData = Awaited<ReturnType<typeof listNotif
 
 
 
+
+export const getMarkAllNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/v1/notifications/read-all`
+}
+
+/**
+ * @summary Mark all notifications as read for current user
+ */
+export const markAllNotificationsRead = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getMarkAllNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMarkAllNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,void, TContext> => {
+
+const mutationKey = ['markAllNotificationsRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAllNotificationsRead>>, void> = () => {
+
+
+          return  markAllNotificationsRead(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkAllNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markAllNotificationsRead>>>
+
+    export type MarkAllNotificationsReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark all notifications as read for current user
+ */
+export const useMarkAllNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markAllNotificationsRead>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarkAllNotificationsReadMutationOptions(options));
+    }
 
 export const getMarkNotificationReadUrl = (id: number,) => {
 

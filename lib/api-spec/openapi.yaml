@@ -110,6 +110,29 @@ paths:
         "401":
           description: Unauthorized
 
+  /v1/auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password (required on first login when mustChangePassword is true)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+
   /v1/me:
     get:
       operationId: getMyProfile
@@ -502,7 +525,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Employee"
+                $ref: "#/components/schemas/EmployeeCreateResponse"
 
   /v1/employees/{id}:
     get:
@@ -558,6 +581,30 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /v1/employees/{id}/reset-password:
+    post:
+      operationId: resetEmployeePassword
+      tags: [employees]
+      summary: Reset employee password and require change on next login
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeCreateResponse"
 
   # FINANCE
   /v1/finance/summary:
@@ -1169,6 +1216,15 @@ paths:
                 items:
                   $ref: "#/components/schemas/Notification"
 
+  /v1/notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [activity]
+      summary: Mark all notifications as read for current user
+      responses:
+        "204":
+          description: All marked read
+
   /v1/notifications/{id}/read:
     patch:
       operationId: markNotificationRead
@@ -1257,8 +1313,26 @@ components:
           type: ["string", "null"]
         status:
           type: string
+        mustChangePassword:
+          type: boolean
+        phone:
+          type: ["string", "null"]
+        employeeCode:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
         createdAt:
           type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
 
     # DASHBOARD
     AuthPermissions:
@@ -1568,12 +1642,20 @@ components:
           type: ["number", "null"]
         payrollStatus:
           type: ["string", "null"]
+        mustChangePassword:
+          type: boolean
+        phone:
+          type: ["string", "null"]
+        employeeCode:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
         createdAt:
           type: string
 
     EmployeeInput:
       type: object
-      required: [fullName, email, role, password]
+      required: [fullName, email, role]
       properties:
         fullName:
           type: string
@@ -1581,11 +1663,20 @@ components:
           type: string
         password:
           type: string
+        passwordMode:
+          type: string
+          enum: [auto, manual]
         role:
           type: string
         teamId:
           type: integer
         jobTitle:
+          type: string
+        phone:
+          type: string
+        employeeCode:
+          type: string
+        startDate:
           type: string
         baseSalary:
           type: number
@@ -1593,11 +1684,42 @@ components:
           type: number
         status:
           type: string
+        sendWelcomeEmail:
+          type: boolean
+
+    EmployeeCreateResponse:
+      allOf:
+        - $ref: "#/components/schemas/Employee"
+        - type: object
+          properties:
+            emailSent:
+              type: boolean
+            message:
+              type: string
+
+    ResetPasswordInput:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [email, manual]
+          description: email = generate temp password and email it; manual = set password in body
+        password:
+          type: string
+          minLength: 8
+          description: Required when mode is manual
+        sendWelcomeEmail:
+          type: boolean
+          description: When mode is email, whether to email credentials (default true)
 
     MyProfileUpdate:
       type: object
       properties:
         avatarUrl:
+          type: ["string", "null"]
+        fullName:
+          type: string
+        phone:
           type: ["string", "null"]
 
     EmployeeUpdate:
@@ -1612,6 +1734,12 @@ components:
         teamId:
           type: integer
         jobTitle:
+          type: string
+        phone:
+          type: string
+        employeeCode:
+          type: string
+        startDate:
           type: string
         baseSalary:
           type: number

@@ -59,6 +59,11 @@ router.get("/v1/notifications", requireAuth, async (req, res): Promise<void> => 
   );
 });
 
+router.post("/v1/notifications/read-all", requireAuth, async (req, res): Promise<void> => {
+  await store.markAllNotificationsRead(req.user!.userId);
+  res.sendStatus(204);
+});
+
 router.patch("/v1/notifications/:id/read", requireAuth, async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const notification = await store.markNotificationRead(id);

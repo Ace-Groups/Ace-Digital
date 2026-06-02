@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
 import { Bell, Search } from "lucide-react";
 import { getListNotificationsQueryKey, useListNotifications } from "@workspace/api-client-react";
@@ -13,6 +14,7 @@ interface DesktopShellProps {
 }
 
 export function DesktopShell({ children, title }: DesktopShellProps) {
+  const [, setLocation] = useLocation();
   const { data: notifications } = useListNotifications({
     query: {
       queryKey: getListNotificationsQueryKey(),
@@ -49,6 +51,7 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
           <button
             type="button"
             data-testid="btn-notifications"
+            onClick={() => setLocation("/notifications")}
             className={cn(
               "relative rounded-lg p-2.5 text-muted-foreground transition-colors duration-300",
               "hover:bg-muted hover:text-foreground",

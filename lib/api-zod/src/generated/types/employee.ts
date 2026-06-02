@@ -26,5 +26,12 @@ export interface Employee {
   bonus?: number | null;
   /** @nullable */
   payrollStatus?: string | null;
+  mustChangePassword?: boolean;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  employeeCode?: string | null;
+  /** @nullable */
+  startDate?: string | null;
   createdAt?: string;
 }

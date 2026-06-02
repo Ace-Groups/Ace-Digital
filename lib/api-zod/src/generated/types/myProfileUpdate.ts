@@ -9,4 +9,7 @@
 export interface MyProfileUpdate {
   /** @nullable */
   avatarUrl?: string | null;
+  fullName?: string;
+  /** @nullable */
+  phone?: string | null;
 }

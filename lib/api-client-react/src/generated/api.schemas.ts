@@ -38,12 +38,25 @@ export interface User {
   /** @nullable */
   avatarUrl?: string | null;
   status?: string;
+  mustChangePassword?: boolean;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  employeeCode?: string | null;
+  /** @nullable */
+  startDate?: string | null;
   createdAt?: string;
 }
 
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface ChangePasswordInput {
+  currentPassword?: string;
+  /** @minLength 8 */
+  newPassword: string;
 }
 
 export interface AuthPermissions {
@@ -243,24 +256,75 @@ export interface Employee {
   bonus?: number | null;
   /** @nullable */
   payrollStatus?: string | null;
+  mustChangePassword?: boolean;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  employeeCode?: string | null;
+  /** @nullable */
+  startDate?: string | null;
   createdAt?: string;
 }
+
+export type EmployeeInputPasswordMode = typeof EmployeeInputPasswordMode[keyof typeof EmployeeInputPasswordMode];
+
+
+export const EmployeeInputPasswordMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
 
 export interface EmployeeInput {
   fullName: string;
   email: string;
-  password: string;
+  password?: string;
+  passwordMode?: EmployeeInputPasswordMode;
   role: string;
   teamId?: number;
   jobTitle?: string;
+  phone?: string;
+  employeeCode?: string;
+  startDate?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;
+  sendWelcomeEmail?: boolean;
+}
+
+export type EmployeeCreateResponse = Employee & {
+  emailSent?: boolean;
+  message?: string;
+};
+
+/**
+ * email = generate temp password and email it; manual = set password in body
+ */
+export type ResetPasswordInputMode = typeof ResetPasswordInputMode[keyof typeof ResetPasswordInputMode];
+
+
+export const ResetPasswordInputMode = {
+  email: 'email',
+  manual: 'manual',
+} as const;
+
+export interface ResetPasswordInput {
+  /** email = generate temp password and email it; manual = set password in body */
+  mode?: ResetPasswordInputMode;
+  /**
+     * Required when mode is manual
+     * @minLength 8
+     */
+  password?: string;
+  /** When mode is email, whether to email credentials (default true) */
+  sendWelcomeEmail?: boolean;
 }
 
 export interface MyProfileUpdate {
   /** @nullable */
   avatarUrl?: string | null;
+  fullName?: string;
+  /** @nullable */
+  phone?: string | null;
 }
 
 export interface EmployeeUpdate {
@@ -269,6 +333,9 @@ export interface EmployeeUpdate {
   role?: string;
   teamId?: number;
   jobTitle?: string;
+  phone?: string;
+  employeeCode?: string;
+  startDate?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;

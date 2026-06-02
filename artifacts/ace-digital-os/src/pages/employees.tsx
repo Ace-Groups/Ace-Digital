@@ -1,60 +1,60 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListEmployees,
   useCreateEmployee,
+  useUpdateEmployee,
+  useDeleteEmployee,
+  useResetEmployeePassword,
   useListTeams,
   useGetMyProfile,
+  useUpdateMyProfile,
   getListEmployeesQueryKey,
   getGetMyProfileQueryKey,
+  type Employee,
 } from "@workspace/api-client-react";
+import { canAssignRole } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserAvatar } from "@/components/UserAvatar";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Plus, Mail, Briefcase, Search } from "lucide-react";
-import { formatCurrency, statusColor, cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import { UserAvatar } from "@/components/UserAvatar";
+import { Plus, Search } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
-
-const ROLES = [
-  "employee",
-  "team_lead",
-  "finance",
-  "hr",
-  "management",
-  "client_manager",
-  "super_admin",
-];
-
-const createSchema = z.object({
-  fullName: z.string().min(1, "Name required"),
-  email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Min 6 characters"),
-  role: z.string(),
-  teamId: z.string().optional(),
-  jobTitle: z.string().optional(),
-  baseSalary: z.string().optional(),
-});
-type CreateForm = z.infer<typeof createSchema>;
+import { EmployeeCard } from "@/components/employees/EmployeeCard";
+import {
+  EmployeeFormSheet,
+  type EmployeeFormSubmitCreate,
+  type EmployeeFormSubmitEdit,
+} from "@/components/employees/EmployeeFormSheet";
+import {
+  EmployeePasswordResetSheet,
+  type PasswordResetSubmit,
+} from "@/components/employees/EmployeePasswordResetSheet";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function EmployeesPage() {
   const { user } = useAuth();
   const { can } = usePermissions();
   const isSelfOnly = can("employees:read_self") && !can("employees:read");
+  const canWrite = can("employees:write");
+  const canResetPassword = can("employees:password_reset");
+  const canRemove = can("employees:delete");
+  const canViewSalaries = can("finance:salaries_all");
+
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Employee | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [resetTarget, setResetTarget] = useState<Employee | null>(null);
+
   const { data: employees, isLoading } = useListEmployees(undefined, {
     query: { enabled: !isSelfOnly, queryKey: getListEmployeesQueryKey() },
   });
@@ -63,205 +63,342 @@ export default function EmployeesPage() {
   });
   const { data: teams } = useListTeams();
   const createEmployee = useCreateEmployee();
+  const updateEmployee = useUpdateEmployee();
+  const deleteEmployee = useDeleteEmployee();
+  const resetPassword = useResetEmployeePassword();
+  const updateMyProfile = useUpdateMyProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
 
-  const form = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
-    defaultValues: { fullName: "", email: "", password: "", role: "employee" },
+  const assignableRoles = useMemo(() => {
+    if (!user) return ["employee"];
+    return [
+      "employee",
+      "team_lead",
+      "finance",
+      "hr",
+      "management",
+      "client_manager",
+      "super_admin",
+    ].filter((r) => canAssignRole(user.role, r));
+  }, [user]);
+
+  const filtered = employees?.filter((e) => {
+    const q = search.toLowerCase();
+    return (
+      e.fullName.toLowerCase().includes(q) ||
+      e.email.toLowerCase().includes(q) ||
+      (e.teamName ?? "").toLowerCase().includes(q) ||
+      (e.employeeCode ?? "").toLowerCase().includes(q)
+    );
   });
 
-  const filtered = employees?.filter(
-    (e) =>
-      e.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      e.email.toLowerCase().includes(search.toLowerCase()) ||
-      (e.teamName ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  async function handleCreate(data: EmployeeFormSubmitCreate) {
+    try {
+      const result = await createEmployee.mutateAsync({
+        data: {
+          fullName: data.fullName,
+          email: data.email,
+          role: data.role,
+          teamId: data.teamId,
+          jobTitle: data.jobTitle,
+          phone: data.phone,
+          employeeCode: data.employeeCode,
+          startDate: data.startDate,
+          status: data.status,
+          baseSalary: data.baseSalary,
+          bonus: data.bonus,
+          passwordMode: data.passwordMode,
+          password: data.password,
+          sendWelcomeEmail: data.sendWelcomeEmail,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+      setCreateOpen(false);
+      toast({
+        title: "Employee created",
+        description: result.emailSent
+          ? "Welcome email sent with login details."
+          : "Account created (email not sent).",
+      });
+    } catch {
+      toast({ title: "Could not create employee", variant: "destructive" });
+    }
+  }
 
-  async function onSubmit(data: CreateForm) {
-    await createEmployee.mutateAsync({
-      data: {
-        fullName: data.fullName,
-        email: data.email,
-        password: data.password,
-        role: data.role,
-        teamId: data.teamId ? Number(data.teamId) : undefined,
-        jobTitle: data.jobTitle,
-        baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
-      },
-    });
-    queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
-    toast({ title: "Employee added!" });
-    setOpen(false);
-    form.reset();
+  async function handleEdit(data: EmployeeFormSubmitEdit) {
+    if (!editing) return;
+    try {
+      await updateEmployee.mutateAsync({
+        id: editing.id,
+        data: {
+          fullName: data.fullName,
+          email: data.email,
+          role: data.role,
+          teamId: data.teamId,
+          jobTitle: data.jobTitle,
+          phone: data.phone,
+          employeeCode: data.employeeCode,
+          startDate: data.startDate,
+          status: data.status,
+          baseSalary: data.baseSalary,
+          bonus: data.bonus,
+          payrollStatus: data.payrollStatus,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+      setEditOpen(false);
+      setEditing(null);
+      toast({ title: "Employee updated" });
+    } catch {
+      toast({ title: "Could not save changes", variant: "destructive" });
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await deleteEmployee.mutateAsync({ id: deleteTarget.id });
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+      toast({ title: "Employee removed" });
+      setDeleteTarget(null);
+    } catch {
+      toast({ title: "Could not delete employee", variant: "destructive" });
+    }
+  }
+
+  async function handlePasswordReset(data: PasswordResetSubmit) {
+    if (!resetTarget) return;
+    try {
+      const result = await resetPassword.mutateAsync({
+        id: resetTarget.id,
+        data: {
+          mode: data.mode,
+          password: data.password,
+          sendWelcomeEmail: data.sendWelcomeEmail,
+        },
+      });
+      setResetTarget(null);
+      toast({
+        title: data.mode === "email" ? "Reset email queued" : "Password updated",
+        description: result.emailSent
+          ? "Credentials will be sent via Firebase email."
+          : data.mode === "email"
+            ? "Password reset; email could not be queued (check Firebase Trigger Email extension)."
+            : "Share the new password with the employee securely.",
+      });
+    } catch {
+      toast({ title: "Could not reset password", variant: "destructive" });
+    }
   }
 
   if (isSelfOnly) {
-    const p = meProfile;
     return (
       <AppLayout title="My Profile">
-        {meLoading ? (
-          <Skeleton className="h-40 w-full max-w-lg" />
-        ) : p ? (
-          <Card className="max-w-lg">
-            <CardContent className="p-6 space-y-3">
-              <p className="text-lg font-semibold">{p.fullName}</p>
-              <p className="text-sm text-muted-foreground">{p.email}</p>
-              <p className="text-sm">{p.jobTitle ?? "—"} · {p.teamName ?? "No team"}</p>
-              <p className="text-sm capitalize">{p.role.replace("_", " ")}</p>
-              {(p.baseSalary != null || p.bonus != null) && (
-                <div className="pt-3 border-t text-sm">
-                  <p>Base: {formatCurrency(p.baseSalary ?? 0)}</p>
-                  <p>Bonus: {formatCurrency(p.bonus ?? 0)}</p>
-                  <p className="text-muted-foreground">Payroll: {p.payrollStatus ?? "—"}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
+        <SelfProfileView
+          profile={meProfile}
+          loading={meLoading}
+          onSavePhone={async (phone) => {
+            await updateMyProfile.mutateAsync({ data: { phone } });
+            queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
+            toast({ title: "Profile updated" });
+          }}
+        />
       </AppLayout>
     );
   }
 
   return (
     <AppLayout title="Employees">
-      <div className="flex items-center justify-between mb-6">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search
+            size={16}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
             data-testid="input-search-employees"
-            type="text"
-            placeholder="Search employees..."
+            placeholder="Search employees…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-64 rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="min-h-11 pl-9"
           />
         </div>
-        {can("employees:write") && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="btn-add-employee" className="gap-2">
-              <Plus size={16} /> Add Employee
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Add Employee</DialogTitle></DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="fullName" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl><Input data-testid="input-emp-name" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl><Input data-testid="input-emp-email" type="email" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-                <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl><Input data-testid="input-emp-password" type="password" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="role" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {ROLES.map((r) => <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="teamId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select team" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {teams?.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="jobTitle" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Title</FormLabel>
-                      <FormControl><Input data-testid="input-emp-title" {...field} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="baseSalary" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Base Salary (₹)</FormLabel>
-                      <FormControl><Input data-testid="input-emp-salary" type="number" {...field} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-                <Button data-testid="btn-submit-employee" type="submit" className="w-full" disabled={createEmployee.isPending}>
-                  Add Employee
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {canWrite && (
+          <Button
+            data-testid="btn-add-employee"
+            className="hidden min-h-11 gap-2 sm:inline-flex"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus size={16} /> Add employee
+          </Button>
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {isLoading ? (
-          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
-        ) : filtered?.map((emp) => (
-          <Card key={emp.id} data-testid={`employee-card-${emp.id}`} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <UserAvatar
-                  avatarUrl={emp.avatarUrl}
-                  fullName={emp.fullName}
-                  className="h-11 w-11 shrink-0"
-                  fallbackClassName="bg-primary/15 text-primary font-semibold"
-                  iconSize={20}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground">{emp.fullName}</p>
-                  {emp.jobTitle && <p className="text-xs text-muted-foreground mt-0.5">{emp.jobTitle}</p>}
-                  <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                    <Mail size={11} />
-                    <span className="truncate">{emp.email}</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className={cn("text-xs shrink-0", statusColor(emp.status ?? "active"))}>
-                  {emp.status}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                <div>
-                  <p className="text-xs text-muted-foreground">Team</p>
-                  <p className="text-sm font-medium">{emp.teamName ?? "—"}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Salary</p>
-                  <p className="text-sm font-semibold text-primary">
-                    {emp.baseSalary ? formatCurrency(emp.baseSalary) : "—"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-44 rounded-xl" />
+            ))
+          : filtered?.map((emp) => (
+              <EmployeeCard
+                key={emp.id}
+                employee={emp}
+                canEdit={canWrite}
+                canDelete={canRemove && emp.id !== user?.id}
+                canResetPassword={canResetPassword}
+                canViewSalaries={canViewSalaries}
+                onEdit={() => {
+                  setEditing(emp);
+                  setEditOpen(true);
+                }}
+                onDelete={() => setDeleteTarget(emp)}
+                onResetPassword={() => setResetTarget(emp)}
+              />
+            ))}
       </div>
+
+      {canWrite && (
+        <Button
+          data-testid="btn-add-employee-fab"
+          size="lg"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          onClick={() => setCreateOpen(true)}
+          aria-label="Add employee"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+
+      <EmployeeFormSheet
+        mode="create"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        teams={teams}
+        assignableRoles={assignableRoles}
+        canViewSalaries={canViewSalaries}
+        saving={createEmployee.isPending}
+        onCreateSubmit={handleCreate}
+        onEditSubmit={handleEdit}
+      />
+
+      <EmployeeFormSheet
+        mode="edit"
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditing(null);
+        }}
+        employee={editing}
+        teams={teams}
+        assignableRoles={assignableRoles}
+        canViewSalaries={canViewSalaries}
+        saving={updateEmployee.isPending}
+        onCreateSubmit={handleCreate}
+        onEditSubmit={handleEdit}
+      />
+
+      <EmployeePasswordResetSheet
+        employee={resetTarget}
+        open={resetTarget !== null}
+        onOpenChange={(open) => !open && setResetTarget(null)}
+        saving={resetPassword.isPending}
+        onSubmit={handlePasswordReset}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete employee?"
+        description={
+          deleteTarget ? (
+            <>
+              This permanently removes <strong>{deleteTarget.fullName}</strong>. This cannot be
+              undone.
+            </>
+          ) : undefined
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteEmployee.isPending}
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
+  );
+}
+
+function SelfProfileView({
+  profile,
+  loading,
+  onSavePhone,
+}: {
+  profile: Employee | undefined;
+  loading: boolean;
+  onSavePhone: (phone: string) => Promise<void>;
+}) {
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    setPhone(profile?.phone ?? "");
+  }, [profile?.phone]);
+
+  if (loading) return <Skeleton className="h-48 w-full max-w-lg" />;
+  if (!profile) return null;
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4">
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          <div className="flex items-center gap-4">
+            <UserAvatar
+              avatarUrl={profile.avatarUrl}
+              fullName={profile.fullName}
+              className="h-14 w-14"
+              fallbackClassName="bg-primary/15 text-primary"
+            />
+            <div>
+              <p className="text-lg font-semibold">{profile.fullName}</p>
+              <p className="text-sm text-muted-foreground">{profile.email}</p>
+              <p className="text-sm capitalize text-muted-foreground">
+                {profile.role.replace(/_/g, " ")}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm">
+            {profile.jobTitle ?? "—"} · {profile.teamName ?? "No team"}
+          </p>
+          {(profile.baseSalary != null || profile.bonus != null) && (
+            <div className="border-t pt-3 text-sm">
+              <p>Base: {formatCurrency(profile.baseSalary ?? 0)}</p>
+              <p>Bonus: {formatCurrency(profile.bonus ?? 0)}</p>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="profile-phone">Phone</Label>
+            <Input
+              id="profile-phone"
+              className="min-h-11"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => void onSavePhone(phone)}
+            >
+              Save phone
+            </Button>
+          </div>
+          <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+            <Link href="/settings" className="flex-1">
+              <Button type="button" variant="outline" className="min-h-11 w-full">
+                Account settings
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

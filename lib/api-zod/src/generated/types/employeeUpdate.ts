@@ -12,6 +12,9 @@ export interface EmployeeUpdate {
   role?: string;
   teamId?: number;
   jobTitle?: string;
+  phone?: string;
+  employeeCode?: string;
+  startDate?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;

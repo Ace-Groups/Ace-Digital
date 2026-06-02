@@ -70,16 +70,33 @@ export type CreateUserInput = {
   role: string;
   teamId?: number | null;
   jobTitle?: string | null;
+  phone?: string | null;
+  employeeCode?: string | null;
+  startDate?: Date | null;
+  mustChangePassword?: boolean;
 };
 
 export type UpdateUserInput = Partial<{
   fullName: string;
+  email: string;
   role: string;
   teamId: number | null;
   jobTitle: string | null;
+  phone: string | null;
+  employeeCode: string | null;
+  startDate: Date | null;
+  mustChangePassword: boolean;
   status: string;
   avatarUrl: string | null;
+  passwordHash: string;
 }>;
+
+export type CreateNotificationInput = {
+  userId: number;
+  title: string;
+  body: string;
+  link?: string | null;
+};
 
 export type CreateProfileInput = { userId: number; baseSalary?: string; bonus?: string };
 export type UpdateProfileInput = Partial<{

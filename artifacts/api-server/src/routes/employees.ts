@@ -1,12 +1,21 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
-import { canAssignRole, canViewSalaries, hasPermission } from "@workspace/rbac";
+import { canAssignRole, canViewSalaries } from "@workspace/rbac";
 import { requireAuth, hashPassword } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { employeeWithProfile } from "../lib/employee-serializer";
+import { generateTemporaryPassword } from "../lib/password";
+import { sendCredentialsEmail } from "../lib/email";
 
 const router = Router();
+
+function parseStartDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
 router.get(
   "/v1/employees",
@@ -29,9 +38,24 @@ router.post(
   requirePermission("employees:write"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
-    const { fullName, email, password, role, teamId, jobTitle, baseSalary, bonus, status } =
-      req.body;
-    if (!fullName || !email || !password || !role) {
+    const {
+      fullName,
+      email,
+      password,
+      passwordMode,
+      role,
+      teamId,
+      jobTitle,
+      phone,
+      employeeCode,
+      startDate,
+      baseSalary,
+      bonus,
+      status,
+      sendWelcomeEmail: shouldSendEmail = true,
+    } = req.body;
+
+    if (!fullName || !email || !role) {
       res.status(400).json({ error: "Missing required fields" });
       return;
     }
@@ -39,12 +63,29 @@ router.post(
       res.status(403).json({ error: "Cannot assign this role" });
       return;
     }
+
+    const mode = passwordMode === "manual" ? "manual" : "auto";
+    let plainPassword = typeof password === "string" ? password : "";
+    if (mode === "auto") {
+      plainPassword = generateTemporaryPassword();
+    } else if (!plainPassword || plainPassword.length < 6) {
+      res.status(400).json({ error: "Password must be at least 6 characters" });
+      return;
+    }
+
     const existing = await store.findUserByEmail(email);
     if (existing) {
       res.status(400).json({ error: "Email already in use" });
       return;
     }
-    const passwordHash = await hashPassword(password);
+
+    const parsedStart = parseStartDate(startDate);
+    if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
+      res.status(400).json({ error: "Invalid start date" });
+      return;
+    }
+
+    const passwordHash = await hashPassword(plainPassword);
     const user = await store.createUser({
       email,
       passwordHash,
@@ -52,8 +93,13 @@ router.post(
       role,
       teamId: teamId ?? null,
       jobTitle: jobTitle ?? null,
+      phone: phone ?? null,
+      employeeCode: employeeCode ?? null,
+      startDate: parsedStart ?? null,
+      mustChangePassword: true,
     });
     await store.updateUser(user.id, { status: status ?? "active" });
+
     if (canViewSalaries(ctx)) {
       await store.createProfile({
         userId: user.id,
@@ -63,8 +109,21 @@ router.post(
     } else {
       await store.createProfile({ userId: user.id });
     }
+
+    let emailSent = false;
+    if (shouldSendEmail !== false) {
+      emailSent = await sendCredentialsEmail({
+        to: email.toLowerCase(),
+        fullName,
+        email: email.toLowerCase(),
+        password: plainPassword,
+        kind: "welcome",
+      });
+    }
+
     const refreshed = (await store.findUserById(user.id))!;
-    res.status(201).json(await employeeWithProfile(refreshed, ctx));
+    const profile = await employeeWithProfile(refreshed, ctx);
+    res.status(201).json({ ...profile, emailSent });
   },
 );
 
@@ -91,11 +150,29 @@ router.patch(
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
     const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-    const { fullName, email, role, teamId, jobTitle, baseSalary, bonus, status, payrollStatus } =
-      req.body;
+    const {
+      fullName,
+      email,
+      role,
+      teamId,
+      jobTitle,
+      phone,
+      employeeCode,
+      startDate,
+      baseSalary,
+      bonus,
+      status,
+      payrollStatus,
+    } = req.body;
 
     if (role !== undefined && !canAssignRole(ctx.role, role)) {
       res.status(403).json({ error: "Cannot assign this role" });
+      return;
+    }
+
+    const parsedStart = parseStartDate(startDate);
+    if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
+      res.status(400).json({ error: "Invalid start date" });
       return;
     }
 
@@ -105,6 +182,9 @@ router.patch(
       ...(role !== undefined && { role }),
       ...(teamId !== undefined && { teamId }),
       ...(jobTitle !== undefined && { jobTitle }),
+      ...(phone !== undefined && { phone: phone || null }),
+      ...(employeeCode !== undefined && { employeeCode: employeeCode || null }),
+      ...(parsedStart !== undefined && { startDate: parsedStart }),
       ...(status !== undefined && { status }),
     });
     if (!user) {
@@ -125,12 +205,85 @@ router.patch(
   },
 );
 
+router.post(
+  "/v1/employees/:id/reset-password",
+  requireAuth,
+  requirePermission("employees:password_reset"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const body = req.body ?? {};
+    const mode = body.mode === "manual" ? "manual" : "email";
+    const shouldSendEmail = body.sendWelcomeEmail !== false;
+    const manualPassword = typeof body.password === "string" ? body.password : "";
+
+    const user = await store.findUserById(id);
+    if (!user) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    if (id === ctx.userId) {
+      res.status(400).json({ error: "Use Settings to change your own password" });
+      return;
+    }
+
+    let plainPassword: string;
+    if (mode === "manual") {
+      if (!manualPassword || manualPassword.length < 8) {
+        res.status(400).json({ error: "Password must be at least 8 characters" });
+        return;
+      }
+      plainPassword = manualPassword;
+    } else {
+      plainPassword = generateTemporaryPassword();
+    }
+
+    const passwordHash = await hashPassword(plainPassword);
+    const updated = await store.updateUser(id, {
+      passwordHash,
+      mustChangePassword: true,
+    });
+    if (!updated) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    let emailSent = false;
+    const notifyByEmail =
+      mode === "email" ? shouldSendEmail !== false : body.sendWelcomeEmail === true;
+    if (notifyByEmail) {
+      emailSent = await sendCredentialsEmail({
+        to: user.email,
+        fullName: user.fullName,
+        email: user.email,
+        password: plainPassword,
+        kind: "password_reset",
+      });
+    }
+
+    res.json({
+      ...(await employeeWithProfile(updated, ctx)),
+      emailSent,
+      message:
+        mode === "manual"
+          ? "Password updated. User must change password on next login."
+          : "Password reset. User must change password on next login.",
+    });
+  },
+);
+
 router.delete(
   "/v1/employees/:id",
   requireAuth,
   requirePermission("employees:delete"),
   async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
     const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    if (id === ctx.userId) {
+      res.status(400).json({ error: "You cannot delete your own account" });
+      return;
+    }
     await store.deleteUser(id);
     res.sendStatus(204);
   },

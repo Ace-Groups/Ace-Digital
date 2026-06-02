@@ -3,7 +3,7 @@ import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
   Building2, ClipboardCheck, BarChart3, MessageSquare, Activity,
-  LogOut, ChevronLeft, ChevronRight, UserCircle,
+  LogOut, ChevronLeft, ChevronRight, UserCircle, Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -134,6 +134,19 @@ export function Sidebar() {
             <>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
+                  <Link
+                    href="/settings"
+                    data-testid="nav-settings"
+                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    aria-label="Settings"
+                  >
+                    <Settings size={18} />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Settings</TooltipContent>
+              </Tooltip>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
                     data-testid="btn-profile"
@@ -169,6 +182,14 @@ export function Sidebar() {
             </>
           ) : (
             <>
+              <Link
+                href="/settings"
+                data-testid="nav-settings"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <Settings size={18} className="shrink-0" />
+                <span>Settings</span>
+              </Link>
               <button
                 type="button"
                 data-testid="btn-profile"

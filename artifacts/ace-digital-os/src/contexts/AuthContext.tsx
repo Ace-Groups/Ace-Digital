@@ -14,7 +14,9 @@ interface AuthUser {
   teamName: string | null;
   jobTitle: string | null;
   avatarUrl: string | null;
+  phone: string | null;
   status: string;
+  mustChangePassword: boolean;
 }
 
 interface AuthContextValue {
@@ -54,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         teamName: rawUser.teamName ?? null,
         jobTitle: rawUser.jobTitle ?? null,
         avatarUrl: rawUser.avatarUrl ?? null,
+        phone: rawUser.phone ?? null,
         status: rawUser.status ?? "active",
+        mustChangePassword: rawUser.mustChangePassword ?? false,
       }
     : null;
 

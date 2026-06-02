@@ -40,6 +40,7 @@ import type {
   AccessContext,
   CreateProfileInput,
   CreateUserInput,
+  CreateNotificationInput,
   DashboardSnapshot,
   MessageWithSender,
   SalaryRow,
@@ -93,6 +94,10 @@ export function createPostgresStore() {
           role: data.role,
           teamId: data.teamId ?? null,
           jobTitle: data.jobTitle ?? null,
+          phone: data.phone ?? null,
+          employeeCode: data.employeeCode ?? null,
+          startDate: data.startDate ?? null,
+          mustChangePassword: data.mustChangePassword ?? true,
         })
         .returning();
       return u;
@@ -119,7 +124,14 @@ export function createPostgresStore() {
     },
     listProfiles: () => db.select().from(employeeProfilesTable),
     createProfile: async (data: CreateProfileInput) => {
-      const [p] = await db.insert(employeeProfilesTable).values({ userId: data.userId }).returning();
+      const [p] = await db
+        .insert(employeeProfilesTable)
+        .values({
+          userId: data.userId,
+          baseSalary: data.baseSalary ?? "0",
+          bonus: data.bonus ?? "0",
+        })
+        .returning();
       return p;
     },
     updateProfileByUserId: async (userId: number, patch: UpdateProfileInput) => {
@@ -453,6 +465,25 @@ export function createPostgresStore() {
         .where(eq(notificationsTable.id, id))
         .returning();
       return n ?? null;
+    },
+    createNotification: async (data: CreateNotificationInput) => {
+      const [n] = await db
+        .insert(notificationsTable)
+        .values({
+          userId: data.userId,
+          title: data.title,
+          body: data.body,
+          read: "false",
+          link: data.link ?? null,
+        })
+        .returning();
+      return n;
+    },
+    markAllNotificationsRead: async (userId: number) => {
+      await db
+        .update(notificationsTable)
+        .set({ read: "true" })
+        .where(eq(notificationsTable.userId, userId));
     },
     listChannels: () =>
       db

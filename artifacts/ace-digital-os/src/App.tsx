@@ -22,6 +22,11 @@ const ApprovalsPage = lazy(() => import("@/pages/approvals"));
 const ReportsPage = lazy(() => import("@/pages/reports"));
 const ChannelsPage = lazy(() => import("@/pages/channels"));
 const ActivityPage = lazy(() => import("@/pages/activity"));
+const ChangePasswordPage = lazy(() => import("@/pages/change-password"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const NotificationsPage = lazy(() => import("@/pages/notifications"));
+
+const AUTH_ONLY_PATHS = new Set(["/change-password", "/settings"]);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,7 +61,11 @@ function ProtectedRoute({
     return <Redirect to="/login" />;
   }
 
-  if (user && !canAccessRoute(user.role, path)) {
+  if (user?.mustChangePassword && path !== "/change-password") {
+    return <Redirect to="/change-password" />;
+  }
+
+  if (user && !AUTH_ONLY_PATHS.has(path) && !canAccessRoute(user.role, path)) {
     return (
       <Suspense fallback={<PageFallback />}>
         <ForbiddenPage />
@@ -85,6 +94,18 @@ function AppRouter() {
     <Suspense fallback={<PageFallback />}>
       <Switch>
         <Route path="/login" component={LoginPage} />
+        <Route
+          path="/change-password"
+          component={() => <ProtectedRoute path="/change-password" component={ChangePasswordPage} />}
+        />
+        <Route
+          path="/settings"
+          component={() => <ProtectedRoute path="/settings" component={SettingsPage} />}
+        />
+        <Route
+          path="/notifications"
+          component={() => <ProtectedRoute path="/notifications" component={NotificationsPage} />}
+        />
         <Route path="/" component={() => <ProtectedRoute path="/" component={DashboardPage} />} />
         <Route
           path="/projects"

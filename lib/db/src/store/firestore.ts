@@ -22,6 +22,7 @@ import type {
   AccessContext,
   CreateProfileInput,
   CreateUserInput,
+  CreateNotificationInput,
   DashboardSnapshot,
   MessageWithSender,
   SalaryRow,
@@ -138,6 +139,10 @@ export function createFirestoreStore() {
         role: data.role,
         teamId: data.teamId ?? null,
         jobTitle: data.jobTitle ?? null,
+        phone: data.phone ?? null,
+        employeeCode: data.employeeCode ?? null,
+        startDate: data.startDate ? data.startDate.toISOString() : null,
+        mustChangePassword: data.mustChangePassword ?? true,
         avatarUrl: null,
         status: "active",
         createdAt: now.toISOString(),
@@ -552,6 +557,31 @@ export function createFirestoreStore() {
       return mapNotification(snap.data()!, snap.id);
     },
 
+    async createNotification(data: CreateNotificationInput): Promise<Notification> {
+      const id = await nextId(COL.notifications);
+      const row = {
+        userId: data.userId,
+        title: data.title,
+        body: data.body,
+        read: "false",
+        link: data.link ?? null,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection(COL.notifications).doc(docId(id)).set(row);
+      return mapNotification(row, String(id));
+    },
+
+    async markAllNotificationsRead(userId: number): Promise<void> {
+      const snap = await db.collection(COL.notifications).where("userId", "==", userId).get();
+      const batch = db.batch();
+      for (const doc of snap.docs) {
+        if (doc.data().read !== "true") {
+          batch.update(doc.ref, { read: "true" });
+        }
+      }
+      await batch.commit();
+    },
+
     async listChannels(): Promise<Channel[]> {
       const items = await allDocs(COL.channels, mapChannel);
       return items
@@ -813,6 +843,10 @@ function mapUser(data: FirebaseFirestore.DocumentData, id: string): User {
     role: data.role as string,
     teamId: (data.teamId as number) ?? null,
     jobTitle: (data.jobTitle as string) ?? null,
+    phone: (data.phone as string) ?? null,
+    employeeCode: (data.employeeCode as string) ?? null,
+    startDate: data.startDate ? toDate(data.startDate) : null,
+    mustChangePassword: data.mustChangePassword !== false,
     status: data.status as string,
     createdAt: toDate(data.createdAt),
   };

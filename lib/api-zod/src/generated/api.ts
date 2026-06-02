@@ -36,6 +36,10 @@ export const LoginResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 })
@@ -54,6 +58,10 @@ export const GetMeResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -64,6 +72,36 @@ export const GetMeResponse = zod.object({
 export const GetAuthPermissionsResponse = zod.object({
   "role": zod.string(),
   "permissions": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Change password (required on first login when mustChangePassword is true)
+ */
+export const changePasswordBodyNewPasswordMin = 8;
+
+
+
+export const ChangePasswordBody = zod.object({
+  "currentPassword": zod.string().optional(),
+  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
+})
+
+export const ChangePasswordResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "fullName": zod.string(),
+  "role": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "createdAt": zod.string().optional()
 })
 
 
@@ -83,6 +121,10 @@ export const GetMyProfileResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -91,7 +133,9 @@ export const GetMyProfileResponse = zod.object({
  * @summary Update own profile (avatar, etc.)
  */
 export const UpdateMyProfileBody = zod.object({
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "fullName": zod.string().optional(),
+  "phone": zod.string().nullish()
 })
 
 export const UpdateMyProfileResponse = zod.object({
@@ -107,6 +151,10 @@ export const UpdateMyProfileResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -518,6 +566,10 @@ export const GetTeamMembersResponseItem = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 export const GetTeamMembersResponse = zod.array(GetTeamMembersResponseItem)
@@ -544,6 +596,10 @@ export const ListEmployeesResponseItem = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -555,13 +611,18 @@ export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 export const CreateEmployeeBody = zod.object({
   "fullName": zod.string(),
   "email": zod.string(),
-  "password": zod.string(),
+  "password": zod.string().optional(),
+  "passwordMode": zod.enum(['auto', 'manual']).optional(),
   "role": zod.string(),
   "teamId": zod.number().optional(),
   "jobTitle": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "employeeCode": zod.string().optional(),
+  "startDate": zod.string().optional(),
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "sendWelcomeEmail": zod.boolean().optional()
 })
 
 
@@ -585,6 +646,10 @@ export const GetEmployeeResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -602,6 +667,9 @@ export const UpdateEmployeeBody = zod.object({
   "role": zod.string().optional(),
   "teamId": zod.number().optional(),
   "jobTitle": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "employeeCode": zod.string().optional(),
+  "startDate": zod.string().optional(),
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
@@ -621,6 +689,10 @@ export const UpdateEmployeeResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -631,6 +703,47 @@ export const UpdateEmployeeResponse = zod.object({
 export const DeleteEmployeeParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
+/**
+ * @summary Reset employee password and require change on next login
+ */
+export const ResetEmployeePasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const resetEmployeePasswordBodyPasswordMin = 8;
+
+
+
+export const ResetEmployeePasswordBody = zod.object({
+  "mode": zod.enum(['email', 'manual']).optional().describe('email = generate temp password and email it; manual = set password in body'),
+  "password": zod.string().min(resetEmployeePasswordBodyPasswordMin).optional().describe('Required when mode is manual'),
+  "sendWelcomeEmail": zod.boolean().optional().describe('When mode is email, whether to email credentials (default true)')
+})
+
+export const ResetEmployeePasswordResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "baseSalary": zod.number().nullish(),
+  "bonus": zod.number().nullish(),
+  "payrollStatus": zod.string().nullish(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+}).and(zod.object({
+  "emailSent": zod.boolean().optional(),
+  "message": zod.string().optional()
+}))
 
 
 /**

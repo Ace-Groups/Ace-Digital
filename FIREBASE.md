@@ -105,6 +105,28 @@ npx firebase-tools deploy --only functions --project ace-digital-os
 
 Login and API calls will fail until `JWT_SECRET` is set and functions are redeployed.
 
+### Employee email (Firebase Trigger Email)
+
+Welcome and password-reset emails are queued in Firestore collection `mail`. The [**Trigger Email from Firestore**](https://extensions.dev/extensions/firebase/firestore-send-email) extension sends them using your project's default SMTP (configure during install).
+
+**One-time install (Firebase console or CLI):**
+
+```bash
+firebase ext:install firebase/firestore-send-email --project ace-digital-os
+```
+
+Use `firebase/extensions/firestore-send-email.env` as a reference. Set **DEFAULT_FROM** to your verified sender (e.g. `Ace-Digital <noreply@ace-digital-os.web.app>`).
+
+| Env (optional on `api` function) | Purpose |
+|----------------------------------|---------|
+| `EMAIL_FROM` | From address on queued mail docs (default `noreply@ace-digital-os.web.app`) |
+| `APP_LOGIN_URL` | Login link in emails (default `https://ace-digital-os.web.app/login`) |
+| `FIREBASE_MAIL_COLLECTION` | Collection name (default `mail`) |
+
+Without the extension, users are still created/reset but `emailSent` is `false`.
+
+**Who can reset passwords:** `super_admin`, `management`, and `hr` (`employees:password_reset`) — send reset email or set a manual temporary password from the employee card menu.
+
 CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
 
 ### API URLs (do not open the function root in a browser for the app)

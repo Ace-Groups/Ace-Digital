@@ -8,6 +8,7 @@ import {
   Users,
   MoreHorizontal,
   Bell,
+  Settings,
   UserCircle,
   DollarSign,
   Building2,
@@ -90,8 +91,9 @@ export function MobileShell({ children, title }: MobileShellProps) {
         <ThemeToggle className="h-11 w-11" />
         <button
           type="button"
+          onClick={() => setLocation("/notifications")}
           className="relative flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
-          aria-label="Notifications"
+          aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
         >
           <Bell size={20} />
           {unread > 0 && (
@@ -192,6 +194,19 @@ export function MobileShell({ children, title }: MobileShellProps) {
                 </li>
               );
             })}
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocation("/settings");
+                  setMoreOpen(false);
+                }}
+                className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3 text-left text-sm font-medium active:bg-muted"
+              >
+                <Settings size={20} className="text-primary" aria-hidden />
+                Settings
+              </button>
+            </li>
             <li>
               <button
                 type="button"

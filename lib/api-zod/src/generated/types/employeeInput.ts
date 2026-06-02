@@ -5,15 +5,21 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EmployeeInputPasswordMode } from './employeeInputPasswordMode';
 
 export interface EmployeeInput {
   fullName: string;
   email: string;
-  password: string;
+  password?: string;
+  passwordMode?: EmployeeInputPasswordMode;
   role: string;
   teamId?: number;
   jobTitle?: string;
+  phone?: string;
+  employeeCode?: string;
+  startDate?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;
+  sendWelcomeEmail?: boolean;
 }
