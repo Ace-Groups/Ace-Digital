@@ -117,7 +117,7 @@ export default function ApprovalsPage() {
         </Button>
         <ResponsiveSheet open={open} onOpenChange={setOpen} title="Submit Approval Request">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4">
                 <FormField control={form.control} name="type" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Request Type</FormLabel>

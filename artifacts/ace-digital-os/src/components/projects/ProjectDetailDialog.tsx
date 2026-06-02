@@ -230,7 +230,7 @@ export function ProjectDetailDialog({
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSave)} className="mobile-form space-y-4">
               <FormField
                 control={form.control}
                 name="name"

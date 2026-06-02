@@ -68,6 +68,7 @@ export default function ChangePasswordPage() {
                 <Input
                   id="current-password"
                   type="password"
+                  enterKeyHint="next"
                   autoComplete="current-password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -80,6 +81,7 @@ export default function ChangePasswordPage() {
               <Input
                 id="new-password"
                 type="password"
+                enterKeyHint="next"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -91,6 +93,7 @@ export default function ChangePasswordPage() {
               <Input
                 id="confirm-password"
                 type="password"
+                enterKeyHint="go"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

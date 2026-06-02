@@ -297,7 +297,7 @@ export default function FinancePage() {
                     </DialogDescription>
                   </DialogHeader>
                   <Form {...expenseForm}>
-                    <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
+                    <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="mobile-form space-y-4">
                       <FormField
                         control={expenseForm.control}
                         name="description"

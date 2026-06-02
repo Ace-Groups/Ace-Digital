@@ -8,6 +8,7 @@ import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { FormEnterNavigation } from "@/components/FormEnterNavigation";
 import { canAccessRoute } from "@workspace/rbac";
 const NotFound = lazy(() => import("@/pages/not-found"));
 const ForbiddenPage = lazy(() => import("@/pages/forbidden"));
@@ -158,6 +159,7 @@ function App() {
                 <InstallPrompt />
               </WouterRouter>
               <Toaster />
+              <FormEnterNavigation />
             </MobileChromeProvider>
           </AuthProvider>
         </TooltipProvider>

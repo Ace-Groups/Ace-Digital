@@ -87,7 +87,7 @@ export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelD
         <DialogHeader>
           <DialogTitle>Create channel</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mobile-form space-y-4">
           <div className="space-y-2">
             <Label htmlFor="ch-name">Name</Label>
             <Input

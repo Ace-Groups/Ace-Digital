@@ -55,7 +55,7 @@ export function TeamCreateDialog({ open, onOpenChange, onCreated }: TeamCreateDi
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        <form onSubmit={(e) => void handleSubmit(e)} className="mobile-form space-y-4">
           <div className="space-y-2">
             <Label htmlFor="team-name">Team name</Label>
             <Input

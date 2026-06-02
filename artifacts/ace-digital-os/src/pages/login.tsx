@@ -14,13 +14,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
+import { MobileLoginHero } from "@/components/login/MobileLoginHero";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import aceLogo from "@/assets/ace-logo.png";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -29,41 +29,13 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const underlineInputClass =
-  "h-12 rounded-none border-0 border-b-2 border-border bg-transparent px-0 pl-9 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0";
-
-function LoginWaveHeader() {
-  return (
-    <div className="relative min-h-[38dvh] shrink-0 overflow-hidden brand-gradient">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.14]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54 0c-6 8-18 12-30 12S0 8 0 0' fill='none' stroke='white' stroke-width='0.6'/%3E%3C/svg%3E")`,
-          backgroundSize: "48px 48px",
-        }}
-        aria-hidden
-      />
-      <div className="relative flex h-full min-h-[200px] items-center justify-center pb-10 pt-[max(2rem,env(safe-area-inset-top))]">
-        <img
-          src={aceLogo}
-          alt=""
-          className="size-20 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
-        />
-      </div>
-      <svg
-        className="absolute bottom-0 left-0 block h-[52px] w-full text-card"
-        viewBox="0 0 1440 52"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <path
-          fill="currentColor"
-          d="M0,28 C240,52 420,8 720,24 C1020,40 1200,48 1440,20 L1440,52 L0,52 Z"
-        />
-      </svg>
-    </div>
-  );
-}
+const mobileFieldClass = cn(
+  "h-[3.25rem] rounded-none border-0 border-b-2 border-border/70 bg-transparent px-0 pl-10 text-[17px] shadow-none",
+  "placeholder:text-muted-foreground/60",
+  "transition-[border-color,box-shadow] duration-200",
+  "focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0",
+  "focus-visible:shadow-[0_1px_0_0_hsl(var(--primary))]",
+);
 
 function LoginMobileForm({
   form,
@@ -78,11 +50,13 @@ function LoginMobileForm({
   onTogglePassword: () => void;
   onSubmit: (data: FormData) => void | Promise<void>;
 }) {
+  const passwordRef = useRef<HTMLInputElement>(null);
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-8"
+        className="mobile-form flex flex-col gap-7"
         autoComplete="on"
         aria-label="Sign in"
       >
@@ -90,22 +64,30 @@ function LoginMobileForm({
           control={form.control}
           name="email"
           render={({ field }) => (
-            <FormItem className="space-y-2">
+            <FormItem className="space-y-1.5">
               <FormLabel className="sr-only">Email</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Mail
-                    className="pointer-events-none absolute left-0 top-1/2 size-[18px] -translate-y-1/2 text-primary"
+                    className="pointer-events-none absolute left-0 top-1/2 size-[19px] -translate-y-1/2 text-primary"
                     aria-hidden
                   />
                   <Input
                     data-testid="input-email"
                     type="email"
                     inputMode="email"
+                    enterKeyHint="next"
                     autoCapitalize="none"
+                    autoCorrect="off"
                     autoComplete="username"
                     placeholder="Email"
-                    className={underlineInputClass}
+                    className={mobileFieldClass}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        passwordRef.current?.focus();
+                      }
+                    }}
                     {...field}
                   />
                 </div>
@@ -118,32 +100,38 @@ function LoginMobileForm({
           control={form.control}
           name="password"
           render={({ field }) => (
-            <FormItem className="space-y-2">
+            <FormItem className="space-y-1.5">
               <FormLabel className="sr-only">Password</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Lock
-                    className="pointer-events-none absolute left-0 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
+                    className="pointer-events-none absolute left-0 top-1/2 size-[19px] -translate-y-1/2 text-muted-foreground"
                     aria-hidden
                   />
                   <Input
                     data-testid="input-password"
                     type={showPassword ? "text" : "password"}
+                    enterKeyHint="go"
                     autoComplete="current-password"
                     placeholder="Password"
-                    className={cn(underlineInputClass, "pr-10")}
+                    className={cn(mobileFieldClass, "pr-11")}
                     {...field}
+                    ref={(el) => {
+                      field.ref(el);
+                      passwordRef.current = el;
+                    }}
                   />
                   <button
                     type="button"
-                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-muted-foreground touch-manipulation"
+                    tabIndex={-1}
+                    className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center text-muted-foreground touch-manipulation active:text-foreground"
                     onClick={onTogglePassword}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <EyeOff className="size-[18px]" aria-hidden />
+                      <EyeOff className="size-[19px]" aria-hidden />
                     ) : (
-                      <Eye className="size-[18px]" aria-hidden />
+                      <Eye className="size-[19px]" aria-hidden />
                     )}
                   </button>
                 </div>
@@ -156,7 +144,7 @@ function LoginMobileForm({
           data-testid="button-submit"
           type="submit"
           disabled={loading}
-          className="mt-2 h-12 w-full rounded-full text-base font-semibold shadow-brand-sm touch-manipulation"
+          className="mt-1 h-[3.25rem] w-full rounded-full text-base font-semibold shadow-brand-md touch-manipulation active:scale-[0.98]"
           size="lg"
         >
           {loading ? <Loader2 className="size-5 animate-spin" aria-hidden /> : "Login"}
@@ -181,11 +169,13 @@ function LoginDesktopForm({
   onSubmit: (data: FormData) => void | Promise<void>;
   onForgotPassword: () => void;
 }) {
+  const passwordRef = useRef<HTMLInputElement>(null);
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-5"
+        className="mobile-form space-y-5"
         autoComplete="off"
       >
         <FormField
@@ -203,9 +193,16 @@ function LoginDesktopForm({
                   <Input
                     data-testid="input-email"
                     type="email"
+                    enterKeyHint="next"
                     placeholder="you@acedigital.com"
                     autoComplete="username"
                     className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        passwordRef.current?.focus();
+                      }
+                    }}
                     {...field}
                   />
                 </div>
@@ -238,10 +235,15 @@ function LoginDesktopForm({
                   <Input
                     data-testid="input-password"
                     type={showPassword ? "text" : "password"}
+                    enterKeyHint="go"
                     placeholder="••••••••"
                     autoComplete="current-password"
                     className="h-12 rounded-xl border-white/10 bg-white/[0.06] pr-11 pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
                     {...field}
+                    ref={(el) => {
+                      field.ref(el);
+                      passwordRef.current = el;
+                    }}
                   />
                   <button
                     type="button"
@@ -288,16 +290,18 @@ function LoginMobileLayout({
   onSubmit: (data: FormData) => void | Promise<void>;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-card">
-      <LoginWaveHeader />
-      <div className="flex flex-1 flex-col justify-center px-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4">
-        <LoginMobileForm
-          form={form}
-          loading={loading}
-          showPassword={showPassword}
-          onTogglePassword={() => setShowPassword((v) => !v)}
-          onSubmit={onSubmit}
-        />
+    <div className="flex min-h-dvh flex-col bg-background">
+      <MobileLoginHero />
+      <div className="relative -mt-1 flex flex-1 flex-col bg-background shadow-[0_-8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.35)]">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-7 pb-[max(2rem,env(safe-area-inset-bottom))] pt-6">
+          <LoginMobileForm
+            form={form}
+            loading={loading}
+            showPassword={showPassword}
+            onTogglePassword={() => setShowPassword((v) => !v)}
+            onSubmit={onSubmit}
+          />
+        </div>
       </div>
     </div>
   );
