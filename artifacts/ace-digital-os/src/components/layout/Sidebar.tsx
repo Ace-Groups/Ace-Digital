@@ -49,7 +49,7 @@ export function Sidebar() {
         data-testid="sidebar"
         data-collapsed={collapsed ? "true" : "false"}
         className={cn(
-          "flex h-screen shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
+          "sticky top-0 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-brand-md transition-[width] duration-300 ease-out",
           collapsed ? "w-[4.25rem]" : "w-64",
         )}
       >

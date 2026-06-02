@@ -9,7 +9,7 @@ import {
   TrendingUp, Clock, Building2, CheckSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { StaggerItem, StaggerList } from "@/components/design";
 import { formatCurrency, formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useMemo } from "react";
@@ -33,7 +33,6 @@ export default function DashboardPage() {
   });
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
   const widgets = useMemo(() => new Set(dash?.widgets ?? []), [dash?.widgets]);
-  const isMobile = useIsMobile();
   const dashboardDate = useMemo(
     () =>
       new Date().toLocaleDateString("en-IN", {
@@ -128,8 +127,9 @@ export default function DashboardPage() {
 
   return (
     <AppLayout title="Dashboard">
-      <div className="page-stack">
-        <section className="brand-gradient relative overflow-hidden rounded-2xl border border-white/10 p-6 text-white shadow-brand-md sm:p-8">
+      <StaggerList className="page-stack">
+        <StaggerItem>
+          <section className="brand-gradient relative overflow-hidden rounded-2xl border border-white/10 p-5 text-white shadow-brand-md sm:p-7 lg:p-8">
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl"
             aria-hidden
@@ -145,22 +145,24 @@ export default function DashboardPage() {
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl text-balance">
               {getGreeting()}, {firstName}
             </h2>
-            <p className="mt-2 max-w-lg text-sm text-white/75">
+            <p className="mt-2 max-w-lg text-sm text-white/75 sm:text-[0.95rem]">
               Here&apos;s what&apos;s happening at Ace Digital today.
             </p>
           </div>
         </section>
+        </StaggerItem>
 
-        {isMobile ? (
-          <div className="mobile-stat-scroll">{statCards}</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{statCards}</div>
-        )}
+        <StaggerItem>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {statCards}
+          </div>
+        </StaggerItem>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <StaggerItem>
+        <div className="grid gap-4 lg:grid-cols-3 xl:gap-6">
           {widgets.has("upcomingDeadlines") && (
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-border/70">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Clock size={16} className="text-amber-500" aria-hidden />
@@ -228,7 +230,7 @@ export default function DashboardPage() {
 
           {widgets.has("teamLoad") && (
           <div className={widgets.has("upcomingDeadlines") ? "" : "lg:col-span-3"}>
-            <Card className="h-full">
+            <Card className="h-full border-border/70">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Users size={16} className="text-primary" aria-hidden />
@@ -273,9 +275,11 @@ export default function DashboardPage() {
           </div>
           )}
         </div>
+        </StaggerItem>
 
         {widgets.has("recentActivity") && (
-        <Card>
+        <StaggerItem>
+        <Card className="border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <TrendingUp size={16} className="text-primary" aria-hidden />
@@ -322,8 +326,9 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        </StaggerItem>
         )}
-      </div>
+      </StaggerList>
     </AppLayout>
   );
 }

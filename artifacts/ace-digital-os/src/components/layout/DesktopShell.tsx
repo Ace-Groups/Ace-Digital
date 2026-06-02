@@ -24,10 +24,10 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
 
   return (
-    <div className="flex min-h-[100dvh] overflow-hidden bg-background brand-gradient-subtle">
+    <div className="flex h-[100dvh] overflow-hidden bg-background brand-gradient-subtle">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center gap-4 border-b border-border/80 bg-card/90 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-4 border-b border-border/80 bg-card/90 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
           {title && (
             <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
           )}
@@ -64,7 +64,7 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
             )}
           </button>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <PageTransition className="mx-auto max-w-[1600px]">{children}</PageTransition>
         </main>
       </div>

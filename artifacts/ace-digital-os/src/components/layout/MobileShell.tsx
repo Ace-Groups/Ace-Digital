@@ -74,7 +74,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
       <header className="sticky top-0 z-40 flex shrink-0 items-center gap-3 border-b border-border/80 bg-card/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
@@ -112,7 +112,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <PageTransition>{children}</PageTransition>
       </main>
 
