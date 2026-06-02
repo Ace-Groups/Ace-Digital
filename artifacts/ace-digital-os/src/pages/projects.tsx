@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { ProjectDetailDialog } from "@/components/projects/ProjectDetailDialog";
 import {
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, IndianRupee, GripVertical } from "lucide-react";
+import { Plus, Calendar, IndianRupee, GripVertical, CircleDashed, Timer, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,10 +35,22 @@ const STATUS_LABELS: Record<string, string> = {
   DONE: "Done",
 };
 const STATUS_COLORS: Record<string, string> = {
-  TODO: "bg-muted/50 border-border",
-  IN_PROGRESS: "bg-blue-500/10 border-blue-500/25 dark:bg-blue-500/15",
-  REVIEW: "bg-purple-500/10 border-purple-500/25 dark:bg-purple-500/15",
-  DONE: "bg-emerald-500/10 border-emerald-500/25 dark:bg-emerald-500/15",
+  TODO: "border-slate-500/25 bg-slate-500/10",
+  IN_PROGRESS: "border-sky-500/30 bg-sky-500/10",
+  REVIEW: "border-amber-500/30 bg-amber-500/10",
+  DONE: "border-emerald-500/30 bg-emerald-500/10",
+};
+const STATUS_ACCENTS: Record<string, string> = {
+  TODO: "text-slate-300",
+  IN_PROGRESS: "text-sky-300",
+  REVIEW: "text-amber-300",
+  DONE: "text-emerald-300",
+};
+const STATUS_ICON: Record<string, typeof CircleDashed> = {
+  TODO: CircleDashed,
+  IN_PROGRESS: Timer,
+  REVIEW: ShieldCheck,
+  DONE: CheckCircle2,
 };
 
 const createSchema = z.object({
@@ -53,7 +65,6 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function ProjectsPage() {
-  const isMobile = useIsMobile();
   const { data: projects, isLoading } = useListProjects();
   const { data: teams } = useListTeams();
   const { data: clients } = useListClients();
@@ -267,22 +278,29 @@ export default function ProjectsPage() {
 
   return (
     <AppLayout title="Projects">
-      <div className="page-stack">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {projects?.length ?? 0} total projects · tap a card to edit
-        </p>
-        <Button
-          data-testid="btn-create-project"
-          className="hidden gap-2 sm:inline-flex"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus size={16} /> New Project
-        </Button>
-        <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
-          {createForm}
-        </ResponsiveSheet>
-      </div>
+      <StaggerList className="page-stack">
+      <StaggerItem>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {projects?.length ?? 0} total projects
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground/90">
+              Drag a card to move status, or tap any card to edit details.
+            </p>
+          </div>
+          <Button
+            data-testid="btn-create-project"
+            className="hidden gap-2 sm:inline-flex active:scale-[0.98]"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus size={16} /> New Project
+          </Button>
+          <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
+            {createForm}
+          </ResponsiveSheet>
+        </div>
+      </StaggerItem>
 
       <ProjectDetailDialog
         project={selectedProject}
@@ -293,166 +311,129 @@ export default function ProjectsPage() {
         onDuplicate={handleDuplicate}
       />
 
-      {isMobile ? (
-        <div className="space-y-6">
+      <StaggerItem>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATUSES.map((status) => (
-            <section key={status}>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h3>
-                <Badge variant="secondary" className="text-xs">
+            <section
+              key={status}
+              data-testid={`kanban-col-${status.toLowerCase()}`}
+              className={cn(
+                "relative rounded-2xl border p-3 sm:p-4 transition-colors",
+                STATUS_COLORS[status],
+              )}
+              onDragOver={(e) => {
+                e.preventDefault();
+              }}
+              onDrop={() => {
+                if (dragging !== null) void handleDrop(status, dragging);
+                setDragging(null);
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const Icon = STATUS_ICON[status];
+                    return <Icon size={14} className={cn("shrink-0", STATUS_ACCENTS[status])} />;
+                  })()}
+                  <h3 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h3>
+                </div>
+                <Badge variant="secondary" className="text-xs tabular-nums">
                   {byStatus[status]?.length ?? 0}
                 </Badge>
               </div>
-              <div className="space-y-2">
+
+              <div className="space-y-2 min-h-[10rem]">
                 {isLoading
                   ? [1, 2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)
                   : byStatus[status]?.map((project) => (
-                      <button
+                      <article
                         key={project.id}
-                        type="button"
                         data-testid={`project-card-${project.id}`}
-                        onClick={() => openProject(project)}
-                        className="w-full rounded-xl border border-border bg-card p-4 text-left shadow-brand-sm transition-transform active:scale-[0.99]"
-                      >
-                        <p className="text-sm font-medium text-foreground">{project.name}</p>
-                        {project.teamName && (
-                          <p className="mt-1 text-xs text-muted-foreground">{project.teamName}</p>
+                        className={cn(
+                          "rounded-xl border border-border/80 bg-card/95 shadow-brand-sm transition-all duration-200",
+                          "hover:border-primary/30 hover:shadow-brand-md",
+                          dragging === project.id && "opacity-50 ring-2 ring-primary/30",
                         )}
-                        <div className="mt-2 flex items-center gap-2">
-                          <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
-                            {project.priority}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            {project.progress}%
-                          </span>
+                      >
+                        <div
+                          draggable
+                          onDragStart={() => setDragging(project.id)}
+                          onDragEnd={() => setDragging(null)}
+                          className="flex justify-end px-2 pt-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+                          title="Drag to move"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical size={14} />
                         </div>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => openProject(project)}
+                          className="w-full rounded-b-xl px-3 pb-3 pt-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        >
+                          <p className="pr-1 text-sm font-medium leading-tight text-foreground">
+                            {project.name}
+                          </p>
+                          <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs text-muted-foreground">
+                            {project.teamName ?? "Unassigned team"}
+                            {project.clientName ? ` · ${project.clientName}` : ""}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
+                              {project.priority}
+                            </Badge>
+                            <span className="text-xs tabular-nums text-muted-foreground">{project.progress}%</span>
+                          </div>
+                          <div className="mt-2">
+                            <div className="h-1.5 overflow-hidden rounded-full bg-muted/80">
+                              <div
+                                className="h-full rounded-full bg-primary transition-all duration-500"
+                                style={{ width: `${project.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                            {project.deadline && (
+                              <span className="flex items-center gap-1">
+                                <Calendar size={10} />
+                                {new Date(project.deadline).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </span>
+                            )}
+                            {project.budget != null && (
+                              <span className="ml-auto flex items-center gap-1 tabular-nums">
+                                <IndianRupee size={10} />
+                                {formatCurrency(project.budget)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      </article>
                     ))}
+                {!isLoading && (byStatus[status]?.length ?? 0) === 0 && (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-background/40 p-4 text-center text-xs text-muted-foreground">
+                    No projects in {STATUS_LABELS[status].toLowerCase()}.
+                  </div>
+                )}
               </div>
             </section>
           ))}
         </div>
-      ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 min-h-96">
-        {STATUSES.map((status) => (
-          <div
-            key={status}
-            data-testid={`kanban-col-${status.toLowerCase()}`}
-            className={cn(
-              "rounded-xl border-2 p-3 min-h-64 transition-colors",
-              STATUS_COLORS[status],
-            )}
-            onDragOver={(e) => {
-              e.preventDefault();
-            }}
-            onDrop={() => {
-              if (dragging !== null) handleDrop(status, dragging);
-              setDragging(null);
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</span>
-              <Badge variant="secondary" className="text-xs">
-                {byStatus[status]?.length ?? 0}
-              </Badge>
-            </div>
+      </StaggerItem>
 
-            {isLoading ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {byStatus[status]?.map((project) => (
-                  <div
-                    key={project.id}
-                    data-testid={`project-card-${project.id}`}
-                    className={cn(
-                      "rounded-lg border border-border bg-card shadow-brand-sm transition-shadow group hover:shadow-brand-md",
-                      dragging === project.id && "opacity-50 ring-2 ring-primary/30",
-                    )}
-                  >
-                    <div
-                      draggable
-                      onDragStart={() => setDragging(project.id)}
-                      onDragEnd={() => setDragging(null)}
-                      className="flex justify-end px-2 pt-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
-                      title="Drag to move column"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical size={14} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openProject(project)}
-                      className="w-full text-left px-3 pb-3 pt-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-b-lg"
-                    >
-                      <p className="text-sm font-medium text-foreground leading-tight pr-1">
-                        {project.name}
-                      </p>
-                      {project.teamName && (
-                        <p className="text-xs text-muted-foreground mt-1">{project.teamName}</p>
-                      )}
-                      {project.clientName && (
-                        <p className="text-xs text-muted-foreground">{project.clientName}</p>
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap mt-2">
-                        <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
-                          {project.priority}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {project.progress}%
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <div className="h-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{ width: `${project.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-2 gap-2">
-                        {project.deadline && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar size={10} />
-                            {new Date(project.deadline).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            })}
-                          </span>
-                        )}
-                        {project.budget != null && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
-                            <IndianRupee size={10} />
-                            {formatCurrency(project.budget)}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      )}
-
-      {isMobile && (
+      <StaggerItem>
         <Button
           data-testid="btn-create-project-mobile"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md active:scale-[0.98] sm:hidden"
           onClick={() => setCreateOpen(true)}
           aria-label="New project"
         >
           <Plus size={22} />
         </Button>
-      )}
-      </div>
+      </StaggerItem>
+      </StaggerList>
     </AppLayout>
   );
 }
