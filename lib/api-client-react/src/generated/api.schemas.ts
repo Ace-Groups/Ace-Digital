@@ -243,6 +243,11 @@ export interface EmployeeInput {
   status?: string;
 }
 
+export interface MyProfileUpdate {
+  /** @nullable */
+  avatarUrl?: string | null;
+}
+
 export interface EmployeeUpdate {
   fullName?: string;
   email?: string;
@@ -414,11 +419,66 @@ export interface Channel {
   id: number;
   name: string;
   /** @nullable */
+  description?: string | null;
+  /** @nullable */
   teamId?: number | null;
   /** @nullable */
   teamName?: string | null;
   type: string;
+  visibility?: string;
+  archived?: boolean;
+  memberCount?: number;
+  /** @nullable */
+  myRole?: string | null;
   unreadCount?: number;
+  createdAt?: string;
+}
+
+export type ChannelInputType = typeof ChannelInputType[keyof typeof ChannelInputType];
+
+
+export const ChannelInputType = {
+  TEAM: 'TEAM',
+  ANNOUNCEMENT: 'ANNOUNCEMENT',
+} as const;
+
+export interface ChannelInput {
+  name: string;
+  description?: string;
+  type?: ChannelInputType;
+  teamId?: number;
+  memberIds?: number[];
+}
+
+export interface ChannelUpdate {
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  archived?: boolean;
+}
+
+export interface ChannelMember {
+  userId: number;
+  fullName: string;
+  email?: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+  role: string;
+  joinedAt?: string;
+}
+
+export type ChannelMemberInputRole = typeof ChannelMemberInputRole[keyof typeof ChannelMemberInputRole];
+
+
+export const ChannelMemberInputRole = {
+  owner: 'owner',
+  member: 'member',
+  viewer: 'viewer',
+} as const;
+
+export interface ChannelMemberInput {
+  userId: number;
+  role?: ChannelMemberInputRole;
 }
 
 export interface Message {

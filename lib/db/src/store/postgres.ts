@@ -1,4 +1,4 @@
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, and, sql, count, inArray } from "drizzle-orm";
 import { getPgDb } from "../pg";
 import {
   usersTable,
@@ -11,6 +11,7 @@ import {
   activityLogsTable,
   notificationsTable,
   channelsTable,
+  channelMembersTable,
   messagesTable,
   reportsTable,
   expensesTable,
@@ -26,6 +27,7 @@ import type {
   ActivityLog,
   Notification,
   Channel,
+  ChannelMember,
   Message,
   Report,
   Expense,
@@ -42,6 +44,10 @@ import type {
   SalaryRow,
   UpdateProfileInput,
   UpdateUserInput,
+  CreateChannelInput,
+  UpdateChannelInput,
+  ChannelMemberWithUser,
+  ChannelMemberRole,
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
 import {
@@ -366,7 +372,148 @@ export function createPostgresStore() {
         .returning();
       return n ?? null;
     },
-    listChannels: () => db.select().from(channelsTable).orderBy(channelsTable.name),
+    listChannels: () =>
+      db
+        .select()
+        .from(channelsTable)
+        .where(eq(channelsTable.archived, false))
+        .orderBy(channelsTable.name),
+    findChannelById: async (id: number) => {
+      const [c] = await db.select().from(channelsTable).where(eq(channelsTable.id, id));
+      return c ?? null;
+    },
+    createChannel: async (data: CreateChannelInput) => {
+      const [c] = await db
+        .insert(channelsTable)
+        .values({
+          name: data.name,
+          description: data.description ?? null,
+          teamId: data.teamId ?? null,
+          type: data.type ?? "TEAM",
+          visibility: data.visibility ?? "PRIVATE",
+          archived: false,
+          createdById: data.createdById,
+        })
+        .returning();
+      return c;
+    },
+    updateChannel: async (id: number, patch: UpdateChannelInput) => {
+      const [c] = await db
+        .update(channelsTable)
+        .set(patch)
+        .where(eq(channelsTable.id, id))
+        .returning();
+      return c ?? null;
+    },
+    deleteChannel: async (id: number) => {
+      await db.delete(channelMembersTable).where(eq(channelMembersTable.channelId, id));
+      await db.delete(messagesTable).where(eq(messagesTable.channelId, id));
+      await db.delete(channelsTable).where(eq(channelsTable.id, id));
+    },
+    listChannelIdsForUser: async (userId: number) => {
+      const rows = await db
+        .select({ channelId: channelMembersTable.channelId })
+        .from(channelMembersTable)
+        .where(eq(channelMembersTable.userId, userId));
+      return rows.map((r) => r.channelId);
+    },
+    listChannelsForUser: async (userId: number, includeArchived = false) => {
+      const ids = await db
+        .select({ channelId: channelMembersTable.channelId })
+        .from(channelMembersTable)
+        .where(eq(channelMembersTable.userId, userId));
+      const channelIds = ids.map((r) => r.channelId);
+      if (channelIds.length === 0) return [];
+      const conditions = [inArray(channelsTable.id, channelIds)];
+      if (!includeArchived) {
+        conditions.push(eq(channelsTable.archived, false));
+      }
+      return db
+        .select()
+        .from(channelsTable)
+        .where(and(...conditions))
+        .orderBy(channelsTable.name);
+    },
+    findChannelMembership: async (channelId: number, userId: number) => {
+      const [m] = await db
+        .select()
+        .from(channelMembersTable)
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        );
+      return m ?? null;
+    },
+    listChannelMembers: async (channelId: number): Promise<ChannelMemberWithUser[]> => {
+      const rows = await db
+        .select({
+          id: channelMembersTable.id,
+          channelId: channelMembersTable.channelId,
+          userId: channelMembersTable.userId,
+          role: channelMembersTable.role,
+          joinedAt: channelMembersTable.joinedAt,
+          fullName: usersTable.fullName,
+          avatarUrl: usersTable.avatarUrl,
+          email: usersTable.email,
+        })
+        .from(channelMembersTable)
+        .innerJoin(usersTable, eq(channelMembersTable.userId, usersTable.id))
+        .where(eq(channelMembersTable.channelId, channelId))
+        .orderBy(channelMembersTable.role, usersTable.fullName);
+      return rows;
+    },
+    addChannelMember: async (
+      channelId: number,
+      userId: number,
+      role: ChannelMemberRole = "member",
+    ) => {
+      const existing = await db
+        .select()
+        .from(channelMembersTable)
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        );
+      if (existing.length > 0) {
+        const [updated] = await db
+          .update(channelMembersTable)
+          .set({ role })
+          .where(eq(channelMembersTable.id, existing[0]!.id))
+          .returning();
+        return updated!;
+      }
+      const [m] = await db
+        .insert(channelMembersTable)
+        .values({ channelId, userId, role })
+        .returning();
+      return m!;
+    },
+    removeChannelMember: async (channelId: number, userId: number) => {
+      await db
+        .delete(channelMembersTable)
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        );
+    },
+    countChannelOwners: async (channelId: number) => {
+      const [r] = await db
+        .select({ n: count() })
+        .from(channelMembersTable)
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.role, "owner"),
+          ),
+        );
+      return Number(r?.n ?? 0);
+    },
     listMessagesByChannel: async (channelId: number, limit = 100): Promise<MessageWithSender[]> => {
       const rows = await db
         .select({

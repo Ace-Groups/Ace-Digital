@@ -88,6 +88,30 @@ export const GetMyProfileResponse = zod.object({
 
 
 /**
+ * @summary Update own profile (avatar, etc.)
+ */
+export const UpdateMyProfileBody = zod.object({
+  "avatarUrl": zod.string().nullish()
+})
+
+export const UpdateMyProfileResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "baseSalary": zod.number().nullish(),
+  "bonus": zod.number().nullish(),
+  "payrollStatus": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
  * @summary Register user (super_admin only after first)
  */
 export const RegisterBody = zod.object({
@@ -914,12 +938,130 @@ export const GenerateReportBody = zod.object({
 export const ListChannelsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "description": zod.string().nullish(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "type": zod.string(),
-  "unreadCount": zod.number().optional()
+  "visibility": zod.string().optional(),
+  "archived": zod.boolean().optional(),
+  "memberCount": zod.number().optional(),
+  "myRole": zod.string().nullish(),
+  "unreadCount": zod.number().optional(),
+  "createdAt": zod.string().optional()
 })
 export const ListChannelsResponse = zod.array(ListChannelsResponseItem)
+
+
+/**
+ * @summary Create a channel
+ */
+export const CreateChannelBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "type": zod.enum(['TEAM', 'ANNOUNCEMENT']).optional(),
+  "teamId": zod.number().optional(),
+  "memberIds": zod.array(zod.number()).optional()
+})
+
+
+/**
+ * @summary Get channel details
+ */
+export const GetChannelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetChannelResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "type": zod.string(),
+  "visibility": zod.string().optional(),
+  "archived": zod.boolean().optional(),
+  "memberCount": zod.number().optional(),
+  "myRole": zod.string().nullish(),
+  "unreadCount": zod.number().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Update channel (owners / admins)
+ */
+export const UpdateChannelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateChannelBody = zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().nullish(),
+  "archived": zod.boolean().optional()
+})
+
+export const UpdateChannelResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "type": zod.string(),
+  "visibility": zod.string().optional(),
+  "archived": zod.boolean().optional(),
+  "memberCount": zod.number().optional(),
+  "myRole": zod.string().nullish(),
+  "unreadCount": zod.number().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete channel (super admin)
+ */
+export const DeleteChannelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List channel members
+ */
+export const ListChannelMembersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListChannelMembersResponseItem = zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string().optional(),
+  "avatarUrl": zod.string().nullish(),
+  "role": zod.string(),
+  "joinedAt": zod.string().optional()
+})
+export const ListChannelMembersResponse = zod.array(ListChannelMembersResponseItem)
+
+
+/**
+ * @summary Add member to channel
+ */
+export const AddChannelMemberParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddChannelMemberBody = zod.object({
+  "userId": zod.number(),
+  "role": zod.enum(['owner', 'member', 'viewer']).optional()
+})
+
+
+/**
+ * @summary Remove member from channel
+ */
+export const RemoveChannelMemberParams = zod.object({
+  "id": zod.coerce.number(),
+  "userId": zod.coerce.number()
+})
 
 
 /**

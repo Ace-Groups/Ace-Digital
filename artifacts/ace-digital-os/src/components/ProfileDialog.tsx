@@ -1,40 +1,23 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { getInitials } from "@/lib/utils";
+import { useUpdateMyProfile } from "@workspace/api-client-react";
 import {
-  Camera, User, Code2, Palette, TrendingUp, DollarSign,
-  Settings, Users, Smile, Upload, Check,
+  Camera, Upload, Check, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-const PRESET_AVATARS = [
-  { id: "user", icon: User, label: "Default", color: "bg-slate-500" },
-  { id: "code", icon: Code2, label: "Engineer", color: "bg-blue-600" },
-  { id: "design", icon: Palette, label: "Designer", color: "bg-purple-600" },
-  { id: "sales", icon: TrendingUp, label: "Sales", color: "bg-amber-600" },
-  { id: "finance", icon: DollarSign, label: "Finance", color: "bg-emerald-600" },
-  { id: "hr", icon: Users, label: "HR", color: "bg-pink-600" },
-  { id: "ops", icon: Settings, label: "Ops", color: "bg-orange-600" },
-  { id: "mgmt", icon: Smile, label: "Mgmt", color: "bg-primary" },
-];
-
-const AVATAR_KEY = "ace_avatar";
-const PRESET_KEY = "ace_avatar_preset";
-
-export function getStoredAvatar(): { type: "image" | "preset" | null; value: string | null } {
-  const image = localStorage.getItem(AVATAR_KEY);
-  if (image) return { type: "image", value: image };
-  const preset = localStorage.getItem(PRESET_KEY);
-  if (preset) return { type: "preset", value: preset };
-  return { type: null, value: null };
-}
+import {
+  PRESET_AVATARS,
+  encodeAvatarUrl,
+  parseAvatarUrl,
+  resizeImageFile,
+} from "@/lib/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -42,16 +25,23 @@ interface ProfileDialogProps {
 }
 
 export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
-  const { user, logout } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [avatarData, setAvatarData] = useState<string | null>(localStorage.getItem(AVATAR_KEY));
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(localStorage.getItem(PRESET_KEY));
+  const [avatarData, setAvatarData] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const updateProfile = useUpdateMyProfile();
 
-  const initials = getInitials(user?.fullName ?? "?");
+  useEffect(() => {
+    if (!open) return;
+    const parsed = parseAvatarUrl(user?.avatarUrl);
+    setAvatarData(parsed.type === "image" ? parsed.value : null);
+    setSelectedPreset(parsed.type === "preset" ? parsed.value : null);
+    setSaved(false);
+  }, [open, user?.avatarUrl]);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -62,13 +52,17 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
       });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setAvatarData(result);
+    try {
+      const resized = await resizeImageFile(file);
+      setAvatarData(resized);
       setSelectedPreset(null);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      toast({
+        title: "Upload failed",
+        description: "Could not process that image. Try another file.",
+        variant: "destructive",
+      });
+    }
   }
 
   function handlePresetSelect(id: string) {
@@ -76,29 +70,28 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
     setAvatarData(null);
   }
 
-  function handleSave() {
-    if (avatarData) {
-      localStorage.setItem(AVATAR_KEY, avatarData);
-      localStorage.removeItem(PRESET_KEY);
-    } else if (selectedPreset) {
-      localStorage.setItem(PRESET_KEY, selectedPreset);
-      localStorage.removeItem(AVATAR_KEY);
-    } else {
-      localStorage.removeItem(AVATAR_KEY);
-      localStorage.removeItem(PRESET_KEY);
+  async function handleSave() {
+    const avatarUrl = encodeAvatarUrl(avatarData, selectedPreset);
+    try {
+      await updateProfile.mutateAsync({ data: { avatarUrl } });
+      await refreshUser();
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 800);
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "Could not save your profile photo. Please try again.",
+        variant: "destructive",
+      });
     }
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 800);
   }
 
   function handleRemove() {
     setAvatarData(null);
     setSelectedPreset(null);
-    localStorage.removeItem(AVATAR_KEY);
-    localStorage.removeItem(PRESET_KEY);
   }
 
-  const presetInfo = PRESET_AVATARS.find((p) => p.id === selectedPreset);
+  const previewUrl = encodeAvatarUrl(avatarData, selectedPreset);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -108,24 +101,17 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Current avatar preview */}
           <div className="flex flex-col items-center gap-3 rounded-xl bg-muted/50 py-4">
             <div className="relative group">
-              {avatarData ? (
-                <Avatar className="h-20 w-20 ring-4 ring-[#5483B3]/30">
-                  <AvatarImage src={avatarData} alt={user?.fullName} className="object-cover" />
-                  <AvatarFallback className="bg-primary text-white text-2xl">{initials}</AvatarFallback>
-                </Avatar>
-              ) : selectedPreset && presetInfo ? (
-                <div className={`h-20 w-20 rounded-full ${presetInfo.color} flex items-center justify-center ring-4 ring-[#5483B3]/30`}>
-                  <presetInfo.icon size={36} className="text-white" />
-                </div>
-              ) : (
-                <Avatar className="h-20 w-20 ring-4 ring-[#5483B3]/30">
-                  <AvatarFallback className="bg-primary text-white text-2xl">{initials}</AvatarFallback>
-                </Avatar>
-              )}
+              <UserAvatar
+                avatarUrl={previewUrl}
+                fullName={user?.fullName}
+                className="h-20 w-20 ring-4 ring-[#5483B3]/30"
+                fallbackClassName="bg-primary text-white text-2xl"
+                iconSize={36}
+              />
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
               >
@@ -141,7 +127,6 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
             </div>
           </div>
 
-          {/* Upload section */}
           <div>
             <p className="mb-2 text-sm font-medium text-foreground">Upload Photo</p>
             <div className="flex items-center gap-2">
@@ -169,7 +154,6 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
             <p className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF up to 5MB</p>
           </div>
 
-          {/* Preset icons */}
           <div>
             <p className="mb-2 text-sm font-medium text-foreground">Or choose an icon</p>
             <div className="grid grid-cols-4 gap-2">
@@ -179,6 +163,7 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
                 return (
                   <button
                     key={preset.id}
+                    type="button"
                     onClick={() => handlePresetSelect(preset.id)}
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all",
@@ -197,7 +182,6 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
             </div>
           </div>
 
-          {/* Info row */}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-muted/50 p-3">
               <p className="text-xs text-muted-foreground mb-0.5">Team</p>
@@ -209,13 +193,19 @@ export function ProfileDialog({ open, onClose }: ProfileDialogProps) {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2 pt-1">
             <Button
               onClick={handleSave}
+              disabled={updateProfile.isPending}
               className="flex-1 gap-2"
             >
-              {saved ? <><Check size={16} /> Saved!</> : "Save Profile"}
+              {updateProfile.isPending ? (
+                <><Loader2 size={16} className="animate-spin" /> Saving…</>
+              ) : saved ? (
+                <><Check size={16} /> Saved!</>
+              ) : (
+                "Save Profile"
+              )}
             </Button>
             <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel

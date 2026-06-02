@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
+
 interface AuthUser {
   id: number;
   email: string;
@@ -20,6 +22,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -27,6 +30,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(getAuthToken());
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setAuthTokenGetter(() => getAuthToken());
@@ -83,6 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   }, [logoutMutation]);
 
+  const refreshUser = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["getMe"] });
+  }, [queryClient]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -90,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: !!token && isLoading,
         login,
         logout,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >

@@ -7,10 +7,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, getInitials } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ProfileDialog, getStoredAvatar } from "@/components/ProfileDialog";
+import { ProfileDialog } from "@/components/ProfileDialog";
+import { UserAvatar } from "@/components/UserAvatar";
 import aceLogo from "@/assets/ace-logo.png";
 
 const NAV_ICONS = {
@@ -31,10 +31,7 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarKey, setAvatarKey] = useState(0);
 
-  const initials = getInitials(user?.fullName ?? "?");
-  const storedAvatar = getStoredAvatar();
   const allowedRoutes = new Set(getNavRoutesForRole(user?.role ?? ""));
   const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
     ...n,
@@ -44,7 +41,6 @@ export function Sidebar() {
 
   function handleProfileClose() {
     setProfileOpen(false);
-    setAvatarKey((k) => k + 1);
   }
 
   return (
@@ -145,14 +141,13 @@ export function Sidebar() {
                     className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-sidebar-accent"
                     aria-label="Profile"
                   >
-                    <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
-                      {storedAvatar.type === "image" && storedAvatar.value ? (
-                        <AvatarImage src={storedAvatar.value} key={avatarKey} className="object-cover" />
-                      ) : null}
-                      <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      fullName={user?.fullName}
+                      className="h-8 w-8 ring-2 ring-sidebar-primary/50"
+                      fallbackClassName="bg-sidebar-primary text-xs text-sidebar-primary-foreground"
+                      iconSize={16}
+                    />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Profile</TooltipContent>
@@ -180,14 +175,13 @@ export function Sidebar() {
                 onClick={() => setProfileOpen(true)}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
               >
-                <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-primary/50">
-                  {storedAvatar.type === "image" && storedAvatar.value ? (
-                    <AvatarImage src={storedAvatar.value} key={avatarKey} className="object-cover" />
-                  ) : null}
-                  <AvatarFallback className="bg-sidebar-primary text-xs text-sidebar-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  avatarUrl={user?.avatarUrl}
+                  fullName={user?.fullName}
+                  className="h-8 w-8 ring-2 ring-sidebar-primary/50"
+                  fallbackClassName="bg-sidebar-primary text-xs text-sidebar-primary-foreground"
+                  iconSize={16}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium leading-tight text-sidebar-foreground">
                     {user?.fullName}

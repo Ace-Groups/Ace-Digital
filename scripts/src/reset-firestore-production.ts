@@ -21,6 +21,7 @@ const ROLE = "super_admin";
 
 const COLLECTIONS = [
   "messages",
+  "channel_members",
   "channels",
   "activity_logs",
   "notifications",

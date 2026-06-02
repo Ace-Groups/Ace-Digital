@@ -26,6 +26,10 @@ import type {
   SalaryRow,
   UpdateProfileInput,
   UpdateUserInput,
+  CreateChannelInput,
+  UpdateChannelInput,
+  ChannelMemberWithUser,
+  ChannelMemberRole,
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
 import {
@@ -47,6 +51,7 @@ const COL = {
   payrollRuns: "payroll_runs",
   reports: "reports",
   channels: "channels",
+  channelMembers: "channel_members",
   messages: "messages",
   activityLogs: "activity_logs",
   notifications: "notifications",
@@ -456,7 +461,138 @@ export function createFirestoreStore() {
 
     async listChannels(): Promise<Channel[]> {
       const items = await allDocs(COL.channels, mapChannel);
-      return items.sort((a, b) => a.name.localeCompare(b.name));
+      return items
+        .filter((c) => !c.archived)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    async findChannelById(id: number): Promise<Channel | null> {
+      const snap = await db.collection(COL.channels).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapChannel(snap.data()!, snap.id);
+    },
+
+    async createChannel(data: CreateChannelInput): Promise<Channel> {
+      const id = await nextId(COL.channels);
+      const now = new Date().toISOString();
+      const row = {
+        name: data.name,
+        description: data.description ?? null,
+        teamId: data.teamId ?? null,
+        type: data.type ?? "TEAM",
+        visibility: data.visibility ?? "PRIVATE",
+        archived: false,
+        createdById: data.createdById,
+        createdAt: now,
+      };
+      await db.collection(COL.channels).doc(docId(id)).set(row);
+      return mapChannel(row, String(id));
+    },
+
+    async updateChannel(id: number, patch: UpdateChannelInput): Promise<Channel | null> {
+      const ref = db.collection(COL.channels).doc(docId(id));
+      const snap = await ref.get();
+      if (!snap.exists) return null;
+      await ref.set(patch, { merge: true });
+      const updated = await ref.get();
+      return mapChannel(updated.data()!, updated.id);
+    },
+
+    async deleteChannel(id: number): Promise<void> {
+      const members = await db.collection(COL.channelMembers).where("channelId", "==", id).get();
+      const batch = db.batch();
+      members.docs.forEach((d) => batch.delete(d.ref));
+      const msgs = await db.collection(COL.messages).where("channelId", "==", id).get();
+      msgs.docs.forEach((d) => batch.delete(d.ref));
+      batch.delete(db.collection(COL.channels).doc(docId(id)));
+      await batch.commit();
+    },
+
+    async listChannelIdsForUser(userId: number): Promise<number[]> {
+      const snap = await db.collection(COL.channelMembers).where("userId", "==", userId).get();
+      return snap.docs.map((d) => Number(d.data().channelId));
+    },
+
+    async listChannelsForUser(userId: number, includeArchived = false): Promise<Channel[]> {
+      const ids = await this.listChannelIdsForUser(userId);
+      if (ids.length === 0) return [];
+      const channels = await Promise.all(ids.map((id) => this.findChannelById(id)));
+      return channels
+        .filter((c): c is Channel => c != null && (includeArchived || !c.archived))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    async findChannelMembership(channelId: number, userId: number) {
+      const snap = await db
+        .collection(COL.channelMembers)
+        .where("channelId", "==", channelId)
+        .where("userId", "==", userId)
+        .limit(1)
+        .get();
+      if (snap.empty) return null;
+      const doc = snap.docs[0]!;
+      return mapChannelMember(doc.data(), doc.id);
+    },
+
+    async listChannelMembers(channelId: number): Promise<ChannelMemberWithUser[]> {
+      const snap = await db.collection(COL.channelMembers).where("channelId", "==", channelId).get();
+      const users = await this.listUsers();
+      const userMap = new Map(users.map((u) => [u.id, u]));
+      return snap.docs
+        .map((d) => {
+          const m = mapChannelMember(d.data(), d.id);
+          const u = userMap.get(m.userId);
+          return {
+            ...m,
+            fullName: u?.fullName ?? "Unknown",
+            avatarUrl: u?.avatarUrl ?? null,
+            email: u?.email ?? "",
+          };
+        })
+        .sort((a, b) => a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName));
+    },
+
+    async addChannelMember(
+      channelId: number,
+      userId: number,
+      role: ChannelMemberRole = "member",
+    ) {
+      const existing = await this.findChannelMembership(channelId, userId);
+      if (existing) {
+        const ref = db.collection(COL.channelMembers).doc(docId(existing.id));
+        await ref.set({ role }, { merge: true });
+        const updated = await ref.get();
+        return mapChannelMember(updated.data()!, updated.id);
+      }
+      const id = await nextId(COL.channelMembers);
+      const row = {
+        channelId,
+        userId,
+        role,
+        joinedAt: new Date().toISOString(),
+      };
+      await db.collection(COL.channelMembers).doc(docId(id)).set(row);
+      return mapChannelMember(row, String(id));
+    },
+
+    async removeChannelMember(channelId: number, userId: number): Promise<void> {
+      const snap = await db
+        .collection(COL.channelMembers)
+        .where("channelId", "==", channelId)
+        .where("userId", "==", userId)
+        .get();
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    },
+
+    async countChannelOwners(channelId: number): Promise<number> {
+      const snap = await db
+        .collection(COL.channelMembers)
+        .where("channelId", "==", channelId)
+        .where("role", "==", "owner")
+        .get();
+      return snap.size;
     },
 
     async listMessagesByChannel(channelId: number, limit = 100): Promise<MessageWithSender[]> {
@@ -745,9 +881,23 @@ function mapChannel(data: FirebaseFirestore.DocumentData, id: string): Channel {
   return {
     id: Number(id),
     name: data.name as string,
+    description: (data.description as string) ?? null,
     teamId: (data.teamId as number) ?? null,
     type: data.type as string,
+    visibility: (data.visibility as string) ?? "PRIVATE",
+    archived: Boolean(data.archived),
+    createdById: (data.createdById as number) ?? null,
     createdAt: toDate(data.createdAt),
+  };
+}
+
+function mapChannelMember(data: FirebaseFirestore.DocumentData, id: string) {
+  return {
+    id: Number(id),
+    channelId: data.channelId as number,
+    userId: data.userId as number,
+    role: data.role as string,
+    joinedAt: toDate(data.joinedAt),
   };
 }
 

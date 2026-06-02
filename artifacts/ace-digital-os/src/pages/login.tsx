@@ -3,13 +3,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
-import aceLogo from "@/assets/ace-logo.png";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  Shield,
+  ShieldCheck,
+} from "lucide-react";
+import { AceLogoParticles } from "@/components/AceLogoParticles";
+import { LoginBackground } from "@/components/LoginBackground";
+import { cn } from "@/lib/utils";
+
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
@@ -17,18 +28,34 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const PRODUCT_HIGHLIGHTS = [
-  { label: "Projects", value: "Kanban" },
-  { label: "Teams", value: "Org-wide" },
-  { label: "Clients", value: "CRM" },
-  { label: "Finance", value: "Payroll" },
-] as const;
+function LoginInput({
+  className,
+  icon: Icon,
+  ...props
+}: React.ComponentProps<typeof Input> & { icon: typeof Mail }) {
+  return (
+    <div className="relative">
+      <Icon
+        className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/40"
+        aria-hidden
+      />
+      <Input
+        className={cn(
+          "h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md transition-all focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm",
+          className
+        )}
+        {...props}
+      />
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -52,126 +79,157 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh bg-background">
-      <div className="relative hidden w-[42%] min-w-[320px] flex-col justify-between overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex xl:p-12">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 100% 0%, hsl(var(--ace-sky) / 0.25), transparent 55%)",
-          }}
-          aria-hidden
-        />
-        <div className="relative">
-          <div className="mb-14 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sidebar-accent/60">
-              <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
+    <div className="relative flex min-h-dvh overflow-hidden">
+      <LoginBackground />
+
+      <div className="relative z-10 flex w-full flex-col lg:flex-row">
+        {/* Brand — wide particle hero (desktop) */}
+        <div className="hidden flex-1 flex-col items-center justify-center px-6 lg:flex lg:py-0 lg:pl-12 lg:pr-6 xl:pl-16">
+          <div className="flex w-full max-w-2xl flex-col items-center justify-center text-center">
+            <div className="relative flex w-full items-center justify-center">
+              <div
+                className="pointer-events-none absolute aspect-[4/5] h-[min(500px,58vh)] w-[min(520px,85vw)] rounded-[40%] bg-[hsl(203_90%_70%/0.1)] blur-[90px]"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute aspect-[4/5] h-[min(420px,50vh)] w-[min(440px,72vw)] rounded-[40%] bg-[hsl(211_45%_50%/0.18)] blur-[70px]"
+                aria-hidden
+              />
+              <AceLogoParticles
+                className="relative h-[min(460px,54vh)] w-full max-w-[600px] lg:max-w-[680px]"
+                size={500}
+                widthScale={1.38}
+                particleSize={2.75}
+                sampleStep={2}
+                quality="high"
+              />
             </div>
-            <span className="text-xl font-semibold tracking-tight">Ace Digital</span>
           </div>
-          <h1 className="text-4xl font-semibold leading-[1.15] tracking-tight text-balance xl:text-[2.75rem]">
-            Your company&apos;s
-            <br />
-            operating system
-          </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-sidebar-foreground/70">
-            Manage projects, teams, clients, and finances in one unified platform built
-            for Ace Digital.
-          </p>
         </div>
-        <div className="relative grid grid-cols-2 gap-3">
-          {PRODUCT_HIGHLIGHTS.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-xl border border-sidebar-border/80 bg-sidebar-accent/40 p-4 backdrop-blur-sm"
-            >
-              <p className="text-2xl font-semibold tabular-nums text-sidebar-foreground">
-                {stat.value}
+
+        {/* Sign-in — frosted glass card */}
+        <div className="flex min-h-dvh flex-1 shrink-0 items-center justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] lg:min-h-0 lg:w-[min(100%,480px)] lg:p-10 lg:pl-4 xl:w-[520px]">
+          <div className="w-full max-w-[420px] rounded-2xl border border-white/[0.1] bg-[hsl(218_40%_12%/0.55)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl sm:p-10">
+            <div className="mb-8 flex justify-center lg:hidden">
+              <AceLogoParticles
+                className="h-[150px] w-[240px]"
+                size={190}
+                widthScale={1.35}
+                particleSize={2.4}
+                sampleStep={3}
+                interactive={false}
+                quality="balanced"
+              />
+            </div>
+
+            <div className="mb-8">
+              <div className="mb-5 flex size-12 items-center justify-center rounded-xl border border-white/15 bg-gradient-to-br from-[hsl(211_38%_52%/0.35)] to-[hsl(211_38%_52%/0.1)] shadow-[0_0_32px_hsl(211_38%_52%/0.25)]">
+                <Shield className="size-5 text-[hsl(203_100%_87%)]" strokeWidth={1.75} aria-hidden />
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight text-white">
+                Welcome back <span aria-hidden>👋</span>
+              </h2>
+              <p className="mt-1.5 text-sm text-white/50">
+                Sign in to your account
               </p>
-              <p className="mt-1 text-sm text-sidebar-foreground/55">{stat.label}</p>
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div className="flex flex-1 flex-col justify-center p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:p-10">
-        <div className="w-full max-w-[400px] sm:mx-auto">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <img src={aceLogo} alt="Ace Digital" className="h-10 w-10 bg-transparent object-contain" />
-            <span className="text-xl font-semibold tracking-tight text-foreground">
-              Ace Digital OS
-            </span>
-          </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" autoComplete="off">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white/60">Email</FormLabel>
+                      <FormControl>
+                        <LoginInput
+                          data-testid="input-email"
+                          icon={Mail}
+                          type="email"
+                          placeholder="you@acedigital.com"
+                          autoComplete="username"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-300" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-white/60">Password</FormLabel>
+                        <a
+                          href="#"
+                          className="text-xs font-medium text-[hsl(203_100%_87%/0.85)] hover:text-white"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          Forgot password?
+                        </a>
+                      </div>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock
+                            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/40"
+                            aria-hidden
+                          />
+                          <Input
+                            data-testid="input-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            className="h-12 rounded-xl border-white/10 bg-white/[0.06] pr-11 pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
+                            onClick={() => setShowPassword((v) => !v)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-4" aria-hidden />
+                            ) : (
+                              <Eye className="size-4" aria-hidden />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-red-300" />
+                    </FormItem>
+                  )}
+                />
+                <button
+                  data-testid="button-submit"
+                  type="submit"
+                  disabled={loading}
+                  className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[hsl(211_42%_46%)] via-[hsl(211_45%_54%)] to-[hsl(203_70%_58%)] text-base font-semibold text-white shadow-[0_4px_28px_hsl(211_38%_52%/0.45)] transition-all hover:shadow-[0_8px_36px_hsl(211_38%_52%/0.55)] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:h-11 sm:text-sm"
+                >
+                  <span
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-hidden
+                  />
+                  {loading ? (
+                    <Loader2 size={18} className="animate-spin" aria-hidden />
+                  ) : (
+                    <>
+                      Sign in
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                    </>
+                  )}
+                </button>
+              </form>
+            </Form>
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Welcome back
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sign in to your account to continue
+            <p className="mt-8 flex items-center gap-2 text-xs text-white/40">
+              <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+              Secure access. Authorized personnel only.
             </p>
           </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        data-testid="input-email"
-                        type="email"
-                        placeholder="you@acedigital.com"
-                        autoComplete="off"
-                        name="ace-login-email"
-                        className="h-11 text-base sm:h-10 sm:text-sm"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        data-testid="input-password"
-                        type="password"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        className="h-11 text-base sm:h-10 sm:text-sm"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                data-testid="button-submit"
-                type="submit"
-                className="h-12 w-full text-base font-medium sm:h-10 sm:text-sm"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 size={16} className="mr-2 animate-spin" aria-hidden />
-                ) : null}
-                Sign in
-              </Button>
-            </form>
-          </Form>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Authorized Ace Digital personnel only
-          </p>
         </div>
       </div>
     </div>

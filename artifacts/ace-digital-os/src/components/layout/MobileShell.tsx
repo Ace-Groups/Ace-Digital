@@ -18,8 +18,7 @@ import {
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListNotifications } from "@workspace/api-client-react";
-import { cn, getInitials } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getMobileNavItems } from "@/lib/mobile-nav";
@@ -30,7 +29,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ProfileDialog, getStoredAvatar } from "@/components/ProfileDialog";
+import { ProfileDialog } from "@/components/ProfileDialog";
+import { UserAvatar } from "@/components/UserAvatar";
 import aceLogo from "@/assets/ace-logo.png";
 
 const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
@@ -58,10 +58,8 @@ export function MobileShell({ children, title }: MobileShellProps) {
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarKey, setAvatarKey] = useState(0);
 
   const { primary, overflow } = getMobileNavItems(user?.role ?? "");
-  const storedAvatar = getStoredAvatar();
 
   function isActive(href: string) {
     if (href === "/") return location === "/";
@@ -97,16 +95,13 @@ export function MobileShell({ children, title }: MobileShellProps) {
           className="flex h-11 w-11 items-center justify-center rounded-xl active:bg-muted"
           aria-label="Profile"
         >
-          <Avatar className="h-8 w-8">
-            {storedAvatar.type === "image" && storedAvatar.value ? (
-              <AvatarImage src={storedAvatar.value} key={avatarKey} className="object-cover" />
-            ) : user?.avatarUrl ? (
-              <AvatarImage src={user.avatarUrl} key={avatarKey} className="object-cover" />
-            ) : null}
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-              {getInitials(user?.fullName ?? "?")}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            avatarUrl={user?.avatarUrl}
+            fullName={user?.fullName}
+            className="h-8 w-8"
+            fallbackClassName="bg-primary text-xs text-primary-foreground"
+            iconSize={16}
+          />
         </button>
       </header>
 
@@ -198,10 +193,7 @@ export function MobileShell({ children, title }: MobileShellProps) {
 
       <ProfileDialog
         open={profileOpen}
-        onClose={() => {
-          setProfileOpen(false);
-          setAvatarKey((k) => k + 1);
-        }}
+        onClose={() => setProfileOpen(false)}
       />
     </div>
   );

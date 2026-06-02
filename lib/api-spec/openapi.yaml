@@ -124,6 +124,27 @@ paths:
                 $ref: "#/components/schemas/Employee"
         "401":
           description: Unauthorized
+    patch:
+      operationId: updateMyProfile
+      tags: [employees]
+      summary: Update own profile (avatar, etc.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
 
   /v1/auth/register:
     post:
@@ -906,6 +927,166 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Channel"
+    post:
+      operationId: createChannel
+      tags: [channels]
+      summary: Create a channel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelInput"
+      responses:
+        "201":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+
+  /v1/channels/{id}:
+    get:
+      operationId: getChannel
+      tags: [channels]
+      summary: Get channel details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    patch:
+      operationId: updateChannel
+      tags: [channels]
+      summary: Update channel (owners / admins)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelUpdate"
+      responses:
+        "200":
+          description: Updated channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteChannel
+      tags: [channels]
+      summary: Delete channel (super admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /v1/channels/{id}/members:
+    get:
+      operationId: listChannelMembers
+      tags: [channels]
+      summary: List channel members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelMember"
+    post:
+      operationId: addChannelMember
+      tags: [channels]
+      summary: Add member to channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelMemberInput"
+      responses:
+        "201":
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelMember"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+
+  /v1/channels/{id}/members/{userId}:
+    delete:
+      operationId: removeChannelMember
+      tags: [channels]
+      summary: Remove member from channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+        "400":
+          description: Cannot remove last owner
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
 
   /v1/channels/{id}/messages:
     get:
@@ -1380,6 +1561,12 @@ components:
         status:
           type: string
 
+    MyProfileUpdate:
+      type: object
+      properties:
+        avatarUrl:
+          type: ["string", "null"]
+
     EmployeeUpdate:
       type: object
       properties:
@@ -1665,14 +1852,81 @@ components:
           type: integer
         name:
           type: string
+        description:
+          type: ["string", "null"]
         teamId:
           type: ["integer", "null"]
         teamName:
           type: ["string", "null"]
         type:
           type: string
+        visibility:
+          type: string
+        archived:
+          type: boolean
+        memberCount:
+          type: integer
+        myRole:
+          type: ["string", "null"]
         unreadCount:
           type: integer
+        createdAt:
+          type: string
+
+    ChannelInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [TEAM, ANNOUNCEMENT]
+        teamId:
+          type: integer
+        memberIds:
+          type: array
+          items:
+            type: integer
+
+    ChannelUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+
+    ChannelMember:
+      type: object
+      required: [userId, fullName, role]
+      properties:
+        userId:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+        joinedAt:
+          type: string
+
+    ChannelMemberInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+        role:
+          type: string
+          enum: [owner, member, viewer]
 
     Message:
       type: object

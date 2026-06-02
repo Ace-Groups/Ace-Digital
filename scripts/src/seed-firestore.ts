@@ -83,8 +83,52 @@ async function seed() {
     updatedAt: now,
   });
 
-  await setDoc("channels", 1, { name: "general", type: "ANNOUNCEMENT", teamId: null, createdAt: now });
-  await setDoc("channels", 2, { name: "engineering", type: "TEAM", teamId: 1, createdAt: now });
+  const channelDefs = [
+    { id: 1, name: "general", type: "ANNOUNCEMENT", teamId: null, createdById: 1 },
+    { id: 2, name: "engineering", type: "TEAM", teamId: 1, createdById: 3 },
+    { id: 3, name: "design", type: "TEAM", teamId: 2, createdById: 4 },
+    { id: 4, name: "sales", type: "TEAM", teamId: 3, createdById: 5 },
+    { id: 5, name: "finance", type: "TEAM", teamId: 4, createdById: 6 },
+    { id: 6, name: "hr", type: "TEAM", teamId: 6, createdById: 10 },
+    { id: 7, name: "operations", type: "TEAM", teamId: 5, createdById: 11 },
+  ];
+  for (const ch of channelDefs) {
+    await setDoc("channels", ch.id, {
+      name: ch.name,
+      type: ch.type,
+      teamId: ch.teamId,
+      description: null,
+      visibility: "PRIVATE",
+      archived: false,
+      createdById: ch.createdById,
+      createdAt: now,
+    });
+  }
+
+  let memberId = 1;
+  for (const ch of channelDefs) {
+    if (ch.type === "ANNOUNCEMENT") {
+      for (const u of users) {
+        const role = u.role === "super_admin" || u.role === "management" ? "owner" : "viewer";
+        await setDoc("channel_members", memberId++, {
+          channelId: ch.id,
+          userId: u.id,
+          role,
+          joinedAt: now,
+        });
+      }
+    } else if (ch.teamId != null) {
+      for (const u of users.filter((x) => x.teamId === ch.teamId)) {
+        const role = u.role === "team_lead" ? "owner" : "member";
+        await setDoc("channel_members", memberId++, {
+          channelId: ch.id,
+          userId: u.id,
+          role,
+          joinedAt: now,
+        });
+      }
+    }
+  }
 
   await setDoc("messages", 1, {
     channelId: 1,
@@ -129,6 +173,7 @@ async function seed() {
     payroll_runs: 3,
     reports: 5,
     channels: 7,
+    channel_members: 50,
     messages: 10,
     activity_logs: 8,
     notifications: 0,

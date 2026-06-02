@@ -9,6 +9,7 @@ import type {
   ActivityLog,
   Notification,
   Channel,
+  ChannelMember,
   Message,
   Report,
   Expense,
@@ -26,6 +27,7 @@ export type {
   ActivityLog,
   Notification,
   Channel,
+  ChannelMember,
   Message,
   Report,
   Expense,
@@ -85,3 +87,26 @@ export type UpdateProfileInput = Partial<{
   bonus: string;
   payrollStatus: string;
 }>;
+
+export type ChannelMemberRole = "owner" | "member" | "viewer";
+
+export type CreateChannelInput = {
+  name: string;
+  description?: string | null;
+  teamId?: number | null;
+  type?: string;
+  visibility?: string;
+  createdById: number;
+};
+
+export type UpdateChannelInput = Partial<{
+  name: string;
+  description: string | null;
+  archived: boolean;
+}>;
+
+export type ChannelMemberWithUser = ChannelMember & {
+  fullName: string;
+  avatarUrl: string | null;
+  email: string;
+};

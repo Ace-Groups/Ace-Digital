@@ -177,22 +177,43 @@ async function seed() {
   console.log(`  ✓ payroll runs seeded`);
 
   // Channels
+  const adminId = um["admin@acedigital.com"];
   const channelRows = await db
     .insert(schema.channelsTable)
     .values([
-      { name: "general", type: "ANNOUNCEMENT" },
-      { name: "engineering", teamId: tm["Engineering"], type: "TEAM" },
-      { name: "design", teamId: tm["Design"], type: "TEAM" },
-      { name: "sales", teamId: tm["Sales"], type: "TEAM" },
-      { name: "finance", teamId: tm["Finance"], type: "TEAM" },
-      { name: "hr", teamId: tm["HR"], type: "TEAM" },
-      { name: "operations", teamId: tm["Operations"], type: "TEAM" },
+      { name: "general", type: "ANNOUNCEMENT", createdById: adminId, visibility: "PRIVATE", archived: false },
+      { name: "engineering", teamId: tm["Engineering"], type: "TEAM", createdById: um["rahul.eng@acedigital.com"], visibility: "PRIVATE", archived: false },
+      { name: "design", teamId: tm["Design"], type: "TEAM", createdById: um["anita.design@acedigital.com"], visibility: "PRIVATE", archived: false },
+      { name: "sales", teamId: tm["Sales"], type: "TEAM", createdById: um["vikram.sales@acedigital.com"], visibility: "PRIVATE", archived: false },
+      { name: "finance", teamId: tm["Finance"], type: "TEAM", createdById: um["sunita.finance@acedigital.com"], visibility: "PRIVATE", archived: false },
+      { name: "hr", teamId: tm["HR"], type: "TEAM", createdById: um["kavya.hr@acedigital.com"], visibility: "PRIVATE", archived: false },
+      { name: "operations", teamId: tm["Operations"], type: "TEAM", createdById: um["sanjay.ops@acedigital.com"], visibility: "PRIVATE", archived: false },
     ])
     .onConflictDoNothing()
     .returning();
   console.log(`  ✓ ${channelRows.length} channels`);
 
   const channels = await db.select().from(schema.channelsTable);
+  const activeUsers = users.filter((u) => u.status === "active");
+  const memberRows: { channelId: number; userId: number; role: string }[] = [];
+  for (const ch of channels) {
+    if (ch.type === "ANNOUNCEMENT") {
+      for (const u of activeUsers) {
+        const role =
+          u.role === "super_admin" || u.role === "management" ? "owner" : "viewer";
+        memberRows.push({ channelId: ch.id, userId: u.id, role });
+      }
+    } else if (ch.teamId != null) {
+      for (const u of activeUsers.filter((x) => x.teamId === ch.teamId)) {
+        const role = u.role === "team_lead" ? "owner" : "member";
+        memberRows.push({ channelId: ch.id, userId: u.id, role });
+      }
+    }
+  }
+  if (memberRows.length > 0) {
+    await db.insert(schema.channelMembersTable).values(memberRows).onConflictDoNothing();
+    console.log(`  ✓ ${memberRows.length} channel memberships`);
+  }
   const cm: Record<string, number> = Object.fromEntries(channels.map((c) => [c.name, c.id]));
 
   // Messages

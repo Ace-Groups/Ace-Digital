@@ -100,6 +100,7 @@ async function main() {
     "payroll_runs",
     "reports",
     "channels",
+    "channel_members",
     "messages",
     "activity_logs",
     "notifications",
@@ -115,6 +116,10 @@ async function main() {
     name: "general",
     type: "ANNOUNCEMENT",
     teamId: null,
+    description: "Company-wide announcements",
+    visibility: "PRIVATE",
+    archived: false,
+    createdById: kavinId,
     createdAt: now,
   });
   await db.collection("channels").doc("2").set({
@@ -122,9 +127,25 @@ async function main() {
     name: "engineering",
     type: "TEAM",
     teamId: 1,
+    description: "Engineering team discussions",
+    visibility: "PRIVATE",
+    archived: false,
+    createdById: kavinId,
     createdAt: now,
   });
-  console.log("✅ Seeded default channels ('general', 'engineering')");
+  await db.collection("channel_members").doc("1").set({
+    channelId: 1,
+    userId: kavinId,
+    role: "owner",
+    joinedAt: now,
+  });
+  await db.collection("channel_members").doc("2").set({
+    channelId: 2,
+    userId: kavinId,
+    role: "owner",
+    joinedAt: now,
+  });
+  console.log("✅ Seeded default channels and memberships for admin");
 
   // 5. Ensure teams exist (recreate default teams if missing)
   const defaultTeams = [
@@ -154,6 +175,7 @@ async function main() {
     payroll_runs: 0,
     reports: 0,
     channels: 2,
+    channel_members: 2,
     messages: 0,
     activity_logs: 0,
     notifications: 0,

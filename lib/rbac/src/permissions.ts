@@ -29,6 +29,7 @@ export const PERMISSIONS = [
   "reports:write",
   "channels:read",
   "channels:post",
+  "channels:write",
   "channels:all",
   "activity:read",
   "activity:read_org",
@@ -61,6 +62,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "reports:write",
     "channels:read",
     "channels:post",
+    "channels:write",
     "channels:all",
     "activity:read",
     "activity:read_org",
@@ -112,6 +114,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "reports:read",
     "channels:read",
     "channels:post",
+    "channels:write",
     "activity:read",
   ],
   team_lead: [
@@ -126,6 +129,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "reports:read",
     "channels:read",
     "channels:post",
+    "channels:write",
     "activity:read",
   ],
   employee: [

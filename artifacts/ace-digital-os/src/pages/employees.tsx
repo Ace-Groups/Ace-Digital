@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -24,7 +24,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Mail, Briefcase, Search } from "lucide-react";
-import { formatCurrency, getInitials, statusColor, cn } from "@/lib/utils";
+import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -227,11 +227,13 @@ export default function EmployeesPage() {
           <Card key={emp.id} data-testid={`employee-card-${emp.id}`} className="hover:shadow-md transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
-                <Avatar className="h-11 w-11 shrink-0">
-                  <AvatarFallback className="bg-primary/15 text-primary font-semibold">
-                    {getInitials(emp.fullName)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  avatarUrl={emp.avatarUrl}
+                  fullName={emp.fullName}
+                  className="h-11 w-11 shrink-0"
+                  fallbackClassName="bg-primary/15 text-primary font-semibold"
+                  iconSize={20}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">{emp.fullName}</p>
                   {emp.jobTitle && <p className="text-xs text-muted-foreground mt-0.5">{emp.jobTitle}</p>}

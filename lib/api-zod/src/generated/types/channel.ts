@@ -10,9 +10,17 @@ export interface Channel {
   id: number;
   name: string;
   /** @nullable */
+  description?: string | null;
+  /** @nullable */
   teamId?: number | null;
   /** @nullable */
   teamName?: string | null;
   type: string;
+  visibility?: string;
+  archived?: boolean;
+  memberCount?: number;
+  /** @nullable */
+  myRole?: string | null;
   unreadCount?: number;
+  createdAt?: string;
 }

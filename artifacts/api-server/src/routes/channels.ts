@@ -1,22 +1,33 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
-import { hasPermission } from "@workspace/rbac";
+import {
+  canAccessChannel,
+  canManageChannel,
+  canPostInChannel,
+  hasPermission,
+} from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
 
 const router = Router();
 
-function canAccessChannel(
+async function getMembership(channelId: number, userId: number) {
+  return store.findChannelMembership(channelId, userId);
+}
+
+async function requireChannelAccess(
   ctx: ReturnType<typeof getAccessContext>,
-  channel: { type: string; teamId: number | null },
-): boolean {
-  if (hasPermission(ctx, "channels:all")) return true;
-  if (channel.type === "ANNOUNCEMENT") return true;
-  if (channel.type === "TEAM" && channel.teamId != null && channel.teamId === ctx.teamId) {
-    return true;
+  channelId: number,
+) {
+  const channel = await store.findChannelById(channelId);
+  if (!channel) return { error: "not_found" as const };
+  const membership = await getMembership(channelId, ctx.userId);
+  if (!canAccessChannel(ctx, channel, membership)) {
+    return { error: "forbidden" as const };
   }
-  return false;
+  return { channel, membership };
 }
 
 router.get(
@@ -25,22 +36,303 @@ router.get(
   requirePermission("channels:read"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
-    const allChannels = await store.listChannels();
-    const channels = allChannels.filter((c) => canAccessChannel(ctx, c));
+    const channels = hasPermission(ctx, "channels:all")
+      ? await store.listChannels()
+      : await store.listChannelsForUser(ctx.userId);
 
     const teams = await store.listTeams();
     const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
 
+    const result = await Promise.all(
+      channels.map(async (c) => {
+        const membership = await getMembership(c.id, ctx.userId);
+        const members = await store.listChannelMembers(c.id);
+        return {
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          teamId: c.teamId,
+          teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
+          type: c.type,
+          visibility: c.visibility,
+          archived: c.archived,
+          memberCount: members.length,
+          myRole: membership?.role ?? (hasPermission(ctx, "channels:all") ? "owner" : null),
+          unreadCount: 0,
+          createdAt: c.createdAt.toISOString(),
+        };
+      }),
+    );
+
+    res.json(result);
+  },
+);
+
+router.post(
+  "/v1/channels",
+  requireAuth,
+  requirePermission("channels:write"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const { name, description, type, teamId, memberIds } = req.body ?? {};
+    const normalized = normalizeChannelName(name ?? "");
+    if (!normalized) {
+      res.status(400).json({
+        error: "Invalid channel name (2–80 chars, lowercase letters, numbers, hyphens)",
+      });
+      return;
+    }
+
+    const channelType = type === "ANNOUNCEMENT" ? "ANNOUNCEMENT" : "TEAM";
+    const channel = await store.createChannel({
+      name: normalized,
+      description: description ?? null,
+      teamId: teamId ?? null,
+      type: channelType,
+      visibility: "PRIVATE",
+      createdById: ctx.userId,
+    });
+
+    await store.addChannelMember(channel.id, ctx.userId, "owner");
+
+    const ids = Array.isArray(memberIds)
+      ? [...new Set(memberIds.map((id: unknown) => Number(id)).filter((id) => id > 0))]
+      : [];
+    for (const userId of ids) {
+      if (userId === ctx.userId) continue;
+      const role = channelType === "ANNOUNCEMENT" ? "viewer" : "member";
+      await store.addChannelMember(channel.id, userId, role);
+    }
+
+    if (teamId) {
+      const users = await store.listUsers();
+      for (const u of users) {
+        if (u.teamId === teamId && u.status === "active" && u.id !== ctx.userId) {
+          if (!ids.includes(u.id)) {
+            await store.addChannelMember(channel.id, u.id, "member");
+          }
+        }
+      }
+    }
+
+    if (channelType === "ANNOUNCEMENT") {
+      const users = await store.listUsers();
+      for (const u of users) {
+        if (u.status !== "active") continue;
+        const existing = await getMembership(channel.id, u.id);
+        if (!existing) {
+          const role = u.id === ctx.userId ? "owner" : "viewer";
+          await store.addChannelMember(channel.id, u.id, role);
+        }
+      }
+    }
+
+    res.status(201).json(await channelToJson(channel, { myRole: "owner" }));
+  },
+);
+
+router.get(
+  "/v1/channels/:id",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const myRole =
+      access.membership?.role ??
+      (hasPermission(ctx, "channels:all") ? "owner" : null);
+    res.json(await channelToJson(access.channel, { myRole }));
+  },
+);
+
+router.patch(
+  "/v1/channels/:id",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!canManageChannel(ctx, access.membership)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const { name, description, archived } = req.body ?? {};
+    const patch: { name?: string; description?: string | null; archived?: boolean } = {};
+    if (name !== undefined) {
+      const normalized = normalizeChannelName(name);
+      if (!normalized) {
+        res.status(400).json({ error: "Invalid channel name" });
+        return;
+      }
+      patch.name = normalized;
+    }
+    if (description !== undefined) patch.description = description;
+    if (archived !== undefined) patch.archived = Boolean(archived);
+
+    const updated = await store.updateChannel(id, patch);
+    if (!updated) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
     res.json(
-      channels.map((c) => ({
-        id: c.id,
-        name: c.name,
-        teamId: c.teamId,
-        teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
-        type: c.type,
-        unreadCount: 0,
+      await channelToJson(updated, {
+        myRole: access.membership?.role ?? "owner",
+      }),
+    );
+  },
+);
+
+router.delete(
+  "/v1/channels/:id",
+  requireAuth,
+  requirePermission("channels:all"),
+  async (req, res): Promise<void> => {
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const channel = await store.findChannelById(id);
+    if (!channel) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    await store.deleteChannel(id);
+    res.status(204).send();
+  },
+);
+
+router.get(
+  "/v1/channels/:id/members",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const members = await store.listChannelMembers(id);
+    res.json(
+      members.map((m) => ({
+        userId: m.userId,
+        fullName: m.fullName,
+        email: m.email,
+        avatarUrl: m.avatarUrl,
+        role: m.role,
+        joinedAt: m.joinedAt.toISOString(),
       })),
     );
+  },
+);
+
+router.post(
+  "/v1/channels/:id/members",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!canManageChannel(ctx, access.membership)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const { userId, role } = req.body ?? {};
+    if (!userId) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+    const memberRole =
+      role === "owner" || role === "viewer" || role === "member" ? role : "member";
+    const user = await store.findUserById(Number(userId));
+    if (!user) {
+      res.status(400).json({ error: "User not found" });
+      return;
+    }
+    await store.addChannelMember(id, Number(userId), memberRole);
+    const members = await store.listChannelMembers(id);
+    const added = members.find((m) => m.userId === Number(userId));
+    res.status(201).json({
+      userId: added!.userId,
+      fullName: added!.fullName,
+      email: added!.email,
+      avatarUrl: added!.avatarUrl,
+      role: added!.role,
+      joinedAt: added!.joinedAt.toISOString(),
+    });
+  },
+);
+
+router.delete(
+  "/v1/channels/:id/members/:userId",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const targetUserId = Number(
+      Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId,
+    );
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!canManageChannel(ctx, access.membership)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const targetMembership = await getMembership(id, targetUserId);
+    if (!targetMembership) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    if (targetMembership.role === "owner") {
+      const ownerCount = await store.countChannelOwners(id);
+      if (ownerCount <= 1) {
+        res.status(400).json({ error: "Cannot remove the last owner" });
+        return;
+      }
+    }
+
+    await store.removeChannelMember(id, targetUserId);
+    res.status(204).send();
   },
 );
 
@@ -51,9 +343,12 @@ router.get(
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
     const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-    const channels = await store.listChannels();
-    const channel = channels.find((c) => c.id === id);
-    if (!channel || !canAccessChannel(ctx, channel)) {
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -83,10 +378,17 @@ router.post(
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
     const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-    const channels = await store.listChannels();
-    const channel = channels.find((c) => c.id === id);
-    if (!channel || !canAccessChannel(ctx, channel)) {
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
       res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!canPostInChannel(ctx, access.channel, access.membership)) {
+      res.status(403).json({ error: "You cannot post in this channel" });
       return;
     }
 
