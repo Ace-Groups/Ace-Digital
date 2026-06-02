@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,9 @@ import { MobileLoginScreen } from "@/components/login/MobileLoginScreen";
 import { consumeLoginNotice } from "@/lib/login-notice";
 import type { LoginFormValues } from "@/pages/login-desktop";
 
-const LoginDesktopLayout = lazy(() => import("@/pages/login-desktop"));
+import { lazyWithReload } from "@/lib/lazy-with-reload";
+
+const LoginDesktopLayout = lazyWithReload(() => import("@/pages/login-desktop"));
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),

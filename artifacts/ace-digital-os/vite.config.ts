@@ -19,7 +19,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       // Avoid disruptive app refresh while users are actively editing.
-      registerType: "prompt",
+      registerType: "autoUpdate",
       includeAssets: [
         "favicon-16.png",
         "favicon-32.png",
@@ -31,15 +31,24 @@ export default defineConfig({
       ],
       manifest: false,
       workbox: {
-        cacheId: "ace-digital-os-v21",
+        cacheId: "ace-digital-os-v22",
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api/],
+        navigateFallbackDenylist: [/^\/api/, /^\/assets\//, /\.js$/i, /\.css$/i],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/.*\.js$/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "ace-assets-js",
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
