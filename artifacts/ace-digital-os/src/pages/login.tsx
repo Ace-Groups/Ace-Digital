@@ -4,7 +4,6 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -18,8 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
-import { MobileLoginHero } from "@/components/login/MobileLoginHero";
-import { cn } from "@/lib/utils";
+import { MobileLoginScreen } from "@/components/login/MobileLoginScreen";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const schema = z.object({
@@ -28,131 +26,6 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
-
-const mobileFieldClass = cn(
-  "h-[3.25rem] rounded-none border-0 border-b-2 border-border/70 bg-transparent px-0 pl-10 text-[17px] shadow-none",
-  "placeholder:text-muted-foreground/60",
-  "transition-[border-color,box-shadow] duration-200",
-  "focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0",
-  "focus-visible:shadow-[0_1px_0_0_hsl(var(--primary))]",
-);
-
-function LoginMobileForm({
-  form,
-  loading,
-  showPassword,
-  onTogglePassword,
-  onSubmit,
-}: {
-  form: ReturnType<typeof useForm<FormData>>;
-  loading: boolean;
-  showPassword: boolean;
-  onTogglePassword: () => void;
-  onSubmit: (data: FormData) => void | Promise<void>;
-}) {
-  const passwordRef = useRef<HTMLInputElement>(null);
-
-  return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="mobile-form flex flex-col gap-7"
-        autoComplete="on"
-        aria-label="Sign in"
-      >
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem className="space-y-1.5">
-              <FormLabel className="sr-only">Email</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Mail
-                    className="pointer-events-none absolute left-0 top-1/2 size-[19px] -translate-y-1/2 text-primary"
-                    aria-hidden
-                  />
-                  <Input
-                    data-testid="input-email"
-                    type="email"
-                    inputMode="email"
-                    enterKeyHint="next"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    autoComplete="username"
-                    placeholder="Email"
-                    className={mobileFieldClass}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        passwordRef.current?.focus();
-                      }
-                    }}
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormMessage className="text-xs" />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem className="space-y-1.5">
-              <FormLabel className="sr-only">Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Lock
-                    className="pointer-events-none absolute left-0 top-1/2 size-[19px] -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <Input
-                    data-testid="input-password"
-                    type={showPassword ? "text" : "password"}
-                    enterKeyHint="go"
-                    autoComplete="current-password"
-                    placeholder="Password"
-                    className={cn(mobileFieldClass, "pr-11")}
-                    {...field}
-                    ref={(el) => {
-                      field.ref(el);
-                      passwordRef.current = el;
-                    }}
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center text-muted-foreground touch-manipulation active:text-foreground"
-                    onClick={onTogglePassword}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-[19px]" aria-hidden />
-                    ) : (
-                      <Eye className="size-[19px]" aria-hidden />
-                    )}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage className="text-xs" />
-            </FormItem>
-          )}
-        />
-        <Button
-          data-testid="button-submit"
-          type="submit"
-          disabled={loading}
-          className="mt-1 h-[3.25rem] w-full rounded-full text-base font-semibold shadow-brand-md touch-manipulation active:scale-[0.98]"
-          size="lg"
-        >
-          {loading ? <Loader2 className="size-5 animate-spin" aria-hidden /> : "Login"}
-        </Button>
-      </form>
-    </Form>
-  );
-}
 
 function LoginDesktopForm({
   form,
@@ -276,37 +149,6 @@ function LoginDesktopForm({
   );
 }
 
-function LoginMobileLayout({
-  form,
-  loading,
-  showPassword,
-  setShowPassword,
-  onSubmit,
-}: {
-  form: ReturnType<typeof useForm<FormData>>;
-  loading: boolean;
-  showPassword: boolean;
-  setShowPassword: (v: boolean | ((p: boolean) => boolean)) => void;
-  onSubmit: (data: FormData) => void | Promise<void>;
-}) {
-  return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <MobileLoginHero />
-      <div className="relative -mt-1 flex flex-1 flex-col bg-background shadow-[0_-8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.35)]">
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-7 pb-[max(2rem,env(safe-area-inset-bottom))] pt-6">
-          <LoginMobileForm
-            form={form}
-            loading={loading}
-            showPassword={showPassword}
-            onTogglePassword={() => setShowPassword((v) => !v)}
-            onSubmit={onSubmit}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LoginDesktopLayout({
   form,
   loading,
@@ -426,12 +268,13 @@ export default function LoginPage() {
 
   if (showMobile) {
     return (
-      <LoginMobileLayout
+      <MobileLoginScreen
         form={form}
         loading={loading}
         showPassword={showPassword}
-        setShowPassword={setShowPassword}
+        onTogglePassword={() => setShowPassword((v) => !v)}
         onSubmit={onSubmit}
+        onForgotPassword={onForgotPassword}
       />
     );
   }
