@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Download,
   FileText,
@@ -8,8 +8,8 @@ import {
   Reply,
   Copy,
   Trash2,
-  MoreHorizontal,
 } from "lucide-react";
+import { MessageActionsMenu } from "@/components/channels/MessageActionsMenu";
 import { VoiceMessagePlayer } from "@/components/channels/VoiceMessagePlayer";
 import { MediaAlbum } from "@/components/channels/MediaAlbum";
 import { PollCard } from "@/components/channels/PollCard";
@@ -28,12 +28,7 @@ import {
 } from "@/lib/chat-reply";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,7 +76,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const attachments = msg.attachments ?? [];
   const mediaAttachments = attachments.filter((a) => a.type === "image" || a.type === "video");
   const otherAttachments = attachments.filter((a) => a.type !== "image" && a.type !== "video");
@@ -95,13 +90,6 @@ export function MessageBubble({
   const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "");
   const showActions = !pending && !deleted && (onToggleReaction || onReply || canDelete);
 
-  function clearLongPress() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
   function handleDeleteClick() {
     if (!onDelete) return;
     if (!isMe && canDelete) {
@@ -114,21 +102,11 @@ export function MessageBubble({
   return (
     <div
       data-testid={`message-${msg.id}`}
-      className={cn("group flex gap-2.5 sm:gap-3", isMe && "flex-row-reverse")}
-      onPointerDown={
-        isMobile && showActions
-          ? () => {
-              clearLongPress();
-              longPressTimer.current = setTimeout(() => {
-                const trigger = document.getElementById(`msg-menu-${msg.id}`);
-                trigger?.click();
-              }, 450);
-            }
-          : undefined
-      }
-      onPointerUp={clearLongPress}
-      onPointerLeave={clearLongPress}
-      onPointerCancel={clearLongPress}
+      className={cn(
+        "group flex gap-2.5 sm:gap-3",
+        isMe && "flex-row-reverse",
+        showActions && "mt-1",
+      )}
     >
       {showMeta ? (
         <UserAvatar
@@ -146,8 +124,9 @@ export function MessageBubble({
       )}
       <div
         className={cn(
-          "min-w-0 max-w-[min(88vw,28rem)] sm:max-w-md lg:max-w-lg",
+          "relative min-w-0 max-w-[min(88vw,28rem)] sm:max-w-md lg:max-w-lg",
           isMe && "flex flex-col items-end",
+          showActions && "pt-9 sm:pt-8",
         )}
       >
         {showMeta && (
@@ -169,82 +148,75 @@ export function MessageBubble({
         )}
 
         {showActions && (
-          <div
-            className={cn(
-              "mb-1 flex items-center gap-0.5",
-              isMe && "justify-end",
-              isMobile ? "opacity-100" : "opacity-0 transition-opacity group-hover:opacity-100",
+          <>
+            <MessageActionsMenu
+              messageId={msg.id}
+              channelId={channelId}
+              isMe={isMe}
+              menuOpen={menuOpen}
+              onMenuOpenChange={setMenuOpen}
+            >
+              {onToggleReaction &&
+                QUICK_REACTIONS.map((emoji) => (
+                  <DropdownMenuItem
+                    key={emoji}
+                    onClick={() => void onToggleReaction(emoji)}
+                    className="min-h-11 sm:min-h-9"
+                  >
+                    React {emoji}
+                  </DropdownMenuItem>
+                ))}
+              {onReply && (
+                <DropdownMenuItem
+                  className="min-h-11 sm:min-h-9"
+                  onClick={() => onReply(replyTargetFromMessage(msg as Message))}
+                >
+                  <Reply size={14} className="mr-2" />
+                  Reply
+                </DropdownMenuItem>
+              )}
+              {msg.body?.trim() && (
+                <DropdownMenuItem
+                  className="min-h-11 sm:min-h-9"
+                  onClick={() => void navigator.clipboard.writeText(msg.body)}
+                >
+                  <Copy size={14} className="mr-2" />
+                  Copy
+                </DropdownMenuItem>
+              )}
+              {canDelete && onDelete && (
+                <DropdownMenuItem
+                  className="min-h-11 text-destructive focus:text-destructive sm:min-h-9"
+                  onClick={handleDeleteClick}
+                >
+                  <Trash2 size={14} className="mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </MessageActionsMenu>
+            {!isMobile && onToggleReaction && (
+              <div
+                className={cn(
+                  "absolute top-0 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
+                  isMe ? "right-10" : "left-10",
+                )}
+              >
+                {QUICK_REACTIONS.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-base"
+                    onClick={() => void onToggleReaction(emoji)}
+                    aria-label={`React ${emoji}`}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
             )}
-          >
-            {!isMobile &&
-              onToggleReaction &&
-              QUICK_REACTIONS.map((emoji) => (
-                <Button
-                  key={emoji}
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 text-base sm:h-7 sm:w-7"
-                  onClick={() => void onToggleReaction(emoji)}
-                  aria-label={`React ${emoji}`}
-                >
-                  {emoji}
-                </Button>
-              ))}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  id={`msg-menu-${msg.id}`}
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 sm:h-7 sm:w-7"
-                  aria-label="Message actions"
-                >
-                  <MoreHorizontal size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align={isMe ? "end" : "start"} className="min-w-[10rem]">
-                {onToggleReaction &&
-                  QUICK_REACTIONS.map((emoji) => (
-                    <DropdownMenuItem
-                      key={emoji}
-                      onClick={() => void onToggleReaction(emoji)}
-                      className="min-h-11 sm:min-h-9"
-                    >
-                      React {emoji}
-                    </DropdownMenuItem>
-                  ))}
-                {onReply && (
-                  <DropdownMenuItem
-                    className="min-h-11 sm:min-h-9"
-                    onClick={() => onReply(replyTargetFromMessage(msg as Message))}
-                  >
-                    <Reply size={14} className="mr-2" />
-                    Reply
-                  </DropdownMenuItem>
-                )}
-                {msg.body?.trim() && (
-                  <DropdownMenuItem
-                    className="min-h-11 sm:min-h-9"
-                    onClick={() => void navigator.clipboard.writeText(msg.body)}
-                  >
-                    <Copy size={14} className="mr-2" />
-                    Copy
-                  </DropdownMenuItem>
-                )}
-                {canDelete && onDelete && (
-                  <DropdownMenuItem
-                    className="min-h-11 text-destructive focus:text-destructive sm:min-h-9"
-                    onClick={handleDeleteClick}
-                  >
-                    <Trash2 size={14} className="mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          </>
         )}
 
         <div className="space-y-2">

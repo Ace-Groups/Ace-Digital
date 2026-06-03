@@ -208,7 +208,7 @@ export function ChannelMessageList({
       {loadingOlder && (
         <p className="mb-3 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
-      <div className="flex w-full flex-col gap-4">
+      <div className="flex w-full flex-col gap-5 overflow-visible">
         {filtered.map((msg, index) => {
           const prev = index > 0 ? filtered[index - 1]! : null;
           const isMe = msg.senderId === currentUserId;
