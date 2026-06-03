@@ -6,3 +6,4 @@ export type { DataStore } from "./store";
 export type { AccessContext } from "./store/types";
 export { canSeeTask } from "./store/scoping";
 export { getPgDb, closePgPool } from "./pg";
+export * from "./chat";

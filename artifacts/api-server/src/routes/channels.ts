@@ -12,6 +12,8 @@ import { requirePermission } from "../lib/rbac-middleware";
 import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
 import { messageToJson, messagePreview, validateMessagePayload } from "../lib/message-attachments";
 import { notifyChannelMembers } from "../lib/chat-notify";
+import { extractMentionedUserIds } from "../lib/chat-mentions";
+import { sortChannelsForSidebar } from "@workspace/db";
 
 const router = Router();
 
@@ -44,27 +46,40 @@ router.get(
 
     const teams = await store.listTeams();
     const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+    const channelIds = channels.map((c) => c.id);
+    const meta = await store.listChannelListMeta(channelIds, ctx.userId);
+    const adminAll = hasPermission(ctx, "channels:all");
 
-    const result = await Promise.all(
-      channels.map(async (c) => {
-        const membership = await getMembership(c.id, ctx.userId);
-        const members = await store.listChannelMembers(c.id);
-        return {
+    const sortOrder = new Map(
+      sortChannelsForSidebar(
+        channels.map((c) => ({
           id: c.id,
           name: c.name,
-          description: c.description,
-          teamId: c.teamId,
-          teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
-          type: c.type,
-          visibility: c.visibility,
-          archived: c.archived,
-          memberCount: members.length,
-          myRole: membership?.role ?? (hasPermission(ctx, "channels:all") ? "owner" : null),
-          unreadCount: 0,
-          createdAt: c.createdAt.toISOString(),
-        };
-      }),
+          unreadCount: meta.unreadCounts.get(c.id) ?? 0,
+          lastPostAt: c.lastPostAt,
+        })),
+      ).map((c, index) => [c.id, index]),
     );
+
+    const result = channels
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        teamId: c.teamId,
+        teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
+        type: c.type,
+        visibility: c.visibility,
+        archived: c.archived,
+        memberCount: meta.counts.get(c.id) ?? 0,
+        myRole: meta.roles.get(c.id) ?? (adminAll ? "owner" : null),
+        unreadCount: meta.unreadCounts.get(c.id) ?? 0,
+        lastPostAt: c.lastPostAt?.toISOString() ?? null,
+        lastMessagePreview: meta.lastMessagePreviews.get(c.id) ?? null,
+        lastReadMessageId: meta.lastReadMessageIds.get(c.id) ?? null,
+        createdAt: c.createdAt.toISOString(),
+      }))
+      .sort((a, b) => (sortOrder.get(a.id) ?? 0) - (sortOrder.get(b.id) ?? 0));
 
     res.json(result);
   },
@@ -339,6 +354,65 @@ router.delete(
 );
 
 router.get(
+  "/v1/channels/:id/mention-candidates",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const qRaw = req.query.q;
+    const q = String(Array.isArray(qRaw) ? qRaw[0] : qRaw ?? "")
+      .trim()
+      .toLowerCase();
+
+    const members = await store.listChannelMembers(id);
+    const candidates = members
+      .filter((m) => m.userId !== ctx.userId)
+      .filter((m) => !q || m.fullName.toLowerCase().includes(q))
+      .slice(0, 20)
+      .map((m) => ({
+        userId: m.userId,
+        fullName: m.fullName,
+        avatarUrl: m.avatarUrl,
+      }));
+
+    res.json(candidates);
+  },
+);
+
+router.post(
+  "/v1/channels/:id/read",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    await store.markChannelRead(id, ctx.userId);
+    res.status(204).send();
+  },
+);
+
+router.get(
   "/v1/channels/:id/messages",
   requireAuth,
   requirePermission("channels:read"),
@@ -355,7 +429,20 @@ router.get(
       return;
     }
 
-    const messages = await store.listMessagesByChannel(id, 100);
+    const limitRaw = Number(req.query.limit);
+    const limit = Number.isFinite(limitRaw)
+      ? Math.min(100, Math.max(1, limitRaw))
+      : 50;
+    const beforeRaw = req.query.before;
+    const before =
+      beforeRaw !== undefined && beforeRaw !== ""
+        ? Number(Array.isArray(beforeRaw) ? beforeRaw[0] : beforeRaw)
+        : undefined;
+
+    const messages = await store.listMessagesByChannel(id, {
+      limit,
+      before: Number.isFinite(before) ? before : undefined,
+    });
     const users = await store.listUsers();
     const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
 
@@ -418,12 +505,30 @@ router.post(
         senderAvatar: sender?.avatarUrl ?? null,
       });
 
-      void notifyChannelMembers(
-        id,
-        ctx.userId,
-        access.channel.name,
-        messagePreview(message.body, message.attachments, message.messageKind),
-      ).catch((err) => console.error("[chat-notify]", err));
+      const members = await store.listChannelMembers(id);
+      const mentioned = extractMentionedUserIds(payload.body, members);
+      const preview = messagePreview(message.body, message.attachments, message.messageKind);
+
+      if (mentioned.length > 0) {
+        void notifyChannelMembers(
+          id,
+          ctx.userId,
+          access.channel.name,
+          `${sender?.fullName ?? "Someone"} mentioned you: ${preview}`,
+          mentioned,
+        ).catch((err) => console.error("[chat-notify-mention]", err));
+      } else {
+        void notifyChannelMembers(
+          id,
+          ctx.userId,
+          access.channel.name,
+          preview,
+        ).catch((err) => console.error("[chat-notify]", err));
+      }
+
+      void store.markChannelRead(id, ctx.userId).catch((e) =>
+        console.error("[channels/mark-read]", e),
+      );
 
       res.status(201).json(
         messageToJson(
@@ -439,6 +544,68 @@ router.post(
         /too large|payload|entity too large|exceed.*size|1\s*MiB|1048576/i.test(message);
       res.status(tooLarge ? 413 : 500).json({ error: message });
     }
+  },
+);
+
+router.post(
+  "/v1/channels/:id/messages/:messageId/reactions",
+  requireAuth,
+  requirePermission("channels:post"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const emoji = typeof req.body?.emoji === "string" ? req.body.emoji.trim() : "";
+    if (!Number.isFinite(channelId) || !Number.isFinite(messageId) || !emoji || emoji.length > 32) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const message = await store.findMessageById(messageId);
+    if (!message || message.channelId !== channelId) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    const meta = (message.metadata ?? {}) as Record<string, unknown>;
+    const reactions = { ...((meta.reactions as Record<string, number[]>) ?? {}) };
+    const current = [...(reactions[emoji] ?? [])];
+    const idx = current.indexOf(ctx.userId);
+    if (idx >= 0) {
+      current.splice(idx, 1);
+    } else {
+      current.push(ctx.userId);
+    }
+    if (current.length) {
+      reactions[emoji] = current;
+    } else {
+      delete reactions[emoji];
+    }
+
+    const updated = await store.updateMessage(messageId, {
+      metadata: { ...meta, reactions },
+    });
+    if (!updated) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    const sender = await store.findUserById(updated.senderId);
+    res.json(
+      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
+    );
   },
 );
 
@@ -469,9 +636,13 @@ router.patch(
       return;
     }
 
-    const messages = await store.listMessagesByChannel(channelId, 200);
-    const message = messages.find((m) => m.id === messageId);
-    if (!message || message.messageKind !== "poll" || !message.metadata) {
+    const message = await store.findMessageByIdWithSender(messageId);
+    if (
+      !message ||
+      message.channelId !== channelId ||
+      message.messageKind !== "poll" ||
+      !message.metadata
+    ) {
       res.status(404).json({ error: "Poll not found" });
       return;
     }
@@ -543,9 +714,13 @@ router.patch(
       return;
     }
 
-    const messages = await store.listMessagesByChannel(channelId, 200);
-    const message = messages.find((m) => m.id === messageId);
-    if (!message || message.messageKind !== "event" || !message.metadata) {
+    const message = await store.findMessageByIdWithSender(messageId);
+    if (
+      !message ||
+      message.channelId !== channelId ||
+      message.messageKind !== "event" ||
+      !message.metadata
+    ) {
       res.status(404).json({ error: "Event not found" });
       return;
     }

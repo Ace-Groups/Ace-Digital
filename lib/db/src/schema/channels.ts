@@ -13,6 +13,8 @@ export const channelsTable = pgTable("channels", {
   type: text("type").notNull().default("TEAM"),
   visibility: text("visibility").notNull().default("PRIVATE"),
   archived: boolean("archived").notNull().default(false),
+  lastPostAt: timestamp("last_post_at", { withTimezone: true }),
+  messageCount: integer("message_count").notNull().default(0),
   createdById: integer("created_by_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -28,6 +30,8 @@ export const channelMembersTable = pgTable(
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    lastReadMessageId: integer("last_read_message_id"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("channel_members_channel_user").on(t.channelId, t.userId)],

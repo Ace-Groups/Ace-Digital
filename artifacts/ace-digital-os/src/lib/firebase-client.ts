@@ -16,7 +16,12 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
-import { firebaseConfig, isFirebaseChatEnabled } from "@/lib/firebase-config";
+import {
+  firebaseConfig,
+  isFirebaseChatEnabled,
+  isFirebaseConfigured,
+  isPlaceholderFirebaseValue,
+} from "@/lib/firebase-config";
 import { authHeader, getAuthToken } from "@/lib/api";
 import type { Message } from "@workspace/api-client-react";
 
@@ -28,6 +33,9 @@ let firebaseInitPromise: Promise<boolean> | null = null;
 let firebaseAuthUnavailable = false;
 
 function ensureApp(): FirebaseApp {
+  if (!isFirebaseConfigured()) {
+    throw new Error("Firebase is not configured");
+  }
   if (!app) {
     app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
   }
@@ -35,22 +43,36 @@ function ensureApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
+  if (!isFirebaseChatEnabled()) {
+    throw new Error("Firebase chat disabled");
+  }
   if (!auth) auth = getAuth(ensureApp());
   return auth;
 }
 
 export function getFirebaseDb(): Firestore {
+  if (!isFirebaseChatEnabled()) {
+    throw new Error("Firebase chat disabled");
+  }
   if (!db) db = getFirestore(ensureApp());
   return db;
 }
 
 export function getFirebaseStorage(): FirebaseStorage {
+  if (!isFirebaseChatEnabled()) {
+    throw new Error("Firebase chat disabled");
+  }
   if (!storage) storage = getStorage(ensureApp());
   return storage;
 }
 
 export function isFirebaseAuthReady(): boolean {
-  return Boolean(getFirebaseAuth().currentUser);
+  if (!isFirebaseChatEnabled()) return false;
+  try {
+    return Boolean(getFirebaseAuth().currentUser);
+  } catch {
+    return false;
+  }
 }
 
 export function isFirebaseRealtimeEnabled(): boolean {
@@ -63,12 +85,18 @@ export async function canUseFirebaseStorage(): Promise<boolean> {
   return ensureFirebaseAuth();
 }
 
-/** Returns true when signed in to Firebase; false when chat realtime/storage auth is unavailable. */
+/** Background-friendly; never blocks UI. Returns true when signed in to Firebase. */
 export async function ensureFirebaseAuth(): Promise<boolean> {
   if (!isFirebaseChatEnabled()) return false;
   if (firebaseAuthUnavailable) return false;
 
-  const a = getFirebaseAuth();
+  let a: Auth;
+  try {
+    a = getFirebaseAuth();
+  } catch {
+    return false;
+  }
+
   if (a.currentUser) return true;
 
   if (firebaseInitPromise) return firebaseInitPromise;
@@ -77,14 +105,18 @@ export async function ensureFirebaseAuth(): Promise<boolean> {
     const jwt = getAuthToken();
     if (!jwt) return false;
 
+    if (isPlaceholderFirebaseValue(firebaseConfig.apiKey)) {
+      firebaseAuthUnavailable = true;
+      return false;
+    }
+
     try {
       const res = await fetch("/api/v1/auth/firebase-custom-token", {
         credentials: "include",
         headers: authHeader(),
       });
       if (!res.ok) {
-        // 404 = feature disabled; 503 is transient (do not block retries after server/IAM fixes).
-        if (res.status === 404) {
+        if (res.status === 404 || res.status === 503) {
           firebaseAuthUnavailable = true;
         }
         return false;
@@ -93,6 +125,7 @@ export async function ensureFirebaseAuth(): Promise<boolean> {
       await signInWithCustomToken(a, token);
       return true;
     } catch {
+      firebaseAuthUnavailable = true;
       return false;
     } finally {
       firebaseInitPromise = null;

@@ -5,9 +5,14 @@ export async function notifyChannelMembers(
   senderId: number,
   channelName: string,
   preview: string,
+  onlyUserIds?: number[],
 ): Promise<void> {
   const members = await store.listChannelMembers(channelId);
-  const targets = members.filter((m) => m.userId !== senderId);
+  let targets = members.filter((m) => m.userId !== senderId);
+  if (onlyUserIds?.length) {
+    const set = new Set(onlyUserIds);
+    targets = targets.filter((m) => set.has(m.userId));
+  }
   await Promise.all(
     targets.map((m) =>
       store.createNotification({

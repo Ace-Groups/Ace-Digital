@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
@@ -12,20 +11,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
+import { useRoomMessageList } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canManageChannel, canPostInChannel } from "@workspace/rbac";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileChromeFlags } from "@/contexts/MobileChromeContext";
-import { ChannelList } from "@/components/channels/ChannelList";
+import { RoomSidebar } from "@/components/channels/RoomSidebar";
 import { CreateChannelDialog } from "@/components/channels/CreateChannelDialog";
 import { ChannelSettingsSheet } from "@/components/channels/ChannelSettingsSheet";
-import { ChannelThreadHeader } from "@/components/channels/ChannelThreadHeader";
-import { MessageBubble } from "@/components/channels/MessageBubble";
+import {
+  ChannelThreadHeader,
+  type ReplyTarget,
+} from "@/components/channels/ChannelThreadHeader";
+import {
+  ChannelMessageList,
+  type ReplyTarget as ListReplyTarget,
+} from "@/components/channels/ChannelMessageList";
 import { MessageComposer } from "@/components/channels/MessageComposer";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
+import { parseChannelIdFromSearch, setChannelIdInSearch } from "@/lib/channel-url";
+import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -33,13 +40,17 @@ export default function ChannelsPage() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { data: channels, isLoading: channelsLoading } = useListChannels();
-  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
+  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(() =>
+    parseChannelIdFromSearch(),
+  );
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
+  const [roomSearch, setRoomSearch] = useState("");
+  const { markRead } = useMarkChannelRead();
 
   useMobileChromeFlags({
     immersivePage: isMobile,
@@ -79,12 +90,15 @@ export default function ChannelsPage() {
     void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
   }, [selectedChannelId]);
 
-  const { data: messages, isLoading: messagesLoading } = useGetChannelMessages(
+  const messageParams = { limit: 50 } as const;
+
+  const { data: latestMessages, isLoading: messagesLoading } = useGetChannelMessages(
     selectedChannelId ?? 0,
+    messageParams,
     {
       query: {
         enabled: !!selectedChannelId,
-        queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0),
+        queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, messageParams),
         staleTime: 30_000,
         refetchInterval: firebaseLive ? false : 10_000,
       },
@@ -92,50 +106,82 @@ export default function ChannelsPage() {
   );
 
   const realtimeReady =
-    threadActive && !!selectedChannelId && !messagesLoading && messages !== undefined;
+    threadActive && !!selectedChannelId && !messagesLoading && latestMessages !== undefined;
 
-  useChannelMessagesRealtime(selectedChannelId, realtimeReady);
+  const room = useRoomMessageList(selectedChannelId, !!selectedChannelId);
+
+  useEffect(() => {
+    if (latestMessages) room.syncFromQuery(latestMessages);
+  }, [latestMessages, room]);
+
+  useChannelMessagesRealtime(selectedChannelId, realtimeReady, room.applyRealtime);
 
   const { send, queuePending, flushPending, markPendingFailed, isPending: sending } =
     useSendChannelMessage(selectedChannelId);
 
-  const rowVirtualizer = useVirtualizer({
-    count: messages?.length ?? 0,
-    getScrollElement: () => messagesContainerRef.current,
-    estimateSize: () => 120,
-    overscan: 10,
-  });
-
   useEffect(() => {
-    if (isMobile) return;
-    if (channels && channels.length > 0 && !selectedChannelId) {
-      setSelectedChannelId(channels[0]!.id);
+    if (!channels?.length) return;
+    const fromUrl = parseChannelIdFromSearch();
+    if (fromUrl && channels.some((c) => c.id === fromUrl)) {
+      if (selectedChannelId !== fromUrl) {
+        setSelectedChannelId(fromUrl);
+        if (isMobile) setMobileThreadOpen(true);
+      }
+      return;
+    }
+    if (!isMobile && !selectedChannelId) {
+      const first = channels[0]!.id;
+      setSelectedChannelId(first);
+      setChannelIdInSearch(first);
     }
   }, [channels, selectedChannelId, isMobile]);
 
   useEffect(() => {
-    if (!messages || messages.length === 0) return;
-    if (!shouldAutoScroll) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, shouldAutoScroll]);
+    setReplyTo(null);
+    setShouldAutoScroll(true);
+    setRoomSearch("");
+  }, [selectedChannelId]);
 
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setShouldAutoScroll(distanceFromBottom < 96);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [selectedChannelId, mobileThreadOpen]);
+  const handleMarkRead = useCallback(() => {
+    if (selectedChannelId) void markRead(selectedChannelId);
+  }, [selectedChannelId, markRead]);
+
+  const handleLoadOlder = useCallback(async () => {
+    setLoadingOlder(true);
+    try {
+      return await room.loadOlder();
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [room]);
+
+  const handleReply = useCallback((target: ListReplyTarget) => {
+    setReplyTo(target);
+  }, []);
+
+  const wrapPayload = useCallback(
+    (payload: MessageInput): MessageInput => {
+      if (!replyTo) return payload;
+      const metadata = {
+        ...(payload.metadata ?? {}),
+        replyTo: {
+          id: replyTo.id,
+          body: replyTo.body.slice(0, 280),
+          senderName: replyTo.senderName ?? null,
+        },
+      };
+      return { ...payload, metadata };
+    },
+    [replyTo],
+  );
 
   const handleSend = useCallback(
     async (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
       if (!selectedChannelId || !canPost) return;
       try {
-        await send(payload, previewAttachments);
+        await send(wrapPayload(payload), previewAttachments);
         setShouldAutoScroll(true);
+        setReplyTo(null);
       } catch (err) {
         const detail =
           err instanceof Error
@@ -150,15 +196,15 @@ export default function ChannelsPage() {
         });
       }
     },
-    [selectedChannelId, canPost, send, toast],
+    [selectedChannelId, canPost, send, wrapPayload, toast],
   );
 
   const handleQueuePending = useCallback(
     (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
       if (!selectedChannelId || !canPost) throw new Error("Not ready");
-      return queuePending(payload, previewAttachments);
+      return queuePending(wrapPayload(payload), previewAttachments);
     },
-    [selectedChannelId, canPost, queuePending],
+    [selectedChannelId, canPost, queuePending, wrapPayload],
   );
 
   const handleFlushPending = useCallback(
@@ -169,8 +215,9 @@ export default function ChannelsPage() {
     ) => {
       if (!selectedChannelId || !canPost) return;
       try {
-        await flushPending(clientId, payload, previewAttachments);
+        await flushPending(clientId, wrapPayload(payload), previewAttachments);
         setShouldAutoScroll(true);
+        setReplyTo(null);
       } catch (err) {
         const detail =
           err instanceof Error
@@ -186,11 +233,12 @@ export default function ChannelsPage() {
         throw err;
       }
     },
-    [selectedChannelId, canPost, flushPending, toast],
+    [selectedChannelId, canPost, flushPending, wrapPayload, toast],
   );
 
   function selectChannel(id: number) {
     setSelectedChannelId(id);
+    setChannelIdInSearch(id);
     if (isMobile) setMobileThreadOpen(true);
   }
 
@@ -199,7 +247,6 @@ export default function ChannelsPage() {
   }
 
   const showList = !isMobile || !mobileThreadOpen;
-  const showThread = !isMobile || mobileThreadOpen;
   const canCreate = can("channels:write");
 
   const threadContent = (
@@ -207,71 +254,45 @@ export default function ChannelsPage() {
       {selectedChannel && (
         <ChannelThreadHeader
           channel={selectedChannel}
+          channelId={selectedChannelId!}
           isMobile={isMobile}
           onBack={backToList}
           onOpenSettings={() => setSettingsOpen(true)}
+          searchQuery={roomSearch}
+          onSearchChange={setRoomSearch}
         />
       )}
 
-      <div
-        ref={messagesContainerRef}
-        className="touch-scroll min-h-0 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
-      >
-        {!selectedChannelId ? (
-          <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
-            Select a channel to start chatting
-          </div>
-        ) : messagesLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex gap-3">
-                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
-                <Skeleton className="h-16 w-64 max-w-full rounded-2xl" />
-              </div>
-            ))}
-          </div>
-        ) : messages?.length === 0 ? (
-          <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-            <p>No messages yet</p>
-            <p className="text-xs">Say hello to the team</p>
-          </div>
-        ) : (
-          <div
-            style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}
-            className="w-full"
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const msg = messages![virtualRow.index]!;
-              const prev = virtualRow.index > 0 ? messages![virtualRow.index - 1] : null;
-              const isMe = msg.senderId === user?.id;
-              const showMeta = !prev || prev.senderId !== msg.senderId;
-              return (
-                <div
-                  key={msg.id}
-                  data-index={virtualRow.index}
-                  ref={rowVirtualizer.measureElement}
-                  className="absolute left-0 top-0 w-full pb-4"
-                  style={{ transform: `translateY(${virtualRow.start}px)` }}
-                >
-                  <MessageBubble
-                    msg={msg}
-                    isMe={isMe}
-                    showMeta={showMeta}
-                    channelId={selectedChannelId!}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+      {selectedChannelId ? (
+        <ChannelMessageList
+          channelId={selectedChannelId}
+          messages={room.messages}
+          isLoading={room.isLoading || messagesLoading}
+          currentUserId={user?.id}
+          lastReadMessageId={selectedChannel?.lastReadMessageId}
+          shouldAutoScroll={shouldAutoScroll}
+          onShouldAutoScrollChange={setShouldAutoScroll}
+          onMarkRead={handleMarkRead}
+          onLoadOlder={handleLoadOlder}
+          loadingOlder={loadingOlder}
+          hasMoreBefore={room.hasMoreBefore}
+          onReply={handleReply}
+          searchQuery={roomSearch}
+          onMessagePatched={(updated) => room.patchMessage(updated.id, () => updated)}
+        />
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+          Select a channel to start chatting
+        </div>
+      )}
 
       {selectedChannelId && canPost && selectedChannel && (
         <MessageComposer
           channelId={selectedChannelId}
           channelName={selectedChannel.name}
           sending={sending}
+          replyTo={replyTo}
+          onClearReply={() => setReplyTo(null)}
           onSend={handleSend}
           onQueuePending={handleQueuePending}
           onFlushPending={handleFlushPending}
@@ -310,34 +331,21 @@ export default function ChannelsPage() {
           isMobile && "flex-col",
         )}
       >
-        {isMobile ? (
-          <>
-            {showList && (
-              <ChannelList
-                channels={channels}
-                isLoading={channelsLoading}
-                selectedChannelId={selectedChannelId}
-                onSelect={selectChannel}
-                onCreateClick={() => setCreateOpen(true)}
-                canCreate={canCreate}
-                isMobile
-              />
-            )}
-          </>
-        ) : (
-          <>
-            <ChannelList
-              channels={channels}
-              isLoading={channelsLoading}
-              selectedChannelId={selectedChannelId}
-              onSelect={selectChannel}
-              onCreateClick={() => setCreateOpen(true)}
-              canCreate={canCreate}
-            />
-            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
-              {threadContent}
-            </div>
-          </>
+        {showList && (
+          <RoomSidebar
+            channels={channels}
+            isLoading={channelsLoading && !channels}
+            selectedChannelId={selectedChannelId}
+            onSelect={selectChannel}
+            onCreateClick={() => setCreateOpen(true)}
+            canCreate={canCreate}
+            isMobile={isMobile}
+          />
+        )}
+        {!isMobile && (
+          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+            {threadContent}
+          </div>
         )}
       </div>
 

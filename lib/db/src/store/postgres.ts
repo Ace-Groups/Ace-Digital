@@ -1,4 +1,4 @@
-import { eq, and, sql, count, inArray } from "drizzle-orm";
+import { eq, and, sql, count, inArray, desc, lt, gt } from "drizzle-orm";
 import { getPgDb } from "../pg";
 import {
   usersTable,
@@ -42,6 +42,12 @@ import type {
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { calendarEventInRange } from "./calendar-scoping";
+import { messageListPreview } from "../chat/preview";
+import {
+  mirrorChannelActivityToFirestore,
+  mirrorMessagePatchToFirestore,
+  mirrorMessageToFirestore,
+} from "../chat/firestore-sync";
 import type {
   ActivityLogWithActor,
   AccessContext,
@@ -641,6 +647,8 @@ export function createPostgresStore() {
           channelId: channelMembersTable.channelId,
           userId: channelMembersTable.userId,
           role: channelMembersTable.role,
+          lastReadAt: channelMembersTable.lastReadAt,
+          lastReadMessageId: channelMembersTable.lastReadMessageId,
           joinedAt: channelMembersTable.joinedAt,
           fullName: usersTable.fullName,
           avatarUrl: usersTable.avatarUrl,
@@ -651,6 +659,115 @@ export function createPostgresStore() {
         .where(eq(channelMembersTable.channelId, channelId))
         .orderBy(channelMembersTable.role, usersTable.fullName);
       return rows;
+    },
+    listChannelListMeta: async (channelIds: number[], userId: number) => {
+      const counts = new Map<number, number>();
+      const roleByChannel = new Map<number, ChannelMemberRole>();
+      const unreadCounts = new Map<number, number>();
+      const lastMessagePreviews = new Map<number, string>();
+      const lastReadMessageIds = new Map<number, number | null>();
+
+      if (!channelIds.length) {
+        return { counts, roles: roleByChannel, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+      }
+
+      const rows = await db
+        .select({
+          channelId: channelMembersTable.channelId,
+          userId: channelMembersTable.userId,
+          role: channelMembersTable.role,
+          lastReadAt: channelMembersTable.lastReadAt,
+          lastReadMessageId: channelMembersTable.lastReadMessageId,
+          joinedAt: channelMembersTable.joinedAt,
+        })
+        .from(channelMembersTable)
+        .where(inArray(channelMembersTable.channelId, channelIds));
+
+      for (const row of rows) {
+        counts.set(row.channelId, (counts.get(row.channelId) ?? 0) + 1);
+        if (row.userId === userId) {
+          roleByChannel.set(row.channelId, row.role as ChannelMemberRole);
+          lastReadMessageIds.set(row.channelId, row.lastReadMessageId ?? null);
+        }
+      }
+
+      const unreadRows = await db
+        .select({
+          channelId: messagesTable.channelId,
+          n: count(),
+        })
+        .from(messagesTable)
+        .innerJoin(
+          channelMembersTable,
+          and(
+            eq(channelMembersTable.channelId, messagesTable.channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        )
+        .where(
+          and(
+            inArray(messagesTable.channelId, channelIds),
+            gt(
+              messagesTable.createdAt,
+              sql`COALESCE(${channelMembersTable.lastReadAt}, ${channelMembersTable.joinedAt})`,
+            ),
+            sql`${messagesTable.senderId} <> ${userId}`,
+          ),
+        )
+        .groupBy(messagesTable.channelId);
+
+      for (const row of unreadRows) {
+        unreadCounts.set(row.channelId, Number(row.n ?? 0));
+      }
+
+      const recentMessages = await db
+        .select({
+          channelId: messagesTable.channelId,
+          body: messagesTable.body,
+          messageKind: messagesTable.messageKind,
+        })
+        .from(messagesTable)
+        .where(inArray(messagesTable.channelId, channelIds))
+        .orderBy(desc(messagesTable.createdAt));
+
+      for (const m of recentMessages) {
+        if (!lastMessagePreviews.has(m.channelId)) {
+          lastMessagePreviews.set(
+            m.channelId,
+            messageListPreview(m.body ?? "", m.messageKind ?? "text"),
+          );
+        }
+      }
+
+      return {
+        counts,
+        roles: roleByChannel,
+        unreadCounts,
+        lastMessagePreviews,
+        lastReadMessageIds,
+      };
+    },
+    markChannelRead: async (channelId: number, userId: number) => {
+      const [latest] = await db
+        .select({ id: messagesTable.id, createdAt: messagesTable.createdAt })
+        .from(messagesTable)
+        .where(eq(messagesTable.channelId, channelId))
+        .orderBy(desc(messagesTable.createdAt))
+        .limit(1);
+
+      const readAt = latest?.createdAt ?? new Date();
+      await db
+        .update(channelMembersTable)
+        .set({
+          lastReadAt: readAt,
+          lastReadMessageId: latest?.id ?? null,
+        })
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        );
     },
     addChannelMember: async (
       channelId: number,
@@ -702,7 +819,24 @@ export function createPostgresStore() {
         );
       return Number(r?.n ?? 0);
     },
-    listMessagesByChannel: async (channelId: number, limit = 100): Promise<MessageWithSender[]> => {
+    listMessagesByChannel: async (
+      channelId: number,
+      options?: { limit?: number; before?: number },
+    ): Promise<MessageWithSender[]> => {
+      const limit = options?.limit ?? 100;
+      const conditions = [eq(messagesTable.channelId, channelId)];
+
+      if (options?.before) {
+        const ref = await db
+          .select({ createdAt: messagesTable.createdAt })
+          .from(messagesTable)
+          .where(eq(messagesTable.id, options.before))
+          .limit(1);
+        if (ref[0]) {
+          conditions.push(lt(messagesTable.createdAt, ref[0].createdAt));
+        }
+      }
+
       const rows = await db
         .select({
           id: messagesTable.id,
@@ -717,10 +851,11 @@ export function createPostgresStore() {
         })
         .from(messagesTable)
         .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
-        .where(eq(messagesTable.channelId, channelId))
-        .orderBy(messagesTable.createdAt)
+        .where(and(...conditions))
+        .orderBy(desc(messagesTable.createdAt))
         .limit(limit);
-      return rows.map((r) => ({
+
+      return rows.reverse().map((r) => ({
         id: r.id,
         channelId: r.channelId,
         senderId: r.senderId,
@@ -732,9 +867,45 @@ export function createPostgresStore() {
         senderName: r.senderName,
       }));
     },
-    createMessage: async (data: Omit<Message, "id" | "createdAt">) => {
-      const [m] = await db.insert(messagesTable).values(data).returning();
-      return m;
+    createMessage: async (
+      data: Omit<Message, "id" | "createdAt"> & {
+        senderName?: string | null;
+        senderAvatar?: string | null;
+      },
+    ) => {
+      const { senderName, senderAvatar, ...insertData } = data;
+      const [m] = await db.insert(messagesTable).values(insertData).returning();
+      const [channel] = await db
+        .update(channelsTable)
+        .set({
+          lastPostAt: m!.createdAt,
+          messageCount: sql`${channelsTable.messageCount} + 1`,
+        })
+        .where(eq(channelsTable.id, insertData.channelId))
+        .returning({
+          messageCount: channelsTable.messageCount,
+        });
+
+      void mirrorMessageToFirestore({
+        id: m!.id,
+        channelId: m!.channelId,
+        senderId: m!.senderId,
+        body: m!.body,
+        attachments: m!.attachments,
+        messageKind: m!.messageKind,
+        metadata: m!.metadata as Record<string, unknown> | null,
+        createdAt: m!.createdAt,
+        senderName: senderName ?? null,
+        senderAvatar: senderAvatar ?? null,
+      }).catch((err) => console.error("[firestore-mirror]", err));
+
+      void mirrorChannelActivityToFirestore(
+        insertData.channelId,
+        m!.createdAt,
+        Number(channel?.messageCount ?? 0),
+      ).catch((err) => console.error("[firestore-mirror-channel]", err));
+
+      return m!;
     },
     updateMessage: async (
       id: number,
@@ -745,11 +916,46 @@ export function createPostgresStore() {
         .set(patch)
         .where(eq(messagesTable.id, id))
         .returning();
+      if (m) {
+        void mirrorMessagePatchToFirestore(id, patch).catch((err) =>
+          console.error("[firestore-mirror-patch]", err),
+        );
+      }
       return m ?? null;
     },
     findMessageById: async (id: number) => {
       const [m] = await db.select().from(messagesTable).where(eq(messagesTable.id, id)).limit(1);
       return m ?? null;
+    },
+    findMessageByIdWithSender: async (id: number): Promise<MessageWithSender | null> => {
+      const [r] = await db
+        .select({
+          id: messagesTable.id,
+          channelId: messagesTable.channelId,
+          senderId: messagesTable.senderId,
+          body: messagesTable.body,
+          attachments: messagesTable.attachments,
+          messageKind: messagesTable.messageKind,
+          metadata: messagesTable.metadata,
+          createdAt: messagesTable.createdAt,
+          senderName: usersTable.fullName,
+        })
+        .from(messagesTable)
+        .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
+        .where(eq(messagesTable.id, id))
+        .limit(1);
+      if (!r) return null;
+      return {
+        id: r.id,
+        channelId: r.channelId,
+        senderId: r.senderId,
+        body: r.body,
+        attachments: r.attachments ?? null,
+        messageKind: r.messageKind,
+        metadata: r.metadata ?? null,
+        createdAt: r.createdAt,
+        senderName: r.senderName,
+      };
     },
     findCalendarEventById: async (id: number) => {
       const [e] = await db

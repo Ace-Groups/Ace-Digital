@@ -11,7 +11,11 @@ import {
 } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 
-export function useChannelMessagesRealtime(channelId: number | null, enabled: boolean) {
+export function useChannelMessagesRealtime(
+  channelId: number | null,
+  enabled: boolean,
+  onMessages?: (messages: Message[]) => void,
+) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -27,9 +31,10 @@ export function useChannelMessagesRealtime(channelId: number | null, enabled: bo
         channelId,
         (messages) => {
           queryClient.setQueryData<Message[]>(
-            getGetChannelMessagesQueryKey(channelId),
+            getGetChannelMessagesQueryKey(channelId, { limit: 50 }),
             messages,
           );
+          onMessages?.(messages);
         },
         (err) => {
           if (import.meta.env.DEV) {
@@ -40,5 +45,5 @@ export function useChannelMessagesRealtime(channelId: number | null, enabled: bo
     })();
 
     return () => unsub();
-  }, [channelId, enabled, queryClient]);
+  }, [channelId, enabled, queryClient, onMessages]);
 }

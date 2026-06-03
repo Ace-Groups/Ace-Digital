@@ -5,6 +5,7 @@ import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
 import { ensureFirebaseAuth, signOutFirebase, resetFirebaseAuthState } from "@/lib/firebase-client";
+import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 
 interface AuthUser {
   id: number;
@@ -74,10 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useLogout();
 
   useEffect(() => {
-    if (token && user) {
-      resetFirebaseAuthState();
-      void ensureFirebaseAuth();
-    }
+    if (!token || !user || !isFirebaseChatEnabled()) return;
+    void ensureFirebaseAuth();
   }, [token, user?.id]);
 
   const login = useCallback(
@@ -86,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(result.token);
       setToken(result.token);
       resetFirebaseAuthState();
-      await ensureFirebaseAuth();
+      void ensureFirebaseAuth();
     },
     [loginMutation],
   );

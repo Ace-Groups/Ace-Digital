@@ -128,23 +128,25 @@ export default function EmployeesPage() {
 
   async function handleEdit(data: EmployeeFormSubmitEdit) {
     if (!editing) return;
+    const roleUnchanged = data.role === editing.role;
+    const patchBody = {
+      fullName: data.fullName,
+      email: data.email,
+      ...(roleUnchanged ? {} : { role: data.role }),
+      teamId: data.teamId,
+      jobTitle: data.jobTitle,
+      phone: data.phone,
+      employeeCode: data.employeeCode,
+      startDate: data.startDate,
+      status: data.status,
+      baseSalary: data.baseSalary,
+      bonus: data.bonus,
+      payrollStatus: data.payrollStatus,
+    };
     try {
       await updateEmployee.mutateAsync({
         id: editing.id,
-        data: {
-          fullName: data.fullName,
-          email: data.email,
-          role: data.role,
-          teamId: data.teamId,
-          jobTitle: data.jobTitle,
-          phone: data.phone,
-          employeeCode: data.employeeCode,
-          startDate: data.startDate,
-          status: data.status,
-          baseSalary: data.baseSalary,
-          bonus: data.bonus,
-          payrollStatus: data.payrollStatus,
-        },
+        data: patchBody,
       });
       queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
       setEditOpen(false);

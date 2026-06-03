@@ -50,6 +50,7 @@ import {
   scopeTaskList,
 } from "./scoping";
 import { calendarEventInRange } from "./calendar-scoping";
+import { messageListPreview } from "../chat/preview";
 
 const COL = {
   meta: "_meta",
@@ -721,6 +722,8 @@ export function createFirestoreStore() {
         type: data.type ?? "TEAM",
         visibility: data.visibility ?? "PRIVATE",
         archived: false,
+        messageCount: 0,
+        lastPostAt: null,
         createdById: data.createdById,
         createdAt: now,
       };
@@ -808,6 +811,95 @@ export function createFirestoreStore() {
         .sort((a, b) => a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName));
     },
 
+    /** One batched read for channel list API (counts + current user's role). */
+    async listChannelListMeta(channelIds: number[], userId: number) {
+      const counts = new Map<number, number>();
+      const roles = new Map<number, ChannelMemberRole>();
+      const unreadCounts = new Map<number, number>();
+      const lastMessagePreviews = new Map<number, string>();
+      const lastReadMessageIds = new Map<number, number | null>();
+
+      if (!channelIds.length) {
+        return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+      }
+
+      const memberByChannel = new Map<
+        number,
+        { lastReadAt?: string; lastReadMessageId?: number; joinedAt: string }
+      >();
+
+      for (let i = 0; i < channelIds.length; i += 30) {
+        const chunk = channelIds.slice(i, i + 30);
+        const snap = await db
+          .collection(COL.channelMembers)
+          .where("channelId", "in", chunk)
+          .get();
+        for (const doc of snap.docs) {
+          const data = doc.data();
+          const cid = Number(data.channelId);
+          counts.set(cid, (counts.get(cid) ?? 0) + 1);
+          if (Number(data.userId) === userId) {
+            roles.set(cid, data.role as ChannelMemberRole);
+            lastReadMessageIds.set(cid, (data.lastReadMessageId as number) ?? null);
+            memberByChannel.set(cid, {
+              lastReadAt: data.lastReadAt as string | undefined,
+              lastReadMessageId: data.lastReadMessageId as number | undefined,
+              joinedAt: (data.joinedAt as string) ?? new Date(0).toISOString(),
+            });
+          }
+        }
+      }
+
+      for (const channelId of channelIds) {
+        const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
+        const messages = snap.docs
+          .map((d) => mapMessage(d.data(), d.id))
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        if (messages.length > 0) {
+          const last = messages[messages.length - 1]!;
+          lastMessagePreviews.set(
+            channelId,
+            messageListPreview(last.body, last.messageKind ?? "text"),
+          );
+        }
+        const membership = memberByChannel.get(channelId);
+        if (membership) {
+          const baseline = membership.lastReadAt
+            ? new Date(membership.lastReadAt).getTime()
+            : new Date(membership.joinedAt).getTime();
+          const unread = messages.filter(
+            (m) => m.senderId !== userId && m.createdAt.getTime() > baseline,
+          ).length;
+          unreadCounts.set(channelId, unread);
+        }
+      }
+
+      return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+    },
+    markChannelRead: async (channelId: number, userId: number) => {
+      const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
+      const messages = snap.docs
+        .map((d) => mapMessage(d.data(), d.id))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const latest = messages[0];
+      const readAt = latest?.createdAt.toISOString() ?? new Date().toISOString();
+
+      const memberSnap = await db
+        .collection(COL.channelMembers)
+        .where("channelId", "==", channelId)
+        .where("userId", "==", userId)
+        .limit(1)
+        .get();
+      if (memberSnap.empty) return;
+      await memberSnap.docs[0]!.ref.set(
+        {
+          lastReadAt: readAt,
+          lastReadMessageId: latest?.id ?? null,
+        },
+        { merge: true },
+      );
+    },
+
     async addChannelMember(
       channelId: number,
       userId: number,
@@ -856,10 +948,23 @@ export function createFirestoreStore() {
       return snap.size;
     },
 
-    async listMessagesByChannel(channelId: number, limit = 100): Promise<MessageWithSender[]> {
+    async listMessagesByChannel(
+      channelId: number,
+      options?: { limit?: number; before?: number },
+    ): Promise<MessageWithSender[]> {
+      const limit = options?.limit ?? 100;
       const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
-      const messages = snap.docs.map((d) => mapMessage(d.data(), d.id));
-      const sorted = messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).slice(-limit);
+      let messages = snap.docs.map((d) => mapMessage(d.data(), d.id));
+      messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+      if (options?.before) {
+        const ref = messages.find((m) => m.id === options.before);
+        if (ref) {
+          messages = messages.filter((m) => m.createdAt < ref.createdAt);
+        }
+      }
+
+      const sorted = messages.slice(-limit);
       const users = await this.listUsers();
       const userMap = new Map(users.map((u) => [u.id, u.fullName]));
       return sorted.map((m) => ({
@@ -887,6 +992,18 @@ export function createFirestoreStore() {
         createdAt: new Date().toISOString(),
       };
       await db.collection(COL.messages).doc(docId(id)).set(row);
+
+      const channelRef = db.collection(COL.channels).doc(docId(data.channelId));
+      const channelSnap = await channelRef.get();
+      const prevCount = Number(channelSnap.data()?.messageCount ?? 0);
+      await channelRef.set(
+        {
+          lastPostAt: row.createdAt,
+          messageCount: prevCount + 1,
+        },
+        { merge: true },
+      );
+
       return mapMessage(row, String(id));
     },
 
@@ -905,6 +1022,14 @@ export function createFirestoreStore() {
       const snap = await db.collection(COL.messages).doc(docId(id)).get();
       if (!snap.exists) return null;
       return mapMessage(snap.data()!, snap.id);
+    },
+
+    async findMessageByIdWithSender(id: number): Promise<MessageWithSender | null> {
+      const m = await this.findMessageById(id);
+      if (!m) return null;
+      const users = await this.listUsers();
+      const user = users.find((u) => u.id === m.senderId);
+      return { ...m, senderName: user?.fullName ?? null };
     },
 
     async findCalendarEventById(id: number): Promise<CalendarEvent | null> {
@@ -1352,6 +1477,8 @@ function mapChannel(data: FirebaseFirestore.DocumentData, id: string): Channel {
     type: data.type as string,
     visibility: (data.visibility as string) ?? "PRIVATE",
     archived: Boolean(data.archived),
+    lastPostAt: data.lastPostAt ? toDate(data.lastPostAt) : null,
+    messageCount: Number(data.messageCount ?? 0),
     createdById: (data.createdById as number) ?? null,
     createdAt: toDate(data.createdAt),
   };
@@ -1363,6 +1490,8 @@ function mapChannelMember(data: FirebaseFirestore.DocumentData, id: string) {
     channelId: data.channelId as number,
     userId: data.userId as number,
     role: data.role as string,
+    lastReadAt: data.lastReadAt ? toDate(data.lastReadAt) : null,
+    lastReadMessageId: (data.lastReadMessageId as number) ?? null,
     joinedAt: toDate(data.joinedAt),
   };
 }

@@ -1410,6 +1410,9 @@ export const ListChannelsResponseItem = zod.object({
   "memberCount": zod.number().optional(),
   "myRole": zod.string().nullish(),
   "unreadCount": zod.number().optional(),
+  "lastPostAt": zod.string().nullish(),
+  "lastMessagePreview": zod.string().nullish(),
+  "lastReadMessageId": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListChannelsResponse = zod.array(ListChannelsResponseItem)
@@ -1446,6 +1449,9 @@ export const GetChannelResponse = zod.object({
   "memberCount": zod.number().optional(),
   "myRole": zod.string().nullish(),
   "unreadCount": zod.number().optional(),
+  "lastPostAt": zod.string().nullish(),
+  "lastMessagePreview": zod.string().nullish(),
+  "lastReadMessageId": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1475,6 +1481,9 @@ export const UpdateChannelResponse = zod.object({
   "memberCount": zod.number().optional(),
   "myRole": zod.string().nullish(),
   "unreadCount": zod.number().optional(),
+  "lastPostAt": zod.string().nullish(),
+  "lastMessagePreview": zod.string().nullish(),
+  "lastReadMessageId": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1528,10 +1537,47 @@ export const RemoveChannelMemberParams = zod.object({
 
 
 /**
+ * @summary List users mentionable in a channel
+ */
+export const GetChannelMentionCandidatesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetChannelMentionCandidatesQueryParams = zod.object({
+  "q": zod.coerce.string().optional()
+})
+
+export const GetChannelMentionCandidatesResponseItem = zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "avatarUrl": zod.string().nullish()
+})
+export const GetChannelMentionCandidatesResponse = zod.array(GetChannelMentionCandidatesResponseItem)
+
+
+/**
+ * @summary Mark channel as read for current user
+ */
+export const MarkChannelReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Get channel messages
  */
 export const GetChannelMessagesParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const getChannelMessagesQueryLimitDefault = 50;
+export const getChannelMessagesQueryLimitMax = 100;
+
+
+
+export const GetChannelMessagesQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getChannelMessagesQueryLimitMax).default(getChannelMessagesQueryLimitDefault),
+  "before": zod.coerce.number().optional().describe('Message id cursor for older history')
 })
 
 export const GetChannelMessagesResponseItem = zod.object({
@@ -1579,6 +1625,45 @@ export const SendMessageBody = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional()
+})
+
+
+/**
+ * @summary Toggle emoji reaction on a message
+ */
+export const ToggleMessageReactionParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const toggleMessageReactionBodyEmojiMax = 32;
+
+
+
+export const ToggleMessageReactionBody = zod.object({
+  "emoji": zod.string().max(toggleMessageReactionBodyEmojiMax)
+})
+
+export const ToggleMessageReactionResponse = zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string()
 })
 
 

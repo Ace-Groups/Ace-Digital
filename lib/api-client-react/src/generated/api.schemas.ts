@@ -741,6 +741,12 @@ export interface Channel {
   /** @nullable */
   myRole?: string | null;
   unreadCount?: number;
+  /** @nullable */
+  lastPostAt?: string | null;
+  /** @nullable */
+  lastMessagePreview?: string | null;
+  /** @nullable */
+  lastReadMessageId?: number | null;
   createdAt?: string;
 }
 
@@ -853,6 +859,18 @@ export interface MessageInput {
   metadata?: MessageInputMetadata;
 }
 
+export interface MentionCandidate {
+  userId: number;
+  fullName: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+}
+
+export interface MessageReactionInput {
+  /** @maxLength 32 */
+  emoji: string;
+}
+
 export interface PollVoteInput {
   optionId: string;
 }
@@ -936,6 +954,22 @@ export type PatchExpenseStatusBody = {
 
 export type ListApprovalsParams = {
 status?: string;
+};
+
+export type GetChannelMentionCandidatesParams = {
+q?: string;
+};
+
+export type GetChannelMessagesParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Message id cursor for older history
+ */
+before?: number;
 };
 
 export type ListActivityParams = {

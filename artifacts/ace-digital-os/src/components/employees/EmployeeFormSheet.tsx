@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { isRole } from "@workspace/rbac";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,7 +59,10 @@ const createSchema = z
 const editSchema = z.object({
   fullName: z.string().min(1, "Name required"),
   email: z.string().email("Invalid email"),
-  role: z.string(),
+  role: z
+    .string()
+    .min(1, "Select an access role")
+    .refine((r) => isRole(r), { message: "Select an access role" }),
   teamId: z.string().optional(),
   jobTitle: z.string().optional(),
   phone: z.string().optional(),
@@ -156,6 +160,13 @@ export function EmployeeFormSheet({
 
   const passwordMode = createForm.watch("passwordMode");
   const startDateWatch = createForm.watch("startDate");
+  const roleOptionsForEdit = useMemo(() => {
+    const options = [...assignableRoles];
+    if (employee?.role && isRole(employee.role) && !options.includes(employee.role)) {
+      options.push(employee.role);
+    }
+    return options;
+  }, [assignableRoles, employee?.role]);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const employeeCodeTouched = useRef(false);
   const queryClient = useQueryClient();
@@ -185,10 +196,12 @@ export function EmployeeFormSheet({
 
   useEffect(() => {
     if (!open || mode !== "edit" || !employee) return;
+    const normalizedRole =
+      employee.role && isRole(employee.role) ? employee.role : "employee";
     editForm.reset({
       fullName: employee.fullName,
       email: employee.email,
-      role: employee.role,
+      role: normalizedRole,
       teamId: employee.teamId ? String(employee.teamId) : undefined,
       jobTitle: employee.jobTitle ?? "",
       phone: employee.phone ?? "",
@@ -337,7 +350,7 @@ export function EmployeeFormSheet({
             <FormFields
               form={editForm as never}
               teams={teams}
-              roles={assignableRoles}
+              roles={roleOptionsForEdit}
               canViewSalaries={canViewSalaries}
               isEdit
               onCreateTeamClick={() => setTeamDialogOpen(true)}

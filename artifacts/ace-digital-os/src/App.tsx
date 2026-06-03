@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -83,6 +84,11 @@ function ProtectedRoute({
   );
 }
 
+function PrefetchBoot() {
+  usePrefetchAppData();
+  return null;
+}
+
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
@@ -159,6 +165,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
+            <PrefetchBoot />
             <MobileChromeProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                 <AppRouter />

@@ -22,5 +22,11 @@ export interface Channel {
   /** @nullable */
   myRole?: string | null;
   unreadCount?: number;
+  /** @nullable */
+  lastPostAt?: string | null;
+  /** @nullable */
+  lastMessagePreview?: string | null;
+  /** @nullable */
+  lastReadMessageId?: number | null;
   createdAt?: string;
 }

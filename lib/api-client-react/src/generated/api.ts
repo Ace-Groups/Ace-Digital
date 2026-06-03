@@ -53,6 +53,8 @@ import type {
   ExpenseInput,
   FinanceSummary,
   GetCalendarFeedParams,
+  GetChannelMentionCandidatesParams,
+  GetChannelMessagesParams,
   GetNextEmployeeCodeParams,
   HealthStatus,
   JobTitleInput,
@@ -63,8 +65,10 @@ import type {
   ListProjectsParams,
   ListTasksParams,
   LoginInput,
+  MentionCandidate,
   Message,
   MessageInput,
+  MessageReactionInput,
   MyProfileUpdate,
   NextEmployeeCode,
   Notification,
@@ -5393,20 +5397,29 @@ export const useRemoveChannelMember = <TError = ErrorType<void>,
       return useMutation(getRemoveChannelMemberMutationOptions(options));
     }
 
-export const getGetChannelMessagesUrl = (id: number,) => {
+export const getGetChannelMentionCandidatesUrl = (id: number,
+    params?: GetChannelMentionCandidatesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/channels/${id}/messages`
+  return stringifiedParams.length > 0 ? `/api/v1/channels/${id}/mention-candidates?${stringifiedParams}` : `/api/v1/channels/${id}/mention-candidates`
 }
 
 /**
- * @summary Get channel messages
+ * @summary List users mentionable in a channel
  */
-export const getChannelMessages = async (id: number, options?: RequestInit): Promise<Message[]> => {
+export const getChannelMentionCandidates = async (id: number,
+    params?: GetChannelMentionCandidatesParams, options?: RequestInit): Promise<MentionCandidate[]> => {
 
-  return customFetch<Message[]>(getGetChannelMessagesUrl(id),
+  return customFetch<MentionCandidate[]>(getGetChannelMentionCandidatesUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -5419,23 +5432,184 @@ export const getChannelMessages = async (id: number, options?: RequestInit): Pro
 
 
 
-export const getGetChannelMessagesQueryKey = (id: number,) => {
+export const getGetChannelMentionCandidatesQueryKey = (id: number,
+    params?: GetChannelMentionCandidatesParams,) => {
     return [
-    `/api/v1/channels/${id}/messages`
+    `/api/v1/channels/${id}/mention-candidates`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetChannelMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getChannelMessages>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetChannelMentionCandidatesQueryOptions = <TData = Awaited<ReturnType<typeof getChannelMentionCandidates>>, TError = ErrorType<unknown>>(id: number,
+    params?: GetChannelMentionCandidatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMentionCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetChannelMessagesQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetChannelMentionCandidatesQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChannelMessages>>> = ({ signal }) => getChannelMessages(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChannelMentionCandidates>>> = ({ signal }) => getChannelMentionCandidates(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChannelMentionCandidates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetChannelMentionCandidatesQueryResult = NonNullable<Awaited<ReturnType<typeof getChannelMentionCandidates>>>
+export type GetChannelMentionCandidatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List users mentionable in a channel
+ */
+
+export function useGetChannelMentionCandidates<TData = Awaited<ReturnType<typeof getChannelMentionCandidates>>, TError = ErrorType<unknown>>(
+ id: number,
+    params?: GetChannelMentionCandidatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMentionCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetChannelMentionCandidatesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getMarkChannelReadUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/read`
+}
+
+/**
+ * @summary Mark channel as read for current user
+ */
+export const markChannelRead = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getMarkChannelReadUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMarkChannelReadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markChannelRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markChannelRead>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markChannelRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markChannelRead>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markChannelRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkChannelReadMutationResult = NonNullable<Awaited<ReturnType<typeof markChannelRead>>>
+
+    export type MarkChannelReadMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark channel as read for current user
+ */
+export const useMarkChannelRead = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markChannelRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markChannelRead>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkChannelReadMutationOptions(options));
+    }
+
+export const getGetChannelMessagesUrl = (id: number,
+    params?: GetChannelMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/channels/${id}/messages?${stringifiedParams}` : `/api/v1/channels/${id}/messages`
+}
+
+/**
+ * @summary Get channel messages
+ */
+export const getChannelMessages = async (id: number,
+    params?: GetChannelMessagesParams, options?: RequestInit): Promise<Message[]> => {
+
+  return customFetch<Message[]>(getGetChannelMessagesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetChannelMessagesQueryKey = (id: number,
+    params?: GetChannelMessagesParams,) => {
+    return [
+    `/api/v1/channels/${id}/messages`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetChannelMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getChannelMessages>>, TError = ErrorType<unknown>>(id: number,
+    params?: GetChannelMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChannelMessagesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChannelMessages>>> = ({ signal }) => getChannelMessages(id,params, { signal, ...requestOptions });
 
 
 
@@ -5453,11 +5627,12 @@ export type GetChannelMessagesQueryError = ErrorType<unknown>
  */
 
 export function useGetChannelMessages<TData = Awaited<ReturnType<typeof getChannelMessages>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number,
+    params?: GetChannelMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChannelMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetChannelMessagesQueryOptions(id,options)
+  const queryOptions = getGetChannelMessagesQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -5540,6 +5715,80 @@ export const useSendMessage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendMessageMutationOptions(options));
+    }
+
+export const getToggleMessageReactionUrl = (id: number,
+    messageId: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/messages/${messageId}/reactions`
+}
+
+/**
+ * @summary Toggle emoji reaction on a message
+ */
+export const toggleMessageReaction = async (id: number,
+    messageId: number,
+    messageReactionInput: MessageReactionInput, options?: RequestInit): Promise<Message> => {
+
+  return customFetch<Message>(getToggleMessageReactionUrl(id,messageId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      messageReactionInput,)
+  }
+);}
+
+
+
+
+export const getToggleMessageReactionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleMessageReaction>>, TError,{id: number;messageId: number;data: BodyType<MessageReactionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof toggleMessageReaction>>, TError,{id: number;messageId: number;data: BodyType<MessageReactionInput>}, TContext> => {
+
+const mutationKey = ['toggleMessageReaction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof toggleMessageReaction>>, {id: number;messageId: number;data: BodyType<MessageReactionInput>}> = (props) => {
+          const {id,messageId,data} = props ?? {};
+
+          return  toggleMessageReaction(id,messageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ToggleMessageReactionMutationResult = NonNullable<Awaited<ReturnType<typeof toggleMessageReaction>>>
+    export type ToggleMessageReactionMutationBody = BodyType<MessageReactionInput>
+    export type ToggleMessageReactionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toggle emoji reaction on a message
+ */
+export const useToggleMessageReaction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleMessageReaction>>, TError,{id: number;messageId: number;data: BodyType<MessageReactionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof toggleMessageReaction>>,
+        TError,
+        {id: number;messageId: number;data: BodyType<MessageReactionInput>},
+        TContext
+      > => {
+      return useMutation(getToggleMessageReactionMutationOptions(options));
     }
 
 export const getVotePollUrl = (id: number,

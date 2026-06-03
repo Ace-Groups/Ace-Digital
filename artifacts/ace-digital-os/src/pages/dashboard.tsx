@@ -13,6 +13,8 @@ import { StaggerItem, StaggerList } from "@/components/design";
 import { formatCurrency, formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useMemo } from "react";
+import { ChatWidget } from "@/components/dashboard/ChatWidget";
+import { usePermissions } from "@/hooks/use-permissions";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -23,6 +25,8 @@ function getGreeting(): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { can } = usePermissions();
+  const showChat = can("channels:read");
   const { data: dash, isLoading, isFetching } = useGetDashboard({
     query: {
       queryKey: getGetDashboardQueryKey(),
@@ -52,7 +56,7 @@ export default function DashboardPage() {
           icon={FolderKanban}
           tone="brand"
           href="/projects"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-active-projects"
         />
       )}
@@ -63,7 +67,7 @@ export default function DashboardPage() {
           icon={CheckSquare}
           tone="brand"
           href="/tasks"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-my-tasks"
         />
       )}
@@ -74,7 +78,7 @@ export default function DashboardPage() {
           icon={Users}
           tone="success"
           href="/employees"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-total-employees"
         />
       )}
@@ -85,7 +89,7 @@ export default function DashboardPage() {
           icon={Building2}
           tone="success"
           href="/clients"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-active-clients"
         />
       )}
@@ -96,7 +100,7 @@ export default function DashboardPage() {
           icon={DollarSign}
           tone="warning"
           href="/clients"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-contract-value"
         />
       )}
@@ -107,7 +111,7 @@ export default function DashboardPage() {
           icon={DollarSign}
           tone="warning"
           href="/finance"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-monthly-revenue"
         />
       )}
@@ -118,7 +122,7 @@ export default function DashboardPage() {
           icon={ClipboardCheck}
           tone="danger"
           href="/approvals"
-          isLoading={isLoading}
+          isLoading={isLoading && !dash}
           testId="stat-pending-approvals"
         />
       )}
@@ -139,7 +143,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-white/70">{dashboardDate}</p>
               <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/80">
-                {isFetching ? "Syncing..." : "Live"}
+                {isFetching && !dash ? "Syncing..." : "Live"}
               </span>
             </div>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl text-balance">
@@ -160,8 +164,13 @@ export default function DashboardPage() {
 
         <StaggerItem>
         <div className="grid gap-4 lg:grid-cols-3 xl:gap-6">
+          {showChat && (
+            <div className="lg:col-span-1">
+              <ChatWidget />
+            </div>
+          )}
           {widgets.has("upcomingDeadlines") && (
-          <div className="lg:col-span-2">
+          <div className={showChat ? "lg:col-span-2" : "lg:col-span-3"}>
             <Card className="border-border/70">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">

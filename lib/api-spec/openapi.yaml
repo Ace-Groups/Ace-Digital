@@ -1434,6 +1434,50 @@ paths:
         "404":
           description: Not found
 
+  /v1/channels/{id}/mention-candidates:
+    get:
+      operationId: getChannelMentionCandidates
+      tags: [channels]
+      summary: List users mentionable in a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mention candidates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MentionCandidate"
+
+  /v1/channels/{id}/read:
+    post:
+      operationId: markChannelRead
+      tags: [channels]
+      summary: Mark channel as read for current user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Marked read
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /v1/channels/{id}/messages:
     get:
       operationId: getChannelMessages
@@ -1443,6 +1487,18 @@ paths:
         - name: id
           in: path
           required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: before
+          in: query
+          description: Message id cursor for older history
           schema:
             type: integer
       responses:
@@ -1473,6 +1529,36 @@ paths:
       responses:
         "201":
           description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /v1/channels/{id}/messages/{messageId}/reactions:
+    post:
+      operationId: toggleMessageReaction
+      tags: [channels]
+      summary: Toggle emoji reaction on a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageReactionInput"
+      responses:
+        "200":
+          description: Updated message
           content:
             application/json:
               schema:
@@ -2652,6 +2738,12 @@ components:
           type: ["string", "null"]
         unreadCount:
           type: integer
+        lastPostAt:
+          type: ["string", "null"]
+        lastMessagePreview:
+          type: ["string", "null"]
+        lastReadMessageId:
+          type: ["integer", "null"]
         createdAt:
           type: string
 
@@ -2770,6 +2862,25 @@ components:
           enum: [text, poll, event]
         metadata:
           type: object
+
+    MentionCandidate:
+      type: object
+      required: [userId, fullName]
+      properties:
+        userId:
+          type: integer
+        fullName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+
+    MessageReactionInput:
+      type: object
+      required: [emoji]
+      properties:
+        emoji:
+          type: string
+          maxLength: 32
 
     PollVoteInput:
       type: object

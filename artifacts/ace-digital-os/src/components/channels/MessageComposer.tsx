@@ -1,5 +1,9 @@
 import { useRef, useState } from "react";
 import { Mic, Paperclip, Send, Trash2, X } from "lucide-react";
+import { UserAvatar } from "@/components/UserAvatar";
+import { useMentionAutocomplete } from "@/hooks/use-mention-autocomplete";
+import { insertMentionToken } from "@/lib/chat-mentions";
+import type { ReplyTarget } from "@/components/channels/ChannelThreadHeader";
 import type { MessageAttachment, MessageInput } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
@@ -33,6 +37,8 @@ interface MessageComposerProps {
   channelName: string;
   disabled?: boolean;
   sending?: boolean;
+  replyTo?: ReplyTarget | null;
+  onClearReply?: () => void;
   onSend: (payload: MessageInput, previewAttachments?: MessageAttachment[]) => Promise<void>;
   onQueuePending: (
     payload: MessageInput,
@@ -57,6 +63,8 @@ export function MessageComposer({
   channelName: _channelName,
   disabled,
   sending,
+  replyTo,
+  onClearReply,
   onSend,
   onQueuePending,
   onFlushPending,
@@ -65,6 +73,7 @@ export function MessageComposer({
   const { toast } = useToast();
   const keyboardOffset = useKeyboardOffset();
   const [message, setMessage] = useState("");
+  const [cursor, setCursor] = useState(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [attachOpen, setAttachOpen] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
@@ -72,6 +81,8 @@ export function MessageComposer({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const mention = useMentionAutocomplete(channelId, message, cursor);
 
   const voice = useVoiceRecorder();
   const isRecording = voice.state === "recording";
@@ -264,7 +275,44 @@ export function MessageComposer({
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function pickMention(userId: number, fullName: string) {
+    const el = textareaRef.current;
+    const pos = el?.selectionStart ?? cursor;
+    const next = insertMentionToken(message, pos, userId, fullName);
+    setMessage(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      const c = next.length;
+      el?.setSelectionRange(c, c);
+      setCursor(c);
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mention.open && mention.candidates.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        mention.moveActive(1);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        mention.moveActive(-1);
+        return;
+      }
+      if (e.key === "Tab" || e.key === "Enter") {
+        const c = mention.candidates[mention.activeIndex];
+        if (c) {
+          e.preventDefault();
+          pickMention(c.userId, c.fullName);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (showSend) void handleSend();
@@ -289,6 +337,25 @@ export function MessageComposer({
               : "max(0.75rem, env(safe-area-inset-bottom))",
         }}
       >
+        {replyTo && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted-foreground">
+                Replying to {replyTo.senderName ?? "message"}
+              </p>
+              <p className="line-clamp-2 text-sm">{replyTo.body}</p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => onClearReply?.()}
+              aria-label="Cancel reply"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {pendingFiles.length > 0 && !isRecording && (
           <div className="mb-2 flex gap-2 overflow-x-auto pb-1 touch-scroll px-1">
             {pendingFiles.map((pf, i) => (
@@ -381,26 +448,62 @@ export function MessageComposer({
               <Paperclip size={22} className="shrink-0" />
             </button>
 
-            <div
-              className={cn(
-                "flex min-h-11 min-w-0 flex-1 items-center rounded-full border border-border/80",
-                "bg-muted/30 px-4 shadow-sm",
+            <div className="relative min-w-0 flex-1">
+              {mention.open && mention.candidates.length > 0 && (
+                <ul
+                  className="absolute bottom-full left-0 z-20 mb-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md"
+                  role="listbox"
+                >
+                  {mention.candidates.map((c, i) => (
+                    <li key={c.userId}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={i === mention.activeIndex}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted",
+                          i === mention.activeIndex && "bg-muted",
+                        )}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickMention(c.userId, c.fullName);
+                        }}
+                      >
+                        <UserAvatar
+                          avatarUrl={c.avatarUrl}
+                          fullName={c.fullName}
+                          className="h-7 w-7"
+                          iconSize={12}
+                        />
+                        <span className="truncate">{c.fullName}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            >
-              <textarea
-                ref={textareaRef}
-                data-testid="input-message"
-                rows={1}
-                disabled={disabled}
-                placeholder="Message"
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  autoResize();
-                }}
-                onKeyDown={handleKeyDown}
-                className="my-2 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-base leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
-              />
+              <div
+                className={cn(
+                  "flex min-h-11 min-w-0 flex-1 items-center rounded-full border border-border/80",
+                  "bg-muted/30 px-4 shadow-sm",
+                )}
+              >
+                <textarea
+                  ref={textareaRef}
+                  data-testid="input-message"
+                  rows={1}
+                  disabled={disabled}
+                  placeholder="Message"
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    setCursor(e.target.selectionStart);
+                    autoResize();
+                  }}
+                  onSelect={(e) => setCursor(e.currentTarget.selectionStart)}
+                  onKeyDown={handleKeyDown}
+                  className="my-2 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-base leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
+                />
+              </div>
             </div>
 
             {showSend && (

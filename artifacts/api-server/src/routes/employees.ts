@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
-import { canAssignRole, canViewSalaries } from "@workspace/rbac";
+import { canAssignRole, canViewSalaries, isRole } from "@workspace/rbac";
 import { requireAuth, hashPassword } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
@@ -205,11 +205,6 @@ router.patch(
       payrollStatus,
     } = req.body;
 
-    if (role !== undefined && !canAssignRole(ctx.role, role)) {
-      res.status(403).json({ error: "Cannot assign this role" });
-      return;
-    }
-
     const parsedStart = parseStartDate(startDate);
     if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
       res.status(400).json({ error: "Invalid start date" });
@@ -220,6 +215,17 @@ router.patch(
     if (!existingUser) {
       res.status(404).json({ error: "Employee not found" });
       return;
+    }
+
+    if (role !== undefined && role !== "") {
+      if (!isRole(role)) {
+        res.status(400).json({ error: "Invalid role" });
+        return;
+      }
+      if (role !== existingUser.role && !canAssignRole(ctx.role, role)) {
+        res.status(403).json({ error: "Cannot assign this role" });
+        return;
+      }
     }
 
     if (email !== undefined) {
@@ -244,7 +250,7 @@ router.patch(
     const user = await store.updateUser(id, {
       ...(fullName !== undefined && { fullName }),
       ...(email !== undefined && { email: email.toLowerCase() }),
-      ...(role !== undefined && { role }),
+      ...(role !== undefined && role !== "" && role !== existingUser.role && { role }),
       ...(teamId !== undefined && { teamId }),
       ...(jobTitle !== undefined && { jobTitle }),
       ...(phone !== undefined && { phone: phone || null }),
