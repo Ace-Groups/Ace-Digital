@@ -17,8 +17,8 @@ Protocol definitions live in [`lib/realtime-protocol`](../lib/realtime-protocol)
 | Variable | Where | Purpose |
 |----------|--------|---------|
 | `VITE_REALTIME_WS_URL` | ace-digital-os | Production WebSocket URL (`wss://…`). Unset in dev → Vite proxies `/ws` to api-server |
-| `REDIS_URL` | api-server, realtime-server | Pub/sub between Firebase Functions API and Cloud Run realtime |
-| `JWT_SECRET` | api-server, realtime-server, Functions | Must match across services (32+ chars in production) |
+| `REDIS_URL` | api-server (Render) | Optional pub/sub; single Render instance uses in-process hub |
+| `JWT_SECRET` | api-server (Render), Functions (if used) | Must match token signing (32+ chars in production) |
 | `VITE_FIREBASE_CHAT` | ace-digital-os | Set to `false` to disable Firestore fallback + Storage chat |
 | `FIREBASE_CHAT_ENABLED` | api-server | Set to `false` to disable mirror + custom token |
 | `FIREBASE_CHAT_MIRROR` | api-server | Set to `false` to skip Postgres → Firestore message mirror |
@@ -35,15 +35,16 @@ When `DATABASE_URL` is set (local dev), Postgres is canonical. Messages may stil
    - `REDIS_URL=redis://localhost:6379 pnpm --filter @workspace/realtime-server run dev`
    - Set `REDIS_URL` on api-server as well (inline hub still works without Redis locally)
 
-## Production (Firebase + Cloud Run)
+## Production (Firebase Hosting + Render)
 
-1. Provision **Redis** (e.g. Upstash, Memorystore).
-2. Deploy **realtime server**: `pnpm run deploy:realtime` (or `gcloud run deploy` with [`artifacts/realtime-server/Dockerfile`](../artifacts/realtime-server/Dockerfile)).
-3. Set `REDIS_URL` on Cloud Functions (Firebase secret or env).
-4. Set Hosting build env `VITE_REALTIME_WS_URL=wss://<cloud-run-url>/ws`.
-5. Keep Firebase chat enabled for fallback and attachment Storage.
+See **[PRODUCTION.md](PRODUCTION.md)** for URLs and verify steps.
 
-REST remains on Firebase Functions; WebSocket runs on Cloud Run and subscribes to Redis.
+1. **Render** runs api-server (REST + `/ws`). Env: `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `USE_FIRESTORE=true`, optional `REDIS_URL`. Deploy: push to `main` or manual deploy; build `bash scripts/render-build.sh`.
+2. **Hosting** build: `pnpm run build:web:render` then `firebase deploy --only hosting` (sets `VITE_API_BASE_URL` and `VITE_REALTIME_WS_URL` to Render).
+3. Keep **`VITE_FIREBASE_CHAT=true`** for Firestore fallback and Storage attachments.
+4. External **cron** pings `/api/healthz` every 10–14 min on the free Render plan ([RENDER_KEEPALIVE_CRON.md](RENDER_KEEPALIVE_CRON.md)).
+
+**Legacy:** separate Cloud Run realtime (`pnpm run deploy:realtime`) + Functions-only REST — not used in the live Render setup.
 
 ## Firestore index (fallback)
 

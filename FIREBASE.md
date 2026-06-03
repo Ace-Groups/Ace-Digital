@@ -1,5 +1,7 @@
 # Firebase deployment (Ace Digital OS)
 
+**Current production:** the hosted SPA is on Firebase Hosting; **REST and WebSocket** run on [Render](https://ace-digital-api.onrender.com). Deploy the frontend with `pnpm run build:web:render` then `firebase deploy --only hosting`. See **[docs/PRODUCTION.md](docs/PRODUCTION.md)** for the full live architecture. Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
+
 ## Project
 
 | Item | Value |
@@ -195,14 +197,20 @@ USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/
 pnpm run deploy:firebase
 ```
 
-## Architecture (lowest cost)
+## Architecture (production)
 
-- **Firestore** — NoSQL; Spark free tier (50K reads / 20K writes per day). All business data stays server-side via Cloud Functions (Admin SDK); clients never touch Firestore directly (`firestore.rules` denies client access).
-- **Hosting** — Free CDN + SSL.
-- **Cloud Functions (gen 1)** — `asia-south1`, 512MB, max 10 instances — Express app bundled as `api-app.mjs` using `USE_FIRESTORE=true`.
-- **Cloud Run (`ace-realtime`)** — WebSocket server for channel chat; subscribes to **Redis** (`REDIS_URL`) for events published by the API. Deploy: `pnpm run deploy:realtime`. Set `VITE_REALTIME_WS_URL` on Hosting builds. See [`docs/CHAT.md`](docs/CHAT.md).
+| Component | Role |
+|-----------|------|
+| **Firestore** | Production database; API on Render uses Admin SDK (`FIREBASE_SERVICE_ACCOUNT_JSON`). Client writes denied in rules; chat fallback may read mirrored `messages`. |
+| **Hosting** | SPA at https://ace-digital-os.web.app — build with `pnpm run build:web:render`. |
+| **Render (`ace-digital-api`)** | REST `/api/*` + WebSocket `/ws`; see [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). |
+| **Redis Cloud** (optional) | `REDIS_URL` on Render for pub/sub; not required on a single instance. |
+| **Cloud Functions (gen 1)** | Legacy bundled API for Hosting `/api/**` rewrite; unused when the SPA calls Render via `VITE_API_BASE_URL`. |
+| **Cloud Run (`ace-realtime`)** | Optional split WS deploy (`pnpm run deploy:realtime`); not used in current Render-all-in-one setup. |
 
-Postgres (`DATABASE_URL`) is still supported locally for development; production Firebase uses Firestore only. Local dev attaches WebSocket on the api-server at `/ws` without Cloud Run.
+Postgres (`DATABASE_URL`) is for local development. Local dev: api-server on port 8080 with `/ws` on the same process.
+
+Full diagram and deploy commands: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**. Chat: **[docs/CHAT.md](docs/CHAT.md)**.
 
 ## Estimated monthly cost (Ace Digital OS, small team)
 

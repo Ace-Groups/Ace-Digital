@@ -1,5 +1,7 @@
 # Deploy API + WebSocket on Render (free tier)
 
+**Live service:** https://ace-digital-api.onrender.com — paired with Firebase Hosting; see **[PRODUCTION.md](PRODUCTION.md)** for end-to-end deploy and verify.
+
 One Render **web service** runs Express REST and WebSocket chat on `/ws` (same as local `api-server`). **Redis Cloud** is optional on this layout; chat works via the in-process hub. Set `REDIS_URL` if you want pub/sub ready for a second consumer later.
 
 ## 1. Redis Cloud (`REDIS_URL`)
@@ -69,7 +71,14 @@ VITE_API_BASE_URL=https://ace-digital-api.onrender.com
 VITE_REALTIME_WS_URL=wss://ace-digital-api.onrender.com/ws
 ```
 
-Rebuild and deploy the frontend (`pnpm run build:web && firebase deploy --only hosting`). Keep `VITE_FIREBASE_CHAT=true` for Firestore fallback.
+Rebuild and deploy the frontend:
+
+```bash
+pnpm run build:web:render
+firebase deploy --only hosting
+```
+
+Or: `pnpm run deploy:hosting:render`. Keep `VITE_FIREBASE_CHAT=true` for Firestore fallback.
 
 **Important:** With `VITE_API_BASE_URL` set, the app calls Render directly for REST. You can leave the Firebase `/api/**` rewrite in place (unused) or remove it later to avoid confusion.
 

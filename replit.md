@@ -2,6 +2,20 @@
 
 An internal company operating system for Ace Digital — an IT company. Manages projects, teams, employees, finance/payroll, clients, approvals, reports, and team communications.
 
+## Production
+
+| | URL |
+|--|-----|
+| App | https://ace-digital-os.web.app |
+| API + WS | https://ace-digital-api.onrender.com |
+
+```bash
+pnpm run deploy:hosting:render   # build:web:render + firebase hosting
+# Render API auto-deploys from main (scripts/render-build.sh)
+```
+
+Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md), [FIREBASE.md](FIREBASE.md).
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
