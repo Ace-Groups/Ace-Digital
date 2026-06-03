@@ -75,16 +75,14 @@ Rebuild and deploy the frontend (`pnpm run build:web && firebase deploy --only h
 
 If you still use Firebase Functions for REST, only set `VITE_REALTIME_WS_URL` to Render.
 
-## 5. Keep the free instance awake (optional)
+## 5. Keep the free instance awake (cron job)
 
-Free services spin down after **15 minutes** without HTTP or WebSocket traffic (~1 min cold start).
+See **[RENDER_KEEPALIVE_CRON.md](RENDER_KEEPALIVE_CRON.md)** for the full cron-job.org / UptimeRobot setup.
 
-Use an external cron (e.g. [cron-job.org](https://cron-job.org), UptimeRobot free):
+- **URL:** `https://ace-digital-api.onrender.com/api/healthz`
+- **Every:** 10–14 minutes
 
-- **URL:** `https://YOUR-SERVICE.onrender.com/api/healthz`
-- **Interval:** every **10–14 minutes**
-
-Active chat (WS ping every 25s) also prevents spin-down while someone has the app open.
+Do **not** use Render’s “Cron Job” service type — it does not wake a Web Service.
 
 ## 6. Verify
 

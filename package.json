@@ -8,6 +8,7 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "build:web": "BASE_PATH=/ PORT=5173 pnpm --filter @workspace/ace-digital-os run build",
+    "build:web:render": "VITE_API_BASE_URL=https://ace-digital-api.onrender.com VITE_REALTIME_WS_URL=wss://ace-digital-api.onrender.com/ws BASE_PATH=/ pnpm --filter @workspace/ace-digital-os run build",
     "build:api": "pnpm --filter @workspace/api-server run build",
     "seed:firestore": "USE_FIRESTORE=true npx tsx scripts/src/seed-firestore.ts",
     "clear:prod": "USE_FIRESTORE=true npx tsx scripts/src/clear-db-for-prod.ts",
