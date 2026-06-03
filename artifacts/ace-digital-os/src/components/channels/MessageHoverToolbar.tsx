@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MessageSquare, MoreHorizontal, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmojiPickerSheet } from "@/components/channels/EmojiPickerSheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const QUICK = ["👍", "👀", "🙌"];
@@ -19,29 +20,34 @@ export function MessageHoverToolbar({
   onMore,
   className,
 }: MessageHoverToolbarProps) {
+  const isMobile = useIsMobile();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div
       className={cn(
-        "absolute right-4 top-0 z-10 flex translate-y-1 items-center gap-0.5 rounded-lg border border-border bg-popover p-0.5 opacity-0 shadow-md transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100",
+        "z-10 flex items-center gap-0.5",
+        isMobile
+          ? "relative shrink-0 self-start rounded-lg border border-border bg-[var(--chat-toolbar-bg)] p-0.5 shadow-brand-sm"
+          : "absolute right-2 top-0 translate-y-1 rounded-lg border border-border bg-[var(--chat-toolbar-bg)] p-0.5 opacity-0 shadow-brand-md transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 sm:right-4",
         className,
       )}
       onClick={(e) => e.stopPropagation()}
     >
-      {QUICK.map((emoji) => (
-        <Button
-          key={emoji}
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-base"
-          aria-label={`React with ${emoji}`}
-          onClick={() => onReact(emoji)}
-        >
-          {emoji}
-        </Button>
-      ))}
+      {!isMobile &&
+        QUICK.map((emoji) => (
+          <Button
+            key={emoji}
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-base"
+            aria-label={`React with ${emoji}`}
+            onClick={() => onReact(emoji)}
+          >
+            {emoji}
+          </Button>
+        ))}
       <EmojiPickerSheet
         open={pickerOpen}
         onOpenChange={setPickerOpen}
@@ -54,11 +60,11 @@ export function MessageHoverToolbar({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className={cn(isMobile ? "h-9 w-9" : "h-8 w-8")}
             aria-label="Add reaction"
             onClick={() => setPickerOpen(true)}
           >
-            <Smile size={16} />
+            <Smile size={isMobile ? 18 : 16} />
           </Button>
         }
       />
@@ -67,11 +73,11 @@ export function MessageHoverToolbar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className={cn(isMobile ? "h-9 w-9" : "h-8 w-8")}
           aria-label="Reply in thread"
           onClick={onReply}
         >
-          <MessageSquare size={16} />
+          <MessageSquare size={isMobile ? 18 : 16} />
         </Button>
       )}
       {onMore && (
@@ -79,11 +85,11 @@ export function MessageHoverToolbar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className={cn(isMobile ? "h-9 w-9" : "h-8 w-8")}
           aria-label="More actions"
           onClick={onMore}
         >
-          <MoreHorizontal size={16} />
+          <MoreHorizontal size={isMobile ? 18 : 16} />
         </Button>
       )}
     </div>

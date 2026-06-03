@@ -58,16 +58,17 @@ export function MessageRow({
     <article
       data-testid={`message-${msg.id}`}
       className={cn(
-        "group relative flex gap-3 rounded-md px-2 py-1 transition-colors duration-150 hover:bg-[var(--chat-row-hover)]",
+        "group relative flex gap-2 rounded-md px-1 py-0.5 transition-colors duration-150 sm:gap-3 sm:px-2 sm:py-1",
+        "hover:bg-[var(--chat-row-hover)] active:bg-[var(--chat-row-hover)]",
         className,
       )}
     >
-      <div className="w-9 shrink-0">
+      <div className="w-8 shrink-0 sm:w-9">
         {showHeader ? (
           <UserAvatar
             fullName={msg.senderName ?? "?"}
             avatarUrl={msg.senderAvatar}
-            className="size-9 rounded-md"
+            className="size-8 rounded-md sm:size-9"
           />
         ) : (
           <span className="block pt-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
@@ -87,10 +88,12 @@ export function MessageRow({
             )}
           </div>
         )}
-        <div className="text-sm text-foreground">{children ?? <MessageBody body={msg.body} />}</div>
+        <div className="text-[15px] leading-snug text-foreground sm:text-sm">
+          {children ?? <MessageBody body={msg.body} />}
+        </div>
         {footer}
       </div>
-      {toolbar}
+      {toolbar ? <div className="shrink-0 pt-0.5">{toolbar}</div> : null}
     </article>
   );
 }

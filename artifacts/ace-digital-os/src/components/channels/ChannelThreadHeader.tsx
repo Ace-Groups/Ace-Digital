@@ -65,8 +65,13 @@ export function ChannelThreadHeader({
   }
 
   return (
-    <div className="flex shrink-0 flex-col border-b border-border bg-card/80 backdrop-blur-sm">
-      <div className="flex min-h-12 items-center gap-2 px-3 sm:px-4">
+    <div
+      className={cn(
+        "flex shrink-0 flex-col border-b border-border bg-[var(--chat-bg)]/95 backdrop-blur-sm",
+        isMobile && "pt-[env(safe-area-inset-top)]",
+      )}
+    >
+      <div className="flex min-h-11 items-center gap-1.5 px-2 sm:min-h-12 sm:gap-2 sm:px-4">
         {isMobile && onBack && (
           <Button
             type="button"
@@ -85,7 +90,7 @@ export function ChannelThreadHeader({
             {titlePrefix}
             {title}
           </p>
-          {(channel.description || channel.teamName) && (
+          {!isMobile && (channel.description || channel.teamName) && (
             <p className="truncate text-[11px] leading-tight text-muted-foreground">
               {channel.description ?? `${channel.teamName} team`}
             </p>
@@ -153,13 +158,13 @@ export function ChannelThreadHeader({
         )}
       </div>
       {onTabChange && (
-        <div className="flex gap-4 border-t border-border/60 px-4">
+        <div className="flex gap-3 border-t border-border/60 px-3 sm:gap-4 sm:px-4">
           {(["messages", "files"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               className={cn(
-                "border-b-2 py-2 text-sm font-medium capitalize transition-colors",
+                "min-h-10 border-b-2 py-2 text-sm font-medium capitalize transition-colors sm:min-h-0",
                 activeTab === tab
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",

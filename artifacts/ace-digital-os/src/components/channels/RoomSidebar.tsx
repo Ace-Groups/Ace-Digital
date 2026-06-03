@@ -70,8 +70,8 @@ function RoomRow({
       className={cn(
         "mb-0.5 flex w-full min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors active:scale-[0.99]",
         isSelected
-          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          ? "bg-primary/10 font-semibold text-foreground ring-1 ring-inset ring-primary/20 dark:bg-sidebar-accent dark:font-medium dark:text-sidebar-accent-foreground dark:ring-0"
+          : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
       )}
     >
       {ch.type === "DM" ? (
@@ -97,7 +97,9 @@ function RoomRow({
         <span
           className={cn(
             "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
-            isSelected ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-red-500 text-white",
+            isSelected
+              ? "bg-primary text-primary-foreground dark:bg-sidebar-primary dark:text-sidebar-primary-foreground"
+              : "bg-red-500 text-white",
           )}
         >
           {formatUnreadBadge(unread)}
@@ -136,7 +138,7 @@ function Section({
     <div className="mb-2">
       <button
         type="button"
-        className="mb-1 flex w-full items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/45 hover:text-sidebar-foreground/70"
+        className="mb-1 flex w-full items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/55 hover:text-sidebar-foreground"
         onClick={() => {
           const next = !collapsed;
           setCollapsed(next);
@@ -215,11 +217,13 @@ export function RoomSidebar({
     <div
       className={cn(
         "flex flex-col bg-sidebar text-sidebar-foreground",
-        isMobile ? "min-h-0 w-full flex-1" : "w-64 shrink-0 border-r border-sidebar-border",
+        isMobile
+          ? "min-h-0 w-full flex-1 pt-[env(safe-area-inset-top)]"
+          : "w-64 shrink-0 border-r border-sidebar-border",
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-3 py-3">
-        <h2 className="text-sm font-semibold">Chat</h2>
+      <div className="flex min-h-11 items-center justify-between gap-2 border-b border-sidebar-border px-3 py-2">
+        <h2 className="text-base font-semibold sm:text-sm">Chat</h2>
       </div>
       <div className="border-b border-sidebar-border px-2 py-2">
         <div className="relative">
@@ -231,11 +235,11 @@ export function RoomSidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
-            className="h-9 border-sidebar-border bg-sidebar-accent/30 pl-8 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/40"
+            className="h-9 border-sidebar-border bg-background pl-8 text-sm text-foreground shadow-none placeholder:text-muted-foreground dark:bg-sidebar-accent/30 dark:text-sidebar-foreground dark:placeholder:text-sidebar-foreground/40"
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-2 [-webkit-overflow-scrolling:touch]">
         {isLoading ? (
           <div className="space-y-2 p-2">
             {[1, 2, 3].map((i) => (

@@ -31,7 +31,7 @@ export function DesktopShell({ children, title, fillViewport }: DesktopShellProp
     <div className="flex h-[100dvh] overflow-hidden bg-background brand-gradient-subtle">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-4 border-b border-border/80 bg-card/90 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
+        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-4 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
           {title && (
             <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
           )}

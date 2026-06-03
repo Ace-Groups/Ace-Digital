@@ -124,16 +124,16 @@
   --chart-4: 0 84% 60%;
   --chart-5: 270 70% 60%;
 
-  /* Sidebar = ace-800 deep navy */
-  --sidebar: 215 91% 19%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-border: 215 50% 28%;
+  /* Sidebar — light workspace rail (Slack-style), navy reserved for brand accents */
+  --sidebar: 210 28% 97%;
+  --sidebar-foreground: 215 45% 22%;
+  --sidebar-border: 210 22% 90%;
   --sidebar-primary: 211 38% 52%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-primary-border: hsl(211 38% 44%);
-  --sidebar-accent: 215 50% 28%;
-  --sidebar-accent-foreground: 0 0% 95%;
-  --sidebar-accent-border: hsl(215 40% 35%);
+  --sidebar-accent: 210 35% 93%;
+  --sidebar-accent-foreground: 215 50% 18%;
+  --sidebar-accent-border: hsl(210 25% 86%);
   --sidebar-ring: 211 38% 52%;
 
   --app-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -143,7 +143,7 @@
   --ace-navy: 215 91% 19%;
   --ace-blue: 211 38% 52%;
   --ace-sky: 203 100% 87%;
-  --shadow-brand: 215 40% 35%;
+  --shadow-brand: 210 25% 75%;
 }
 
 /* DARK MODE */
@@ -207,6 +207,14 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 @layer utilities {
@@ -328,9 +336,17 @@ body {
       @apply text-sm font-medium;
     }
 
+    .touch-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+
     .mobile-form .touch-scroll {
       -webkit-overflow-scrolling: touch;
     }
+  }
+
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -339,12 +355,19 @@ body {
   --motion-base: 300ms;
   --motion-slow: 500ms;
 
-  --chat-bg: hsl(var(--background));
-  --chat-row-hover: hsl(var(--muted) / 0.4);
-  --chat-toolbar-bg: hsl(var(--popover));
-  --chat-composer-border: hsl(var(--border));
+  --chat-bg: hsl(0 0% 100%);
+  --chat-sidebar-bg: hsl(var(--sidebar));
+  --chat-row-hover: hsl(210 30% 96%);
+  --chat-toolbar-bg: hsl(0 0% 100%);
+  --chat-composer-border: hsl(210 22% 88%);
+  --chat-composer-bg: hsl(0 0% 100%);
 }
 
 .dark {
+  --chat-bg: hsl(var(--background));
+  --chat-sidebar-bg: hsl(var(--sidebar));
   --chat-row-hover: hsl(var(--muted) / 0.35);
+  --chat-toolbar-bg: hsl(var(--popover));
+  --chat-composer-border: hsl(var(--border));
+  --chat-composer-bg: hsl(var(--card));
 }

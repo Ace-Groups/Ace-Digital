@@ -202,7 +202,7 @@ export function MessageBubble({
           {quote && (
             <button
               type="button"
-              className="mb-1 w-full rounded-md border-l-2 border-primary bg-muted/60 px-3 py-2 text-left text-xs hover:bg-muted"
+                      className="mb-1 w-full rounded-md border-l-2 border-primary bg-muted/50 px-3 py-2 text-left text-xs hover:bg-muted/80 dark:bg-muted/60"
               onClick={() => onScrollToQuotedMessage?.(quote.id)}
             >
               <p className="font-medium">{quote.senderName ?? "Message"}</p>

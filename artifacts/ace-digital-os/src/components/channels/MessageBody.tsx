@@ -15,7 +15,7 @@ export function MessageBody({ body, className }: MessageBodyProps) {
   return (
     <div
       className={cn(
-        "prose prose-sm dark:prose-invert max-w-none break-words [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2",
+        "prose prose-sm prose-slate max-w-none break-words dark:prose-invert [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2 [&_p]:my-0 [&_p]:leading-relaxed",
         className,
       )}
     >

@@ -83,7 +83,7 @@ export default function ChannelsPage() {
 
   useMobileChromeFlags({
     immersivePage: isMobile,
-    hideBottomNav: isMobile && mobileThreadOpen,
+    hideBottomNav: isMobile,
   });
 
   const selectedChannel = channels?.find((c) => c.id === selectedChannelId);
@@ -428,7 +428,7 @@ export default function ChannelsPage() {
       : (selectedChannel?.name ?? "");
 
   const threadContent = (
-    <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
+    <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--chat-bg)]">
       {selectedChannel && (
         <ChannelThreadHeader
           channel={selectedChannel}
@@ -520,7 +520,7 @@ export default function ChannelsPage() {
     selectedChannelId &&
     typeof document !== "undefined"
       ? createPortal(
-          <div className="fixed inset-0 z-[100] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="fixed inset-0 z-[100] flex h-[100dvh] max-h-[100dvh] flex-col bg-background supports-[height:100dvh]:h-[100dvh]">
             {threadContent}
           </div>,
           document.body,

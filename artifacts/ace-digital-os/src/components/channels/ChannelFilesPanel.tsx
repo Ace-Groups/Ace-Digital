@@ -45,13 +45,14 @@ export function ChannelFilesPanel({ channelId }: ChannelFilesPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 gap-2 border-b border-border px-4 py-2">
+      <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-border px-3 py-2 touch-scroll sm:px-4">
         {filters.map((f) => (
           <Button
             key={f.id}
             type="button"
             size="sm"
             variant={filter === f.id ? "secondary" : "ghost"}
+            className="shrink-0 min-h-10"
             onClick={() => setFilter(f.id)}
           >
             {f.label}

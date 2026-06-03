@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { useKeyboardOffset } from "@/hooks/use-keyboard-offset";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { AttachSheet, type AttachAction } from "@/components/channels/AttachSheet";
 import { CreatePollSheet } from "@/components/channels/CreatePollSheet";
@@ -81,6 +82,7 @@ export function MessageComposer({
   slackStyle = false,
 }: MessageComposerProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const keyboardOffset = useKeyboardOffset();
   const [message, setMessage] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -387,7 +389,10 @@ export function MessageComposer({
           <div className="mb-2 flex items-center gap-0.5 border-b border-border/60 pb-2">
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+              className={cn(
+                "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:bg-muted",
+                isMobile ? "size-10" : "size-8",
+              )}
               aria-label="Toggle formatting"
               onClick={() => setFormatOpen((o) => !o)}
             >
@@ -406,7 +411,10 @@ export function MessageComposer({
                   <button
                     key={label}
                     type="button"
-                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                    className={cn(
+                      "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:bg-muted",
+                      isMobile ? "size-10" : "size-8",
+                    )}
                     aria-label={label}
                     onClick={fn}
                   >
@@ -520,8 +528,9 @@ export function MessageComposer({
               disabled={attachDisabled}
               onClick={() => setAttachOpen(true)}
               className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-full",
+                "flex shrink-0 items-center justify-center rounded-full",
                 "text-muted-foreground transition-colors hover:bg-muted/60 active:bg-muted disabled:opacity-40",
+                isMobile ? "size-11" : "size-10",
               )}
               aria-label="Attach"
             >
@@ -583,7 +592,10 @@ export function MessageComposer({
                   }}
                   onSelect={(e) => setCursor(e.currentTarget.selectionStart)}
                   onKeyDown={handleKeyDown}
-                  className="my-1.5 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-[0.9375rem] leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+                  className={cn(
+                    "my-1.5 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0",
+                    isMobile ? "text-base" : "text-[0.9375rem]",
+                  )}
                 />
               </div>
             </div>
@@ -594,7 +606,10 @@ export function MessageComposer({
                 data-testid="btn-send-message"
                 onClick={() => void handleSend()}
                 disabled={!canSend}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
+                  isMobile ? "size-11" : "size-10",
+                )}
                 aria-label="Send message"
               >
                 <Send size={18} className="shrink-0" />
@@ -606,7 +621,10 @@ export function MessageComposer({
                 type="button"
                 data-testid="btn-voice-message"
                 onClick={() => void handleMicPress()}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]"
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]",
+                  isMobile ? "size-11" : "size-10",
+                )}
                 aria-label="Record voice message"
               >
                 <Mic size={20} className="shrink-0" />

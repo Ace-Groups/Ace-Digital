@@ -82,8 +82,11 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
     return location === href || location.startsWith(`${href}/`);
   }
 
+  const showAppHeader = !immersivePage || Boolean(title?.trim());
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
+      {showAppHeader && (
       <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-card/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-4">
         <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
@@ -122,6 +125,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           />
         </button>
       </header>
+      )}
 
       <main
         className={cn(

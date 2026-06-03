@@ -88,13 +88,25 @@ export function ThreadSidePanel({
       role="dialog"
       aria-label="Thread"
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+      <div
+        className={cn(
+          "flex shrink-0 items-center justify-between border-b border-border px-3 py-2 sm:px-4 sm:py-3",
+          isMobile && "pt-[max(0.5rem,env(safe-area-inset-top))]",
+        )}
+      >
         <h2 className="text-sm font-semibold">Thread</h2>
-        <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close thread">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-10"
+          onClick={onClose}
+          aria-label="Close thread"
+        >
           <X size={18} />
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2 [-webkit-overflow-scrolling:touch] sm:px-4 sm:py-3">
         <MessageRow msg={rootMessage} showHeader>
           <MessageBody body={rootMessage.body} />
         </MessageRow>
@@ -129,7 +141,7 @@ export function ThreadSidePanel({
 
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-[110] flex flex-col bg-background pt-[env(safe-area-inset-top)]">
+      <div className="fixed inset-0 z-[110] flex h-[100dvh] max-h-[100dvh] flex-col bg-background">
         {panel}
       </div>
     );

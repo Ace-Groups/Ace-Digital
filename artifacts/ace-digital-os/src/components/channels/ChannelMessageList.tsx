@@ -211,7 +211,7 @@ export function ChannelMessageList({
       ref={containerRef}
       className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
     >
-      <div className="flex w-full max-w-none flex-col overflow-visible px-5 py-2 sm:py-3">
+      <div className="flex w-full max-w-none flex-col overflow-visible px-3 py-2 sm:px-5 sm:py-3">
       {loadingOlder && (
         <p className="mb-2 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
@@ -287,7 +287,7 @@ export function ChannelMessageList({
       <div ref={endRef} className="h-px shrink-0" />
       </div>
       {pendingNewCount > 0 && !shouldAutoScroll && (
-        <div className="pointer-events-none sticky bottom-4 flex justify-center">
+        <div className="pointer-events-none sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex justify-center pb-2">
           <Button
             type="button"
             size="sm"
