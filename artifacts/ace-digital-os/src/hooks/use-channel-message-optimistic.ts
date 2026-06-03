@@ -86,8 +86,19 @@ export function useChannelMessageOptimistic(
         commit: () =>
           deleteMutation.mutateAsync({ id: channelId, messageId: msg.id }),
         reconcile: (updated) => apply(msg.id, () => updated),
-      }).catch(() => {
-        toast({ title: "Could not delete message", variant: "destructive" });
+      }).catch((err) => {
+        const detail =
+          err instanceof Error
+            ? err.message
+            : typeof err === "object" && err && "error" in err
+              ? String((err as { error: unknown }).error)
+              : undefined;
+        toast({
+          title: "Could not delete message",
+          description:
+            detail?.includes("24 hours") ? detail : "Messages can only be deleted within 24 hours.",
+          variant: "destructive",
+        });
       });
     },
     [channelId, snapshot, rollback, apply, deleteMutation, toast],

@@ -195,6 +195,9 @@ export function MessageBubble({
                 >
                   <Trash2 size={14} className="mr-2" />
                   Delete
+                  {isMe ? (
+                    <span className="ml-auto text-[10px] text-muted-foreground">24h</span>
+                  ) : null}
                 </DropdownMenuItem>
               )}
             </MessageActionsMenu>
@@ -291,7 +294,8 @@ export function MessageBubble({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete message?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the message for everyone in the channel.
+              This removes the message for everyone in the channel. You can only delete messages
+              within 24 hours of sending.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

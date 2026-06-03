@@ -48,13 +48,28 @@ export function canManageChannel(
   return isChannelOwnerRole(membership?.role);
 }
 
+/** Messages can only be deleted within this window after they were sent. */
+export const MESSAGE_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export type MessageDeleteInfo = {
   senderId: number;
+  createdAt?: Date | string | null;
 };
 
 export type ChannelDeleteInfo = {
   createdById: number | null;
 };
+
+export function isWithinMessageDeleteWindow(
+  createdAt: Date | string | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (createdAt == null || createdAt === "") return false;
+  const ms =
+    typeof createdAt === "string" ? new Date(createdAt).getTime() : createdAt.getTime();
+  if (Number.isNaN(ms)) return false;
+  return nowMs - ms >= 0 && nowMs - ms <= MESSAGE_DELETE_WINDOW_MS;
+}
 
 export function canDeleteMessage(
   ctx: AccessContext,
@@ -62,6 +77,7 @@ export function canDeleteMessage(
   channel: ChannelDeleteInfo,
   membership: ChannelMembershipInfo,
 ): boolean {
+  if (!isWithinMessageDeleteWindow(message.createdAt)) return false;
   if (ctx.role === "super_admin") return true;
   if (message.senderId === ctx.userId) return true;
   if (channel.createdById != null && channel.createdById === ctx.userId) return true;

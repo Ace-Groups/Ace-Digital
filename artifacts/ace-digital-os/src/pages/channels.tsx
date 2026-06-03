@@ -185,7 +185,7 @@ export default function ChannelsPage() {
       if (!ctx || !selectedChannel) return false;
       return canDeleteMessage(
         ctx,
-        { senderId: msg.senderId },
+        { senderId: msg.senderId, createdAt: msg.createdAt },
         { createdById: selectedChannel.createdById ?? null },
         membership,
       );

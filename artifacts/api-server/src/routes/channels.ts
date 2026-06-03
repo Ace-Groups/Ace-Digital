@@ -529,12 +529,17 @@ router.delete(
     if (
       !canDeleteMessage(
         ctx,
-        { senderId: message.senderId },
+        {
+          senderId: message.senderId,
+          createdAt: message.createdAt,
+        },
         { createdById: access.channel.createdById ?? null },
         access.membership,
       )
     ) {
-      res.status(403).json({ error: "Cannot delete this message" });
+      res.status(403).json({
+        error: "Messages can only be deleted within 24 hours of sending",
+      });
       return;
     }
 
