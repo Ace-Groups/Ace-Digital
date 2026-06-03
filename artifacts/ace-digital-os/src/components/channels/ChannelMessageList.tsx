@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "@workspace/api-client-react";
 import { MessageBubble } from "@/components/channels/MessageBubble";
+import { shouldGroupWithPrevious } from "@/components/channels/MessageRow";
 import { DateSeparator } from "@/components/channels/DateSeparator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,9 @@ interface ChannelMessageListProps {
   onToggleReaction?: (message: Message, emoji: string) => void;
   onVotePoll?: (message: Message, optionId: string) => void;
   onRsvpEvent?: (message: Message, status: "going" | "maybe" | "no") => void;
+  onOpenThread?: (message: Message) => void;
+  onEditMessage?: (message: Message) => void;
+  canEditMessage?: (message: Message) => boolean;
 }
 
 export function ChannelMessageList({
@@ -63,6 +67,9 @@ export function ChannelMessageList({
   onToggleReaction,
   onVotePoll,
   onRsvpEvent,
+  onOpenThread,
+  onEditMessage,
+  canEditMessage,
 }: ChannelMessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -179,11 +186,11 @@ export function ChannelMessageList({
 
   if (isLoading) {
     return (
-      <div className="space-y-3 px-2 py-3 sm:space-y-4 sm:px-6 sm:py-4">
+      <div className="w-full space-y-2 px-5 py-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex gap-3">
-            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
-            <Skeleton className="h-16 w-64 max-w-full rounded-2xl" />
+          <div key={i} className="flex gap-2">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-12 w-48 max-w-[75%] rounded-2xl" />
           </div>
         ))}
       </div>
@@ -202,26 +209,36 @@ export function ChannelMessageList({
   return (
     <div
       ref={containerRef}
-      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-2 py-3 sm:px-6 sm:py-4 [-webkit-overflow-scrolling:touch]"
+      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
     >
+      <div className="flex w-full max-w-none flex-col overflow-visible px-5 py-2 sm:py-3">
       {loadingOlder && (
-        <p className="mb-3 text-center text-xs text-muted-foreground">Loading older messages…</p>
+        <p className="mb-2 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
-      <div className="flex w-full flex-col gap-3 overflow-visible sm:gap-4">
+      <div className="flex w-full flex-col">
         {filtered.map((msg, index) => {
           const prev = index > 0 ? filtered[index - 1]! : null;
           const isMe = msg.senderId === currentUserId;
-          const showMeta = !prev || prev.senderId !== msg.senderId;
+          const prevMsg = prev && !isPendingMessage(prev) ? (prev as Message) : null;
+          const curMsg = !isPendingMessage(msg) ? (msg as Message) : null;
+          const showMeta = !curMsg || !prevMsg || !shouldGroupWithPrevious(prevMsg, curMsg);
           const showDay =
             !prev || messageDayKey(prev.createdAt) !== messageDayKey(msg.createdAt);
           const showNewDivider = index === newMessagesDividerIndex;
+          const sameSenderAsPrev = prev && prev.senderId === msg.senderId;
 
           return (
-            <div key={msg.id} data-message-index={index}>
+            <div
+              key={msg.id}
+              data-message-index={index}
+              className={cn(
+                showMeta ? "pt-3 first:pt-0" : sameSenderAsPrev ? "pt-0.5" : "pt-1",
+              )}
+            >
               {showDay && <DateSeparator createdAt={msg.createdAt} />}
               {showNewDivider && (
                 <div
-                  className="mb-4 flex items-center gap-3 text-xs font-medium text-primary"
+                  className="mb-2 flex items-center gap-2 text-xs font-medium text-primary"
                   role="separator"
                 >
                   <span className="h-px flex-1 bg-primary/30" />
@@ -255,18 +272,28 @@ export function ChannelMessageList({
                     ? (status) => onRsvpEvent(msg as Message, status)
                     : undefined
                 }
+                onOpenThread={
+                  !isPendingMessage(msg) && onOpenThread
+                    ? () => onOpenThread(msg as Message)
+                    : undefined
+                }
+                onEdit={onEditMessage}
+                canEdit={canEditMessage?.(msg as Message) ?? false}
               />
             </div>
           );
         })}
       </div>
-      <div ref={endRef} />
+      <div ref={endRef} className="h-px shrink-0" />
+      </div>
       {pendingNewCount > 0 && !shouldAutoScroll && (
         <div className="pointer-events-none sticky bottom-4 flex justify-center">
           <Button
             type="button"
             size="sm"
-            className={cn("pointer-events-auto shadow-md")}
+            className={cn(
+              "pointer-events-auto rounded-full bg-primary px-4 text-primary-foreground shadow-md hover:bg-primary/90",
+            )}
             onClick={() => {
               autoScrollRef.current = true;
               onShouldAutoScrollChange(true);

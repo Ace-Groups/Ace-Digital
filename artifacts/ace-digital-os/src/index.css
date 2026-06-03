@@ -338,4 +338,13 @@ body {
   --motion-fast: 150ms;
   --motion-base: 300ms;
   --motion-slow: 500ms;
+
+  --chat-bg: hsl(var(--background));
+  --chat-row-hover: hsl(var(--muted) / 0.4);
+  --chat-toolbar-bg: hsl(var(--popover));
+  --chat-composer-border: hsl(var(--border));
+}
+
+.dark {
+  --chat-row-hover: hsl(var(--muted) / 0.35);
 }

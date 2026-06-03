@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   toggleMessageReaction,
+  patchMessage as patchMessageApi,
   useDeleteMessage,
   useVotePoll,
   useRsvpEvent,
@@ -152,9 +153,33 @@ export function useChannelMessageOptimistic(
     [channelId, apply, snapshot, rollback, rsvpEvent, toast],
   );
 
+  const editMessageInstant = useCallback(
+    (msg: Message, body: string) => {
+      if (!channelId) return;
+      void runOptimistic({
+        apply: () => {
+          const prev = snapshot();
+          apply(msg.id, (m) => ({
+            ...m,
+            body,
+            editedAt: new Date().toISOString(),
+          }));
+          return prev;
+        },
+        rollback,
+        commit: () => patchMessageApi(channelId, msg.id, { body }),
+        reconcile: (updated) => apply(msg.id, () => updated),
+      }).catch(() => {
+        toast({ title: "Could not edit message", variant: "destructive" });
+      });
+    },
+    [channelId, apply, snapshot, rollback, toast],
+  );
+
   return {
     toggleReactionInstant,
     deleteMessage,
+    editMessageInstant,
     votePollInstant,
     rsvpInstant,
     apply,

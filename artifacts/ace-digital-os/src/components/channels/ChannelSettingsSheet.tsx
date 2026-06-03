@@ -23,6 +23,7 @@ import { ChannelMembersPanel } from "./ChannelMembersPanel";
 import { ChannelIcon } from "./ChannelIcon";
 import type { Channel } from "@workspace/api-client-react";
 import { Archive, ImageOff, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 interface ChannelSettingsSheetProps {
@@ -233,7 +234,53 @@ export function ChannelSettingsSheet({
         }
         className={isMobile ? undefined : "max-w-lg"}
       >
-        <div className={cn("space-y-8", isMobile && "pb-2")}>
+        <Tabs defaultValue="about" className={cn(isMobile && "pb-2")}>
+          <TabsList className="mb-4 w-full">
+            <TabsTrigger value="about" className="flex-1">
+              About
+            </TabsTrigger>
+            <TabsTrigger value="members" className="flex-1">
+              Members
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1">
+              Settings
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="about" className="space-y-6">
+            <SettingsSection title="About">
+              <p className="text-sm text-muted-foreground">
+                {channel.description?.trim() || "No description yet."}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Created{" "}
+                {channel.createdAt
+                  ? new Date(channel.createdAt).toLocaleDateString()
+                  : "—"}
+              </p>
+            </SettingsSection>
+            {canManage ? (
+              <SettingsSection title="Danger zone">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 text-destructive hover:text-destructive"
+                  onClick={() => setArchiveConfirmOpen(true)}
+                >
+                  <Archive size={16} />
+                  Archive channel
+                </Button>
+              </SettingsSection>
+            ) : null}
+          </TabsContent>
+          <TabsContent value="members">
+            <SettingsSection
+              title="Members"
+              description={`${members?.length ?? channel.memberCount ?? 0} people in this channel`}
+            >
+              <ChannelMembersPanel channelId={channel.id} canManage={canManage} active={open} />
+            </SettingsSection>
+          </TabsContent>
+          <TabsContent value="settings" className="space-y-6">
           {canManage ? (
             <>
               <SettingsSection
@@ -323,33 +370,8 @@ export function ChannelSettingsSheet({
                 </div>
               </SettingsSection>
 
-              <SettingsSection
-                title="Members"
-                description={`${members?.length ?? channel.memberCount ?? 0} people in this channel`}
-              >
-                <ChannelMembersPanel
-                  channelId={channel.id}
-                  canManage={canManage}
-                  active={open}
-                />
-              </SettingsSection>
-
-              <SettingsSection title="Danger zone">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10",
-                    isMobile && "min-h-11",
-                  )}
-                  onClick={() => setArchiveConfirmOpen(true)}
-                  disabled={updateChannel.isPending}
-                >
-                  <Archive size={16} /> Archive channel
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Archived channels are hidden from the list. History is kept.
-                </p>
+              <SettingsSection title="Notifications">
+                <p className="text-sm text-muted-foreground">Notification preferences coming soon.</p>
               </SettingsSection>
 
               {isMobile && (
@@ -393,7 +415,8 @@ export function ChannelSettingsSheet({
               </p>
             </>
           )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </ResponsiveSheet>
 
       <ConfirmDialog

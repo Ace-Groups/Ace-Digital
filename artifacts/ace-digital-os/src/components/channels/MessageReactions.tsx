@@ -28,7 +28,7 @@ export function MessageReactions({
   if (!entries.length) return null;
 
   return (
-    <div className={cn("mt-1 flex flex-wrap gap-1", className)}>
+    <div className={cn("mt-0.5 flex flex-wrap gap-0.5", className)}>
       {entries.map(([emoji, userIds]) => {
         const active = currentUserId != null && userIds.includes(currentUserId);
         return (

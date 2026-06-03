@@ -34,7 +34,12 @@ import {
   ChannelMessageList,
   type ReplyTarget as ListReplyTarget,
 } from "@/components/channels/ChannelMessageList";
-import { MessageComposer } from "@/components/channels/MessageComposer";
+import { SlackComposer } from "@/components/channels/SlackComposer";
+import { ChatWorkspace } from "@/components/channels/ChatWorkspace";
+import { ThreadSidePanel } from "@/components/channels/ThreadSidePanel";
+import { ChannelFilesPanel } from "@/components/channels/ChannelFilesPanel";
+import { useStarChannel, useUnstarChannel } from "@workspace/api-client-react";
+import { canEditMessage } from "@workspace/rbac";
 import { cn } from "@/lib/utils";
 import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
@@ -65,7 +70,11 @@ export default function ChannelsPage() {
   const replyToRef = useRef<ReplyTarget | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [roomSearch, setRoomSearch] = useState("");
+  const [headerTab, setHeaderTab] = useState<"messages" | "files">("messages");
+  const [threadRoot, setThreadRoot] = useState<Message | null>(null);
   const { markRead } = useMarkChannelRead();
+  const starChannel = useStarChannel();
+  const unstarChannel = useUnstarChannel();
 
   const setActiveReply = useCallback((target: ReplyTarget | null) => {
     replyToRef.current = target;
@@ -191,8 +200,36 @@ export default function ChannelsPage() {
     { onAppend: appendMessage },
   );
 
-  const { toggleReactionInstant, deleteMessage, votePollInstant, rsvpInstant } =
+  const { toggleReactionInstant, deleteMessage, editMessageInstant, votePollInstant, rsvpInstant } =
     useChannelMessageOptimistic(selectedChannelId, patchMessage);
+
+  const canEditForMessage = useCallback(
+    (msg: Message) => {
+      if (!ctx) return false;
+      return canEditMessage(ctx, { senderId: msg.senderId, createdAt: msg.createdAt });
+    },
+    [ctx],
+  );
+
+  const handleEditMessage = useCallback(
+    (msg: Message) => {
+      const next = window.prompt("Edit message", msg.body);
+      if (next != null && next.trim() && next.trim() !== msg.body) {
+        editMessageInstant(msg, next.trim());
+      }
+    },
+    [editMessageInstant],
+  );
+
+  const handleToggleStar = useCallback(() => {
+    if (!selectedChannelId || !selectedChannel) return;
+    const starred = selectedChannel.starred ?? false;
+    const action = starred ? unstarChannel : starChannel;
+    void action.mutateAsync({ id: selectedChannelId }).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["/v1/channels"] });
+      void queryClient.invalidateQueries({ queryKey: ["/v1/dms"] });
+    });
+  }, [selectedChannelId, selectedChannel, starChannel, unstarChannel, queryClient]);
 
   const canDeleteForMessage = useCallback(
     (msg: Message) => {
@@ -235,6 +272,8 @@ export default function ChannelsPage() {
     setActiveReply(null);
     setShouldAutoScroll(true);
     setRoomSearch("");
+    setHeaderTab("messages");
+    setThreadRoot(null);
   }, [selectedChannelId, setActiveReply]);
 
   const latestPersistedMessageId = useMemo(() => {
@@ -383,6 +422,11 @@ export default function ChannelsPage() {
   const showList = !isMobile || !mobileThreadOpen;
   const canCreate = can("channels:write");
 
+  const channelLabel =
+    selectedChannel?.type === "DM"
+      ? (selectedChannel.dmPeerName ?? selectedChannel.name)
+      : (selectedChannel?.name ?? "");
+
   const threadContent = (
     <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
       {selectedChannel && (
@@ -394,10 +438,16 @@ export default function ChannelsPage() {
           onOpenSettings={() => setSettingsOpen(true)}
           searchQuery={roomSearch}
           onSearchChange={setRoomSearch}
+          activeTab={headerTab}
+          onTabChange={setHeaderTab}
+          starred={selectedChannel.starred ?? false}
+          onToggleStar={handleToggleStar}
         />
       )}
 
-      {selectedChannelId ? (
+      {selectedChannelId && headerTab === "files" ? (
+        <ChannelFilesPanel channelId={selectedChannelId} />
+      ) : selectedChannelId ? (
         <ChannelMessageList
           channelId={selectedChannelId}
           messages={roomMessages}
@@ -429,6 +479,9 @@ export default function ChannelsPage() {
               ? (msg, status) => rsvpInstant(msg, status, user.id)
               : undefined
           }
+          onOpenThread={(msg) => setThreadRoot(msg)}
+          onEditMessage={handleEditMessage}
+          canEditMessage={canEditForMessage}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -436,10 +489,10 @@ export default function ChannelsPage() {
         </div>
       )}
 
-      {selectedChannelId && canPost && selectedChannel && (
-        <MessageComposer
+      {selectedChannelId && canPost && selectedChannel && headerTab === "messages" && (
+        <SlackComposer
           channelId={selectedChannelId}
-          channelName={selectedChannel.name}
+          channelName={channelLabel}
           sending={false}
           replyTo={replyTo}
           composerRef={composerRef}
@@ -452,7 +505,7 @@ export default function ChannelsPage() {
       )}
 
       {selectedChannelId && !canPost && selectedChannel && (
-        <div className="sticky bottom-0 shrink-0 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">
+        <div className="sticky bottom-0 shrink-0 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">
           {selectedChannel.archived
             ? "This channel is archived."
             : "You have read-only access in this channel."}
@@ -474,33 +527,58 @@ export default function ChannelsPage() {
         )
       : null;
 
-  return (
-    <AppLayout title="Chat" fillViewport>
-      <div
-        className={cn(
-          "flex h-full min-h-0 w-full flex-1 overflow-hidden",
-          isMobile && "flex-col",
-        )}
-      >
-        {showList && (
-          <RoomSidebar
-            channels={channels}
-            isLoading={channelsLoading && !channels}
-            selectedChannelId={selectedChannelId}
-            onSelect={selectChannel}
-            onCreateClick={() => setCreateOpen(true)}
-            canCreate={canCreate}
-            isMobile={isMobile}
-          />
-        )}
-        {!isMobile && (
-          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
-            {threadContent}
-          </div>
-        )}
-      </div>
+  const threadPanel =
+    threadRoot && selectedChannel && selectedChannelId ? (
+      <ThreadSidePanel
+        channel={selectedChannel}
+        channelId={selectedChannelId}
+        rootMessage={threadRoot}
+        currentUserId={user?.id}
+        canPost={Boolean(canPost)}
+        isMobile={isMobile}
+        onClose={() => setThreadRoot(null)}
+      />
+    ) : null;
 
-      {mobileThreadPortal}
+  const mobileThreadPanelPortal =
+    isMobile && threadRoot && typeof document !== "undefined"
+      ? createPortal(threadPanel, document.body)
+      : null;
+
+  return (
+    <AppLayout title="" fillViewport>
+      {isMobile ? (
+        <>
+          {showList && (
+            <RoomSidebar
+              channels={channels}
+              isLoading={channelsLoading && !channels}
+              selectedChannelId={selectedChannelId}
+              onSelect={selectChannel}
+              onCreateClick={() => setCreateOpen(true)}
+              canCreate={canCreate}
+              isMobile
+            />
+          )}
+          {mobileThreadPortal}
+          {mobileThreadPanelPortal}
+        </>
+      ) : (
+        <ChatWorkspace
+          sidebar={
+            <RoomSidebar
+              channels={channels}
+              isLoading={channelsLoading && !channels}
+              selectedChannelId={selectedChannelId}
+              onSelect={selectChannel}
+              onCreateClick={() => setCreateOpen(true)}
+              canCreate={canCreate}
+            />
+          }
+          main={threadContent}
+          threadPanel={threadPanel}
+        />
+      )}
 
       <CreateChannelDialog
         open={createOpen}

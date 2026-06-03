@@ -20,6 +20,10 @@ export interface Message {
   attachments?: MessageAttachment[];
   messageKind?: MessageMessageKind;
   metadata?: MessageMetadata;
+  /** @nullable */
+  parentMessageId?: number | null;
+  /** @nullable */
+  editedAt?: string | null;
   deleted?: boolean;
   createdAt: string;
 }

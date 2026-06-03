@@ -97,6 +97,8 @@ export function messageToJson(
     attachments?: MessageAttachment[] | null;
     messageKind?: string | null;
     metadata?: Record<string, unknown> | null;
+    parentMessageId?: number | null;
+    editedAt?: Date | null;
     deletedAt?: Date | null;
     createdAt: Date;
   },
@@ -114,6 +116,8 @@ export function messageToJson(
     attachments: deleted ? undefined : m.attachments?.length ? m.attachments : undefined,
     messageKind: m.messageKind ?? "text",
     metadata: deleted ? undefined : m.metadata ?? undefined,
+    parentMessageId: m.parentMessageId ?? undefined,
+    editedAt: deleted ? undefined : m.editedAt?.toISOString() ?? undefined,
     deleted: deleted || undefined,
     createdAt: m.createdAt.toISOString(),
   };

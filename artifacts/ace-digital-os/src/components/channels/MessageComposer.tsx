@@ -1,5 +1,10 @@
 import { useCallback, useRef, useState, type RefObject } from "react";
-import { Mic, Paperclip, Send, Trash2, X } from "lucide-react";
+import { Bold, Code, Italic, Link2, List, Mic, Paperclip, Send, Strikethrough, Trash2, Type, X } from "lucide-react";
+import {
+  insertMarkdownPrefix,
+  wrapMarkdownLink,
+  wrapMarkdownSelection,
+} from "@/lib/chat-markdown";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useMentionAutocomplete } from "@/hooks/use-mention-autocomplete";
 import { insertMentionToken } from "@/lib/chat-mentions";
@@ -32,7 +37,7 @@ type PendingFile = {
   progress?: number;
 };
 
-interface MessageComposerProps {
+export interface MessageComposerProps {
   channelId: number;
   channelName: string;
   disabled?: boolean;
@@ -51,6 +56,8 @@ interface MessageComposerProps {
     previewAttachments?: MessageAttachment[],
   ) => Promise<void>;
   onMarkPendingFailed: (clientId: string) => void;
+  /** Slack-style bordered composer with format toolbar */
+  slackStyle?: boolean;
 }
 
 function formatRecordTime(seconds: number): string {
@@ -61,7 +68,7 @@ function formatRecordTime(seconds: number): string {
 
 export function MessageComposer({
   channelId,
-  channelName: _channelName,
+  channelName,
   disabled,
   sending,
   replyTo,
@@ -71,6 +78,7 @@ export function MessageComposer({
   onQueuePending,
   onFlushPending,
   onMarkPendingFailed,
+  slackStyle = false,
 }: MessageComposerProps) {
   const { toast } = useToast();
   const keyboardOffset = useKeyboardOffset();
@@ -78,6 +86,7 @@ export function MessageComposer({
   const [cursor, setCursor] = useState(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [formatOpen, setFormatOpen] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -336,19 +345,80 @@ export function MessageComposer({
     el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }
 
+  function applyFormat(
+    fn: (text: string, start: number, end: number) => { value: string; cursor: number },
+  ) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const { value, cursor: next } = fn(el.value, el.selectionStart, el.selectionEnd);
+    setMessage(value);
+    setCursor(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(next, next);
+      autoResize();
+    });
+  }
+
+  const placeholder = slackStyle
+    ? `Message #${channelName}`
+    : "Message";
+
   return (
     <>
       <div
-        className="z-10 shrink-0 border-t border-border bg-card/95 px-2 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5"
-        style={{
-          paddingBottom:
-            keyboardOffset > 0
-              ? `${keyboardOffset}px`
-              : "max(0.75rem, env(safe-area-inset-bottom))",
-        }}
+        className={cn(
+          "z-10 shrink-0",
+          slackStyle ? "bg-transparent" : "border-t border-border bg-card/95 backdrop-blur-sm",
+        )}
+        style={
+          slackStyle
+            ? undefined
+            : {
+                paddingBottom:
+                  keyboardOffset > 0
+                    ? `${keyboardOffset}px`
+                    : "max(0.5rem, env(safe-area-inset-bottom))",
+              }
+        }
       >
+        <div className={cn(slackStyle ? "px-3 py-2" : "mx-auto w-full max-w-3xl px-3 py-2 sm:px-4")}>
+        {slackStyle && (
+          <div className="mb-2 flex items-center gap-0.5 border-b border-border/60 pb-2">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+              aria-label="Toggle formatting"
+              onClick={() => setFormatOpen((o) => !o)}
+            >
+              <Type size={16} />
+            </button>
+            {formatOpen && (
+              <>
+                {[
+                  { icon: Bold, label: "Bold", fn: () => applyFormat((t, s, e) => wrapMarkdownSelection(t, s, e, "**")) },
+                  { icon: Italic, label: "Italic", fn: () => applyFormat((t, s, e) => wrapMarkdownSelection(t, s, e, "_")) },
+                  { icon: Strikethrough, label: "Strikethrough", fn: () => applyFormat((t, s, e) => wrapMarkdownSelection(t, s, e, "~~")) },
+                  { icon: Code, label: "Code", fn: () => applyFormat((t, s, e) => wrapMarkdownSelection(t, s, e, "`")) },
+                  { icon: List, label: "List", fn: () => applyFormat((t, s, e) => insertMarkdownPrefix(t, s, e, "- ")) },
+                  { icon: Link2, label: "Link", fn: () => applyFormat(wrapMarkdownLink) },
+                ].map(({ icon: Icon, label, fn }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                    aria-label={label}
+                    onClick={fn}
+                  >
+                    <Icon size={16} />
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
         {replyTo && (
-          <div className="mb-2 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+          <div className="mb-1.5 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-muted-foreground">
                 Replying to {replyTo.senderName ?? "message"}
@@ -443,19 +513,19 @@ export function MessageComposer({
             </button>
           </div>
         ) : (
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-1.5">
             <button
               type="button"
               data-testid="btn-attach"
               disabled={attachDisabled}
               onClick={() => setAttachOpen(true)}
               className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-full",
+                "flex size-10 shrink-0 items-center justify-center rounded-full",
                 "text-muted-foreground transition-colors hover:bg-muted/60 active:bg-muted disabled:opacity-40",
               )}
               aria-label="Attach"
             >
-              <Paperclip size={22} className="shrink-0" />
+              <Paperclip size={20} className="shrink-0" />
             </button>
 
             <div className="relative min-w-0 flex-1">
@@ -493,8 +563,10 @@ export function MessageComposer({
               )}
               <div
                 className={cn(
-                  "flex min-h-11 min-w-0 flex-1 items-center rounded-full border border-border/80",
-                  "bg-muted/30 px-4 shadow-sm",
+                  "flex min-h-10 min-w-0 flex-1 items-center px-3.5",
+                  slackStyle
+                    ? "rounded-md bg-transparent"
+                    : "rounded-2xl border border-border/80 bg-muted/30 shadow-sm",
                 )}
               >
                 <textarea
@@ -502,7 +574,7 @@ export function MessageComposer({
                   data-testid="input-message"
                   rows={1}
                   disabled={disabled}
-                  placeholder="Message"
+                  placeholder={placeholder}
                   value={message}
                   onChange={(e) => {
                     setMessage(e.target.value);
@@ -511,7 +583,7 @@ export function MessageComposer({
                   }}
                   onSelect={(e) => setCursor(e.currentTarget.selectionStart)}
                   onKeyDown={handleKeyDown}
-                  className="my-2 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-base leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
+                  className="my-1.5 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-[0.9375rem] leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0"
                 />
               </div>
             </div>
@@ -522,10 +594,10 @@ export function MessageComposer({
                 data-testid="btn-send-message"
                 onClick={() => void handleSend()}
                 disabled={!canSend}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
-                <Send size={20} className="shrink-0" />
+                <Send size={18} className="shrink-0" />
               </button>
             )}
 
@@ -534,14 +606,16 @@ export function MessageComposer({
                 type="button"
                 data-testid="btn-voice-message"
                 onClick={() => void handleMicPress()}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]"
                 aria-label="Record voice message"
               >
-                <Mic size={22} className="shrink-0" />
+                <Mic size={20} className="shrink-0" />
               </button>
             )}
           </div>
         )}
+
+        </div>
 
         <input
           ref={galleryInputRef}

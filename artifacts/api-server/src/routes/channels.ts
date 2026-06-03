@@ -3,6 +3,7 @@ import { store } from "@workspace/db";
 import {
   canAccessChannel,
   canDeleteMessage,
+  canEditMessage,
   canManageChannel,
   canPostInChannel,
   hasPermission,
@@ -40,6 +41,52 @@ async function requireChannelAccess(
   return { channel, membership };
 }
 
+async function dmPeerForChannel(channelId: number, userId: number) {
+  const channel = await store.findChannelById(channelId);
+  if (!channel || channel.type !== "DM") return null;
+  const members = await store.listChannelMembers(channelId);
+  const peer = members.find((m) => m.userId !== userId);
+  if (!peer) return null;
+  return {
+    dmPeerUserId: peer.userId,
+    dmPeerName: peer.fullName,
+    dmPeerAvatar: peer.avatarUrl ?? null,
+  };
+}
+
+function channelListItem(
+  c: Awaited<ReturnType<typeof store.findChannelById>> & object,
+  meta: Awaited<ReturnType<typeof store.listChannelListMeta>>,
+  teamMap: Record<number, string>,
+  adminAll: boolean,
+  dmPeer?: { dmPeerUserId: number; dmPeerName: string; dmPeerAvatar: string | null } | null,
+) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    avatarUrl: c.avatarUrl ?? null,
+    teamId: c.teamId,
+    teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
+    type: c.type,
+    visibility: c.visibility,
+    archived: c.archived,
+    memberCount: meta.counts.get(c.id) ?? 0,
+    myRole: meta.roles.get(c.id) ?? (adminAll ? "owner" : null),
+    unreadCount: meta.unreadCounts.get(c.id) ?? 0,
+    lastPostAt: c.lastPostAt?.toISOString() ?? null,
+    lastMessagePreview: meta.lastMessagePreviews.get(c.id) ?? null,
+    lastReadMessageId: meta.lastReadMessageIds.get(c.id) ?? null,
+    starred: meta.starred?.get(c.id) ?? false,
+    dmPeerUserId: dmPeer?.dmPeerUserId ?? null,
+    dmPeerName: dmPeer?.dmPeerName ?? null,
+    dmPeerAvatar: dmPeer?.dmPeerAvatar ?? null,
+    createdById: c.createdById ?? null,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
 router.get(
   "/v1/channels",
   requireAuth,
@@ -67,28 +114,18 @@ router.get(
       ).map((c, index) => [c.id, index]),
     );
 
-    const result = channels
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        avatarUrl: c.avatarUrl ?? null,
-        teamId: c.teamId,
-        teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
-        type: c.type,
-        visibility: c.visibility,
-        archived: c.archived,
-        memberCount: meta.counts.get(c.id) ?? 0,
-        myRole: meta.roles.get(c.id) ?? (adminAll ? "owner" : null),
-        unreadCount: meta.unreadCounts.get(c.id) ?? 0,
-        lastPostAt: c.lastPostAt?.toISOString() ?? null,
-        lastMessagePreview: meta.lastMessagePreviews.get(c.id) ?? null,
-        lastReadMessageId: meta.lastReadMessageIds.get(c.id) ?? null,
-        createdAt: c.createdAt.toISOString(),
-      }))
-      .sort((a, b) => (sortOrder.get(a.id) ?? 0) - (sortOrder.get(b.id) ?? 0));
+    const result = await Promise.all(
+      channels.map(async (c) => {
+        const peer = c.type === "DM" ? await dmPeerForChannel(c.id, ctx.userId) : null;
+        return channelListItem(c, meta, teamMap, adminAll, peer);
+      }),
+    );
 
-    res.json(result);
+    res.json(
+      result
+        .filter((c): c is NonNullable<typeof c> => c != null)
+        .sort((a, b) => (sortOrder.get(a.id) ?? 0) - (sortOrder.get(b.id) ?? 0)),
+    );
   },
 );
 
@@ -343,6 +380,29 @@ router.post(
       return;
     }
     await store.addChannelMember(id, Number(userId), memberRole);
+    if (access.channel.type !== "DM") {
+      const sysSender = await store.findUserById(ctx.userId);
+      void store
+        .createMessage({
+          channelId: id,
+          senderId: ctx.userId,
+          body: `${user.fullName} joined #${access.channel.name}`,
+          attachments: null,
+          messageKind: "system",
+          metadata: { systemEvent: "member_joined", userId: user.id, userName: user.fullName },
+          parentMessageId: null,
+          editedAt: null,
+          deletedAt: null,
+          deletedById: null,
+          senderName: sysSender?.fullName ?? null,
+          senderAvatar: sysSender?.avatarUrl ?? null,
+        })
+        .then((m) => {
+          const json = messageToJson(m, sysSender?.fullName ?? "System", sysSender?.avatarUrl ?? null);
+          void publishMessageNew(json).catch((err) => console.error("[realtime-system]", err));
+        })
+        .catch((e) => console.error("[member-join-system]", e));
+    }
     const members = await store.listChannelMembers(id);
     const added = members.find((m) => m.userId === Number(userId));
     res.status(201).json({
@@ -487,10 +547,16 @@ router.get(
       beforeRaw !== undefined && beforeRaw !== ""
         ? Number(Array.isArray(beforeRaw) ? beforeRaw[0] : beforeRaw)
         : undefined;
+    const threadRootRaw = req.query.threadRootId;
+    const threadRootId =
+      threadRootRaw !== undefined && threadRootRaw !== ""
+        ? Number(Array.isArray(threadRootRaw) ? threadRootRaw[0] : threadRootRaw)
+        : undefined;
 
     const messages = await store.listMessagesByChannel(id, {
       limit,
       before: Number.isFinite(before) ? before : undefined,
+      threadRootId: Number.isFinite(threadRootId) ? threadRootId : undefined,
     });
 
     res.json(
@@ -605,6 +671,17 @@ router.post(
 
     try {
       const sender = await store.findUserById(ctx.userId);
+      const parentRaw = req.body?.parentMessageId;
+      const parentMessageId =
+        parentRaw != null && Number.isFinite(Number(parentRaw)) ? Number(parentRaw) : null;
+      if (parentMessageId) {
+        const root = await store.findMessageById(parentMessageId);
+        if (!root || root.channelId !== id) {
+          res.status(400).json({ error: "Invalid thread parent" });
+          return;
+        }
+      }
+
       const message = await store.createMessage({
         channelId: id,
         senderId: ctx.userId,
@@ -612,6 +689,8 @@ router.post(
         attachments: payload.attachments ?? null,
         messageKind: payload.messageKind,
         metadata: payload.metadata ?? null,
+        parentMessageId,
+        editedAt: null,
         deletedAt: null,
         deletedById: null,
         senderName: sender?.fullName ?? null,
@@ -885,6 +964,362 @@ router.patch(
       console.error("[realtime-rsvp]", err),
     );
     res.json(rsvpJson);
+  },
+);
+
+router.patch(
+  "/v1/channels/:id/messages/:messageId",
+  requireAuth,
+  requirePermission("channels:post"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const message = await store.findMessageById(messageId);
+    if (!message || message.channelId !== channelId || message.deletedAt) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+    if (!canEditMessage(ctx, { senderId: message.senderId, createdAt: message.createdAt })) {
+      res.status(403).json({ error: "Messages can only be edited within 24 hours of sending" });
+      return;
+    }
+
+    const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+    if (!body) {
+      res.status(400).json({ error: "Message body is required" });
+      return;
+    }
+
+    const updated = await store.updateMessage(messageId, {
+      body,
+      editedAt: new Date(),
+    });
+    if (!updated) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    const sender = await store.findUserById(updated.senderId);
+    const json = messageToJson(
+      updated,
+      sender?.fullName ?? "Unknown",
+      sender?.avatarUrl ?? null,
+    );
+    void publishMessageUpdated(json).catch((err) =>
+      console.error("[realtime-message-edit]", err),
+    );
+    res.json(json);
+  },
+);
+
+router.post(
+  "/v1/channels/:id/star",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    await store.setChannelStarred(id, ctx.userId, true);
+    res.status(204).send();
+  },
+);
+
+router.delete(
+  "/v1/channels/:id/star",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    await store.setChannelStarred(id, ctx.userId, false);
+    res.status(204).send();
+  },
+);
+
+router.get(
+  "/v1/channels/:id/pins",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const pins = await store.listChannelPins(id);
+    const users = await store.listUsers();
+    const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
+    const out = await Promise.all(
+      pins.map(async (pin) => {
+        const msg = await store.findMessageByIdWithSender(pin.messageId);
+        if (!msg) return null;
+        const sender = users.find((u) => u.id === msg.senderId);
+        return {
+          channelId: pin.channelId,
+          messageId: pin.messageId,
+          pinnedById: pin.pinnedById,
+          pinnedAt: pin.pinnedAt.toISOString(),
+          message: messageToJson(
+            msg,
+            msg.senderName ?? sender?.fullName ?? "Unknown",
+            avatarMap[msg.senderId] ?? sender?.avatarUrl ?? null,
+          ),
+        };
+      }),
+    );
+    res.json(out.filter((p): p is NonNullable<typeof p> => p != null));
+  },
+);
+
+router.post(
+  "/v1/channels/:id/messages/:messageId/pin",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const message = await store.findMessageById(messageId);
+    if (!message || message.channelId !== channelId || message.deletedAt) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    const canPin =
+      message.senderId === ctx.userId ||
+      canManageChannel(ctx, access.membership, {
+        createdById: access.channel.createdById ?? null,
+      });
+    if (!canPin) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const pin = await store.pinMessage(channelId, messageId, ctx.userId);
+    const msg = await store.findMessageByIdWithSender(messageId);
+    const sender = await store.findUserById(msg?.senderId ?? message.senderId);
+    res.status(201).json({
+      channelId: pin.channelId,
+      messageId: pin.messageId,
+      pinnedById: pin.pinnedById,
+      pinnedAt: pin.pinnedAt.toISOString(),
+      message: messageToJson(
+        msg ?? message,
+        msg?.senderName ?? sender?.fullName ?? "Unknown",
+        sender?.avatarUrl ?? null,
+      ),
+    });
+  },
+);
+
+router.delete(
+  "/v1/channels/:id/messages/:messageId/pin",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    await store.unpinMessage(channelId, messageId);
+    res.status(204).send();
+  },
+);
+
+router.get(
+  "/v1/channels/:id/files",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const access = await requireChannelAccess(ctx, id);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const limitRaw = Number(req.query.limit);
+    const limit = Number.isFinite(limitRaw) ? Math.min(100, Math.max(1, limitRaw)) : 50;
+    const beforeRaw = req.query.before;
+    const before =
+      beforeRaw !== undefined && beforeRaw !== ""
+        ? Number(Array.isArray(beforeRaw) ? beforeRaw[0] : beforeRaw)
+        : undefined;
+    const typeRaw = req.query.type;
+    const type = String(Array.isArray(typeRaw) ? typeRaw[0] : typeRaw ?? "").trim() || undefined;
+
+    const files = await store.listChannelFiles(id, {
+      limit,
+      before: Number.isFinite(before) ? before : undefined,
+      type,
+    });
+    res.json(
+      files.map((f) => ({
+        messageId: f.messageId,
+        type: f.type,
+        url: f.url,
+        name: f.name,
+        mimeType: f.mimeType,
+        size: f.size,
+        thumbUrl: f.thumbUrl,
+        uploaderId: f.uploaderId,
+        uploaderName: f.uploaderName,
+        createdAt: f.createdAt.toISOString(),
+      })),
+    );
+  },
+);
+
+router.get(
+  "/v1/dms",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const dms = await store.listDmChannelsForUser(ctx.userId);
+    const channelIds = dms.map((c) => c.id);
+    const meta = await store.listChannelListMeta(channelIds, ctx.userId);
+    const teams = await store.listTeams();
+    const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+    const adminAll = hasPermission(ctx, "channels:all");
+    const result = await Promise.all(
+      dms.map(async (c) => {
+        const peer = await dmPeerForChannel(c.id, ctx.userId);
+        return channelListItem(c, meta, teamMap, adminAll, peer);
+      }),
+    );
+    res.json(result.filter((c): c is NonNullable<typeof c> => c != null));
+  },
+);
+
+router.post(
+  "/v1/dms/open",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const targetUserId = Number(req.body?.userId);
+    if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+      res.status(400).json({ error: "Invalid userId" });
+      return;
+    }
+    if (targetUserId === ctx.userId) {
+      res.status(400).json({ error: "Cannot open a DM with yourself" });
+      return;
+    }
+
+    const target = await store.findUserById(targetUserId);
+    if (!target || target.status !== "active") {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    let channel = await store.findDmChannelBetween(ctx.userId, targetUserId);
+    if (!channel) {
+      const peerName = target.fullName;
+      channel = await store.createChannel({
+        name: `dm-${Math.min(ctx.userId, targetUserId)}-${Math.max(ctx.userId, targetUserId)}`,
+        description: null,
+        teamId: null,
+        type: "DM",
+        visibility: "PRIVATE",
+        createdById: ctx.userId,
+      });
+      await store.addChannelMember(channel.id, ctx.userId, "owner");
+      await store.addChannelMember(channel.id, targetUserId, "member");
+      void store
+        .createMessage({
+          channelId: channel.id,
+          senderId: ctx.userId,
+          body: `This is the start of your direct message history with ${peerName}.`,
+          attachments: null,
+          messageKind: "system",
+          metadata: { systemEvent: "dm_opened" },
+          parentMessageId: null,
+          editedAt: null,
+          deletedAt: null,
+          deletedById: null,
+        })
+        .catch((e) => console.error("[dm-system]", e));
+    }
+
+    const meta = await store.listChannelListMeta([channel.id], ctx.userId);
+    const teams = await store.listTeams();
+    const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+    const peer = await dmPeerForChannel(channel.id, ctx.userId);
+    const item = channelListItem(
+      channel,
+      meta,
+      teamMap,
+      hasPermission(ctx, "channels:all"),
+      peer,
+    );
+    res.json(item);
   },
 );
 

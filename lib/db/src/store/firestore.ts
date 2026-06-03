@@ -72,6 +72,7 @@ const COL = {
   channels: "channels",
   channelMembers: "channel_members",
   channelMemberIndex: "channel_member_index",
+  channelPins: "channel_pins",
   messages: "messages",
   calendarEvents: "calendar_events",
   calendarAttendeeIndex: "calendar_attendee_index",
@@ -953,9 +954,10 @@ export function createFirestoreStore() {
       const unreadCounts = new Map<number, number>();
       const lastMessagePreviews = new Map<number, string>();
       const lastReadMessageIds = new Map<number, number | null>();
+      const starred = new Map<number, boolean>();
 
       if (!channelIds.length) {
-        return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+        return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds, starred };
       }
 
       const memberByChannel = new Map<
@@ -982,6 +984,7 @@ export function createFirestoreStore() {
                 : "member") as ChannelMemberRole,
             );
             lastReadMessageIds.set(cid, (data.lastReadMessageId as number) ?? null);
+            starred.set(cid, Boolean(data.starred));
             memberByChannel.set(cid, {
               lastReadAt: data.lastReadAt as string | undefined,
               lastReadMessageId: data.lastReadMessageId as number | undefined,
@@ -1015,7 +1018,175 @@ export function createFirestoreStore() {
         }
       }
 
-      return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+      return { counts, roles, unreadCounts, lastMessagePreviews, lastReadMessageIds, starred };
+    },
+    setChannelStarred: async (channelId: number, userId: number, starred: boolean) => {
+      const snap = await db
+        .collection(COL.channelMembers)
+        .where("channelId", "==", channelId)
+        .where("userId", "==", userId)
+        .limit(1)
+        .get();
+      if (snap.empty) return;
+      await snap.docs[0]!.ref.set({ starred }, { merge: true });
+    },
+    findDmChannelBetween: async (userA: number, userB: number) => {
+      const memberSnap = await db
+        .collection(COL.channelMemberIndex)
+        .where("userId", "==", userA)
+        .get();
+      for (const doc of memberSnap.docs) {
+        const channelId = Number(doc.data().channelId);
+        const chSnap = await db.collection(COL.channels).doc(docId(channelId)).get();
+        if (!chSnap.exists || chSnap.data()?.type !== "DM" || chSnap.data()?.archived) continue;
+        const memSnap = await db
+          .collection(COL.channelMembers)
+          .where("channelId", "==", channelId)
+          .get();
+        const ids = memSnap.docs
+          .map((d) => Number(d.data().userId))
+          .sort((x, y) => x - y);
+        if (ids.length === 2 && ids[0] === Math.min(userA, userB) && ids[1] === Math.max(userA, userB)) {
+          return mapChannel(chSnap.data()!, chSnap.id);
+        }
+      }
+      return null;
+    },
+    listDmChannelsForUser: async (userId: number) => {
+      const memberSnap = await db
+        .collection(COL.channelMemberIndex)
+        .where("userId", "==", userId)
+        .get();
+      const out: Channel[] = [];
+      for (const doc of memberSnap.docs) {
+        const channelId = Number(doc.data().channelId);
+        const chSnap = await db.collection(COL.channels).doc(docId(channelId)).get();
+        if (!chSnap.exists) continue;
+        const ch = mapChannel(chSnap.data()!, chSnap.id);
+        if (ch.type === "DM" && !ch.archived) out.push(ch);
+      }
+      return out.sort((a, b) => a.name.localeCompare(b.name));
+    },
+    listChannelPins: async (channelId: number) => {
+      const snap = await db
+        .collection(COL.channelPins)
+        .where("channelId", "==", channelId)
+        .get();
+      return snap.docs
+        .map((d) => {
+          const data = d.data();
+          return {
+            id: Number(d.id),
+            channelId: data.channelId as number,
+            messageId: data.messageId as number,
+            pinnedById: data.pinnedById as number,
+            pinnedAt: toDate(data.pinnedAt),
+          };
+        })
+        .sort((a, b) => b.pinnedAt.getTime() - a.pinnedAt.getTime());
+    },
+    pinMessage: async (channelId: number, messageId: number, pinnedById: number) => {
+      const existing = await db
+        .collection(COL.channelPins)
+        .where("channelId", "==", channelId)
+        .where("messageId", "==", messageId)
+        .limit(1)
+        .get();
+      if (!existing.empty) {
+        const d = existing.docs[0]!;
+        const data = d.data();
+        return {
+          id: Number(d.id),
+          channelId: data.channelId as number,
+          messageId: data.messageId as number,
+          pinnedById: data.pinnedById as number,
+          pinnedAt: toDate(data.pinnedAt),
+        };
+      }
+      const id = await nextId(COL.channelPins);
+      const row = {
+        channelId,
+        messageId,
+        pinnedById,
+        pinnedAt: new Date().toISOString(),
+      };
+      await db.collection(COL.channelPins).doc(docId(id)).set(row);
+      return {
+        id,
+        channelId,
+        messageId,
+        pinnedById,
+        pinnedAt: new Date(row.pinnedAt),
+      };
+    },
+    unpinMessage: async (channelId: number, messageId: number) => {
+      const snap = await db
+        .collection(COL.channelPins)
+        .where("channelId", "==", channelId)
+        .where("messageId", "==", messageId)
+        .get();
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    },
+    listChannelFiles: async (
+      channelId: number,
+      options?: { limit?: number; before?: number; type?: string },
+    ) => {
+      const limit = options?.limit ?? 50;
+      const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
+      let messages = snap.docs
+        .map((d) => {
+          const data = d.data();
+          const m = mapMessage(data, d.id);
+          return {
+            ...m,
+            senderName: typeof data.senderName === "string" ? data.senderName : null,
+          };
+        })
+        .filter((m) => !m.deletedAt && (m.attachments?.length ?? 0) > 0)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      if (options?.before) {
+        const ref = messages.find((m) => m.id === options.before);
+        if (ref) {
+          const t = ref.createdAt.getTime();
+          messages = messages.filter((m) => m.createdAt.getTime() < t);
+        }
+      }
+
+      type FileRow = {
+        messageId: number;
+        type: string;
+        url: string;
+        name?: string;
+        mimeType?: string;
+        size?: number;
+        thumbUrl?: string;
+        uploaderId: number;
+        uploaderName: string;
+        createdAt: Date;
+      };
+      const out: FileRow[] = [];
+      for (const row of messages) {
+        for (const att of row.attachments ?? []) {
+          if (options?.type && att.type !== options.type) continue;
+          out.push({
+            messageId: row.id,
+            type: att.type,
+            url: att.url,
+            name: att.name,
+            mimeType: att.mimeType,
+            size: att.size,
+            thumbUrl: att.thumbUrl,
+            uploaderId: row.senderId,
+            uploaderName: row.senderName ?? "Unknown",
+            createdAt: row.createdAt,
+          });
+          if (out.length >= limit) return out;
+        }
+      }
+      return out;
     },
     markChannelRead: async (channelId: number, userId: number) => {
       const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
@@ -1091,7 +1262,7 @@ export function createFirestoreStore() {
 
     async listMessagesByChannel(
       channelId: number,
-      options?: { limit?: number; before?: number },
+      options?: { limit?: number; before?: number; threadRootId?: number },
     ): Promise<MessageWithSender[]> {
       const limit = options?.limit ?? 100;
       let beforeAt: string | null = null;
@@ -1108,36 +1279,32 @@ export function createFirestoreStore() {
                 : null;
       }
 
-      let q = db
-        .collection(COL.messages)
-        .where("channelId", "==", channelId)
-        .orderBy("createdAt", "desc")
-        .limit(limit);
+      let q: FirebaseFirestore.Query = db.collection(COL.messages).where("channelId", "==", channelId);
+      if (options?.threadRootId != null) {
+        q = q.where("parentMessageId", "==", options.threadRootId);
+      }
+      q = q.orderBy("createdAt", "desc").limit(limit * 4);
       if (beforeAt) {
-        q = db
-          .collection(COL.messages)
-          .where("channelId", "==", channelId)
-          .where("createdAt", "<", beforeAt)
-          .orderBy("createdAt", "desc")
-          .limit(limit);
+        q = q.where("createdAt", "<", beforeAt);
       }
 
       const snap = await q.get();
-      return snap.docs
-        .map((d) => {
-          const data = d.data();
-          const m = mapMessage(data, d.id);
-          return {
-            ...m,
-            senderName:
-              typeof data.senderName === "string" ? data.senderName : null,
-            senderAvatar:
-              typeof data.senderAvatar === "string" || data.senderAvatar === null
-                ? (data.senderAvatar as string | null)
-                : null,
-          };
-        })
-        .reverse();
+      let rows = snap.docs.map((d) => {
+        const data = d.data();
+        const m = mapMessage(data, d.id);
+        return {
+          ...m,
+          senderName: typeof data.senderName === "string" ? data.senderName : null,
+          senderAvatar:
+            typeof data.senderAvatar === "string" || data.senderAvatar === null
+              ? (data.senderAvatar as string | null)
+              : null,
+        };
+      });
+      if (options?.threadRootId == null) {
+        rows = rows.filter((m) => m.parentMessageId == null);
+      }
+      return rows.slice(0, limit).reverse();
     },
 
     async createMessage(
@@ -1154,6 +1321,8 @@ export function createFirestoreStore() {
         attachments: sanitizeMessageAttachments(data.attachments ?? null),
         messageKind: data.messageKind ?? "text",
         metadata: data.metadata ?? null,
+        parentMessageId: data.parentMessageId ?? null,
+        editedAt: data.editedAt?.toISOString() ?? null,
         deletedAt: data.deletedAt?.toISOString() ?? null,
         deletedById: data.deletedById ?? null,
         senderName: data.senderName ?? null,
@@ -1161,6 +1330,16 @@ export function createFirestoreStore() {
         createdAt: new Date().toISOString(),
       };
       await db.collection(COL.messages).doc(docId(id)).set(row);
+
+      if (data.parentMessageId) {
+        const rootRef = db.collection(COL.messages).doc(docId(data.parentMessageId));
+        const rootSnap = await rootRef.get();
+        if (rootSnap.exists) {
+          const meta = (rootSnap.data()?.metadata ?? {}) as Record<string, unknown>;
+          const replyCount = Number(meta.replyCount ?? 0) + 1;
+          await rootRef.set({ metadata: { ...meta, replyCount } }, { merge: true });
+        }
+      }
 
       const channelRef = db.collection(COL.channels).doc(docId(data.channelId));
       const channelSnap = await channelRef.get();
@@ -1178,7 +1357,9 @@ export function createFirestoreStore() {
 
     async updateMessage(
       id: number,
-      patch: Partial<Pick<Message, "metadata" | "body" | "attachments">>,
+      patch: Partial<
+        Pick<Message, "metadata" | "body" | "attachments" | "editedAt" | "parentMessageId">
+      >,
     ): Promise<Message | null> {
       const ref = db.collection(COL.messages).doc(docId(id));
       if (!(await ref.get()).exists) return null;
@@ -1705,6 +1886,7 @@ function mapChannelMember(data: FirebaseFirestore.DocumentData, id: string) {
     channelId: data.channelId as number,
     userId: data.userId as number,
     role: data.role as string,
+    starred: Boolean(data.starred),
     lastReadAt: data.lastReadAt ? toDate(data.lastReadAt) : null,
     lastReadMessageId: (data.lastReadMessageId as number) ?? null,
     joinedAt: toDate(data.joinedAt),
@@ -1720,6 +1902,8 @@ function mapMessage(data: FirebaseFirestore.DocumentData, id: string): Message {
     attachments: normalizeMessageAttachments(data.attachments) ?? null,
     messageKind: (data.messageKind as string) ?? "text",
     metadata: (data.metadata as Record<string, unknown> | null) ?? null,
+    parentMessageId: (data.parentMessageId as number | null | undefined) ?? null,
+    editedAt: data.editedAt ? toDate(data.editedAt) : null,
     deletedAt: data.deletedAt ? toDate(data.deletedAt) : null,
     deletedById: (data.deletedById as number | null | undefined) ?? null,
     createdAt: toDate(data.createdAt),

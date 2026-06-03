@@ -71,6 +71,14 @@ export function isWithinMessageDeleteWindow(
   return nowMs - ms >= 0 && nowMs - ms <= MESSAGE_DELETE_WINDOW_MS;
 }
 
+export function canEditMessage(
+  ctx: AccessContext,
+  message: MessageDeleteInfo,
+): boolean {
+  if (!isWithinMessageDeleteWindow(message.createdAt)) return false;
+  return message.senderId === ctx.userId;
+}
+
 export function canDeleteMessage(
   ctx: AccessContext,
   message: MessageDeleteInfo,

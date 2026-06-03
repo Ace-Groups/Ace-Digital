@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
-import { Plus, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronRight, Hash } from "lucide-react";
 import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import { formatUnreadBadge, formatChannelListTime } from "@/lib/chat-display";
+import { useListDms, getListDmsQueryKey } from "@workspace/api-client-react";
 import type { Channel } from "@workspace/api-client-react";
 
 const SECTION_KEY = "ace-chat-sidebar-sections";
@@ -32,6 +34,11 @@ function saveSectionCollapsed(key: string, collapsed: boolean): void {
   }
 }
 
+function channelDisplayName(ch: Channel): string {
+  if (ch.type === "DM") return ch.dmPeerName ?? ch.name;
+  return ch.name;
+}
+
 interface RoomSidebarProps {
   channels: Channel[] | undefined;
   isLoading: boolean;
@@ -46,57 +53,56 @@ function RoomRow({
   ch,
   isSelected,
   onSelect,
+  showHash = true,
 }: {
   ch: Channel;
   isSelected: boolean;
   onSelect: (id: number) => void;
+  showHash?: boolean;
 }) {
   const unread = ch.unreadCount ?? 0;
+  const label = channelDisplayName(ch);
   return (
     <button
       type="button"
       data-testid={`channel-item-${ch.id}`}
       onClick={() => onSelect(ch.id)}
       className={cn(
-        "mb-0.5 flex w-full min-h-12 flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors active:scale-[0.99]",
+        "mb-0.5 flex w-full min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors active:scale-[0.99]",
         isSelected
-          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-          : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
       )}
     >
-      <div className="flex items-center gap-2">
-        <ChannelIcon channel={ch} size={16} />
+      {ch.type === "DM" ? (
+        <UserAvatar
+          fullName={label}
+          avatarUrl={ch.dmPeerAvatar}
+          className="size-5 shrink-0 rounded-md"
+          iconSize={10}
+        />
+      ) : (
+        <ChannelIcon channel={ch} size={16} className="shrink-0 opacity-70" />
+      )}
+      <span className="min-w-0 flex-1 truncate">
+        {showHash && ch.type !== "DM" ? "#" : ""}
+        {label}
+      </span>
+      {ch.lastPostAt ? (
+        <span className="shrink-0 text-[10px] tabular-nums opacity-50">
+          {formatChannelListTime(ch.lastPostAt)}
+        </span>
+      ) : null}
+      {unread > 0 && (
         <span
           className={cn(
-            "min-w-0 flex-1 truncate",
-            unread > 0 && !isSelected && "font-semibold text-sidebar-foreground",
+            "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+            isSelected ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-red-500 text-white",
           )}
         >
-          {ch.name}
+          {formatUnreadBadge(unread)}
         </span>
-        {ch.lastPostAt ? (
-          <span className="shrink-0 text-[10px] tabular-nums opacity-50">
-            {formatChannelListTime(ch.lastPostAt)}
-          </span>
-        ) : null}
-        {unread > 0 && (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
-              isSelected
-                ? "bg-sidebar-primary-foreground/20 text-sidebar-primary-foreground"
-                : "bg-red-500 text-white",
-            )}
-          >
-            {formatUnreadBadge(unread)}
-          </span>
-        )}
-      </div>
-      {ch.lastMessagePreview ? (
-        <p className={cn("truncate pl-6 text-xs", isSelected ? "opacity-80" : "opacity-50")}>
-          {ch.lastMessagePreview}
-        </p>
-      ) : null}
+      )}
     </button>
   );
 }
@@ -108,6 +114,9 @@ function Section({
   selectedChannelId,
   onSelect,
   defaultCollapsed,
+  footer,
+  icon,
+  showHash = true,
 }: {
   title: string;
   sectionKey: string;
@@ -115,12 +124,13 @@ function Section({
   selectedChannelId: number | null;
   onSelect: (id: number) => void;
   defaultCollapsed?: boolean;
+  footer?: React.ReactNode;
+  icon?: React.ReactNode;
+  showHash?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(
     () => loadSectionCollapsed(sectionKey) ?? defaultCollapsed ?? false,
   );
-
-  if (!channels.length) return null;
 
   return (
     <div className="mb-2">
@@ -134,18 +144,28 @@ function Section({
         }}
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        {icon}
         {title}
         <span className="ml-auto tabular-nums">{channels.length}</span>
       </button>
-      {!collapsed &&
-        channels.map((ch) => (
-          <RoomRow
-            key={ch.id}
-            ch={ch}
-            isSelected={selectedChannelId === ch.id}
-            onSelect={onSelect}
-          />
-        ))}
+      {!collapsed && (
+        <>
+          {channels.length === 0 ? (
+            <p className="px-3 py-1 text-xs text-sidebar-foreground/40">None yet</p>
+          ) : (
+            channels.map((ch) => (
+              <RoomRow
+                key={ch.id}
+                ch={ch}
+                isSelected={selectedChannelId === ch.id}
+                onSelect={onSelect}
+                showHash={showHash}
+              />
+            ))
+          )}
+          {footer}
+        </>
+      )}
     </div>
   );
 }
@@ -160,9 +180,12 @@ export function RoomSidebar({
   isMobile,
 }: RoomSidebarProps) {
   const [query, setQuery] = useState("");
+  const { data: dms } = useListDms({
+    query: { queryKey: getListDmsQueryKey(), staleTime: 30_000 },
+  });
 
-  const filtered = useMemo(() => {
-    const list = channels ?? [];
+  const teamChannels = useMemo(() => {
+    const list = (channels ?? []).filter((c) => c.type !== "DM");
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -172,14 +195,21 @@ export function RoomSidebar({
     );
   }, [channels, query]);
 
-  const unread = useMemo(
-    () => filtered.filter((c) => (c.unreadCount ?? 0) > 0),
-    [filtered],
+  const starred = useMemo(
+    () => teamChannels.filter((c) => c.starred),
+    [teamChannels],
   );
-  const read = useMemo(
-    () => filtered.filter((c) => (c.unreadCount ?? 0) === 0),
-    [filtered],
+  const regular = useMemo(
+    () => teamChannels.filter((c) => !c.starred),
+    [teamChannels],
   );
+
+  const dmList = useMemo(() => {
+    const list = dms ?? [];
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((c) => (c.dmPeerName ?? c.name).toLowerCase().includes(q));
+  }, [dms, query]);
 
   return (
     <div
@@ -190,20 +220,6 @@ export function RoomSidebar({
     >
       <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-3 py-3">
         <h2 className="text-sm font-semibold">Chat</h2>
-        {canCreate && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
-            onClick={onCreateClick}
-            aria-label="Create channel"
-            data-testid="btn-create-channel"
-          >
-            <Plus size={14} />
-            New channel
-          </Button>
-        )}
       </div>
       <div className="border-b border-sidebar-border px-2 py-2">
         <div className="relative">
@@ -214,7 +230,7 @@ export function RoomSidebar({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search channels"
+            placeholder="Search"
             className="h-9 border-sidebar-border bg-sidebar-accent/30 pl-8 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/40"
           />
         </div>
@@ -226,33 +242,44 @@ export function RoomSidebar({
               <Skeleton key={i} className="h-11 w-full bg-white/10" />
             ))}
           </div>
-        ) : !filtered.length ? (
-          <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
-            <p className="text-sm text-sidebar-foreground/60">
-              {query ? "No channels match your search" : "No channels yet"}
-            </p>
-            {canCreate && !query && (
-              <Button type="button" size="sm" variant="secondary" className="gap-2" onClick={onCreateClick}>
-                <Plus size={14} /> Create channel
-              </Button>
-            )}
-          </div>
         ) : (
           <>
             <Section
-              title="Unread"
-              sectionKey="unread"
-              channels={unread}
+              title="Starred"
+              sectionKey="starred"
+              channels={starred}
               selectedChannelId={selectedChannelId}
               onSelect={onSelect}
+              defaultCollapsed={starred.length === 0}
+              icon={<span className="text-amber-400">★</span>}
             />
             <Section
               title="Channels"
               sectionKey="channels"
-              channels={read}
+              channels={regular}
               selectedChannelId={selectedChannelId}
               onSelect={onSelect}
-              defaultCollapsed={false}
+              icon={<Hash size={12} className="opacity-60" />}
+              footer={
+                canCreate ? (
+                  <button
+                    type="button"
+                    className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    onClick={onCreateClick}
+                  >
+                    <Plus size={14} />
+                    Add channels
+                  </button>
+                ) : null
+              }
+            />
+            <Section
+              title="Direct messages"
+              sectionKey="dms"
+              channels={dmList}
+              selectedChannelId={selectedChannelId}
+              onSelect={onSelect}
+              showHash={false}
             />
           </>
         )}

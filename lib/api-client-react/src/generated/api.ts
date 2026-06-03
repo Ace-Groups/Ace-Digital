@@ -35,9 +35,11 @@ import type {
   CalendarRsvpInput,
   ChangePasswordInput,
   Channel,
+  ChannelFile,
   ChannelInput,
   ChannelMember,
   ChannelMemberInput,
+  ChannelPin,
   ChannelUpdate,
   CheckCalendarChatLinkParams,
   Client,
@@ -61,6 +63,7 @@ import type {
   ListActivityParams,
   ListApprovalsParams,
   ListCalendarEventsParams,
+  ListChannelFilesParams,
   ListEmployeesParams,
   ListProjectsParams,
   ListServiceTicketsParams,
@@ -69,10 +72,12 @@ import type {
   MentionCandidate,
   Message,
   MessageInput,
+  MessagePatchInput,
   MessageReactionInput,
   MyProfileUpdate,
   NextEmployeeCode,
   Notification,
+  OpenDmInput,
   PatchExpenseStatusBody,
   PayrollRun,
   PayrollRunInput,
@@ -6256,6 +6261,80 @@ export const useSendMessage = <TError = ErrorType<unknown>,
       return useMutation(getSendMessageMutationOptions(options));
     }
 
+export const getPatchMessageUrl = (id: number,
+    messageId: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/messages/${messageId}`
+}
+
+/**
+ * @summary Edit a message body
+ */
+export const patchMessage = async (id: number,
+    messageId: number,
+    messagePatchInput: MessagePatchInput, options?: RequestInit): Promise<Message> => {
+
+  return customFetch<Message>(getPatchMessageUrl(id,messageId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      messagePatchInput,)
+  }
+);}
+
+
+
+
+export const getPatchMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchMessage>>, TError,{id: number;messageId: number;data: BodyType<MessagePatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchMessage>>, TError,{id: number;messageId: number;data: BodyType<MessagePatchInput>}, TContext> => {
+
+const mutationKey = ['patchMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchMessage>>, {id: number;messageId: number;data: BodyType<MessagePatchInput>}> = (props) => {
+          const {id,messageId,data} = props ?? {};
+
+          return  patchMessage(id,messageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchMessageMutationResult = NonNullable<Awaited<ReturnType<typeof patchMessage>>>
+    export type PatchMessageMutationBody = BodyType<MessagePatchInput>
+    export type PatchMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Edit a message body
+ */
+export const usePatchMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchMessage>>, TError,{id: number;messageId: number;data: BodyType<MessagePatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchMessage>>,
+        TError,
+        {id: number;messageId: number;data: BodyType<MessagePatchInput>},
+        TContext
+      > => {
+      return useMutation(getPatchMessageMutationOptions(options));
+    }
+
 export const getDeleteMessageUrl = (id: number,
     messageId: number,) => {
 
@@ -6548,6 +6627,604 @@ export const useRsvpEvent = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRsvpEventMutationOptions(options));
+    }
+
+export const getStarChannelUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/star`
+}
+
+/**
+ * @summary Star a channel for the current user
+ */
+export const starChannel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getStarChannelUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStarChannelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof starChannel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof starChannel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['starChannel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof starChannel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  starChannel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StarChannelMutationResult = NonNullable<Awaited<ReturnType<typeof starChannel>>>
+
+    export type StarChannelMutationError = ErrorType<void>
+
+    /**
+ * @summary Star a channel for the current user
+ */
+export const useStarChannel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof starChannel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof starChannel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getStarChannelMutationOptions(options));
+    }
+
+export const getUnstarChannelUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/star`
+}
+
+/**
+ * @summary Remove star from a channel
+ */
+export const unstarChannel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnstarChannelUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnstarChannelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unstarChannel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unstarChannel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['unstarChannel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unstarChannel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unstarChannel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnstarChannelMutationResult = NonNullable<Awaited<ReturnType<typeof unstarChannel>>>
+
+    export type UnstarChannelMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove star from a channel
+ */
+export const useUnstarChannel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unstarChannel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unstarChannel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUnstarChannelMutationOptions(options));
+    }
+
+export const getListChannelPinsUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/pins`
+}
+
+/**
+ * @summary List pinned messages in a channel
+ */
+export const listChannelPins = async (id: number, options?: RequestInit): Promise<ChannelPin[]> => {
+
+  return customFetch<ChannelPin[]>(getListChannelPinsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChannelPinsQueryKey = (id: number,) => {
+    return [
+    `/api/v1/channels/${id}/pins`
+    ] as const;
+    }
+
+
+export const getListChannelPinsQueryOptions = <TData = Awaited<ReturnType<typeof listChannelPins>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChannelPins>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChannelPinsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChannelPins>>> = ({ signal }) => listChannelPins(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChannelPins>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChannelPinsQueryResult = NonNullable<Awaited<ReturnType<typeof listChannelPins>>>
+export type ListChannelPinsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List pinned messages in a channel
+ */
+
+export function useListChannelPins<TData = Awaited<ReturnType<typeof listChannelPins>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChannelPins>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChannelPinsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPinMessageUrl = (id: number,
+    messageId: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/messages/${messageId}/pin`
+}
+
+/**
+ * @summary Pin a message
+ */
+export const pinMessage = async (id: number,
+    messageId: number, options?: RequestInit): Promise<ChannelPin> => {
+
+  return customFetch<ChannelPin>(getPinMessageUrl(id,messageId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPinMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pinMessage>>, TError,{id: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof pinMessage>>, TError,{id: number;messageId: number}, TContext> => {
+
+const mutationKey = ['pinMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pinMessage>>, {id: number;messageId: number}> = (props) => {
+          const {id,messageId} = props ?? {};
+
+          return  pinMessage(id,messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PinMessageMutationResult = NonNullable<Awaited<ReturnType<typeof pinMessage>>>
+
+    export type PinMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Pin a message
+ */
+export const usePinMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pinMessage>>, TError,{id: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof pinMessage>>,
+        TError,
+        {id: number;messageId: number},
+        TContext
+      > => {
+      return useMutation(getPinMessageMutationOptions(options));
+    }
+
+export const getUnpinMessageUrl = (id: number,
+    messageId: number,) => {
+
+
+
+
+  return `/api/v1/channels/${id}/messages/${messageId}/pin`
+}
+
+/**
+ * @summary Unpin a message
+ */
+export const unpinMessage = async (id: number,
+    messageId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnpinMessageUrl(id,messageId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnpinMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpinMessage>>, TError,{id: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unpinMessage>>, TError,{id: number;messageId: number}, TContext> => {
+
+const mutationKey = ['unpinMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unpinMessage>>, {id: number;messageId: number}> = (props) => {
+          const {id,messageId} = props ?? {};
+
+          return  unpinMessage(id,messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnpinMessageMutationResult = NonNullable<Awaited<ReturnType<typeof unpinMessage>>>
+
+    export type UnpinMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Unpin a message
+ */
+export const useUnpinMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpinMessage>>, TError,{id: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unpinMessage>>,
+        TError,
+        {id: number;messageId: number},
+        TContext
+      > => {
+      return useMutation(getUnpinMessageMutationOptions(options));
+    }
+
+export const getListChannelFilesUrl = (id: number,
+    params?: ListChannelFilesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/channels/${id}/files?${stringifiedParams}` : `/api/v1/channels/${id}/files`
+}
+
+/**
+ * @summary List file attachments shared in a channel
+ */
+export const listChannelFiles = async (id: number,
+    params?: ListChannelFilesParams, options?: RequestInit): Promise<ChannelFile[]> => {
+
+  return customFetch<ChannelFile[]>(getListChannelFilesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChannelFilesQueryKey = (id: number,
+    params?: ListChannelFilesParams,) => {
+    return [
+    `/api/v1/channels/${id}/files`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListChannelFilesQueryOptions = <TData = Awaited<ReturnType<typeof listChannelFiles>>, TError = ErrorType<unknown>>(id: number,
+    params?: ListChannelFilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChannelFiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChannelFilesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChannelFiles>>> = ({ signal }) => listChannelFiles(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChannelFiles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChannelFilesQueryResult = NonNullable<Awaited<ReturnType<typeof listChannelFiles>>>
+export type ListChannelFilesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List file attachments shared in a channel
+ */
+
+export function useListChannelFiles<TData = Awaited<ReturnType<typeof listChannelFiles>>, TError = ErrorType<unknown>>(
+ id: number,
+    params?: ListChannelFilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChannelFiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChannelFilesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDmsUrl = () => {
+
+
+
+
+  return `/api/v1/dms`
+}
+
+/**
+ * @summary List direct message channels for the current user
+ */
+export const listDms = async ( options?: RequestInit): Promise<Channel[]> => {
+
+  return customFetch<Channel[]>(getListDmsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDmsQueryKey = () => {
+    return [
+    `/api/v1/dms`
+    ] as const;
+    }
+
+
+export const getListDmsQueryOptions = <TData = Awaited<ReturnType<typeof listDms>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDmsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDms>>> = ({ signal }) => listDms({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDms>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDmsQueryResult = NonNullable<Awaited<ReturnType<typeof listDms>>>
+export type ListDmsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List direct message channels for the current user
+ */
+
+export function useListDms<TData = Awaited<ReturnType<typeof listDms>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDmsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getOpenDmUrl = () => {
+
+
+
+
+  return `/api/v1/dms/open`
+}
+
+/**
+ * @summary Open or create a DM with another user
+ */
+export const openDm = async (openDmInput: OpenDmInput, options?: RequestInit): Promise<Channel> => {
+
+  return customFetch<Channel>(getOpenDmUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      openDmInput,)
+  }
+);}
+
+
+
+
+export const getOpenDmMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openDm>>, TError,{data: BodyType<OpenDmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof openDm>>, TError,{data: BodyType<OpenDmInput>}, TContext> => {
+
+const mutationKey = ['openDm'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof openDm>>, {data: BodyType<OpenDmInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  openDm(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OpenDmMutationResult = NonNullable<Awaited<ReturnType<typeof openDm>>>
+    export type OpenDmMutationBody = BodyType<OpenDmInput>
+    export type OpenDmMutationError = ErrorType<void>
+
+    /**
+ * @summary Open or create a DM with another user
+ */
+export const useOpenDm = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openDm>>, TError,{data: BodyType<OpenDmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof openDm>>,
+        TError,
+        {data: BodyType<OpenDmInput>},
+        TContext
+      > => {
+      return useMutation(getOpenDmMutationOptions(options));
     }
 
 export const getListActivityUrl = (params?: ListActivityParams,) => {

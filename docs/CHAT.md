@@ -1,57 +1,65 @@
 # Channel chat (WebSocket + Firestore fallback)
 
-Chat UX patterns are inspired by [Rocket.Chat](https://github.com/RocketChat/Rocket.Chat) (MIT) and Mattermost-style unread/recency — implemented on Ace shadcn without Fuselage or Meteor.
+Chat UX follows Slack-style patterns (flat rows, threads, DMs, stars, pins, files) on Ace shadcn — inspired by Rocket.Chat/Mattermost for unread/recency.
+
+## Slack parity matrix
+
+| Slack pattern | Ace Digital |
+|---------------|-------------|
+| Flat message rows (avatar + name + time) | `MessageRow` + `MessageHoverToolbar` |
+| Sidebar: Starred, Channels (#), DMs | `RoomSidebar` + `starred` on `channel_members` |
+| Header tabs: Messages, Files | `ChannelThreadHeader` + `ChannelFilesPanel` |
+| Thread side panel | `ThreadSidePanel` + `parentMessageId` |
+| Edit message (24h) | `PATCH /v1/channels/{id}/messages/{messageId}` |
+| Star channel | `POST/DELETE /v1/channels/{id}/star` |
+| Pins | `channel_pins` + pin routes |
+| Markdown composer | `SlackComposer` + `react-markdown` render |
+| System join lines | `messageKind: system` |
+| Canvas / Huddle / Workflows | Out of scope |
 
 ## Realtime transport
 
 | Layer | Role |
 |-------|------|
-| **REST** | Send messages, reactions, polls, RSVP; initial history load |
-| **WebSocket** | Primary realtime (`message:new`, `message:updated`, `message:deleted`, `channel:activity`, `notification:new`) |
-| **Firestore** | Fallback when WebSocket is unavailable (`onSnapshot` on `messages`) |
+| **REST** | Send messages, reactions, polls, RSVP, edits, threads, pins, files |
+| **WebSocket** | Primary realtime (`message:new`, `message:updated`, `message:deleted`, `channel:activity`) |
+| **Firestore** | Fallback when WebSocket is unavailable |
 
-Protocol definitions live in [`lib/realtime-protocol`](../lib/realtime-protocol).
+Protocol: [`lib/realtime-protocol`](../lib/realtime-protocol).
 
-## Environment
+## Schema (Postgres / Firestore)
 
-| Variable | Where | Purpose |
-|----------|--------|---------|
-| `VITE_REALTIME_WS_URL` | ace-digital-os | Production WebSocket URL (`wss://…`). Unset in dev → Vite proxies `/ws` to api-server |
-| `REDIS_URL` | api-server (Render) | Optional pub/sub; single Render instance uses in-process hub |
-| `JWT_SECRET` | api-server (Render), Functions (if used) | Must match token signing (32+ chars in production) |
-| `VITE_FIREBASE_CHAT` | ace-digital-os | Set to `false` to disable Firestore fallback + Storage chat |
-| `FIREBASE_CHAT_ENABLED` | api-server | Set to `false` to disable mirror + custom token |
-| `FIREBASE_CHAT_MIRROR` | api-server | Set to `false` to skip Postgres → Firestore message mirror |
-| `GCLOUD_PROJECT` / `FIREBASE_PROJECT_ID` | api-server | Firebase Admin project for mirror when using Postgres |
-| `FIRESTORE_EMULATOR_HOST` | api-server | Enables mirror against the emulator |
+- `messages.parentMessageId`, `messages.editedAt`
+- `channel_members.starred`
+- `channel_pins` (channelId, messageId, pinnedById, pinnedAt)
+- `channels.type` includes `DM`
 
-When `DATABASE_URL` is set (local dev), Postgres is canonical. Messages may still be mirrored to Firestore for fallback realtime.
+Run `pnpm --filter @workspace/db push` after pulling.
+
+## API highlights
+
+- `GET /v1/channels/{id}/messages?threadRootId=` — thread replies (main feed excludes replies)
+- `PATCH /v1/channels/{id}/messages/{messageId}` — edit body
+- `POST /v1/dms/open`, `GET /v1/dms`
+- `GET /v1/channels/{id}/files`, `GET /v1/channels/{id}/pins`
+
+Codegen: `pnpm --filter @workspace/api-spec run codegen`
+
+## Firestore indexes
+
+Deploy [`firebase/firestore.indexes.json`](../firebase/firestore.indexes.json):
+
+- `messages`: `channelId` + `createdAt`
+- `messages`: `channelId` + `parentMessageId` + `createdAt` (threads)
+
+## Subagent
+
+Use `.cursor/agents/slack-chat-ux.md` for consistent Slack-parity UI work.
 
 ## Local development
 
-1. Start API (HTTP + WebSocket on `/ws`): `pnpm --filter @workspace/api-server run dev`
-2. Start UI: `pnpm --filter @workspace/ace-digital-os run dev`
-3. Optional: run dedicated realtime + Redis to mimic production:
-   - `REDIS_URL=redis://localhost:6379 pnpm --filter @workspace/realtime-server run dev`
-   - Set `REDIS_URL` on api-server as well (inline hub still works without Redis locally)
+1. API: `pnpm --filter @workspace/api-server run dev`
+2. UI: `pnpm --filter @workspace/ace-digital-os run dev`
+3. Typecheck: `pnpm run typecheck`
 
-## Production (Firebase Hosting + Render)
-
-See **[PRODUCTION.md](PRODUCTION.md)** for URLs and verify steps.
-
-1. **Render** runs api-server (REST + `/ws`). Env: `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `USE_FIRESTORE=true`, optional `REDIS_URL`. Deploy: push to `main` or manual deploy; build `bash scripts/render-build.sh`.
-2. **Hosting** build: `pnpm run build:web:render` then `firebase deploy --only hosting` (sets `VITE_API_BASE_URL` and `VITE_REALTIME_WS_URL` to Render).
-3. Keep **`VITE_FIREBASE_CHAT=true`** for Firestore fallback and Storage attachments.
-4. External **cron** pings `/api/healthz` every 10–14 min on the free Render plan ([RENDER_KEEPALIVE_CRON.md](RENDER_KEEPALIVE_CRON.md)).
-
-**Legacy:** separate Cloud Run realtime (`pnpm run deploy:realtime`) + Functions-only REST — not used in the live Render setup.
-
-## Firestore index (fallback)
-
-Deploy indexes from [`firebase/firestore.indexes.json`](../firebase/firestore.indexes.json):
-
-- `messages`: `channelId` ASC, `createdAt` ASC
-
-## Schema
-
-Run `pnpm --filter @workspace/db push` after pulling channel read-state columns.
+See [PRODUCTION.md](PRODUCTION.md) for deployment.

@@ -66,7 +66,12 @@ export async function mirrorMessageToFirestore(payload: MirrorMessagePayload): P
 
 export async function mirrorMessagePatchToFirestore(
   id: number,
-  patch: Partial<Pick<MirrorMessagePayload, "metadata" | "body" | "attachments">>,
+  patch: Partial<
+    Pick<MirrorMessagePayload, "metadata" | "body" | "attachments"> & {
+      editedAt?: Date | null;
+      parentMessageId?: number | null;
+    }
+  >,
 ): Promise<void> {
   const db = ensureFirestore();
   if (!db) return;
@@ -77,6 +82,10 @@ export async function mirrorMessagePatchToFirestore(
   if (patch.attachments !== undefined) {
     data.attachments = sanitizeMessageAttachments(patch.attachments ?? null);
   }
+  if (patch.editedAt !== undefined) {
+    data.editedAt = patch.editedAt ? patch.editedAt.toISOString() : null;
+  }
+  if (patch.parentMessageId !== undefined) data.parentMessageId = patch.parentMessageId;
   if (Object.keys(data).length === 0) return;
 
   await db.collection("messages").doc(docId(id)).set(data, { merge: true });

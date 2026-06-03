@@ -1,4 +1,4 @@
-import { eq, and, sql, count, inArray, desc, lt, gt } from "drizzle-orm";
+import { eq, and, sql, count, inArray, desc, lt, gt, isNull } from "drizzle-orm";
 import { getPgDb } from "../pg";
 import {
   usersTable,
@@ -15,6 +15,7 @@ import {
   notificationsTable,
   channelsTable,
   channelMembersTable,
+  channelPinsTable,
   messagesTable,
   calendarEventsTable,
   reportsTable,
@@ -790,6 +791,7 @@ export function createPostgresStore() {
           channelId: channelMembersTable.channelId,
           userId: channelMembersTable.userId,
           role: channelMembersTable.role,
+          starred: channelMembersTable.starred,
           lastReadAt: channelMembersTable.lastReadAt,
           lastReadMessageId: channelMembersTable.lastReadMessageId,
           joinedAt: channelMembersTable.joinedAt,
@@ -809,9 +811,17 @@ export function createPostgresStore() {
       const unreadCounts = new Map<number, number>();
       const lastMessagePreviews = new Map<number, string>();
       const lastReadMessageIds = new Map<number, number | null>();
+      const starredByChannel = new Map<number, boolean>();
 
       if (!channelIds.length) {
-        return { counts, roles: roleByChannel, unreadCounts, lastMessagePreviews, lastReadMessageIds };
+        return {
+          counts,
+          roles: roleByChannel,
+          unreadCounts,
+          lastMessagePreviews,
+          lastReadMessageIds,
+          starred: starredByChannel,
+        };
       }
 
       const rows = await db
@@ -819,6 +829,7 @@ export function createPostgresStore() {
           channelId: channelMembersTable.channelId,
           userId: channelMembersTable.userId,
           role: channelMembersTable.role,
+          starred: channelMembersTable.starred,
           lastReadAt: channelMembersTable.lastReadAt,
           lastReadMessageId: channelMembersTable.lastReadMessageId,
           joinedAt: channelMembersTable.joinedAt,
@@ -837,6 +848,7 @@ export function createPostgresStore() {
               : "member") as ChannelMemberRole,
           );
           lastReadMessageIds.set(row.channelId, row.lastReadMessageId ?? null);
+          starredByChannel.set(row.channelId, Boolean(row.starred));
         }
       }
 
@@ -894,7 +906,159 @@ export function createPostgresStore() {
         unreadCounts,
         lastMessagePreviews,
         lastReadMessageIds,
+        starred: starredByChannel,
       };
+    },
+    setChannelStarred: async (channelId: number, userId: number, starred: boolean) => {
+      await db
+        .update(channelMembersTable)
+        .set({ starred })
+        .where(
+          and(
+            eq(channelMembersTable.channelId, channelId),
+            eq(channelMembersTable.userId, userId),
+          ),
+        );
+    },
+    findDmChannelBetween: async (userA: number, userB: number) => {
+      const aChannels = await db
+        .select({ channelId: channelMembersTable.channelId })
+        .from(channelMembersTable)
+        .innerJoin(channelsTable, eq(channelsTable.id, channelMembersTable.channelId))
+        .where(
+          and(eq(channelMembersTable.userId, userA), eq(channelsTable.type, "DM")),
+        );
+      for (const { channelId } of aChannels) {
+        const members = await db
+          .select({ userId: channelMembersTable.userId })
+          .from(channelMembersTable)
+          .where(eq(channelMembersTable.channelId, channelId));
+        const ids = members.map((m) => m.userId).sort((x, y) => x - y);
+        if (ids.length === 2 && ids[0] === Math.min(userA, userB) && ids[1] === Math.max(userA, userB)) {
+          const [ch] = await db
+            .select()
+            .from(channelsTable)
+            .where(eq(channelsTable.id, channelId))
+            .limit(1);
+          if (ch && !ch.archived) return ch;
+        }
+      }
+      return null;
+    },
+    listDmChannelsForUser: async (userId: number) => {
+      const rows = await db
+        .select({ channel: channelsTable })
+        .from(channelMembersTable)
+        .innerJoin(channelsTable, eq(channelsTable.id, channelMembersTable.channelId))
+        .where(
+          and(
+            eq(channelMembersTable.userId, userId),
+            eq(channelsTable.type, "DM"),
+            eq(channelsTable.archived, false),
+          ),
+        );
+      return rows.map((r) => r.channel);
+    },
+    listChannelPins: async (channelId: number) => {
+      return db
+        .select()
+        .from(channelPinsTable)
+        .where(eq(channelPinsTable.channelId, channelId))
+        .orderBy(desc(channelPinsTable.pinnedAt));
+    },
+    pinMessage: async (channelId: number, messageId: number, pinnedById: number) => {
+      const existing = await db
+        .select()
+        .from(channelPinsTable)
+        .where(
+          and(
+            eq(channelPinsTable.channelId, channelId),
+            eq(channelPinsTable.messageId, messageId),
+          ),
+        )
+        .limit(1);
+      if (existing[0]) return existing[0]!;
+      const [pin] = await db
+        .insert(channelPinsTable)
+        .values({ channelId, messageId, pinnedById })
+        .returning();
+      return pin!;
+    },
+    unpinMessage: async (channelId: number, messageId: number) => {
+      await db
+        .delete(channelPinsTable)
+        .where(
+          and(
+            eq(channelPinsTable.channelId, channelId),
+            eq(channelPinsTable.messageId, messageId),
+          ),
+        );
+    },
+    listChannelFiles: async (
+      channelId: number,
+      options?: { limit?: number; before?: number; type?: string },
+    ) => {
+      const limit = options?.limit ?? 50;
+      const conditions = [
+        eq(messagesTable.channelId, channelId),
+        sql`${messagesTable.deletedAt} IS NULL`,
+        sql`jsonb_array_length(COALESCE(${messagesTable.attachments}, '[]'::jsonb)) > 0`,
+      ];
+      if (options?.before) {
+        const ref = await db
+          .select({ createdAt: messagesTable.createdAt })
+          .from(messagesTable)
+          .where(eq(messagesTable.id, options.before))
+          .limit(1);
+        if (ref[0]) conditions.push(lt(messagesTable.createdAt, ref[0].createdAt));
+      }
+      const rows = await db
+        .select({
+          id: messagesTable.id,
+          senderId: messagesTable.senderId,
+          attachments: messagesTable.attachments,
+          createdAt: messagesTable.createdAt,
+          senderName: usersTable.fullName,
+        })
+        .from(messagesTable)
+        .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
+        .where(and(...conditions))
+        .orderBy(desc(messagesTable.createdAt))
+        .limit(limit * 3);
+
+      type FileRow = {
+        messageId: number;
+        type: string;
+        url: string;
+        name?: string;
+        mimeType?: string;
+        size?: number;
+        thumbUrl?: string;
+        uploaderId: number;
+        uploaderName: string;
+        createdAt: Date;
+      };
+      const out: FileRow[] = [];
+      for (const row of rows) {
+        const atts = row.attachments ?? [];
+        for (const att of atts) {
+          if (options?.type && att.type !== options.type) continue;
+          out.push({
+            messageId: row.id,
+            type: att.type,
+            url: att.url,
+            name: att.name,
+            mimeType: att.mimeType,
+            size: att.size,
+            thumbUrl: att.thumbUrl,
+            uploaderId: row.senderId,
+            uploaderName: row.senderName ?? "Unknown",
+            createdAt: row.createdAt,
+          });
+          if (out.length >= limit) return out;
+        }
+      }
+      return out;
     },
     markChannelRead: async (channelId: number, userId: number) => {
       const [latest] = await db
@@ -970,10 +1134,16 @@ export function createPostgresStore() {
     },
     listMessagesByChannel: async (
       channelId: number,
-      options?: { limit?: number; before?: number },
+      options?: { limit?: number; before?: number; threadRootId?: number },
     ): Promise<MessageWithSender[]> => {
       const limit = options?.limit ?? 100;
       const conditions = [eq(messagesTable.channelId, channelId)];
+
+      if (options?.threadRootId) {
+        conditions.push(eq(messagesTable.parentMessageId, options.threadRootId));
+      } else {
+        conditions.push(isNull(messagesTable.parentMessageId));
+      }
 
       if (options?.before) {
         const ref = await db
@@ -995,6 +1165,8 @@ export function createPostgresStore() {
           attachments: messagesTable.attachments,
           messageKind: messagesTable.messageKind,
           metadata: messagesTable.metadata,
+          parentMessageId: messagesTable.parentMessageId,
+          editedAt: messagesTable.editedAt,
           deletedAt: messagesTable.deletedAt,
           deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
@@ -1015,6 +1187,8 @@ export function createPostgresStore() {
         attachments: r.attachments ?? null,
         messageKind: r.messageKind,
         metadata: r.metadata ?? null,
+        parentMessageId: r.parentMessageId ?? null,
+        editedAt: r.editedAt ?? null,
         deletedAt: r.deletedAt,
         deletedById: r.deletedById,
         createdAt: r.createdAt,
@@ -1030,6 +1204,23 @@ export function createPostgresStore() {
     ) => {
       const { senderName, senderAvatar, ...insertData } = data;
       const [m] = await db.insert(messagesTable).values(insertData).returning();
+
+      if (insertData.parentMessageId) {
+        const root = await db
+          .select({ metadata: messagesTable.metadata })
+          .from(messagesTable)
+          .where(eq(messagesTable.id, insertData.parentMessageId))
+          .limit(1);
+        if (root[0]) {
+          const meta = (root[0].metadata ?? {}) as Record<string, unknown>;
+          const replyCount = Number(meta.replyCount ?? 0) + 1;
+          await db
+            .update(messagesTable)
+            .set({ metadata: { ...meta, replyCount } })
+            .where(eq(messagesTable.id, insertData.parentMessageId));
+        }
+      }
+
       const [channel] = await db
         .update(channelsTable)
         .set({
@@ -1064,7 +1255,7 @@ export function createPostgresStore() {
     },
     updateMessage: async (
       id: number,
-      patch: Partial<Pick<Message, "metadata" | "body" | "attachments">>,
+      patch: Partial<Pick<Message, "metadata" | "body" | "attachments" | "editedAt" | "parentMessageId">>,
     ) => {
       const [m] = await db
         .update(messagesTable)
@@ -1164,6 +1355,8 @@ export function createPostgresStore() {
           attachments: messagesTable.attachments,
           messageKind: messagesTable.messageKind,
           metadata: messagesTable.metadata,
+          parentMessageId: messagesTable.parentMessageId,
+          editedAt: messagesTable.editedAt,
           deletedAt: messagesTable.deletedAt,
           deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
@@ -1182,6 +1375,8 @@ export function createPostgresStore() {
         attachments: r.attachments ?? null,
         messageKind: r.messageKind,
         metadata: r.metadata ?? null,
+        parentMessageId: r.parentMessageId ?? null,
+        editedAt: r.editedAt ?? null,
         deletedAt: r.deletedAt,
         deletedById: r.deletedById,
         createdAt: r.createdAt,

@@ -1658,6 +1658,11 @@ paths:
           description: Message id cursor for older history
           schema:
             type: integer
+        - name: threadRootId
+          in: query
+          description: When set, returns paginated thread replies for this root message
+          schema:
+            type: integer
       responses:
         "200":
           description: Messages
@@ -1692,6 +1697,38 @@ paths:
                 $ref: "#/components/schemas/Message"
 
   /v1/channels/{id}/messages/{messageId}:
+    patch:
+      operationId: patchMessage
+      tags: [channels]
+      summary: Edit a message body
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessagePatchInput"
+      responses:
+        "200":
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
     delete:
       operationId: deleteMessage
       tags: [channels]
@@ -1808,6 +1845,190 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Message"
+
+  /v1/channels/{id}/star:
+    post:
+      operationId: starChannel
+      tags: [channels]
+      summary: Star a channel for the current user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Starred
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      operationId: unstarChannel
+      tags: [channels]
+      summary: Remove star from a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Unstarred
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /v1/channels/{id}/pins:
+    get:
+      operationId: listChannelPins
+      tags: [channels]
+      summary: List pinned messages in a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pinned messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelPin"
+
+  /v1/channels/{id}/messages/{messageId}/pin:
+    post:
+      operationId: pinMessage
+      tags: [channels]
+      summary: Pin a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Pinned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelPin"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      operationId: unpinMessage
+      tags: [channels]
+      summary: Unpin a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Unpinned
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /v1/channels/{id}/files:
+    get:
+      operationId: listChannelFiles
+      tags: [channels]
+      summary: List file attachments shared in a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: before
+          in: query
+          description: Cursor message id for pagination
+          schema:
+            type: integer
+        - name: type
+          in: query
+          description: Filter by attachment type
+          schema:
+            type: string
+            enum: [image, file, video, audio]
+      responses:
+        "200":
+          description: Channel files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelFile"
+
+  /v1/dms:
+    get:
+      operationId: listDms
+      tags: [channels]
+      summary: List direct message channels for the current user
+      responses:
+        "200":
+          description: DM channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
+
+  /v1/dms/open:
+    post:
+      operationId: openDm
+      tags: [channels]
+      summary: Open or create a DM with another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenDmInput"
+      responses:
+        "200":
+          description: DM channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+        "403":
+          description: Forbidden
+        "404":
+          description: User not found
 
   # ACTIVITY
   /v1/activity:
@@ -3120,6 +3341,16 @@ components:
           type: ["string", "null"]
         lastReadMessageId:
           type: ["integer", "null"]
+        starred:
+          type: boolean
+        dmPeerUserId:
+          type: ["integer", "null"]
+          description: For DM channels, the other participant user id
+        dmPeerName:
+          type: ["string", "null"]
+          description: For DM channels, display name of the other participant
+        dmPeerAvatar:
+          type: ["string", "null"]
         createdById:
           type: ["integer", "null"]
         createdAt:
@@ -3222,12 +3453,23 @@ components:
             $ref: "#/components/schemas/MessageAttachment"
         messageKind:
           type: string
-          enum: [text, poll, event]
+          enum: [text, poll, event, system]
         metadata:
           type: object
+        parentMessageId:
+          type: ["integer", "null"]
+        editedAt:
+          type: ["string", "null"]
         deleted:
           type: boolean
         createdAt:
+          type: string
+
+    MessagePatchInput:
+      type: object
+      required: [body]
+      properties:
+        body:
           type: string
 
     MessageInput:
@@ -3241,9 +3483,59 @@ components:
             $ref: "#/components/schemas/MessageAttachment"
         messageKind:
           type: string
-          enum: [text, poll, event]
+          enum: [text, poll, event, system]
         metadata:
           type: object
+        parentMessageId:
+          type: integer
+
+    OpenDmInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+
+    ChannelPin:
+      type: object
+      required: [channelId, messageId, pinnedAt, message]
+      properties:
+        channelId:
+          type: integer
+        messageId:
+          type: integer
+        pinnedById:
+          type: integer
+        pinnedAt:
+          type: string
+        message:
+          $ref: "#/components/schemas/Message"
+
+    ChannelFile:
+      type: object
+      required: [messageId, type, url, createdAt]
+      properties:
+        messageId:
+          type: integer
+        type:
+          type: string
+          enum: [image, file, video, audio]
+        url:
+          type: string
+        name:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        thumbUrl:
+          type: string
+        uploaderId:
+          type: integer
+        uploaderName:
+          type: string
+        createdAt:
+          type: string
 
     MentionCandidate:
       type: object

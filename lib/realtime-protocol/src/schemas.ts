@@ -21,8 +21,10 @@ export const realtimeMessageSchema = z.object({
   senderAvatar: z.string().nullable().optional(),
   body: z.string(),
   attachments: z.array(messageAttachmentSchema).optional(),
-  messageKind: z.enum(["text", "poll", "event"]).optional(),
+  messageKind: z.enum(["text", "poll", "event", "system"]).optional(),
   metadata: z.record(z.unknown()).optional(),
+  parentMessageId: z.number().optional(),
+  editedAt: z.string().optional(),
   deleted: z.boolean().optional(),
   createdAt: z.string(),
 });

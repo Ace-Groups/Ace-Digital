@@ -895,6 +895,19 @@ export interface Channel {
   lastMessagePreview?: string | null;
   /** @nullable */
   lastReadMessageId?: number | null;
+  starred?: boolean;
+  /**
+     * For DM channels, the other participant user id
+     * @nullable
+     */
+  dmPeerUserId?: number | null;
+  /**
+     * For DM channels, display name of the other participant
+     * @nullable
+     */
+  dmPeerName?: string | null;
+  /** @nullable */
+  dmPeerAvatar?: string | null;
   /** @nullable */
   createdById?: number | null;
   createdAt?: string;
@@ -975,6 +988,7 @@ export const MessageMessageKind = {
   text: 'text',
   poll: 'poll',
   event: 'event',
+  system: 'system',
 } as const;
 
 export type MessageMetadata = { [key: string]: unknown };
@@ -990,8 +1004,16 @@ export interface Message {
   attachments?: MessageAttachment[];
   messageKind?: MessageMessageKind;
   metadata?: MessageMetadata;
+  /** @nullable */
+  parentMessageId?: number | null;
+  /** @nullable */
+  editedAt?: string | null;
   deleted?: boolean;
   createdAt: string;
+}
+
+export interface MessagePatchInput {
+  body: string;
 }
 
 export type MessageInputMessageKind = typeof MessageInputMessageKind[keyof typeof MessageInputMessageKind];
@@ -1001,6 +1023,7 @@ export const MessageInputMessageKind = {
   text: 'text',
   poll: 'poll',
   event: 'event',
+  system: 'system',
 } as const;
 
 export type MessageInputMetadata = { [key: string]: unknown };
@@ -1010,6 +1033,42 @@ export interface MessageInput {
   attachments?: MessageAttachment[];
   messageKind?: MessageInputMessageKind;
   metadata?: MessageInputMetadata;
+  parentMessageId?: number;
+}
+
+export interface OpenDmInput {
+  userId: number;
+}
+
+export interface ChannelPin {
+  channelId: number;
+  messageId: number;
+  pinnedById?: number;
+  pinnedAt: string;
+  message: Message;
+}
+
+export type ChannelFileType = typeof ChannelFileType[keyof typeof ChannelFileType];
+
+
+export const ChannelFileType = {
+  image: 'image',
+  file: 'file',
+  video: 'video',
+  audio: 'audio',
+} as const;
+
+export interface ChannelFile {
+  messageId: number;
+  type: ChannelFileType;
+  url: string;
+  name?: string;
+  mimeType?: string;
+  size?: number;
+  thumbUrl?: string;
+  uploaderId?: number;
+  uploaderName?: string;
+  createdAt: string;
 }
 
 export interface MentionCandidate {
@@ -1130,7 +1189,37 @@ limit?: number;
  * Message id cursor for older history
  */
 before?: number;
+/**
+ * When set, returns paginated thread replies for this root message
+ */
+threadRootId?: number;
 };
+
+export type ListChannelFilesParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Cursor message id for pagination
+ */
+before?: number;
+/**
+ * Filter by attachment type
+ */
+type?: ListChannelFilesType;
+};
+
+export type ListChannelFilesType = typeof ListChannelFilesType[keyof typeof ListChannelFilesType];
+
+
+export const ListChannelFilesType = {
+  image: 'image',
+  file: 'file',
+  video: 'video',
+  audio: 'audio',
+} as const;
 
 export type ListActivityParams = {
 limit?: number;

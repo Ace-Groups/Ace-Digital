@@ -13,4 +13,5 @@ export const MessageInputMessageKind = {
   text: 'text',
   poll: 'poll',
   event: 'event',
+  system: 'system',
 } as const;

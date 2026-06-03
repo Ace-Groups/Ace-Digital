@@ -30,6 +30,19 @@ export interface Channel {
   lastMessagePreview?: string | null;
   /** @nullable */
   lastReadMessageId?: number | null;
+  starred?: boolean;
+  /**
+     * For DM channels, the other participant user id
+     * @nullable
+     */
+  dmPeerUserId?: number | null;
+  /**
+     * For DM channels, display name of the other participant
+     * @nullable
+     */
+  dmPeerName?: string | null;
+  /** @nullable */
+  dmPeerAvatar?: string | null;
   /** @nullable */
   createdById?: number | null;
   createdAt?: string;

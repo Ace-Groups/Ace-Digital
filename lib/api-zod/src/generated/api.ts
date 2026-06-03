@@ -1630,6 +1630,10 @@ export const ListChannelsResponseItem = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "starred": zod.boolean().optional(),
+  "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
+  "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
+  "dmPeerAvatar": zod.string().nullish(),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -1671,6 +1675,10 @@ export const GetChannelResponse = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "starred": zod.boolean().optional(),
+  "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
+  "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
+  "dmPeerAvatar": zod.string().nullish(),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -1706,6 +1714,10 @@ export const UpdateChannelResponse = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "starred": zod.boolean().optional(),
+  "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
+  "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
+  "dmPeerAvatar": zod.string().nullish(),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -1800,7 +1812,8 @@ export const getChannelMessagesQueryLimitMax = 100;
 
 export const GetChannelMessagesQueryParams = zod.object({
   "limit": zod.coerce.number().min(1).max(getChannelMessagesQueryLimitMax).default(getChannelMessagesQueryLimitDefault),
-  "before": zod.coerce.number().optional().describe('Message id cursor for older history')
+  "before": zod.coerce.number().optional().describe('Message id cursor for older history'),
+  "threadRootId": zod.coerce.number().optional().describe('When set, returns paginated thread replies for this root message')
 })
 
 export const GetChannelMessagesResponseItem = zod.object({
@@ -1818,10 +1831,12 @@ export const GetChannelMessagesResponseItem = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
@@ -1845,10 +1860,49 @@ export const SendMessageBody = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
-}).passthrough().optional()
+}).passthrough().optional(),
+  "parentMessageId": zod.number().optional()
+})
+
+
+/**
+ * @summary Edit a message body
+ */
+export const PatchMessageParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const PatchMessageBody = zod.object({
+  "body": zod.string()
+})
+
+export const PatchMessageResponse = zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
+  "deleted": zod.boolean().optional(),
+  "createdAt": zod.string()
 })
 
 
@@ -1875,10 +1929,12 @@ export const DeleteMessageResponse = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
@@ -1915,10 +1971,12 @@ export const ToggleMessageReactionResponse = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
@@ -1951,10 +2009,12 @@ export const VotePollResponse = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
@@ -1987,12 +2047,182 @@ export const RsvpEventResponse = zod.object({
   "size": zod.number().optional(),
   "thumbUrl": zod.string().optional()
 })).optional(),
-  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Star a channel for the current user
+ */
+export const StarChannelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Remove star from a channel
+ */
+export const UnstarChannelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List pinned messages in a channel
+ */
+export const ListChannelPinsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListChannelPinsResponseItem = zod.object({
+  "channelId": zod.number(),
+  "messageId": zod.number(),
+  "pinnedById": zod.number().optional(),
+  "pinnedAt": zod.string(),
+  "message": zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event', 'system']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "parentMessageId": zod.number().nullish(),
+  "editedAt": zod.string().nullish(),
+  "deleted": zod.boolean().optional(),
+  "createdAt": zod.string()
+})
+})
+export const ListChannelPinsResponse = zod.array(ListChannelPinsResponseItem)
+
+
+/**
+ * @summary Pin a message
+ */
+export const PinMessageParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Unpin a message
+ */
+export const UnpinMessageParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+
+/**
+ * @summary List file attachments shared in a channel
+ */
+export const ListChannelFilesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const listChannelFilesQueryLimitDefault = 50;
+export const listChannelFilesQueryLimitMax = 100;
+
+
+
+export const ListChannelFilesQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(listChannelFilesQueryLimitMax).default(listChannelFilesQueryLimitDefault),
+  "before": zod.coerce.number().optional().describe('Cursor message id for pagination'),
+  "type": zod.enum(['image', 'file', 'video', 'audio']).optional().describe('Filter by attachment type')
+})
+
+export const ListChannelFilesResponseItem = zod.object({
+  "messageId": zod.number(),
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional(),
+  "uploaderId": zod.number().optional(),
+  "uploaderName": zod.string().optional(),
+  "createdAt": zod.string()
+})
+export const ListChannelFilesResponse = zod.array(ListChannelFilesResponseItem)
+
+
+/**
+ * @summary List direct message channels for the current user
+ */
+export const ListDmsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "type": zod.string(),
+  "visibility": zod.string().optional(),
+  "archived": zod.boolean().optional(),
+  "memberCount": zod.number().optional(),
+  "myRole": zod.string().nullish(),
+  "unreadCount": zod.number().optional(),
+  "lastPostAt": zod.string().nullish(),
+  "lastMessagePreview": zod.string().nullish(),
+  "lastReadMessageId": zod.number().nullish(),
+  "starred": zod.boolean().optional(),
+  "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
+  "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
+  "dmPeerAvatar": zod.string().nullish(),
+  "createdById": zod.number().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const ListDmsResponse = zod.array(ListDmsResponseItem)
+
+
+/**
+ * @summary Open or create a DM with another user
+ */
+export const OpenDmBody = zod.object({
+  "userId": zod.number()
+})
+
+export const OpenDmResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "type": zod.string(),
+  "visibility": zod.string().optional(),
+  "archived": zod.boolean().optional(),
+  "memberCount": zod.number().optional(),
+  "myRole": zod.string().nullish(),
+  "unreadCount": zod.number().optional(),
+  "lastPostAt": zod.string().nullish(),
+  "lastMessagePreview": zod.string().nullish(),
+  "lastReadMessageId": zod.number().nullish(),
+  "starred": zod.boolean().optional(),
+  "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
+  "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
+  "dmPeerAvatar": zod.string().nullish(),
+  "createdById": zod.number().nullish(),
+  "createdAt": zod.string().optional()
 })
 
 

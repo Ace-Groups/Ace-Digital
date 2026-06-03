@@ -5,19 +5,20 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ListChannelFilesType } from './listChannelFilesType';
 
-export type GetChannelMessagesParams = {
+export type ListChannelFilesParams = {
 /**
  * @minimum 1
  * @maximum 100
  */
 limit?: number;
 /**
- * Message id cursor for older history
+ * Cursor message id for pagination
  */
 before?: number;
 /**
- * When set, returns paginated thread replies for this root message
+ * Filter by attachment type
  */
-threadRootId?: number;
+type?: ListChannelFilesType;
 };

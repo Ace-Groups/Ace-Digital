@@ -15,6 +15,9 @@ import { MediaAlbum } from "@/components/channels/MediaAlbum";
 import { PollCard } from "@/components/channels/PollCard";
 import { EventCard } from "@/components/channels/EventCard";
 import { MessageReactions } from "@/components/channels/MessageReactions";
+import { MessageRow } from "@/components/channels/MessageRow";
+import { MessageBody } from "@/components/channels/MessageBody";
+import { MessageHoverToolbar } from "@/components/channels/MessageHoverToolbar";
 import type { Message } from "@workspace/api-client-react";
 import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import type { ReplyTarget } from "@/components/channels/ChannelMessageList";
@@ -27,7 +30,6 @@ import {
   resolveReplyQuoteDisplay,
 } from "@/lib/chat-reply";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -55,6 +57,9 @@ interface MessageBubbleProps {
   onToggleReaction?: (emoji: string) => void;
   onVotePoll?: (optionId: string) => void;
   onRsvpEvent?: (status: "going" | "maybe" | "no") => void;
+  onOpenThread?: (msg: Message) => void;
+  onEdit?: (msg: Message) => void;
+  canEdit?: boolean;
 }
 
 function isPending(msg: Message | PendingMessage): msg is PendingMessage {
@@ -78,6 +83,9 @@ export function MessageBubble({
   onToggleReaction,
   onVotePoll,
   onRsvpEvent,
+  onOpenThread,
+  onEdit,
+  canEdit = false,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -131,13 +139,27 @@ export function MessageBubble({
             React {emoji}
           </DropdownMenuItem>
         ))}
-      {onReply && (
+      {onOpenThread && !pending && (
+        <DropdownMenuItem
+          className="min-h-11 sm:min-h-9"
+          onClick={() => onOpenThread(msg as Message)}
+        >
+          <Reply size={14} className="mr-2" />
+          Reply in thread
+        </DropdownMenuItem>
+      )}
+      {onReply && !onOpenThread && (
         <DropdownMenuItem
           className="min-h-11 sm:min-h-9"
           onClick={() => onReply(replyTargetFromMessage(msg as Message))}
         >
           <Reply size={14} className="mr-2" />
           Reply
+        </DropdownMenuItem>
+      )}
+      {canEdit && onEdit && (
+        <DropdownMenuItem className="min-h-11 sm:min-h-9" onClick={() => onEdit(msg as Message)}>
+          Edit message
         </DropdownMenuItem>
       )}
       {msg.body?.trim() && (
@@ -164,41 +186,80 @@ export function MessageBubble({
     </>
   );
 
+  const replyCount = Number((msg as Message).metadata?.replyCount ?? 0);
+  const isSystem = !pending && (msg as Message).messageKind === "system";
+
+  if (!pending && isSystem) {
+    return <MessageRow msg={msg as Message} showHeader={false} />;
+  }
+
+  const bodyContent = (
+    <div className="space-y-1">
+      {deleted ? (
+        <p className="text-sm italic text-muted-foreground">Message deleted</p>
+      ) : (
+        <>
+          {quote && (
+            <button
+              type="button"
+              className="mb-1 w-full rounded-md border-l-2 border-primary bg-muted/60 px-3 py-2 text-left text-xs hover:bg-muted"
+              onClick={() => onScrollToQuotedMessage?.(quote.id)}
+            >
+              <p className="font-medium">{quote.senderName ?? "Message"}</p>
+              <p className="line-clamp-2 opacity-70">
+                {quote.isDeleted ? "Original message deleted" : quote.preview}
+              </p>
+            </button>
+          )}
+          {msg.messageKind === "poll" && (
+            <PollCard msg={msg} channelId={_channelId} isMe={isMe} onVote={onVotePoll} />
+          )}
+          {msg.messageKind === "event" && (
+            <EventCard msg={msg} channelId={_channelId} isMe={isMe} onRsvp={onRsvpEvent} />
+          )}
+          {mediaAttachments.length > 0 && (
+            <MediaAlbum attachments={mediaAttachments} isMe={false} />
+          )}
+          {otherAttachments.map((att, i) => (
+            <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={false} />
+          ))}
+          {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
+            <MessageBody body={msg.body ?? ""} />
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div
-      data-testid={`message-${msg.id}`}
-      className={cn(
-        "group flex gap-2 sm:gap-2.5",
-        isMe && "flex-row-reverse",
-      )}
+      onPointerDown={onBubblePointerDown}
+      onPointerUp={clearLongPress}
+      onPointerLeave={clearLongPress}
+      onPointerCancel={clearLongPress}
     >
-      {showMeta ? (
-        <UserAvatar
-          avatarUrl={msg.senderAvatar}
-          fullName={msg.senderName}
-          className="h-8 w-8 shrink-0 sm:h-8 sm:w-8"
-          fallbackClassName={cn(
-            "text-xs",
-            isMe ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-          )}
-          iconSize={14}
-        />
-      ) : (
-        <div className="w-8 shrink-0" />
-      )}
-
-      <div
-        className={cn(
-          "flex min-w-0 max-w-[min(92vw,28rem)] flex-1 flex-col sm:max-w-md lg:max-w-lg",
-          isMe ? "items-end" : "items-start",
-        )}
-      >
-        {showMeta && (
-          <div className={cn("mb-1 flex items-center gap-2", isMe && "flex-row-reverse")}>
-            <p className="text-xs font-medium text-foreground">{msg.senderName}</p>
-            <p className="text-xs text-muted-foreground">{formatRelativeTime(msg.createdAt)}</p>
-            {isMe && pending && (
-              <span className="text-muted-foreground">
+      <MessageRow
+        msg={msg as Message}
+        showHeader={showMeta}
+        toolbar={
+          showActions ? (
+            <MessageHoverToolbar
+              onReact={(emoji) => onToggleReaction?.(emoji)}
+              onReply={
+                onOpenThread
+                  ? () => onOpenThread(msg as Message)
+                  : onReply
+                    ? () => onReply(replyTargetFromMessage(msg as Message))
+                    : undefined
+              }
+              onMore={() => setMenuOpen(true)}
+            />
+          ) : undefined
+        }
+        footer={
+          <>
+            {pending && isMe && (
+              <span className="mt-1 inline-flex text-muted-foreground">
                 {msg.status === "sending" ? (
                   <Loader2 size={12} className="animate-spin" />
                 ) : msg.status === "failed" ? (
@@ -208,124 +269,35 @@ export function MessageBubble({
                 )}
               </span>
             )}
-          </div>
-        )}
-
-        <div
-          className={cn(
-            "flex w-full max-w-full items-end gap-0.5 sm:gap-1",
-            isMe ? "flex-row-reverse" : "flex-row",
-          )}
-          onPointerDown={onBubblePointerDown}
-          onPointerUp={clearLongPress}
-          onPointerLeave={clearLongPress}
-          onPointerCancel={clearLongPress}
-        >
-          {showActions && (
-            <div
-              className={cn(
-                "flex shrink-0 items-center gap-0.5 self-end pb-0.5",
-                isMe ? "flex-row-reverse" : "flex-row",
-              )}
-            >
-              {!isMobile && onToggleReaction && (
-                <div
-                  className={cn(
-                    "flex items-center gap-0.5 opacity-0 transition-opacity duration-150",
-                    "group-hover:opacity-100 group-focus-within:opacity-100",
-                  )}
-                  aria-hidden
-                >
-                  {QUICK_REACTIONS.map((emoji) => (
-                    <Button
-                      key={emoji}
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-base hover:bg-muted/80"
-                      onClick={() => void onToggleReaction(emoji)}
-                      aria-label={`React ${emoji}`}
-                    >
-                      {emoji}
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <MessageActionsMenu
-                isMe={isMe}
-                menuOpen={menuOpen}
-                onMenuOpenChange={setMenuOpen}
-              >
-                {menuItems}
-              </MessageActionsMenu>
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
-            {deleted ? (
-              <p className="text-sm italic text-muted-foreground">Message deleted</p>
-            ) : (
-              <>
-                {quote && (
-                  <button
-                    type="button"
-                    className={cn(
-                      "w-full rounded-lg border-l-2 px-3 py-2 text-left text-xs transition-colors",
-                      isMe
-                        ? "border-primary-foreground/50 bg-primary/20 hover:bg-primary/30"
-                        : "border-primary bg-muted/80 hover:bg-muted",
-                    )}
-                    onClick={() => onScrollToQuotedMessage?.(quote.id)}
-                  >
-                    <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
-                    <p className="line-clamp-2 opacity-70">
-                      {quote.isDeleted ? "Original message deleted" : quote.preview}
-                    </p>
-                  </button>
-                )}
-
-                {msg.messageKind === "poll" && (
-                  <PollCard msg={msg} channelId={_channelId} isMe={isMe} onVote={onVotePoll} />
-                )}
-                {msg.messageKind === "event" && (
-                  <EventCard msg={msg} channelId={_channelId} isMe={isMe} onRsvp={onRsvpEvent} />
-                )}
-
-                {mediaAttachments.length > 0 && (
-                  <MediaAlbum attachments={mediaAttachments} isMe={isMe} />
-                )}
-
-                {otherAttachments.map((att, i) => (
-                  <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={isMe} />
-                ))}
-
-                {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
-                  <div
-                    className={cn(
-                      "rounded-2xl px-3.5 py-2 text-[0.9375rem] leading-relaxed break-words sm:px-4 sm:py-2.5",
-                      isMe
-                        ? "rounded-tr-md bg-primary text-primary-foreground"
-                        : "rounded-tl-md bg-muted text-foreground",
-                      pending && msg.status === "sending" && "opacity-80",
-                    )}
-                  >
-                    {displayBody}
-                  </div>
-                ) : null}
-
-                {!pending && onToggleReaction && (
-                  <MessageReactions
-                    msg={msg}
-                    currentUserId={currentUserId}
-                    onToggle={(emoji) => onToggleReaction(emoji)}
-                    className={isMe ? "justify-end" : undefined}
-                  />
-                )}
-              </>
+            {!pending && onToggleReaction && (
+              <MessageReactions
+                msg={msg}
+                currentUserId={currentUserId}
+                onToggle={(emoji) => onToggleReaction(emoji)}
+              />
             )}
-          </div>
+            {replyCount > 0 && onOpenThread && (
+              <button
+                type="button"
+                className="mt-1 text-xs font-medium text-primary hover:underline"
+                onClick={() => onOpenThread(msg as Message)}
+              >
+                {replyCount} {replyCount === 1 ? "reply" : "replies"}
+              </button>
+            )}
+          </>
+        }
+      >
+        {bodyContent}
+      </MessageRow>
+
+      {showActions && menuOpen && (
+        <div className="absolute right-4 top-10 z-20">
+          <MessageActionsMenu isMe={isMe} menuOpen={menuOpen} onMenuOpenChange={setMenuOpen}>
+            {menuItems}
+          </MessageActionsMenu>
         </div>
-      </div>
+      )}
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

@@ -14,4 +14,5 @@ export interface MessageInput {
   attachments?: MessageAttachment[];
   messageKind?: MessageInputMessageKind;
   metadata?: MessageInputMetadata;
+  parentMessageId?: number;
 }

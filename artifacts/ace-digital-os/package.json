@@ -82,6 +82,8 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.1",
-    "firebase": "^12.14.0"
+    "firebase": "^12.14.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   }
 }
