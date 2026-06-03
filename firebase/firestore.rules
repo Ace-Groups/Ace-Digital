@@ -1,8 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // All data access goes through Cloud Functions (Admin SDK).
-    // Client apps must not read/write business data directly.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function authUserId() {
+      return int(request.auth.token.userId);
+    }
+
+    function isChannelMember(channelId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/channel_member_index/$(channelId + '_' + authUserId()));
+    }
+
+    match /channel_member_index/{docId} {
+      allow read: if signedIn() && resource.data.userId == authUserId();
+    }
+
+    match /messages/{messageId} {
+      allow read: if signedIn() && isChannelMember(resource.data.channelId);
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

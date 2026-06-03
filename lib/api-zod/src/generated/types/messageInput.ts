@@ -6,8 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MessageAttachment } from './messageAttachment';
+import type { MessageInputMessageKind } from './messageInputMessageKind';
+import type { MessageInputMetadata } from './messageInputMetadata';
 
 export interface MessageInput {
   body?: string;
   attachments?: MessageAttachment[];
+  messageKind?: MessageInputMessageKind;
+  metadata?: MessageInputMetadata;
 }

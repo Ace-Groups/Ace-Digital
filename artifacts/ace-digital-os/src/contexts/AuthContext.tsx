@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
+import { ensureFirebaseAuth, signOutFirebase, resetFirebaseAuthState } from "@/lib/firebase-client";
 
 interface AuthUser {
   id: number;
@@ -72,11 +73,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
 
+  useEffect(() => {
+    if (token && user) {
+      void ensureFirebaseAuth();
+    }
+  }, [token, user?.id]);
+
   const login = useCallback(
     async (email: string, password: string) => {
       const result = await loginMutation.mutateAsync({ data: { email, password } });
       setAuthToken(result.token);
       setToken(result.token);
+      resetFirebaseAuthState();
+      await ensureFirebaseAuth();
     },
     [loginMutation],
   );
@@ -87,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
+    await signOutFirebase();
     clearAuthToken();
     setToken(null);
     queryClient.clear();

@@ -128,6 +128,40 @@ export interface TeamLoad {
   members: number;
 }
 
+export type CalendarFeedItemKind = typeof CalendarFeedItemKind[keyof typeof CalendarFeedItemKind];
+
+
+export const CalendarFeedItemKind = {
+  event: 'event',
+  task: 'task',
+  chat_event: 'chat_event',
+  chat_poll: 'chat_poll',
+} as const;
+
+export type CalendarFeedItemSourceRef = { [key: string]: unknown };
+
+export interface CalendarFeedItem {
+  id: string;
+  kind: CalendarFeedItemKind;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  eventType?: string;
+  startAt: string;
+  /** @nullable */
+  endAt?: string | null;
+  allDay?: boolean;
+  /** @nullable */
+  location?: string | null;
+  readOnly: boolean;
+  ownerId?: number;
+  eventId?: number;
+  taskId?: number;
+  channelId?: number;
+  messageId?: number;
+  sourceRef?: CalendarFeedItemSourceRef;
+}
+
 export interface DashboardData {
   activeProjectsCount: number;
   employeeCount: number;
@@ -140,6 +174,7 @@ export interface DashboardData {
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];
   teamLoad: TeamLoad[];
+  upcomingCalendar?: CalendarFeedItem[];
 }
 
 export interface ProjectInput {
@@ -226,6 +261,140 @@ export interface TaskUpdate {
   priority?: string;
   dueDate?: string;
   status?: string;
+}
+
+export type CalendarEventEventType = typeof CalendarEventEventType[keyof typeof CalendarEventEventType];
+
+
+export const CalendarEventEventType = {
+  meeting: 'meeting',
+  deadline: 'deadline',
+  shift: 'shift',
+  training: 'training',
+  company: 'company',
+  leave_block: 'leave_block',
+  other: 'other',
+} as const;
+
+export type CalendarEventVisibility = typeof CalendarEventVisibility[keyof typeof CalendarEventVisibility];
+
+
+export const CalendarEventVisibility = {
+  private: 'private',
+  team: 'team',
+  org: 'org',
+} as const;
+
+export type CalendarEventAttendeeStatuses = { [key: string]: unknown };
+
+export type CalendarEventSourceRef = { [key: string]: unknown };
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  eventType: CalendarEventEventType;
+  startAt: string;
+  /** @nullable */
+  endAt?: string | null;
+  allDay?: boolean;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  color?: string | null;
+  ownerId: number;
+  /** @nullable */
+  ownerName?: string | null;
+  createdById: number;
+  /** @nullable */
+  createdByName?: string | null;
+  /** @nullable */
+  teamId?: number | null;
+  visibility: CalendarEventVisibility;
+  attendeeIds?: number[];
+  attendeeStatuses?: CalendarEventAttendeeStatuses;
+  sourceRef?: CalendarEventSourceRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CalendarEventInputEventType = typeof CalendarEventInputEventType[keyof typeof CalendarEventInputEventType];
+
+
+export const CalendarEventInputEventType = {
+  meeting: 'meeting',
+  deadline: 'deadline',
+  shift: 'shift',
+  training: 'training',
+  company: 'company',
+  leave_block: 'leave_block',
+  other: 'other',
+} as const;
+
+export type CalendarEventInputVisibility = typeof CalendarEventInputVisibility[keyof typeof CalendarEventInputVisibility];
+
+
+export const CalendarEventInputVisibility = {
+  private: 'private',
+  team: 'team',
+  org: 'org',
+} as const;
+
+export interface CalendarEventInput {
+  /** @minLength 1 */
+  title: string;
+  description?: string;
+  eventType?: CalendarEventInputEventType;
+  startAt: string;
+  endAt?: string;
+  allDay?: boolean;
+  location?: string;
+  color?: string;
+  ownerId?: number;
+  teamId?: number;
+  visibility?: CalendarEventInputVisibility;
+  attendeeIds?: number[];
+}
+
+export interface CalendarEventUpdate {
+  title?: string;
+  description?: string;
+  eventType?: string;
+  startAt?: string;
+  endAt?: string;
+  allDay?: boolean;
+  location?: string;
+  color?: string;
+  teamId?: number;
+  visibility?: string;
+  attendeeIds?: number[];
+}
+
+export type CalendarRsvpInputStatus = typeof CalendarRsvpInputStatus[keyof typeof CalendarRsvpInputStatus];
+
+
+export const CalendarRsvpInputStatus = {
+  invited: 'invited',
+  accepted: 'accepted',
+  declined: 'declined',
+  tentative: 'tentative',
+} as const;
+
+export interface CalendarRsvpInput {
+  status: CalendarRsvpInputStatus;
+}
+
+export interface CalendarLinkChatInput {
+  channelId: number;
+  messageId: number;
+  ownerId?: number;
+  reminderAt?: string;
+}
+
+export interface CalendarLinkStatus {
+  linked: boolean;
+  eventId?: number;
 }
 
 export interface Team {
@@ -638,7 +807,19 @@ export interface MessageAttachment {
   name?: string;
   mimeType?: string;
   size?: number;
+  thumbUrl?: string;
 }
+
+export type MessageMessageKind = typeof MessageMessageKind[keyof typeof MessageMessageKind];
+
+
+export const MessageMessageKind = {
+  text: 'text',
+  poll: 'poll',
+  event: 'event',
+} as const;
+
+export type MessageMetadata = { [key: string]: unknown };
 
 export interface Message {
   id: number;
@@ -649,12 +830,44 @@ export interface Message {
   senderAvatar?: string | null;
   body: string;
   attachments?: MessageAttachment[];
+  messageKind?: MessageMessageKind;
+  metadata?: MessageMetadata;
   createdAt: string;
 }
+
+export type MessageInputMessageKind = typeof MessageInputMessageKind[keyof typeof MessageInputMessageKind];
+
+
+export const MessageInputMessageKind = {
+  text: 'text',
+  poll: 'poll',
+  event: 'event',
+} as const;
+
+export type MessageInputMetadata = { [key: string]: unknown };
 
 export interface MessageInput {
   body?: string;
   attachments?: MessageAttachment[];
+  messageKind?: MessageInputMessageKind;
+  metadata?: MessageInputMetadata;
+}
+
+export interface PollVoteInput {
+  optionId: string;
+}
+
+export type EventRsvpInputStatus = typeof EventRsvpInputStatus[keyof typeof EventRsvpInputStatus];
+
+
+export const EventRsvpInputStatus = {
+  going: 'going',
+  maybe: 'maybe',
+  no: 'no',
+} as const;
+
+export interface EventRsvpInput {
+  status: EventRsvpInputStatus;
 }
 
 export interface Notification {
@@ -678,6 +891,26 @@ projectId?: number;
 teamId?: number;
 assigneeId?: number;
 status?: string;
+};
+
+export type GetCalendarFeedParams = {
+from: string;
+to: string;
+userId?: number;
+includeTasks?: boolean;
+includeLinkedChat?: boolean;
+};
+
+export type ListCalendarEventsParams = {
+from?: string;
+to?: string;
+userId?: number;
+};
+
+export type CheckCalendarChatLinkParams = {
+channelId: number;
+messageId: number;
+ownerId?: number;
 };
 
 export type ListEmployeesParams = {

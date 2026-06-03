@@ -34,6 +34,11 @@ export const PERMISSIONS = [
   "channels:all",
   "activity:read",
   "activity:read_org",
+  "calendar:read",
+  "calendar:write",
+  "calendar:write_others",
+  "calendar:read_team",
+  "calendar:read_org",
   "users:register",
 ] as const;
 
@@ -71,6 +76,11 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:all",
     "activity:read",
     "activity:read_org",
+    "calendar:read",
+    "calendar:write",
+    "calendar:write_others",
+    "calendar:read_team",
+    "calendar:read_org",
   ],
   finance: [
     "dashboard:view",
@@ -94,6 +104,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:post",
     "activity:read",
     "activity:read_org",
+    "calendar:read",
+    "calendar:write",
   ],
   hr: [
     "dashboard:view",
@@ -110,6 +122,11 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:post",
     "activity:read",
     "activity:read_org",
+    "calendar:read",
+    "calendar:write",
+    "calendar:write_others",
+    "calendar:read_team",
+    "calendar:read_org",
   ],
   client_manager: [
     "dashboard:view",
@@ -123,6 +140,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:post",
     "channels:write",
     "activity:read",
+    "calendar:read",
+    "calendar:write",
   ],
   team_lead: [
     "dashboard:view",
@@ -138,6 +157,10 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:post",
     "channels:write",
     "activity:read",
+    "calendar:read",
+    "calendar:write",
+    "calendar:write_others",
+    "calendar:read_team",
   ],
   employee: [
     "dashboard:view",
@@ -150,6 +173,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "channels:read",
     "channels:post",
     "activity:read",
+    "calendar:read",
+    "calendar:write",
   ],
 };
 

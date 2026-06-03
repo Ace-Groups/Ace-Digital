@@ -277,6 +277,56 @@ export default function DashboardPage() {
         </div>
         </StaggerItem>
 
+        {widgets.has("upcomingCalendar") && (
+        <StaggerItem>
+          <Card className="border-border/70">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Clock size={16} className="text-sky-500" aria-hidden />
+                Upcoming schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : (dash?.upcomingCalendar?.length ?? 0) === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Nothing scheduled soon</p>
+              ) : (
+                <div className="space-y-2">
+                  {dash?.upcomingCalendar?.map((item) => {
+                    const href =
+                      item.kind === "task" && item.taskId
+                        ? `/tasks?task=${item.taskId}`
+                        : item.eventId
+                          ? `/calendar?event=${item.eventId}`
+                          : "/calendar";
+                    return (
+                    <a
+                      key={item.id}
+                      href={href}
+                      className="surface-muted flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/60"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{item.title}</p>
+                        <p className="text-xs text-muted-foreground">{formatRelativeTime(item.startAt)}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 capitalize">
+                        {item.kind.replace("_", " ")}
+                      </Badge>
+                    </a>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </StaggerItem>
+        )}
+
         {widgets.has("recentActivity") && (
         <StaggerItem>
         <Card className="border-border/70">

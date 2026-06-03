@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function authUserId() {
+      return int(request.auth.token.userId);
+    }
+
+    function isChannelMember(channelId) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/channel_member_index/$(channelId + '_' + authUserId()));
+    }
+
+    match /channels/{channelId}/{uploadId}/{fileName} {
+      allow read: if signedIn() && isChannelMember(int(channelId));
+      allow write: if signedIn()
+        && isChannelMember(int(channelId))
+        && request.resource.size < 50 * 1024 * 1024;
+    }
+  }
+}

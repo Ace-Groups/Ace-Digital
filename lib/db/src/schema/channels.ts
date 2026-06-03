@@ -39,6 +39,8 @@ export const messagesTable = pgTable("messages", {
   senderId: integer("sender_id").notNull().references(() => usersTable.id),
   body: text("body").notNull().default(""),
   attachments: jsonb("attachments").$type<MessageAttachment[]>(),
+  messageKind: text("message_kind").notNull().default("text"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

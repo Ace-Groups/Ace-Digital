@@ -12,9 +12,10 @@ import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
 interface DesktopShellProps {
   children: ReactNode;
   title?: string;
+  fillViewport?: boolean;
 }
 
-export function DesktopShell({ children, title }: DesktopShellProps) {
+export function DesktopShell({ children, title, fillViewport }: DesktopShellProps) {
   const [, setLocation] = useLocation();
   const { data: notifications } = useListNotifications({
     query: {
@@ -69,8 +70,19 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
             )}
           </button>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <PageTransition className="mx-auto max-w-[1600px]">{children}</PageTransition>
+        <main
+          className={cn(
+            "min-h-0 flex-1",
+            fillViewport
+              ? "flex flex-col overflow-hidden"
+              : "overflow-y-auto p-4 sm:p-6",
+          )}
+        >
+          {fillViewport ? (
+            children
+          ) : (
+            <PageTransition className="mx-auto max-w-[1600px]">{children}</PageTransition>
+          )}
         </main>
       </div>
     </div>

@@ -15,7 +15,9 @@ import type {
   Expense,
   PayrollRun,
   EmployeeProfile,
+  CalendarEvent,
 } from "../schema";
+import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { normalizeMessageAttachments } from "../message-attachments";
 import type {
   ActivityLogWithActor,
@@ -47,6 +49,7 @@ import {
   scopeProjectList,
   scopeTaskList,
 } from "./scoping";
+import { calendarEventInRange } from "./calendar-scoping";
 
 const COL = {
   meta: "_meta",
@@ -63,7 +66,11 @@ const COL = {
   reports: "reports",
   channels: "channels",
   channelMembers: "channel_members",
+  channelMemberIndex: "channel_member_index",
   messages: "messages",
+  calendarEvents: "calendar_events",
+  calendarAttendeeIndex: "calendar_attendee_index",
+  calendarSourceIndex: "calendar_source_index",
   activityLogs: "activity_logs",
   notifications: "notifications",
   jobTitles: "job_titles",
@@ -740,7 +747,20 @@ export function createFirestoreStore() {
     },
 
     async listChannelsForUser(userId: number, includeArchived = false): Promise<Channel[]> {
-      const ids = await this.listChannelIdsForUser(userId);
+      const memberSnap = await db.collection(COL.channelMembers).where("userId", "==", userId).get();
+      if (!memberSnap.empty) {
+        const batch = db.batch();
+        for (const doc of memberSnap.docs) {
+          const channelId = Number(doc.data().channelId);
+          batch.set(
+            db.collection(COL.channelMemberIndex).doc(`${channelId}_${userId}`),
+            { channelId, userId },
+            { merge: true },
+          );
+        }
+        await batch.commit();
+      }
+      const ids = memberSnap.docs.map((d) => Number(d.data().channelId));
       if (ids.length === 0) return [];
       const channels = await Promise.all(ids.map((id) => this.findChannelById(id)));
       return channels
@@ -757,6 +777,10 @@ export function createFirestoreStore() {
         .get();
       if (snap.empty) return null;
       const doc = snap.docs[0]!;
+      await db
+        .collection(COL.channelMemberIndex)
+        .doc(`${channelId}_${userId}`)
+        .set({ channelId, userId }, { merge: true });
       return mapChannelMember(doc.data(), doc.id);
     },
 
@@ -798,6 +822,10 @@ export function createFirestoreStore() {
         joinedAt: new Date().toISOString(),
       };
       await db.collection(COL.channelMembers).doc(docId(id)).set(row);
+      await db
+        .collection(COL.channelMemberIndex)
+        .doc(`${channelId}_${userId}`)
+        .set({ channelId, userId });
       return mapChannelMember(row, String(id));
     },
 
@@ -810,6 +838,7 @@ export function createFirestoreStore() {
       const batch = db.batch();
       snap.docs.forEach((d) => batch.delete(d.ref));
       await batch.commit();
+      await db.collection(COL.channelMemberIndex).doc(`${channelId}_${userId}`).delete();
     },
 
     async countChannelOwners(channelId: number): Promise<number> {
@@ -833,11 +862,161 @@ export function createFirestoreStore() {
       }));
     },
 
-    async createMessage(data: Omit<Message, "id" | "createdAt">): Promise<Message> {
+    async createMessage(
+      data: Omit<Message, "id" | "createdAt"> & {
+        senderName?: string | null;
+        senderAvatar?: string | null;
+      },
+    ): Promise<Message> {
       const id = await nextId(COL.messages);
-      const row = { ...data, createdAt: new Date().toISOString() };
+      const row = {
+        channelId: data.channelId,
+        senderId: data.senderId,
+        body: data.body,
+        attachments: data.attachments,
+        messageKind: data.messageKind ?? "text",
+        metadata: data.metadata ?? null,
+        senderName: data.senderName ?? null,
+        senderAvatar: data.senderAvatar ?? null,
+        createdAt: new Date().toISOString(),
+      };
       await db.collection(COL.messages).doc(docId(id)).set(row);
       return mapMessage(row, String(id));
+    },
+
+    async updateMessage(
+      id: number,
+      patch: Partial<Pick<Message, "metadata" | "body" | "attachments">>,
+    ): Promise<Message | null> {
+      const ref = db.collection(COL.messages).doc(docId(id));
+      if (!(await ref.get()).exists) return null;
+      await ref.set(patch, { merge: true });
+      const snap = await ref.get();
+      return mapMessage(snap.data()!, snap.id);
+    },
+
+    async findMessageById(id: number): Promise<Message | null> {
+      const snap = await db.collection(COL.messages).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapMessage(snap.data()!, snap.id);
+    },
+
+    async findCalendarEventById(id: number): Promise<CalendarEvent | null> {
+      const snap = await db.collection(COL.calendarEvents).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapCalendarEvent(snap.data()!, snap.id);
+    },
+
+    async findCalendarEventBySourceRef(
+      ownerId: number,
+      sourceRef: CalendarSourceRef,
+    ): Promise<CalendarEvent | null> {
+      if (sourceRef.kind === "native") return null;
+      const indexId = `${ownerId}_${sourceRefKey(sourceRef)}`;
+      const indexSnap = await db.collection(COL.calendarSourceIndex).doc(indexId).get();
+      if (!indexSnap.exists) return null;
+      const eventId = indexSnap.data()?.eventId as number;
+      return this.findCalendarEventById(eventId);
+    },
+
+    async listCalendarEventsInRange(from: Date, to: Date): Promise<CalendarEvent[]> {
+      const snap = await db
+        .collection(COL.calendarEvents)
+        .where("startAt", ">=", from.toISOString())
+        .where("startAt", "<=", to.toISOString())
+        .get();
+      return snap.docs
+        .map((d) => mapCalendarEvent(d.data(), d.id))
+        .filter((e) => calendarEventInRange(e, from, to));
+    },
+
+    async listCalendarEventsForUser(targetUserId: number, from: Date, to: Date): Promise<CalendarEvent[]> {
+      const indexSnap = await db
+        .collection(COL.calendarAttendeeIndex)
+        .where("userId", "==", targetUserId)
+        .get();
+      const eventIds = new Set(indexSnap.docs.map((d) => d.data().eventId as number));
+      const allInRange = await this.listCalendarEventsInRange(from, to);
+      return allInRange.filter(
+        (e) =>
+          eventIds.has(e.id) ||
+          e.ownerId === targetUserId ||
+          (e.attendeeIds ?? []).includes(targetUserId),
+      );
+    },
+
+    async createCalendarEvent(
+      data: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">,
+    ): Promise<CalendarEvent> {
+      const id = await nextId(COL.calendarEvents);
+      const now = new Date().toISOString();
+      const row = serializeCalendarEvent(data);
+      await db.collection(COL.calendarEvents).doc(docId(id)).set({
+        ...row,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const event = mapCalendarEvent({ ...row, createdAt: now, updatedAt: now }, String(id));
+      await this.syncCalendarEventIndexes(event);
+      return event;
+    },
+
+    async updateCalendarEvent(
+      id: number,
+      patch: Partial<Omit<CalendarEvent, "id" | "createdAt">>,
+    ): Promise<CalendarEvent | null> {
+      const ref = db.collection(COL.calendarEvents).doc(docId(id));
+      if (!(await ref.get()).exists) return null;
+      await ref.set(
+        { ...serializeCalendarEvent(patch), updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      const snap = await ref.get();
+      const event = mapCalendarEvent(snap.data()!, snap.id);
+      await this.clearCalendarEventIndexes(id);
+      await this.syncCalendarEventIndexes(event);
+      return event;
+    },
+
+    async deleteCalendarEvent(id: number): Promise<void> {
+      await this.clearCalendarEventIndexes(id);
+      await db.collection(COL.calendarEvents).doc(docId(id)).delete();
+    },
+
+    async syncCalendarEventIndexes(event: CalendarEvent): Promise<void> {
+      const batch = db.batch();
+      const attendees = [...new Set([event.ownerId, ...(event.attendeeIds ?? [])])];
+      for (const userId of attendees) {
+        batch.set(db.collection(COL.calendarAttendeeIndex).doc(`${event.id}_${userId}`), {
+          eventId: event.id,
+          userId,
+          startAt: event.startAt.toISOString(),
+        });
+      }
+      if (event.sourceRef && event.sourceRef.kind !== "native") {
+        const indexId = `${event.ownerId}_${sourceRefKey(event.sourceRef)}`;
+        batch.set(db.collection(COL.calendarSourceIndex).doc(indexId), {
+          eventId: event.id,
+          ownerId: event.ownerId,
+          sourceRef: event.sourceRef,
+        });
+      }
+      await batch.commit();
+    },
+
+    async clearCalendarEventIndexes(eventId: number): Promise<void> {
+      const attendeeSnap = await db
+        .collection(COL.calendarAttendeeIndex)
+        .where("eventId", "==", eventId)
+        .get();
+      const sourceSnap = await db
+        .collection(COL.calendarSourceIndex)
+        .where("eventId", "==", eventId)
+        .get();
+      const batch = db.batch();
+      attendeeSnap.docs.forEach((d) => batch.delete(d.ref));
+      sourceSnap.docs.forEach((d) => batch.delete(d.ref));
+      if (attendeeSnap.size || sourceSnap.size) await batch.commit();
     },
 
     async listReports(): Promise<Report[]> {
@@ -1189,6 +1368,8 @@ function mapMessage(data: FirebaseFirestore.DocumentData, id: string): Message {
     senderId: data.senderId as number,
     body: (data.body as string) ?? "",
     attachments: normalizeMessageAttachments(data.attachments) ?? null,
+    messageKind: (data.messageKind as string) ?? "text",
+    metadata: (data.metadata as Record<string, unknown> | null) ?? null,
     createdAt: toDate(data.createdAt),
   };
 }
@@ -1227,6 +1408,41 @@ function mapPayroll(data: FirebaseFirestore.DocumentData, id: string): PayrollRu
     approvedById: (data.approvedById as number) ?? null,
     createdAt: toDate(data.createdAt),
   };
+}
+
+function mapCalendarEvent(data: FirebaseFirestore.DocumentData, id: string): CalendarEvent {
+  return {
+    id: Number(id),
+    title: data.title as string,
+    description: (data.description as string) ?? null,
+    eventType: (data.eventType as string) ?? "meeting",
+    startAt: toDate(data.startAt),
+    endAt: data.endAt ? toDate(data.endAt) : null,
+    allDay: Boolean(data.allDay),
+    location: (data.location as string) ?? null,
+    color: (data.color as string) ?? null,
+    ownerId: data.ownerId as number,
+    createdById: data.createdById as number,
+    teamId: (data.teamId as number) ?? null,
+    visibility: (data.visibility as string) ?? "private",
+    attendeeIds: Array.isArray(data.attendeeIds) ? (data.attendeeIds as number[]) : [],
+    attendeeStatuses: (data.attendeeStatuses as Record<string, string>) ?? {},
+    sourceRef: (data.sourceRef as CalendarSourceRef) ?? null,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+function serializeCalendarEvent(
+  p: Partial<Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...p };
+  if (p.startAt !== undefined) out.startAt = p.startAt.toISOString();
+  if (p.endAt !== undefined) out.endAt = p.endAt ? p.endAt.toISOString() : null;
+  delete out.id;
+  delete out.createdAt;
+  delete out.updatedAt;
+  return out;
 }
 
 export type FirestoreStore = ReturnType<typeof createFirestoreStore>;

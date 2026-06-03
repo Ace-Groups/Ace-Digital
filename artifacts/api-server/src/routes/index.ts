@@ -13,6 +13,7 @@ import clientsRouter from "./clients";
 import approvalsRouter from "./approvals";
 import reportsRouter from "./reports";
 import channelsRouter from "./channels";
+import calendarRouter from "./calendar";
 import activityRouter from "./activity";
 
 const router: IRouter = Router();
@@ -31,6 +32,7 @@ router.use(clientsRouter);
 router.use(approvalsRouter);
 router.use(reportsRouter);
 router.use(channelsRouter);
+router.use(calendarRouter);
 router.use(activityRouter);
 
 export default router;

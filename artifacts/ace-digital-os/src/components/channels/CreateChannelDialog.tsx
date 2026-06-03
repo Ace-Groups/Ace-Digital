@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -86,6 +87,9 @@ export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelD
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create channel</DialogTitle>
+          <DialogDescription className="sr-only">
+            Create a new team or announcement channel
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="mobile-form space-y-4">
           <div className="space-y-2">

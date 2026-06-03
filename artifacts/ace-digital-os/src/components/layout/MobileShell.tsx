@@ -15,6 +15,7 @@ import {
   BarChart3,
   MessageSquare,
   Activity,
+  CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,15 +47,17 @@ const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   approvals: ClipboardCheck,
   reports: BarChart3,
   channels: MessageSquare,
+  calendar: CalendarDays,
   activity: Activity,
 };
 
 interface MobileShellProps {
   children: ReactNode;
   title?: string;
+  fillViewport?: boolean;
 }
 
-export function MobileShell({ children, title }: MobileShellProps) {
+export function MobileShell({ children, title, fillViewport }: MobileShellProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const { data: notifications } = useListNotifications({
@@ -121,12 +124,12 @@ export function MobileShell({ children, title }: MobileShellProps) {
       <main
         className={cn(
           "min-h-0 flex-1 overscroll-contain",
-          immersivePage
+          fillViewport || immersivePage
             ? "flex flex-col overflow-hidden p-0"
             : "overflow-y-auto px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]",
         )}
       >
-        {immersivePage ? children : <PageTransition>{children}</PageTransition>}
+        {fillViewport || immersivePage ? children : <PageTransition>{children}</PageTransition>}
       </main>
 
       {!hideBottomNav && (

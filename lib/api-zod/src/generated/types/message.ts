@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MessageAttachment } from './messageAttachment';
+import type { MessageMessageKind } from './messageMessageKind';
+import type { MessageMetadata } from './messageMetadata';
 
 export interface Message {
   id: number;
@@ -16,5 +18,7 @@ export interface Message {
   senderAvatar?: string | null;
   body: string;
   attachments?: MessageAttachment[];
+  messageKind?: MessageMessageKind;
+  metadata?: MessageMetadata;
   createdAt: string;
 }

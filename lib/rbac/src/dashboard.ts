@@ -10,6 +10,7 @@ const PROFILES: Record<string, DashboardWidget[]> = {
     "teamLoad",
     "recentActivity",
     "upcomingDeadlines",
+    "upcomingCalendar",
   ],
   management: [
     "activeProjects",
@@ -19,16 +20,17 @@ const PROFILES: Record<string, DashboardWidget[]> = {
     "teamLoad",
     "recentActivity",
     "upcomingDeadlines",
+    "upcomingCalendar",
   ],
   finance: [
     "monthlyRevenue",
     "pendingApprovals",
     "recentActivity",
   ],
-  hr: ["employeeCount", "pendingApprovals", "pendingLeave", "recentActivity"],
-  client_manager: ["activeClients", "contractValue", "activeProjects", "upcomingDeadlines"],
-  team_lead: ["activeProjects", "myOpenTasks", "pendingLeave", "upcomingDeadlines", "teamLoad"],
-  employee: ["myOpenTasks", "upcomingDeadlines"],
+  hr: ["employeeCount", "pendingApprovals", "pendingLeave", "recentActivity", "upcomingCalendar"],
+  client_manager: ["activeClients", "contractValue", "activeProjects", "upcomingDeadlines", "upcomingCalendar"],
+  team_lead: ["activeProjects", "myOpenTasks", "pendingLeave", "upcomingDeadlines", "teamLoad", "upcomingCalendar"],
+  employee: ["myOpenTasks", "upcomingDeadlines", "upcomingCalendar"],
 };
 
 export function getDashboardProfile(role: string): DashboardProfile {

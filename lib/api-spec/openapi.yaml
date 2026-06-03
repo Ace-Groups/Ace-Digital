@@ -449,6 +449,205 @@ paths:
                 $ref: "#/components/schemas/Task"
 
   # TEAMS
+  /v1/calendar/feed:
+    get:
+      operationId: getCalendarFeed
+      tags: [calendar]
+      summary: Unified calendar feed for a date range
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: includeTasks
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: includeLinkedChat
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Calendar feed items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarFeedItem"
+
+  /v1/calendar/events:
+    get:
+      operationId: listCalendarEvents
+      tags: [calendar]
+      summary: List native calendar events
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Calendar events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarEvent"
+    post:
+      operationId: createCalendarEvent
+      tags: [calendar]
+      summary: Create a calendar event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEvent"
+
+  /v1/calendar/events/{id}:
+    patch:
+      operationId: updateCalendarEvent
+      tags: [calendar]
+      summary: Update a calendar event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEvent"
+    delete:
+      operationId: deleteCalendarEvent
+      tags: [calendar]
+      summary: Delete a calendar event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/calendar/events/{id}/rsvp:
+    patch:
+      operationId: rsvpCalendarEvent
+      tags: [calendar]
+      summary: Update RSVP status on a calendar event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarRsvpInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEvent"
+
+  /v1/calendar/link-chat:
+    post:
+      operationId: linkChatToCalendar
+      tags: [calendar]
+      summary: Link a chat event or poll to a user calendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarLinkChatInput"
+      responses:
+        "201":
+          description: Linked calendar event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEvent"
+
+  /v1/calendar/check-link:
+    get:
+      operationId: checkCalendarChatLink
+      tags: [calendar]
+      summary: Check if chat message is linked to user calendar
+      parameters:
+        - name: channelId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: ownerId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Link status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarLinkStatus"
+
   /v1/teams:
     get:
       operationId: listTeams
@@ -1279,6 +1478,66 @@ paths:
               schema:
                 $ref: "#/components/schemas/Message"
 
+  /v1/channels/{id}/messages/{messageId}/poll/vote:
+    patch:
+      operationId: votePoll
+      tags: [channels]
+      summary: Vote on a poll message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PollVoteInput"
+      responses:
+        "200":
+          description: Updated poll message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /v1/channels/{id}/messages/{messageId}/event/rsvp:
+    patch:
+      operationId: rsvpEvent
+      tags: [channels]
+      summary: RSVP to an event message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRsvpInput"
+      responses:
+        "200":
+          description: Updated event message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
   # ACTIVITY
   /v1/activity:
     get:
@@ -1499,6 +1758,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TeamLoad"
+        upcomingCalendar:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarFeedItem"
 
     TeamLoad:
       type: object
@@ -1698,6 +1961,185 @@ components:
           type: string
         status:
           type: string
+
+    CalendarEvent:
+      type: object
+      required: [id, title, eventType, startAt, ownerId, createdById, visibility, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        eventType:
+          type: string
+          enum: [meeting, deadline, shift, training, company, leave_block, other]
+        startAt:
+          type: string
+        endAt:
+          type: ["string", "null"]
+        allDay:
+          type: boolean
+        location:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        ownerId:
+          type: integer
+        ownerName:
+          type: ["string", "null"]
+        createdById:
+          type: integer
+        createdByName:
+          type: ["string", "null"]
+        teamId:
+          type: ["integer", "null"]
+        visibility:
+          type: string
+          enum: [private, team, org]
+        attendeeIds:
+          type: array
+          items:
+            type: integer
+        attendeeStatuses:
+          type: object
+        sourceRef:
+          type: object
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    CalendarEventInput:
+      type: object
+      required: [title, startAt]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        eventType:
+          type: string
+          enum: [meeting, deadline, shift, training, company, leave_block, other]
+        startAt:
+          type: string
+        endAt:
+          type: string
+        allDay:
+          type: boolean
+        location:
+          type: string
+        color:
+          type: string
+        ownerId:
+          type: integer
+        teamId:
+          type: integer
+        visibility:
+          type: string
+          enum: [private, team, org]
+        attendeeIds:
+          type: array
+          items:
+            type: integer
+
+    CalendarEventUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        eventType:
+          type: string
+        startAt:
+          type: string
+        endAt:
+          type: string
+        allDay:
+          type: boolean
+        location:
+          type: string
+        color:
+          type: string
+        teamId:
+          type: integer
+        visibility:
+          type: string
+        attendeeIds:
+          type: array
+          items:
+            type: integer
+
+    CalendarRsvpInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [invited, accepted, declined, tentative]
+
+    CalendarLinkChatInput:
+      type: object
+      required: [channelId, messageId]
+      properties:
+        channelId:
+          type: integer
+        messageId:
+          type: integer
+        ownerId:
+          type: integer
+        reminderAt:
+          type: string
+
+    CalendarLinkStatus:
+      type: object
+      required: [linked]
+      properties:
+        linked:
+          type: boolean
+        eventId:
+          type: integer
+
+    CalendarFeedItem:
+      type: object
+      required: [id, kind, title, startAt, readOnly]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [event, task, chat_event, chat_poll]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        eventType:
+          type: string
+        startAt:
+          type: string
+        endAt:
+          type: ["string", "null"]
+        allDay:
+          type: boolean
+        location:
+          type: ["string", "null"]
+        readOnly:
+          type: boolean
+        ownerId:
+          type: integer
+        eventId:
+          type: integer
+        taskId:
+          type: integer
+        channelId:
+          type: integer
+        messageId:
+          type: integer
+        sourceRef:
+          type: object
 
     # TEAMS
     Team:
@@ -2283,6 +2725,8 @@ components:
           type: string
         size:
           type: integer
+        thumbUrl:
+          type: string
 
     Message:
       type: object
@@ -2304,6 +2748,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MessageAttachment"
+        messageKind:
+          type: string
+          enum: [text, poll, event]
+        metadata:
+          type: object
         createdAt:
           type: string
 
@@ -2316,6 +2765,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MessageAttachment"
+        messageKind:
+          type: string
+          enum: [text, poll, event]
+        metadata:
+          type: object
+
+    PollVoteInput:
+      type: object
+      required: [optionId]
+      properties:
+        optionId:
+          type: string
+
+    EventRsvpInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [going, maybe, no]
 
     # ACTIVITY & NOTIFICATIONS
     ActivityLog:

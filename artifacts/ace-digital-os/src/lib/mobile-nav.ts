@@ -4,6 +4,7 @@ const PRIMARY_ORDER: NavRoute[] = [
   "dashboard",
   "projects",
   "tasks",
+  "calendar",
   "channels",
   "employees",
   "finance",

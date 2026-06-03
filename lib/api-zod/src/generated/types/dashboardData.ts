@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ActivityLog } from './activityLog';
+import type { CalendarFeedItem } from './calendarFeedItem';
 import type { Project } from './project';
 import type { TeamLoad } from './teamLoad';
 
@@ -21,4 +22,5 @@ export interface DashboardData {
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];
   teamLoad: TeamLoad[];
+  upcomingCalendar?: CalendarFeedItem[];
 }

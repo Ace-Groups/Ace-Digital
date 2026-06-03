@@ -217,7 +217,27 @@ export const GetDashboardResponse = zod.object({
   "teamName": zod.string(),
   "activeProjects": zod.number(),
   "members": zod.number()
-}))
+})),
+  "upcomingCalendar": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['event', 'task', 'chat_event', 'chat_poll']),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "eventType": zod.string().optional(),
+  "startAt": zod.string(),
+  "endAt": zod.string().nullish(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().nullish(),
+  "readOnly": zod.boolean(),
+  "ownerId": zod.number().optional(),
+  "eventId": zod.number().optional(),
+  "taskId": zod.number().optional(),
+  "channelId": zod.number().optional(),
+  "messageId": zod.number().optional(),
+  "sourceRef": zod.object({
+
+}).passthrough().optional()
+})).optional()
 })
 
 
@@ -531,6 +551,225 @@ export const ToggleTaskResponse = zod.object({
   "createdById": zod.number().nullish(),
   "createdByName": zod.string().nullish(),
   "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Unified calendar feed for a date range
+ */
+export const getCalendarFeedQueryIncludeTasksDefault = true;
+export const getCalendarFeedQueryIncludeLinkedChatDefault = true;
+
+export const GetCalendarFeedQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date(),
+  "userId": zod.coerce.number().optional(),
+  "includeTasks": zod.coerce.boolean().default(getCalendarFeedQueryIncludeTasksDefault),
+  "includeLinkedChat": zod.coerce.boolean().default(getCalendarFeedQueryIncludeLinkedChatDefault)
+})
+
+export const GetCalendarFeedResponseItem = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['event', 'task', 'chat_event', 'chat_poll']),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "eventType": zod.string().optional(),
+  "startAt": zod.string(),
+  "endAt": zod.string().nullish(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().nullish(),
+  "readOnly": zod.boolean(),
+  "ownerId": zod.number().optional(),
+  "eventId": zod.number().optional(),
+  "taskId": zod.number().optional(),
+  "channelId": zod.number().optional(),
+  "messageId": zod.number().optional(),
+  "sourceRef": zod.object({
+
+}).passthrough().optional()
+})
+export const GetCalendarFeedResponse = zod.array(GetCalendarFeedResponseItem)
+
+
+/**
+ * @summary List native calendar events
+ */
+export const ListCalendarEventsQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "userId": zod.coerce.number().optional()
+})
+
+export const ListCalendarEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "eventType": zod.enum(['meeting', 'deadline', 'shift', 'training', 'company', 'leave_block', 'other']),
+  "startAt": zod.string(),
+  "endAt": zod.string().nullish(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().nullish(),
+  "color": zod.string().nullish(),
+  "ownerId": zod.number(),
+  "ownerName": zod.string().nullish(),
+  "createdById": zod.number(),
+  "createdByName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "visibility": zod.enum(['private', 'team', 'org']),
+  "attendeeIds": zod.array(zod.number()).optional(),
+  "attendeeStatuses": zod.object({
+
+}).passthrough().optional(),
+  "sourceRef": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListCalendarEventsResponse = zod.array(ListCalendarEventsResponseItem)
+
+
+/**
+ * @summary Create a calendar event
+ */
+
+
+
+export const CreateCalendarEventBody = zod.object({
+  "title": zod.string().min(1),
+  "description": zod.string().optional(),
+  "eventType": zod.enum(['meeting', 'deadline', 'shift', 'training', 'company', 'leave_block', 'other']).optional(),
+  "startAt": zod.string(),
+  "endAt": zod.string().optional(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().optional(),
+  "color": zod.string().optional(),
+  "ownerId": zod.number().optional(),
+  "teamId": zod.number().optional(),
+  "visibility": zod.enum(['private', 'team', 'org']).optional(),
+  "attendeeIds": zod.array(zod.number()).optional()
+})
+
+
+/**
+ * @summary Update a calendar event
+ */
+export const UpdateCalendarEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCalendarEventBody = zod.object({
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "eventType": zod.string().optional(),
+  "startAt": zod.string().optional(),
+  "endAt": zod.string().optional(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().optional(),
+  "color": zod.string().optional(),
+  "teamId": zod.number().optional(),
+  "visibility": zod.string().optional(),
+  "attendeeIds": zod.array(zod.number()).optional()
+})
+
+export const UpdateCalendarEventResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "eventType": zod.enum(['meeting', 'deadline', 'shift', 'training', 'company', 'leave_block', 'other']),
+  "startAt": zod.string(),
+  "endAt": zod.string().nullish(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().nullish(),
+  "color": zod.string().nullish(),
+  "ownerId": zod.number(),
+  "ownerName": zod.string().nullish(),
+  "createdById": zod.number(),
+  "createdByName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "visibility": zod.enum(['private', 'team', 'org']),
+  "attendeeIds": zod.array(zod.number()).optional(),
+  "attendeeStatuses": zod.object({
+
+}).passthrough().optional(),
+  "sourceRef": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a calendar event
+ */
+export const DeleteCalendarEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Update RSVP status on a calendar event
+ */
+export const RsvpCalendarEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RsvpCalendarEventBody = zod.object({
+  "status": zod.enum(['invited', 'accepted', 'declined', 'tentative'])
+})
+
+export const RsvpCalendarEventResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "eventType": zod.enum(['meeting', 'deadline', 'shift', 'training', 'company', 'leave_block', 'other']),
+  "startAt": zod.string(),
+  "endAt": zod.string().nullish(),
+  "allDay": zod.boolean().optional(),
+  "location": zod.string().nullish(),
+  "color": zod.string().nullish(),
+  "ownerId": zod.number(),
+  "ownerName": zod.string().nullish(),
+  "createdById": zod.number(),
+  "createdByName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "visibility": zod.enum(['private', 'team', 'org']),
+  "attendeeIds": zod.array(zod.number()).optional(),
+  "attendeeStatuses": zod.object({
+
+}).passthrough().optional(),
+  "sourceRef": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Link a chat event or poll to a user calendar
+ */
+export const LinkChatToCalendarBody = zod.object({
+  "channelId": zod.number(),
+  "messageId": zod.number(),
+  "ownerId": zod.number().optional(),
+  "reminderAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Check if chat message is linked to user calendar
+ */
+export const CheckCalendarChatLinkQueryParams = zod.object({
+  "channelId": zod.coerce.number(),
+  "messageId": zod.coerce.number(),
+  "ownerId": zod.coerce.number().optional()
+})
+
+export const CheckCalendarChatLinkResponse = zod.object({
+  "linked": zod.boolean(),
+  "eventId": zod.number().optional()
 })
 
 
@@ -1307,8 +1546,13 @@ export const GetChannelMessagesResponseItem = zod.object({
   "url": zod.string(),
   "name": zod.string().optional(),
   "mimeType": zod.string().optional(),
-  "size": zod.number().optional()
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
 })).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
   "createdAt": zod.string()
 })
 export const GetChannelMessagesResponse = zod.array(GetChannelMessagesResponseItem)
@@ -1328,8 +1572,83 @@ export const SendMessageBody = zod.object({
   "url": zod.string(),
   "name": zod.string().optional(),
   "mimeType": zod.string().optional(),
-  "size": zod.number().optional()
-})).optional()
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Vote on a poll message
+ */
+export const VotePollParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const VotePollBody = zod.object({
+  "optionId": zod.string()
+})
+
+export const VotePollResponse = zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary RSVP to an event message
+ */
+export const RsvpEventParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const RsvpEventBody = zod.object({
+  "status": zod.enum(['going', 'maybe', 'no'])
+})
+
+export const RsvpEventResponse = zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string()
 })
 
 

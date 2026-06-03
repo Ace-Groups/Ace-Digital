@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
   useGetChannelMessages,
-  useSendMessage,
   getGetChannelMessagesQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
+import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canManageChannel, canPostInChannel } from "@workspace/rbac";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileChromeFlags } from "@/contexts/MobileChromeContext";
@@ -21,8 +21,10 @@ import { ChannelSettingsSheet } from "@/components/channels/ChannelSettingsSheet
 import { ChannelThreadHeader } from "@/components/channels/ChannelThreadHeader";
 import { MessageBubble } from "@/components/channels/MessageBubble";
 import { MessageComposer } from "@/components/channels/MessageComposer";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { MessageAttachment } from "@workspace/api-client-react";
+import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-client";
+import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -35,8 +37,6 @@ export default function ChannelsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const sendMessage = useSendMessage();
-  const queryClient = useQueryClient();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,17 +66,43 @@ export default function ChannelsPage() {
 
   const canManage = Boolean(ctx && canManageChannel(ctx, membership));
 
+  const threadActive = Boolean(selectedChannelId && (!isMobile || mobileThreadOpen));
+
+  const [firebaseLive, setFirebaseLive] = useState(false);
+
+  useEffect(() => {
+    if (!isFirebaseChatEnabled()) {
+      setFirebaseLive(false);
+      return;
+    }
+    void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
+  }, [selectedChannelId]);
+
   const { data: messages, isLoading: messagesLoading } = useGetChannelMessages(
     selectedChannelId ?? 0,
     {
       query: {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0),
-        refetchInterval: selectedChannelId && (!isMobile || mobileThreadOpen) ? 12_000 : false,
-        refetchIntervalInBackground: false,
+        staleTime: 30_000,
+        refetchInterval: firebaseLive ? false : 10_000,
       },
     },
   );
+
+  const realtimeReady =
+    threadActive && !!selectedChannelId && !messagesLoading && messages !== undefined;
+
+  useChannelMessagesRealtime(selectedChannelId, realtimeReady);
+
+  const { send, isPending: sending } = useSendChannelMessage(selectedChannelId);
+
+  const rowVirtualizer = useVirtualizer({
+    count: messages?.length ?? 0,
+    getScrollElement: () => messagesContainerRef.current,
+    estimateSize: () => 120,
+    overscan: 10,
+  });
 
   useEffect(() => {
     if (isMobile) return;
@@ -102,21 +128,28 @@ export default function ChannelsPage() {
     return () => el.removeEventListener("scroll", onScroll);
   }, [selectedChannelId, mobileThreadOpen]);
 
-  async function handleSend(payload: { body: string; attachments?: MessageAttachment[] }) {
-    if (!selectedChannelId || !canPost) return;
-    try {
-      await sendMessage.mutateAsync({
-        id: selectedChannelId,
-        data: payload,
-      });
-      setShouldAutoScroll(true);
-      queryClient.invalidateQueries({
-        queryKey: getGetChannelMessagesQueryKey(selectedChannelId),
-      });
-    } catch {
-      toast({ title: "Failed to send message", variant: "destructive" });
-    }
-  }
+  const handleSend = useCallback(
+    async (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
+      if (!selectedChannelId || !canPost) return;
+      try {
+        await send(payload, previewAttachments);
+        setShouldAutoScroll(true);
+      } catch (err) {
+        const detail =
+          err instanceof Error
+            ? err.message
+            : typeof err === "object" && err && "error" in err
+              ? String((err as { error: unknown }).error)
+              : undefined;
+        toast({
+          title: "Failed to send message",
+          description: detail ?? "Check your connection and try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [selectedChannelId, canPost, send, toast],
+  );
 
   function selectChannel(id: number) {
     setSelectedChannelId(id);
@@ -132,7 +165,7 @@ export default function ChannelsPage() {
   const canCreate = can("channels:write");
 
   const threadContent = (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
       {selectedChannel && (
         <ChannelThreadHeader
           channel={selectedChannel}
@@ -144,7 +177,7 @@ export default function ChannelsPage() {
 
       <div
         ref={messagesContainerRef}
-        className="touch-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+        className="touch-scroll min-h-0 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
       >
         {!selectedChannelId ? (
           <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
@@ -165,33 +198,48 @@ export default function ChannelsPage() {
             <p className="text-xs">Say hello to the team</p>
           </div>
         ) : (
-          messages?.map((msg, idx) => {
-            const isMe = msg.senderId === user?.id;
-            const showMeta =
-              idx === 0 || messages[idx - 1]?.senderId !== msg.senderId;
-            return (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                isMe={isMe}
-                showMeta={showMeta}
-              />
-            );
-          })
+          <div
+            style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}
+            className="w-full"
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const msg = messages![virtualRow.index]!;
+              const prev = virtualRow.index > 0 ? messages![virtualRow.index - 1] : null;
+              const isMe = msg.senderId === user?.id;
+              const showMeta = !prev || prev.senderId !== msg.senderId;
+              return (
+                <div
+                  key={msg.id}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full pb-4"
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <MessageBubble
+                    msg={msg}
+                    isMe={isMe}
+                    showMeta={showMeta}
+                    channelId={selectedChannelId!}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {selectedChannelId && canPost && selectedChannel && (
         <MessageComposer
+          channelId={selectedChannelId}
           channelName={selectedChannel.name}
-          sending={sendMessage.isPending}
+          sending={sending}
           onSend={handleSend}
         />
       )}
 
       {selectedChannelId && !canPost && selectedChannel && (
-        <div className="shrink-0 border-t border-border px-4 py-4 text-center text-sm text-muted-foreground">
+        <div className="sticky bottom-0 shrink-0 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">
           {selectedChannel.archived
             ? "This channel is archived."
             : "You have read-only access in this channel."}
@@ -206,7 +254,7 @@ export default function ChannelsPage() {
     selectedChannelId &&
     typeof document !== "undefined"
       ? createPortal(
-          <div className="fixed inset-0 z-[100] flex flex-col bg-background pt-[env(safe-area-inset-top)]">
+          <div className="fixed inset-0 z-[100] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background pt-[env(safe-area-inset-top)]">
             {threadContent}
           </div>,
           document.body,
@@ -214,13 +262,11 @@ export default function ChannelsPage() {
       : null;
 
   return (
-    <AppLayout title="Chat">
+    <AppLayout title="Chat" fillViewport>
       <div
         className={cn(
-          "flex overflow-hidden",
-          isMobile
-            ? "min-h-[calc(100dvh-5rem)] flex-col"
-            : "min-h-[calc(100dvh-8rem)] rounded-xl border border-border",
+          "flex h-full min-h-0 w-full flex-1 overflow-hidden",
+          isMobile && "flex-col",
         )}
       >
         {isMobile ? (
@@ -247,7 +293,9 @@ export default function ChannelsPage() {
               onCreateClick={() => setCreateOpen(true)}
               canCreate={canCreate}
             />
-            <div className="flex min-w-0 flex-1 flex-col bg-card">{threadContent}</div>
+            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+              {threadContent}
+            </div>
           </>
         )}
       </div>

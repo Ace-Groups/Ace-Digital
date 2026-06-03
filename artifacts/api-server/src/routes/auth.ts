@@ -104,6 +104,22 @@ router.get("/v1/auth/permissions", requireAuth, async (req, res): Promise<void> 
   });
 });
 
+router.get("/v1/auth/firebase-custom-token", requireAuth, async (req, res): Promise<void> => {
+  const ctx = getAccessContext(req);
+  try {
+    const { createFirebaseCustomToken } = await import("../lib/firebase-custom-token");
+    const token = await createFirebaseCustomToken(ctx.userId, {
+      role: ctx.role,
+      teamId: ctx.teamId,
+    });
+    res.json({ token });
+  } catch (err) {
+    res.status(503).json({
+      error: err instanceof Error ? err.message : "Firebase auth unavailable",
+    });
+  }
+});
+
 router.post(
   "/v1/auth/register",
   requireAuth,

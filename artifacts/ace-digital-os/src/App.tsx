@@ -17,6 +17,7 @@ const LoginPage = lazyWithReload(() => import("@/pages/login"));
 const DashboardPage = lazyWithReload(() => import("@/pages/dashboard"));
 const ProjectsPage = lazyWithReload(() => import("@/pages/projects"));
 const TasksPage = lazyWithReload(() => import("@/pages/tasks"));
+const CalendarPage = lazyWithReload(() => import("@/pages/calendar"));
 const EmployeesPage = lazyWithReload(() => import("@/pages/employees"));
 const FinancePage = lazyWithReload(() => import("@/pages/finance"));
 const ClientsPage = lazyWithReload(() => import("@/pages/clients"));
@@ -114,6 +115,10 @@ function AppRouter() {
           component={() => <ProtectedRoute path="/projects" component={ProjectsPage} />}
         />
         <Route path="/tasks" component={() => <ProtectedRoute path="/tasks" component={TasksPage} />} />
+        <Route
+          path="/calendar"
+          component={() => <ProtectedRoute path="/calendar" component={CalendarPage} />}
+        />
         <Route
           path="/employees"
           component={() => <ProtectedRoute path="/employees" component={EmployeesPage} />}

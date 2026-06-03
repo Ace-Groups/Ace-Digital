@@ -13,4 +13,5 @@ export interface MessageAttachment {
   name?: string;
   mimeType?: string;
   size?: number;
+  thumbUrl?: string;
 }

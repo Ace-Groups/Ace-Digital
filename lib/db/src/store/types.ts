@@ -88,6 +88,15 @@ export type DashboardSnapshot = {
   activeClientsCount?: number;
   contractValueTotal?: number;
   myOpenTasksCount?: number;
+  upcomingCalendar?: {
+    id: string;
+    kind: string;
+    title: string;
+    startAt: string;
+    readOnly: boolean;
+    eventId?: number;
+    taskId?: number;
+  }[];
   widgets: string[];
 };
 

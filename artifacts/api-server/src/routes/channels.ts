@@ -10,7 +10,8 @@ import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
-import { messageToJson, validateMessagePayload } from "../lib/message-attachments";
+import { messageToJson, messagePreview, validateMessagePayload } from "../lib/message-attachments";
+import { notifyChannelMembers } from "../lib/chat-notify";
 
 const router = Router();
 
@@ -393,24 +394,178 @@ router.post(
 
     let payload: ReturnType<typeof validateMessagePayload>;
     try {
-      payload = validateMessagePayload(req.body?.body, req.body?.attachments);
+      payload = validateMessagePayload(
+        req.body?.body,
+        req.body?.attachments,
+        req.body?.messageKind,
+        req.body?.metadata,
+      );
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : "Invalid message" });
       return;
     }
+    const sender = await store.findUserById(ctx.userId);
     const message = await store.createMessage({
       channelId: id,
       senderId: ctx.userId,
       body: payload.body,
       attachments: payload.attachments ?? null,
+      messageKind: payload.messageKind,
+      metadata: payload.metadata ?? null,
+      senderName: sender?.fullName ?? null,
+      senderAvatar: sender?.avatarUrl ?? null,
     });
-    const sender = await store.findUserById(ctx.userId);
+
+    void notifyChannelMembers(
+      id,
+      ctx.userId,
+      access.channel.name,
+      messagePreview(message.body, message.attachments, message.messageKind),
+    ).catch((err) => console.error("[chat-notify]", err));
+
     res.status(201).json(
       messageToJson(
         message,
         sender?.fullName ?? "Unknown",
         sender?.avatarUrl ?? null,
       ),
+    );
+  },
+);
+
+router.patch(
+  "/v1/channels/:id/messages/:messageId/poll/vote",
+  requireAuth,
+  requirePermission("channels:post"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const { optionId } = req.body as { optionId?: string };
+
+    if (!Number.isFinite(channelId) || !Number.isFinite(messageId) || !optionId) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const messages = await store.listMessagesByChannel(channelId, 200);
+    const message = messages.find((m) => m.id === messageId);
+    if (!message || message.messageKind !== "poll" || !message.metadata) {
+      res.status(404).json({ error: "Poll not found" });
+      return;
+    }
+
+    const meta = message.metadata as {
+      question: string;
+      options: { id: string; label: string }[];
+      votes: Record<string, number[]>;
+      allowMultiple?: boolean;
+    };
+    if (!meta.options.some((o) => o.id === optionId)) {
+      res.status(400).json({ error: "Invalid option" });
+      return;
+    }
+
+    const votes = { ...meta.votes };
+    for (const key of Object.keys(votes)) {
+      votes[key] = (votes[key] ?? []).filter((uid) => uid !== ctx.userId);
+    }
+    if (!meta.allowMultiple) {
+      votes[optionId] = [ctx.userId];
+    } else {
+      votes[optionId] = [...(votes[optionId] ?? []), ctx.userId];
+    }
+
+    const updated = await store.updateMessage(messageId, {
+      metadata: { ...meta, votes },
+    });
+    if (!updated) {
+      res.status(404).json({ error: "Poll not found" });
+      return;
+    }
+
+    const sender = await store.findUserById(updated.senderId);
+    res.json(
+      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
+    );
+  },
+);
+
+router.patch(
+  "/v1/channels/:id/messages/:messageId/event/rsvp",
+  requireAuth,
+  requirePermission("channels:post"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const { status } = req.body as { status?: "going" | "maybe" | "no" };
+
+    if (!Number.isFinite(channelId) || !Number.isFinite(messageId) || !status) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+    if (!["going", "maybe", "no"].includes(status)) {
+      res.status(400).json({ error: "Invalid RSVP status" });
+      return;
+    }
+
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const messages = await store.listMessagesByChannel(channelId, 200);
+    const message = messages.find((m) => m.id === messageId);
+    if (!message || message.messageKind !== "event" || !message.metadata) {
+      res.status(404).json({ error: "Event not found" });
+      return;
+    }
+
+    const meta = message.metadata as {
+      title: string;
+      startAt: string;
+      endAt?: string | null;
+      location?: string | null;
+      rsvps: { going: number[]; maybe: number[]; no: number[] };
+    };
+    const rsvps = {
+      going: meta.rsvps.going.filter((uid) => uid !== ctx.userId),
+      maybe: meta.rsvps.maybe.filter((uid) => uid !== ctx.userId),
+      no: meta.rsvps.no.filter((uid) => uid !== ctx.userId),
+    };
+    rsvps[status].push(ctx.userId);
+
+    const updated = await store.updateMessage(messageId, {
+      metadata: { ...meta, rsvps },
+    });
+    if (!updated) {
+      res.status(404).json({ error: "Event not found" });
+      return;
+    }
+
+    const sender = await store.findUserById(updated.senderId);
+    res.json(
+      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
     );
   },
 );

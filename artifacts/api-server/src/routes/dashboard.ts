@@ -1,8 +1,16 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
-import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import { getAccessContext } from "../lib/access";
+import { dashboardShowsWidget } from "@workspace/rbac";
+import {
+  nativeEventToFeedItem,
+  taskInRange,
+  taskToFeedItem,
+  taskVisibleToUser,
+} from "../lib/calendar-serializer";
+import { canViewCalendarEvent } from "@workspace/rbac";
 
 const router = Router();
 const DASHBOARD_CACHE_TTL_MS = 15_000;
@@ -23,6 +31,25 @@ router.get(
   }
 
   const dash = await store.getDashboardSnapshot(ctx);
+
+  let upcomingCalendar: ReturnType<typeof nativeEventToFeedItem>[] = [];
+  if (dashboardShowsWidget(ctx.role, "upcomingCalendar")) {
+    const from = new Date();
+    const to = new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const events = await store.listCalendarEventsForUser(ctx.userId, from, to);
+    const items = events
+      .filter((e) => canViewCalendarEvent(ctx, e, ctx.userId))
+      .map(nativeEventToFeedItem);
+    const tasks = await store.listTasksForAccess(ctx, { assigneeId: ctx.userId });
+    for (const task of tasks) {
+      if (!taskVisibleToUser(task, ctx.userId)) continue;
+      if (!taskInRange(task, from, to)) continue;
+      const feedItem = taskToFeedItem(task);
+      if (feedItem) items.push(feedItem);
+    }
+    upcomingCalendar = items.sort((a, b) => a.startAt.localeCompare(b.startAt)).slice(0, 5);
+  }
+
   const payload = {
     activeProjectsCount: dash.activeProjectsCount,
     employeeCount: dash.employeeCount,
@@ -59,6 +86,7 @@ router.get(
       createdAt: p.createdAt.toISOString(),
     })),
     teamLoad: dash.teamLoad,
+    upcomingCalendar,
   };
   dashboardCache.set(cacheKey, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
   res.json(payload);

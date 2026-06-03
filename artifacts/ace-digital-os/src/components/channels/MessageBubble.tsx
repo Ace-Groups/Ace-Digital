@@ -1,18 +1,30 @@
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Check, AlertCircle, Loader2 } from "lucide-react";
 import { VoiceMessagePlayer } from "@/components/channels/VoiceMessagePlayer";
+import { MediaAlbum } from "@/components/channels/MediaAlbum";
+import { PollCard } from "@/components/channels/PollCard";
+import { EventCard } from "@/components/channels/EventCard";
 import type { Message } from "@workspace/api-client-react";
+import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { UserAvatar } from "@/components/UserAvatar";
 
 interface MessageBubbleProps {
-  msg: Message;
+  msg: Message | PendingMessage;
   isMe: boolean;
   showMeta: boolean;
+  channelId: number;
 }
 
-export function MessageBubble({ msg, isMe, showMeta }: MessageBubbleProps) {
+function isPending(msg: Message | PendingMessage): msg is PendingMessage {
+  return "status" in msg && (msg.status === "sending" || msg.status === "failed");
+}
+
+export function MessageBubble({ msg, isMe, showMeta, channelId }: MessageBubbleProps) {
   const attachments = msg.attachments ?? [];
+  const mediaAttachments = attachments.filter((a) => a.type === "image" || a.type === "video");
+  const otherAttachments = attachments.filter((a) => a.type !== "image" && a.type !== "video");
+  const pending = isPending(msg);
 
   return (
     <div
@@ -40,29 +52,47 @@ export function MessageBubble({ msg, isMe, showMeta }: MessageBubbleProps) {
         )}
       >
         {showMeta && (
-          <div
-            className={cn(
-              "mb-1 flex items-center gap-2",
-              isMe && "flex-row-reverse",
-            )}
-          >
+          <div className={cn("mb-1 flex items-center gap-2", isMe && "flex-row-reverse")}>
             <p className="text-xs font-medium text-foreground">{msg.senderName}</p>
-            <p className="text-xs text-muted-foreground">
-              {formatRelativeTime(msg.createdAt)}
-            </p>
+            <p className="text-xs text-muted-foreground">{formatRelativeTime(msg.createdAt)}</p>
+            {isMe && pending && (
+              <span className="text-muted-foreground">
+                {msg.status === "sending" ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : msg.status === "failed" ? (
+                  <AlertCircle size={12} className="text-destructive" />
+                ) : (
+                  <Check size={12} />
+                )}
+              </span>
+            )}
           </div>
         )}
+
         <div className="space-y-2">
-          {attachments.map((att, i) => (
+          {msg.messageKind === "poll" && (
+            <PollCard msg={msg} channelId={channelId} isMe={isMe} />
+          )}
+          {msg.messageKind === "event" && (
+            <EventCard msg={msg} channelId={channelId} isMe={isMe} />
+          )}
+
+          {mediaAttachments.length > 0 && (
+            <MediaAlbum attachments={mediaAttachments} isMe={isMe} />
+          )}
+
+          {otherAttachments.map((att, i) => (
             <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={isMe} />
           ))}
-          {msg.body?.trim() ? (
+
+          {msg.body?.trim() && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
             <div
               className={cn(
                 "rounded-2xl px-4 py-2.5 text-[0.9375rem] leading-relaxed break-words",
                 isMe
                   ? "rounded-tr-md bg-primary text-primary-foreground"
                   : "rounded-tl-md bg-muted text-foreground",
+                pending && msg.status === "sending" && "opacity-80",
               )}
             >
               {msg.body}
@@ -86,33 +116,6 @@ function AttachmentPreview({
     isMe ? "border-primary/30 bg-primary/10" : "border-border bg-muted/50",
   );
 
-  if (attachment.type === "image") {
-    return (
-      <a href={attachment.url} target="_blank" rel="noreferrer" className={cn(frame, "block")}>
-        <img
-          src={attachment.url}
-          alt={attachment.name ?? "Image"}
-          className="max-h-64 w-full object-cover"
-          loading="lazy"
-        />
-      </a>
-    );
-  }
-
-  if (attachment.type === "video") {
-    return (
-      <div className={frame}>
-        <video
-          src={attachment.url}
-          controls
-          playsInline
-          className="max-h-64 w-full bg-black"
-          preload="metadata"
-        />
-      </div>
-    );
-  }
-
   if (attachment.type === "audio") {
     return <VoiceMessagePlayer url={attachment.url} isMe={isMe} />;
   }
@@ -128,9 +131,7 @@ function AttachmentPreview({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{attachment.name ?? "File"}</p>
-        <p className="text-xs text-muted-foreground">
-          {formatFileSize(attachment.size)}
-        </p>
+        <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
       </div>
       <Download size={18} className="shrink-0 text-muted-foreground" />
     </a>

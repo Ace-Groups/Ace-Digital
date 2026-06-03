@@ -16,6 +16,7 @@ import {
   channelsTable,
   channelMembersTable,
   messagesTable,
+  calendarEventsTable,
   reportsTable,
   expensesTable,
   payrollRunsTable,
@@ -37,7 +38,10 @@ import type {
   Expense,
   PayrollRun,
   EmployeeProfile,
+  CalendarEvent,
 } from "../schema";
+import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
+import { calendarEventInRange } from "./calendar-scoping";
 import type {
   ActivityLogWithActor,
   AccessContext,
@@ -706,6 +710,8 @@ export function createPostgresStore() {
           senderId: messagesTable.senderId,
           body: messagesTable.body,
           attachments: messagesTable.attachments,
+          messageKind: messagesTable.messageKind,
+          metadata: messagesTable.metadata,
           createdAt: messagesTable.createdAt,
           senderName: usersTable.fullName,
         })
@@ -720,6 +726,8 @@ export function createPostgresStore() {
         senderId: r.senderId,
         body: r.body,
         attachments: r.attachments ?? null,
+        messageKind: r.messageKind,
+        metadata: r.metadata ?? null,
         createdAt: r.createdAt,
         senderName: r.senderName,
       }));
@@ -727,6 +735,79 @@ export function createPostgresStore() {
     createMessage: async (data: Omit<Message, "id" | "createdAt">) => {
       const [m] = await db.insert(messagesTable).values(data).returning();
       return m;
+    },
+    updateMessage: async (
+      id: number,
+      patch: Partial<Pick<Message, "metadata" | "body" | "attachments">>,
+    ) => {
+      const [m] = await db
+        .update(messagesTable)
+        .set(patch)
+        .where(eq(messagesTable.id, id))
+        .returning();
+      return m ?? null;
+    },
+    findMessageById: async (id: number) => {
+      const [m] = await db.select().from(messagesTable).where(eq(messagesTable.id, id)).limit(1);
+      return m ?? null;
+    },
+    findCalendarEventById: async (id: number) => {
+      const [e] = await db
+        .select()
+        .from(calendarEventsTable)
+        .where(eq(calendarEventsTable.id, id))
+        .limit(1);
+      return e ?? null;
+    },
+    findCalendarEventBySourceRef: async (ownerId: number, sourceRef: CalendarSourceRef) => {
+      if (sourceRef.kind === "native") return null;
+      const rows = await db.select().from(calendarEventsTable).where(eq(calendarEventsTable.ownerId, ownerId));
+      return (
+        rows.find(
+          (e) =>
+            e.sourceRef &&
+            sourceRefKey(e.sourceRef as CalendarSourceRef) === sourceRefKey(sourceRef),
+        ) ?? null
+      );
+    },
+    listCalendarEventsInRange: async (from: Date, to: Date) => {
+      const rows = await db
+        .select()
+        .from(calendarEventsTable)
+        .where(
+          and(
+            sql`${calendarEventsTable.startAt} <= ${to}`,
+            sql`COALESCE(${calendarEventsTable.endAt}, ${calendarEventsTable.startAt}) >= ${from}`,
+          ),
+        );
+      return rows.filter((e) => calendarEventInRange(e, from, to));
+    },
+    listCalendarEventsForUser: async (targetUserId: number, from: Date, to: Date) => {
+      const rows = await db.select().from(calendarEventsTable);
+      const inRange = rows.filter((e) => calendarEventInRange(e, from, to));
+      return inRange.filter(
+        (e) =>
+          e.ownerId === targetUserId ||
+          (e.attendeeIds ?? []).includes(targetUserId),
+      );
+    },
+    createCalendarEvent: async (data: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">) => {
+      const [e] = await db.insert(calendarEventsTable).values(data).returning();
+      return e;
+    },
+    updateCalendarEvent: async (
+      id: number,
+      patch: Partial<Omit<CalendarEvent, "id" | "createdAt">>,
+    ) => {
+      const [e] = await db
+        .update(calendarEventsTable)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(calendarEventsTable.id, id))
+        .returning();
+      return e ?? null;
+    },
+    deleteCalendarEvent: async (id: number) => {
+      await db.delete(calendarEventsTable).where(eq(calendarEventsTable.id, id));
     },
     listReports: () => db.select().from(reportsTable).orderBy(sql`${reportsTable.generatedAt} DESC`),
     createReport: async (data: Omit<Report, "id" | "generatedAt">) => {
