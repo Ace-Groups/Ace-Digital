@@ -179,7 +179,7 @@ export function ChannelMessageList({
 
   if (isLoading) {
     return (
-      <div className="space-y-4 px-3 py-4 sm:px-6">
+      <div className="space-y-3 px-2 py-3 sm:space-y-4 sm:px-6 sm:py-4">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex gap-3">
             <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
@@ -202,12 +202,12 @@ export function ChannelMessageList({
   return (
     <div
       ref={containerRef}
-      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-2 py-3 sm:px-6 sm:py-4 [-webkit-overflow-scrolling:touch]"
     >
       {loadingOlder && (
         <p className="mb-3 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
-      <div className="flex w-full flex-col gap-5 overflow-visible">
+      <div className="flex w-full flex-col gap-3 overflow-visible sm:gap-4">
         {filtered.map((msg, index) => {
           const prev = index > 0 ? filtered[index - 1]! : null;
           const isMe = msg.senderId === currentUserId;

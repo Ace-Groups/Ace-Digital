@@ -339,7 +339,7 @@ export function MessageComposer({
   return (
     <>
       <div
-        className="z-10 shrink-0 border-t border-border bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4"
+        className="z-10 shrink-0 border-t border-border bg-card/95 px-2 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5"
         style={{
           paddingBottom:
             keyboardOffset > 0

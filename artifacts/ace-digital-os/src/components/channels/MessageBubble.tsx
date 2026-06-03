@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Download,
   FileText,
@@ -62,12 +62,13 @@ function isPending(msg: Message | PendingMessage): msg is PendingMessage {
 }
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉"];
+const LONG_PRESS_MS = 450;
 
 export function MessageBubble({
   msg,
   isMe,
   showMeta,
-  channelId,
+  channelId: _channelId,
   currentUserId,
   canDelete = false,
   onDelete,
@@ -81,6 +82,8 @@ export function MessageBubble({
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const attachments = msg.attachments ?? [];
   const mediaAttachments = attachments.filter((a) => a.type === "image" || a.type === "video");
   const otherAttachments = attachments.filter((a) => a.type !== "image" && a.type !== "video");
@@ -94,6 +97,19 @@ export function MessageBubble({
   const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "");
   const showActions = !pending && !deleted && (onToggleReaction || onReply || canDelete);
 
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const onBubblePointerDown = useCallback(() => {
+    if (!isMobile || !showActions) return;
+    clearLongPress();
+    longPressTimer.current = setTimeout(() => setMenuOpen(true), LONG_PRESS_MS);
+  }, [isMobile, showActions, clearLongPress]);
+
   function handleDeleteClick() {
     if (!onDelete) return;
     if (!isMe && canDelete) {
@@ -103,20 +119,64 @@ export function MessageBubble({
     void onDelete();
   }
 
+  const menuItems = (
+    <>
+      {onToggleReaction &&
+        QUICK_REACTIONS.map((emoji) => (
+          <DropdownMenuItem
+            key={emoji}
+            onClick={() => void onToggleReaction(emoji)}
+            className="min-h-11 sm:min-h-9"
+          >
+            React {emoji}
+          </DropdownMenuItem>
+        ))}
+      {onReply && (
+        <DropdownMenuItem
+          className="min-h-11 sm:min-h-9"
+          onClick={() => onReply(replyTargetFromMessage(msg as Message))}
+        >
+          <Reply size={14} className="mr-2" />
+          Reply
+        </DropdownMenuItem>
+      )}
+      {msg.body?.trim() && (
+        <DropdownMenuItem
+          className="min-h-11 sm:min-h-9"
+          onClick={() => void navigator.clipboard.writeText(msg.body)}
+        >
+          <Copy size={14} className="mr-2" />
+          Copy
+        </DropdownMenuItem>
+      )}
+      {canDelete && onDelete && (
+        <DropdownMenuItem
+          className="min-h-11 text-destructive focus:text-destructive sm:min-h-9"
+          onClick={handleDeleteClick}
+        >
+          <Trash2 size={14} className="mr-2" />
+          Delete
+          {isMe ? (
+            <span className="ml-auto text-[10px] text-muted-foreground">24h</span>
+          ) : null}
+        </DropdownMenuItem>
+      )}
+    </>
+  );
+
   return (
     <div
       data-testid={`message-${msg.id}`}
       className={cn(
-        "group flex gap-2.5 sm:gap-3",
+        "group flex gap-2 sm:gap-2.5",
         isMe && "flex-row-reverse",
-        showActions && "mt-1",
       )}
     >
       {showMeta ? (
         <UserAvatar
           avatarUrl={msg.senderAvatar}
           fullName={msg.senderName}
-          className="h-9 w-9 shrink-0 sm:h-8 sm:w-8"
+          className="h-8 w-8 shrink-0 sm:h-8 sm:w-8"
           fallbackClassName={cn(
             "text-xs",
             isMe ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
@@ -124,13 +184,13 @@ export function MessageBubble({
           iconSize={14}
         />
       ) : (
-        <div className="w-9 shrink-0 sm:w-8" />
+        <div className="w-8 shrink-0" />
       )}
+
       <div
         className={cn(
-          "relative min-w-0 max-w-[min(88vw,28rem)] sm:max-w-md lg:max-w-lg",
-          isMe && "flex flex-col items-end",
-          showActions && "pt-9 sm:pt-8",
+          "flex min-w-0 max-w-[min(92vw,28rem)] flex-1 flex-col sm:max-w-md lg:max-w-lg",
+          isMe ? "items-end" : "items-start",
         )}
       >
         {showMeta && (
@@ -151,141 +211,119 @@ export function MessageBubble({
           </div>
         )}
 
-        {showActions && (
-          <>
-            <MessageActionsMenu
-              messageId={msg.id}
-              channelId={channelId}
-              isMe={isMe}
-              menuOpen={menuOpen}
-              onMenuOpenChange={setMenuOpen}
-            >
-              {onToggleReaction &&
-                QUICK_REACTIONS.map((emoji) => (
-                  <DropdownMenuItem
-                    key={emoji}
-                    onClick={() => void onToggleReaction(emoji)}
-                    className="min-h-11 sm:min-h-9"
-                  >
-                    React {emoji}
-                  </DropdownMenuItem>
-                ))}
-              {onReply && (
-                <DropdownMenuItem
-                  className="min-h-11 sm:min-h-9"
-                  onClick={() => onReply(replyTargetFromMessage(msg as Message))}
-                >
-                  <Reply size={14} className="mr-2" />
-                  Reply
-                </DropdownMenuItem>
-              )}
-              {msg.body?.trim() && (
-                <DropdownMenuItem
-                  className="min-h-11 sm:min-h-9"
-                  onClick={() => void navigator.clipboard.writeText(msg.body)}
-                >
-                  <Copy size={14} className="mr-2" />
-                  Copy
-                </DropdownMenuItem>
-              )}
-              {canDelete && onDelete && (
-                <DropdownMenuItem
-                  className="min-h-11 text-destructive focus:text-destructive sm:min-h-9"
-                  onClick={handleDeleteClick}
-                >
-                  <Trash2 size={14} className="mr-2" />
-                  Delete
-                  {isMe ? (
-                    <span className="ml-auto text-[10px] text-muted-foreground">24h</span>
-                  ) : null}
-                </DropdownMenuItem>
-              )}
-            </MessageActionsMenu>
-            {!isMobile && onToggleReaction && (
-              <div
-                className={cn(
-                  "absolute top-0 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
-                  isMe ? "right-10" : "left-10",
-                )}
-              >
-                {QUICK_REACTIONS.map((emoji) => (
-                  <Button
-                    key={emoji}
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-base"
-                    onClick={() => void onToggleReaction(emoji)}
-                    aria-label={`React ${emoji}`}
-                  >
-                    {emoji}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        <div className="space-y-2">
-          {deleted ? (
-            <p className="text-sm italic text-muted-foreground">Message deleted</p>
-          ) : (
-            <>
-          {quote && (
-            <button
-              type="button"
-              className={cn(
-                "w-full rounded-lg border-l-2 px-3 py-2 text-left text-xs transition-colors",
-                isMe ? "border-primary-foreground/50 bg-primary/20 hover:bg-primary/30" : "border-primary bg-muted/80 hover:bg-muted",
-              )}
-              onClick={() => onScrollToQuotedMessage?.(quote.id)}
-            >
-              <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
-              <p className="line-clamp-2 opacity-70">
-                {quote.isDeleted ? "Original message deleted" : quote.preview}
-              </p>
-            </button>
+        <div
+          className={cn(
+            "flex w-full max-w-full items-end gap-0.5 sm:gap-1",
+            isMe ? "flex-row-reverse" : "flex-row",
           )}
-
-          {msg.messageKind === "poll" && (
-            <PollCard msg={msg} channelId={channelId} isMe={isMe} onVote={onVotePoll} />
-          )}
-          {msg.messageKind === "event" && (
-            <EventCard msg={msg} channelId={channelId} isMe={isMe} onRsvp={onRsvpEvent} />
-          )}
-
-          {mediaAttachments.length > 0 && (
-            <MediaAlbum attachments={mediaAttachments} isMe={isMe} />
-          )}
-
-          {otherAttachments.map((att, i) => (
-            <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={isMe} />
-          ))}
-
-          {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
+          onPointerDown={onBubblePointerDown}
+          onPointerUp={clearLongPress}
+          onPointerLeave={clearLongPress}
+          onPointerCancel={clearLongPress}
+        >
+          {showActions && (
             <div
               className={cn(
-                "rounded-2xl px-4 py-2.5 text-[0.9375rem] leading-relaxed break-words",
-                isMe
-                  ? "rounded-tr-md bg-primary text-primary-foreground"
-                  : "rounded-tl-md bg-muted text-foreground",
-                pending && msg.status === "sending" && "opacity-80",
+                "flex shrink-0 items-center gap-0.5 self-end pb-0.5",
+                isMe ? "flex-row-reverse" : "flex-row",
               )}
             >
-              {displayBody}
+              {!isMobile && onToggleReaction && (
+                <div
+                  className={cn(
+                    "flex items-center gap-0.5 opacity-0 transition-opacity duration-150",
+                    "group-hover:opacity-100 group-focus-within:opacity-100",
+                  )}
+                  aria-hidden
+                >
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <Button
+                      key={emoji}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-base hover:bg-muted/80"
+                      onClick={() => void onToggleReaction(emoji)}
+                      aria-label={`React ${emoji}`}
+                    >
+                      {emoji}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              <MessageActionsMenu
+                isMe={isMe}
+                menuOpen={menuOpen}
+                onMenuOpenChange={setMenuOpen}
+              >
+                {menuItems}
+              </MessageActionsMenu>
             </div>
-          ) : null}
+          )}
 
-          {!pending && onToggleReaction && (
-            <MessageReactions
-              msg={msg}
-              currentUserId={currentUserId}
-              onToggle={(emoji) => onToggleReaction(emoji)}
-              className={isMe ? "justify-end" : undefined}
-            />
-          )}
-            </>
-          )}
+          <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
+            {deleted ? (
+              <p className="text-sm italic text-muted-foreground">Message deleted</p>
+            ) : (
+              <>
+                {quote && (
+                  <button
+                    type="button"
+                    className={cn(
+                      "w-full rounded-lg border-l-2 px-3 py-2 text-left text-xs transition-colors",
+                      isMe
+                        ? "border-primary-foreground/50 bg-primary/20 hover:bg-primary/30"
+                        : "border-primary bg-muted/80 hover:bg-muted",
+                    )}
+                    onClick={() => onScrollToQuotedMessage?.(quote.id)}
+                  >
+                    <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
+                    <p className="line-clamp-2 opacity-70">
+                      {quote.isDeleted ? "Original message deleted" : quote.preview}
+                    </p>
+                  </button>
+                )}
+
+                {msg.messageKind === "poll" && (
+                  <PollCard msg={msg} channelId={_channelId} isMe={isMe} onVote={onVotePoll} />
+                )}
+                {msg.messageKind === "event" && (
+                  <EventCard msg={msg} channelId={_channelId} isMe={isMe} onRsvp={onRsvpEvent} />
+                )}
+
+                {mediaAttachments.length > 0 && (
+                  <MediaAlbum attachments={mediaAttachments} isMe={isMe} />
+                )}
+
+                {otherAttachments.map((att, i) => (
+                  <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={isMe} />
+                ))}
+
+                {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
+                  <div
+                    className={cn(
+                      "rounded-2xl px-3.5 py-2 text-[0.9375rem] leading-relaxed break-words sm:px-4 sm:py-2.5",
+                      isMe
+                        ? "rounded-tr-md bg-primary text-primary-foreground"
+                        : "rounded-tl-md bg-muted text-foreground",
+                      pending && msg.status === "sending" && "opacity-80",
+                    )}
+                  >
+                    {displayBody}
+                  </div>
+                ) : null}
+
+                {!pending && onToggleReaction && (
+                  <MessageReactions
+                    msg={msg}
+                    currentUserId={currentUserId}
+                    onToggle={(emoji) => onToggleReaction(emoji)}
+                    className={isMe ? "justify-end" : undefined}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
