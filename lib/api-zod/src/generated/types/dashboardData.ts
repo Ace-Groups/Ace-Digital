@@ -18,6 +18,7 @@ export interface DashboardData {
   activeClientsCount?: number;
   contractValueTotal?: number;
   myOpenTasksCount?: number;
+  overdueServiceFollowUpsCount?: number;
   widgets: string[];
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];

@@ -10,6 +10,7 @@ const FILL_ORDER: NavRoute[] = [
   "employees",
   "finance",
   "clients",
+  "service",
   "approvals",
   "reports",
   "activity",

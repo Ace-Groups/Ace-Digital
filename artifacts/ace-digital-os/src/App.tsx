@@ -26,6 +26,8 @@ const ApprovalsPage = lazyWithReload(() => import("@/pages/approvals"));
 const ReportsPage = lazyWithReload(() => import("@/pages/reports"));
 const ChannelsPage = lazyWithReload(() => import("@/pages/channels"));
 const ActivityPage = lazyWithReload(() => import("@/pages/activity"));
+const ServiceDeskPage = lazyWithReload(() => import("@/pages/service"));
+const ServiceDetailPage = lazyWithReload(() => import("@/pages/service-detail"));
 const ChangePasswordPage = lazyWithReload(() => import("@/pages/change-password"));
 const SettingsPage = lazyWithReload(() => import("@/pages/settings"));
 const NotificationsPage = lazyWithReload(() => import("@/pages/notifications"));
@@ -136,6 +138,14 @@ function AppRouter() {
         <Route
           path="/clients"
           component={() => <ProtectedRoute path="/clients" component={ClientsPage} />}
+        />
+        <Route
+          path="/service/:id"
+          component={() => <ProtectedRoute path="/service/0" component={ServiceDetailPage} />}
+        />
+        <Route
+          path="/service"
+          component={() => <ProtectedRoute path="/service" component={ServiceDeskPage} />}
         />
         <Route
           path="/approvals"

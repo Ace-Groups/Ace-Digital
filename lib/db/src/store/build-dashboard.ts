@@ -26,6 +26,7 @@ type DashboardDeps = {
   listUpcomingDeadlines: (limit: number) => Promise<Project[]>;
   countActiveProjectsByTeam: (teamId: number) => Promise<number>;
   countUsersByTeam: (teamId: number) => Promise<number>;
+  countOverdueServiceFollowUps?: () => Promise<number>;
 };
 
 export async function buildDashboardSnapshot(
@@ -58,6 +59,10 @@ export async function buildDashboardSnapshot(
   const recentActivityPromise = dashboardShowsWidget(ctx.role, "recentActivity")
     ? deps.listActivityLogs(10)
     : Promise.resolve([]);
+  const overdueFollowUpsPromise = dashboardShowsWidget(ctx.role, "overdueServiceFollowUps")
+    ? (deps.countOverdueServiceFollowUps?.() ?? Promise.resolve(0))
+    : Promise.resolve(0);
+
   const teamLoadPromise: Promise<DashboardSnapshot["teamLoad"]> = dashboardShowsWidget(ctx.role, "teamLoad")
     ? (async () => {
         const teams = await deps.listTeams();
@@ -92,6 +97,7 @@ export async function buildDashboardSnapshot(
     rawUpcomingDeadlines,
     recentActivity,
     teamLoad,
+    overdueServiceFollowUpsCount,
   ] = await Promise.all([
     allProjectsPromise,
     myTasksPromise,
@@ -102,6 +108,7 @@ export async function buildDashboardSnapshot(
     upcomingDeadlinesPromise,
     recentActivityPromise,
     teamLoadPromise,
+    overdueFollowUpsPromise,
   ]);
 
   const scopedProjects = scopeProjectList(ctx, allProjects);
@@ -132,6 +139,7 @@ export async function buildDashboardSnapshot(
     activeClientsCount,
     contractValueTotal,
     myOpenTasksCount,
+    overdueServiceFollowUpsCount,
     widgets,
   };
 }

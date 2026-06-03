@@ -15,6 +15,8 @@ import type {
   Expense,
   PayrollRun,
   SalaryPosting,
+  ServiceTicket,
+  ServiceRecord,
 } from "../schema";
 
 export type {
@@ -34,6 +36,8 @@ export type {
   Expense,
   PayrollRun,
   SalaryPosting,
+  ServiceTicket,
+  ServiceRecord,
 };
 
 export type SalaryPostingRow = {
@@ -91,6 +95,7 @@ export type DashboardSnapshot = {
   activeClientsCount?: number;
   contractValueTotal?: number;
   myOpenTasksCount?: number;
+  overdueServiceFollowUpsCount?: number;
   upcomingCalendar?: {
     id: string;
     kind: string;

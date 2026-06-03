@@ -31,6 +31,7 @@ export type NavRoute =
   | "employees"
   | "finance"
   | "clients"
+  | "service"
   | "approvals"
   | "reports"
   | "channels"
@@ -48,7 +49,8 @@ export type DashboardWidget =
   | "contractValue"
   | "myOpenTasks"
   | "pendingLeave"
-  | "upcomingCalendar";
+  | "upcomingCalendar"
+  | "overdueServiceFollowUps";
 
 export type DashboardProfile = {
   widgets: DashboardWidget[];

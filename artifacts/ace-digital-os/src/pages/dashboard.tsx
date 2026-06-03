@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   FolderKanban, Users, DollarSign, ClipboardCheck,
-  TrendingUp, Clock, Building2, CheckSquare,
+  TrendingUp, Clock, Building2, CheckSquare, Ticket,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { StaggerItem, StaggerList } from "@/components/design";
@@ -126,6 +126,17 @@ export default function DashboardPage() {
           href="/approvals"
           isLoading={isLoading && !dash}
           testId="stat-pending-approvals"
+        />
+      )}
+      {widgets.has("overdueServiceFollowUps") && (
+        <StatCard
+          label="Overdue Follow-ups"
+          value={dash?.overdueServiceFollowUpsCount ?? 0}
+          icon={Ticket}
+          tone="danger"
+          href="/service"
+          isLoading={isLoading && !dash}
+          testId="stat-overdue-service"
         />
       )}
     </>

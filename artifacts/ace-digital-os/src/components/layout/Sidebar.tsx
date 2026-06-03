@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
-  Building2, ClipboardCheck, BarChart3, MessageSquare, Activity, CalendarDays,
+  Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity, CalendarDays,
   LogOut, ChevronLeft, ChevronRight, UserCircle, Settings,
 } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -20,6 +20,7 @@ const NAV_ICONS = {
   employees: Users,
   finance: DollarSign,
   clients: Building2,
+  service: Ticket,
   approvals: ClipboardCheck,
   reports: BarChart3,
   channels: MessageSquare,

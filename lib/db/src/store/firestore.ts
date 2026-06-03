@@ -16,6 +16,8 @@ import type {
   PayrollRun,
   EmployeeProfile,
   CalendarEvent,
+  ServiceTicket,
+  ServiceRecord,
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { normalizeMessageAttachments, sanitizeMessageAttachments } from "../message-attachments";
@@ -49,6 +51,7 @@ import {
   scopeProjectList,
   scopeTaskList,
 } from "./scoping";
+import { isTicketFollowUpOverdue, scopeServiceTicketList } from "./service-scoping";
 import { calendarEventInRange } from "./calendar-scoping";
 import { messageListPreview } from "../chat/preview";
 
@@ -76,9 +79,12 @@ const COL = {
   notifications: "notifications",
   jobTitles: "job_titles",
   salaryPostings: "salary_postings",
+  serviceTickets: "service_tickets",
+  serviceRecords: "service_records",
 } as const;
 
 const EMPLOYEE_CODE_SEQ_KEY = "employeeCodeSeq";
+const SERVICE_TICKET_SEQ_KEY = "serviceTicketSeq";
 
 function app(): App {
   if (!getApps().length) initializeApp();
@@ -135,6 +141,19 @@ async function bumpEmployeeCodeSeq(): Promise<number> {
     tx.set(ref, { [EMPLOYEE_CODE_SEQ_KEY]: next }, { merge: true });
     return next;
   });
+}
+
+async function nextServiceTicketNumber(): Promise<string> {
+  const ref = fs().collection(COL.meta).doc("counters");
+  const year = new Date().getFullYear();
+  const seq = await fs().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data() ?? {};
+    const next = ((data[SERVICE_TICKET_SEQ_KEY] as number) ?? 0) + 1;
+    tx.set(ref, { [SERVICE_TICKET_SEQ_KEY]: next }, { merge: true });
+    return next;
+  });
+  return `ST-${year}-${String(seq).padStart(4, "0")}`;
 }
 
 async function allDocs<T>(collection: string, map: (d: FirebaseFirestore.DocumentData, id: string) => T): Promise<T[]> {
@@ -579,6 +598,122 @@ export function createFirestoreStore() {
 
     async deleteClient(id: number): Promise<void> {
       await db.collection(COL.clients).doc(docId(id)).delete();
+    },
+
+    async listServiceTickets(filters?: {
+      status?: string;
+      clientId?: number;
+      assigneeId?: number;
+      overdueFollowUp?: boolean;
+    }): Promise<ServiceTicket[]> {
+      let q: FirebaseFirestore.Query = db.collection(COL.serviceTickets);
+      if (filters?.status) q = q.where("status", "==", filters.status);
+      if (filters?.clientId != null) q = q.where("clientId", "==", filters.clientId);
+      if (filters?.assigneeId != null) q = q.where("assigneeId", "==", filters.assigneeId);
+      const snap = await q.get();
+      let items = snap.docs.map((d) => mapServiceTicket(d.data(), d.id));
+      if (filters?.overdueFollowUp) {
+        items = items.filter((t) => isTicketFollowUpOverdue(t));
+      }
+      return items.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    },
+
+    async listServiceTicketsForAccess(
+      ctx: AccessContext,
+      filters?: {
+        status?: string;
+        clientId?: number;
+        assigneeId?: number;
+        overdueFollowUp?: boolean;
+      },
+    ): Promise<ServiceTicket[]> {
+      const base = await this.listServiceTickets(filters);
+      return scopeServiceTicketList(ctx, base);
+    },
+
+    async findServiceTicketById(id: number): Promise<ServiceTicket | null> {
+      const snap = await db.collection(COL.serviceTickets).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapServiceTicket(snap.data()!, snap.id);
+    },
+
+    async createServiceTicket(
+      data: Omit<ServiceTicket, "id" | "ticketNumber" | "createdAt" | "updatedAt"> & {
+        ticketNumber?: string;
+      },
+    ): Promise<ServiceTicket> {
+      const id = await nextId(COL.serviceTickets);
+      const ticketNumber = data.ticketNumber ?? (await nextServiceTicketNumber());
+      const now = new Date().toISOString();
+      const { ticketNumber: _tn, ...rest } = data;
+      const row = {
+        ...serializeServiceTicket({ ...rest, ticketNumber }),
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.collection(COL.serviceTickets).doc(docId(id)).set(row);
+      return mapServiceTicket(row, String(id));
+    },
+
+    async updateServiceTicket(id: number, patch: Partial<ServiceTicket>): Promise<ServiceTicket | null> {
+      const ref = db.collection(COL.serviceTickets).doc(docId(id));
+      const existing = await ref.get();
+      if (!existing.exists) return null;
+      const current = mapServiceTicket(existing.data()!, existing.id);
+      const nextStatus = patch.status ?? current.status;
+      const resolvedAt =
+        patch.resolvedAt !== undefined
+          ? patch.resolvedAt
+          : nextStatus === "RESOLVED" || nextStatus === "CLOSED"
+            ? current.resolvedAt ?? new Date()
+            : nextStatus === "OPEN" || nextStatus === "IN_PROGRESS" || nextStatus === "WAITING_CLIENT"
+              ? null
+              : current.resolvedAt;
+      await ref.set(
+        {
+          ...serializeServiceTicket({ ...patch, resolvedAt }),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      const snap = await ref.get();
+      return mapServiceTicket(snap.data()!, snap.id);
+    },
+
+    async listServiceRecords(ticketId: number): Promise<ServiceRecord[]> {
+      const snap = await db
+        .collection(COL.serviceRecords)
+        .where("ticketId", "==", ticketId)
+        .get();
+      const items = snap.docs.map((d) => mapServiceRecord(d.data(), d.id));
+      return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    },
+
+    async createServiceRecord(
+      data: Omit<ServiceRecord, "id" | "createdAt">,
+    ): Promise<{ record: ServiceRecord; ticket: ServiceTicket }> {
+      const ticket = await this.findServiceTicketById(data.ticketId);
+      if (!ticket) throw new Error("Ticket not found");
+      const id = await nextId(COL.serviceRecords);
+      const now = new Date().toISOString();
+      const row = { ...serializeServiceRecord(data), createdAt: now };
+      await db.collection(COL.serviceRecords).doc(docId(id)).set(row);
+      const record = mapServiceRecord(row, String(id));
+
+      const ticketPatch: Partial<ServiceTicket> = {};
+      if (data.statusAfter) ticketPatch.status = data.statusAfter;
+      if (data.nextFollowUpAt !== undefined) ticketPatch.nextFollowUpAt = data.nextFollowUpAt;
+      const updated =
+        Object.keys(ticketPatch).length > 0
+          ? await this.updateServiceTicket(data.ticketId, ticketPatch)
+          : ticket;
+
+      return { record, ticket: updated ?? ticket };
+    },
+
+    async countOverdueServiceFollowUps(): Promise<number> {
+      const tickets = await this.listServiceTickets();
+      return tickets.filter((t) => isTicketFollowUpOverdue(t)).length;
     },
 
     async sumActiveClientRevenue(): Promise<number> {
@@ -1344,6 +1479,7 @@ export function createFirestoreStore() {
         listUpcomingDeadlines: (limit) => self.listUpcomingDeadlines(limit),
         countActiveProjectsByTeam: (teamId) => self.countActiveProjectsByTeam(teamId),
         countUsersByTeam: (teamId) => self.countUsersByTeam(teamId),
+        countOverdueServiceFollowUps: () => self.countOverdueServiceFollowUps(),
       });
     },
 
@@ -1658,6 +1794,64 @@ function serializeCalendarEvent(
   delete out.id;
   delete out.createdAt;
   delete out.updatedAt;
+  return out;
+}
+
+function mapServiceTicket(data: FirebaseFirestore.DocumentData, id: string): ServiceTicket {
+  return {
+    id: Number(id),
+    ticketNumber: data.ticketNumber as string,
+    title: data.title as string,
+    description: (data.description as string) ?? null,
+    clientId: data.clientId as number,
+    projectId: (data.projectId as number) ?? null,
+    assigneeId: (data.assigneeId as number) ?? null,
+    teamId: (data.teamId as number) ?? null,
+    priority: data.priority as string,
+    status: data.status as string,
+    category: data.category as string,
+    nextFollowUpAt: data.nextFollowUpAt ? toDate(data.nextFollowUpAt) : null,
+    resolvedAt: data.resolvedAt ? toDate(data.resolvedAt) : null,
+    createdById: data.createdById as number,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+function serializeServiceTicket(p: Partial<ServiceTicket>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...p };
+  if (p.nextFollowUpAt !== undefined) {
+    out.nextFollowUpAt = p.nextFollowUpAt ? p.nextFollowUpAt.toISOString() : null;
+  }
+  if (p.resolvedAt !== undefined) {
+    out.resolvedAt = p.resolvedAt ? p.resolvedAt.toISOString() : null;
+  }
+  delete out.id;
+  delete out.createdAt;
+  delete out.updatedAt;
+  return out;
+}
+
+function mapServiceRecord(data: FirebaseFirestore.DocumentData, id: string): ServiceRecord {
+  return {
+    id: Number(id),
+    ticketId: data.ticketId as number,
+    recordType: data.recordType as string,
+    body: data.body as string,
+    statusAfter: (data.statusAfter as string) ?? null,
+    nextFollowUpAt: data.nextFollowUpAt ? toDate(data.nextFollowUpAt) : null,
+    createdById: data.createdById as number,
+    createdAt: toDate(data.createdAt),
+  };
+}
+
+function serializeServiceRecord(p: Partial<ServiceRecord>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...p };
+  if (p.nextFollowUpAt !== undefined) {
+    out.nextFollowUpAt = p.nextFollowUpAt ? p.nextFollowUpAt.toISOString() : null;
+  }
+  delete out.id;
+  delete out.createdAt;
   return out;
 }
 

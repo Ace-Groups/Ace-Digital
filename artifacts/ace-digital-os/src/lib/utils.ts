@@ -102,7 +102,13 @@ export function statusColor(status: string): string {
     case "APPROVED":
     case "ACTIVE":
     case "PAID":
+    case "RESOLVED":
+    case "CLOSED":
       return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+    case "OPEN":
+      return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+    case "WAITING_CLIENT":
+      return "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30";
     case "IN_PROGRESS":
     case "PROSPECT":
       return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";

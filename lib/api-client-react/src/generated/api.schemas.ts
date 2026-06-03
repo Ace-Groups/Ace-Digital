@@ -170,6 +170,7 @@ export interface DashboardData {
   activeClientsCount?: number;
   contractValueTotal?: number;
   myOpenTasksCount?: number;
+  overdueServiceFollowUpsCount?: number;
   widgets: string[];
   recentActivity: ActivityLog[];
   upcomingDeadlines: Project[];
@@ -209,6 +210,105 @@ export interface TaskAssignee {
   userId: number;
   fullName: string;
   completed: boolean;
+}
+
+export interface ServiceTicket {
+  id: number;
+  ticketNumber: string;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  clientId: number;
+  /** @nullable */
+  clientName?: string | null;
+  /** @nullable */
+  projectId?: number | null;
+  /** @nullable */
+  projectName?: string | null;
+  /** @nullable */
+  assigneeId?: number | null;
+  /** @nullable */
+  assigneeName?: string | null;
+  /** @nullable */
+  teamId?: number | null;
+  priority: string;
+  status: string;
+  category: string;
+  /** @nullable */
+  nextFollowUpAt?: string | null;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdById?: number;
+  /** @nullable */
+  createdByName?: string | null;
+  recordCount?: number;
+  /** @nullable */
+  lastRecordAt?: string | null;
+  followUpOverdue?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ServiceRecord {
+  id: number;
+  ticketId: number;
+  recordType: string;
+  body: string;
+  /** @nullable */
+  statusAfter?: string | null;
+  /** @nullable */
+  nextFollowUpAt?: string | null;
+  createdById: number;
+  /** @nullable */
+  authorName?: string | null;
+  createdAt: string;
+}
+
+export type ServiceTicketDetail = ServiceTicket & {
+  records?: ServiceRecord[];
+};
+
+export interface ServiceTicketInput {
+  /** @minLength 1 */
+  title: string;
+  description?: string;
+  clientId: number;
+  projectId?: number;
+  assigneeId?: number;
+  teamId?: number;
+  priority?: string;
+  status?: string;
+  category?: string;
+  nextFollowUpAt?: string;
+}
+
+export interface ServiceTicketUpdate {
+  title?: string;
+  description?: string;
+  /** @nullable */
+  projectId?: number | null;
+  /** @nullable */
+  assigneeId?: number | null;
+  /** @nullable */
+  teamId?: number | null;
+  priority?: string;
+  status?: string;
+  category?: string;
+  /** @nullable */
+  nextFollowUpAt?: string | null;
+}
+
+export interface ServiceRecordInput {
+  recordType?: string;
+  /** @minLength 1 */
+  body: string;
+  statusAfter?: string;
+  nextFollowUpAt?: string;
+}
+
+export interface ServiceRecordCreateResponse {
+  record: ServiceRecord;
+  ticket: ServiceTicket;
 }
 
 export interface Task {
@@ -957,6 +1057,13 @@ export const PatchExpenseStatusBodyStatus = {
 
 export type PatchExpenseStatusBody = {
   status: PatchExpenseStatusBodyStatus;
+};
+
+export type ListServiceTicketsParams = {
+status?: string;
+clientId?: number;
+assigneeId?: number;
+overdueFollowUp?: boolean;
 };
 
 export type ListApprovalsParams = {

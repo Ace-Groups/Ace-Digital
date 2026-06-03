@@ -183,6 +183,7 @@ export const GetDashboardResponse = zod.object({
   "activeClientsCount": zod.number().optional(),
   "contractValueTotal": zod.number().optional(),
   "myOpenTasksCount": zod.number().optional(),
+  "overdueServiceFollowUpsCount": zod.number().optional(),
   "widgets": zod.array(zod.string()),
   "recentActivity": zod.array(zod.object({
   "id": zod.number(),
@@ -1269,6 +1270,195 @@ export const UpdateClientResponse = zod.object({
  */
 export const DeleteClientParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List service tickets
+ */
+export const ListServiceTicketsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "clientId": zod.coerce.number().optional(),
+  "assigneeId": zod.coerce.number().optional(),
+  "overdueFollowUp": zod.coerce.boolean().optional()
+})
+
+export const ListServiceTicketsResponseItem = zod.object({
+  "id": zod.number(),
+  "ticketNumber": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "clientId": zod.number(),
+  "clientName": zod.string().nullish(),
+  "projectId": zod.number().nullish(),
+  "projectName": zod.string().nullish(),
+  "assigneeId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "category": zod.string(),
+  "nextFollowUpAt": zod.string().nullish(),
+  "resolvedAt": zod.string().nullish(),
+  "createdById": zod.number().optional(),
+  "createdByName": zod.string().nullish(),
+  "recordCount": zod.number().optional(),
+  "lastRecordAt": zod.string().nullish(),
+  "followUpOverdue": zod.boolean().optional(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+export const ListServiceTicketsResponse = zod.array(ListServiceTicketsResponseItem)
+
+
+/**
+ * @summary Create service ticket
+ */
+
+
+
+export const CreateServiceTicketBody = zod.object({
+  "title": zod.string().min(1),
+  "description": zod.string().optional(),
+  "clientId": zod.number(),
+  "projectId": zod.number().optional(),
+  "assigneeId": zod.number().optional(),
+  "teamId": zod.number().optional(),
+  "priority": zod.string().optional(),
+  "status": zod.string().optional(),
+  "category": zod.string().optional(),
+  "nextFollowUpAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Get service ticket with recent records
+ */
+export const GetServiceTicketParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetServiceTicketResponse = zod.object({
+  "id": zod.number(),
+  "ticketNumber": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "clientId": zod.number(),
+  "clientName": zod.string().nullish(),
+  "projectId": zod.number().nullish(),
+  "projectName": zod.string().nullish(),
+  "assigneeId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "category": zod.string(),
+  "nextFollowUpAt": zod.string().nullish(),
+  "resolvedAt": zod.string().nullish(),
+  "createdById": zod.number().optional(),
+  "createdByName": zod.string().nullish(),
+  "recordCount": zod.number().optional(),
+  "lastRecordAt": zod.string().nullish(),
+  "followUpOverdue": zod.boolean().optional(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+}).and(zod.object({
+  "records": zod.array(zod.object({
+  "id": zod.number(),
+  "ticketId": zod.number(),
+  "recordType": zod.string(),
+  "body": zod.string(),
+  "statusAfter": zod.string().nullish(),
+  "nextFollowUpAt": zod.string().nullish(),
+  "createdById": zod.number(),
+  "authorName": zod.string().nullish(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Update service ticket
+ */
+export const UpdateServiceTicketParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateServiceTicketBody = zod.object({
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "projectId": zod.number().nullish(),
+  "assigneeId": zod.number().nullish(),
+  "teamId": zod.number().nullish(),
+  "priority": zod.string().optional(),
+  "status": zod.string().optional(),
+  "category": zod.string().optional(),
+  "nextFollowUpAt": zod.string().nullish()
+})
+
+export const UpdateServiceTicketResponse = zod.object({
+  "id": zod.number(),
+  "ticketNumber": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "clientId": zod.number(),
+  "clientName": zod.string().nullish(),
+  "projectId": zod.number().nullish(),
+  "projectName": zod.string().nullish(),
+  "assigneeId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "teamId": zod.number().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "category": zod.string(),
+  "nextFollowUpAt": zod.string().nullish(),
+  "resolvedAt": zod.string().nullish(),
+  "createdById": zod.number().optional(),
+  "createdByName": zod.string().nullish(),
+  "recordCount": zod.number().optional(),
+  "lastRecordAt": zod.string().nullish(),
+  "followUpOverdue": zod.boolean().optional(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List follow-up records for a ticket
+ */
+export const ListServiceRecordsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListServiceRecordsResponseItem = zod.object({
+  "id": zod.number(),
+  "ticketId": zod.number(),
+  "recordType": zod.string(),
+  "body": zod.string(),
+  "statusAfter": zod.string().nullish(),
+  "nextFollowUpAt": zod.string().nullish(),
+  "createdById": zod.number(),
+  "authorName": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListServiceRecordsResponse = zod.array(ListServiceRecordsResponseItem)
+
+
+/**
+ * @summary Add follow-up record to a ticket
+ */
+export const CreateServiceRecordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateServiceRecordBody = zod.object({
+  "recordType": zod.string().optional(),
+  "body": zod.string().min(1),
+  "statusAfter": zod.string().optional(),
+  "nextFollowUpAt": zod.string().optional()
 })
 
 

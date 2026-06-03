@@ -21,6 +21,8 @@ import {
   expensesTable,
   payrollRunsTable,
   salaryPostingsTable,
+  serviceTicketsTable,
+  serviceRecordsTable,
 } from "../schema";
 import type {
   User,
@@ -39,6 +41,8 @@ import type {
   PayrollRun,
   EmployeeProfile,
   CalendarEvent,
+  ServiceTicket,
+  ServiceRecord,
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { calendarEventInRange } from "./calendar-scoping";
@@ -78,6 +82,22 @@ import {
   scopeProjectList,
   scopeTaskList,
 } from "./scoping";
+import { isTicketFollowUpOverdue, scopeServiceTicketList } from "./service-scoping";
+
+async function nextServiceTicketNumberPg(
+  db: ReturnType<typeof getPgDb>["db"],
+): Promise<string> {
+  const year = new Date().getFullYear();
+  const key = "serviceTicketSeq";
+  const [row] = await db.select().from(appMetaTable).where(eq(appMetaTable.key, key));
+  const seq = (row?.value ?? 0) + 1;
+  if (row) {
+    await db.update(appMetaTable).set({ value: seq }).where(eq(appMetaTable.key, key));
+  } else {
+    await db.insert(appMetaTable).values({ key, value: seq });
+  }
+  return `ST-${year}-${String(seq).padStart(4, "0")}`;
+}
 
 export function createPostgresStore() {
   const { db } = getPgDb();
@@ -500,6 +520,129 @@ export function createPostgresStore() {
         .from(approvalsTable)
         .where(eq(approvalsTable.status, "PENDING"));
       return r.count;
+    },
+    listServiceTickets: async (filters?: {
+      status?: string;
+      clientId?: number;
+      assigneeId?: number;
+      overdueFollowUp?: boolean;
+    }) => {
+      const conditions = [];
+      if (filters?.status) conditions.push(eq(serviceTicketsTable.status, filters.status));
+      if (filters?.clientId != null) conditions.push(eq(serviceTicketsTable.clientId, filters.clientId));
+      if (filters?.assigneeId != null) {
+        conditions.push(eq(serviceTicketsTable.assigneeId, filters.assigneeId));
+      }
+      let q = db.select().from(serviceTicketsTable);
+      if (conditions.length) q = q.where(and(...conditions)) as typeof q;
+      let items = await q.orderBy(desc(serviceTicketsTable.updatedAt));
+      if (filters?.overdueFollowUp) {
+        items = items.filter((t) => isTicketFollowUpOverdue(t));
+      }
+      return items;
+    },
+    listServiceTicketsForAccess: async (
+      ctx: AccessContext,
+      filters?: {
+        status?: string;
+        clientId?: number;
+        assigneeId?: number;
+        overdueFollowUp?: boolean;
+      },
+    ) => {
+      const conditions = [];
+      if (filters?.status) conditions.push(eq(serviceTicketsTable.status, filters.status));
+      if (filters?.clientId != null) conditions.push(eq(serviceTicketsTable.clientId, filters.clientId));
+      if (filters?.assigneeId != null) {
+        conditions.push(eq(serviceTicketsTable.assigneeId, filters.assigneeId));
+      }
+      let q = db.select().from(serviceTicketsTable);
+      if (conditions.length) q = q.where(and(...conditions)) as typeof q;
+      let items = await q.orderBy(desc(serviceTicketsTable.updatedAt));
+      if (filters?.overdueFollowUp) {
+        items = items.filter((t) => isTicketFollowUpOverdue(t));
+      }
+      return scopeServiceTicketList(ctx, items);
+    },
+    findServiceTicketById: async (id: number) => {
+      const [t] = await db.select().from(serviceTicketsTable).where(eq(serviceTicketsTable.id, id));
+      return t ?? null;
+    },
+    createServiceTicket: async (
+      data: Omit<ServiceTicket, "id" | "createdAt" | "updatedAt"> & { ticketNumber?: string },
+    ) => {
+      const ticketNumber = data.ticketNumber ?? (await nextServiceTicketNumberPg(db));
+      const { ticketNumber: _tn, ...rest } = data;
+      const [t] = await db
+        .insert(serviceTicketsTable)
+        .values({ ...rest, ticketNumber })
+        .returning();
+      return t;
+    },
+    updateServiceTicket: async (id: number, patch: Partial<ServiceTicket>) => {
+      const [existing] = await db
+        .select()
+        .from(serviceTicketsTable)
+        .where(eq(serviceTicketsTable.id, id));
+      if (!existing) return null;
+      const nextStatus = patch.status ?? existing.status;
+      const resolvedAt =
+        patch.resolvedAt !== undefined
+          ? patch.resolvedAt
+          : nextStatus === "RESOLVED" || nextStatus === "CLOSED"
+            ? existing.resolvedAt ?? new Date()
+            : nextStatus === "OPEN" ||
+                nextStatus === "IN_PROGRESS" ||
+                nextStatus === "WAITING_CLIENT"
+              ? null
+              : existing.resolvedAt;
+      const [t] = await db
+        .update(serviceTicketsTable)
+        .set({ ...patch, resolvedAt, updatedAt: new Date() })
+        .where(eq(serviceTicketsTable.id, id))
+        .returning();
+      return t ?? null;
+    },
+    listServiceRecords: async (ticketId: number) => {
+      return db
+        .select()
+        .from(serviceRecordsTable)
+        .where(eq(serviceRecordsTable.ticketId, ticketId))
+        .orderBy(desc(serviceRecordsTable.createdAt));
+    },
+    createServiceRecord: async (data: Omit<ServiceRecord, "id" | "createdAt">) => {
+      const [ticket] = await db
+        .select()
+        .from(serviceTicketsTable)
+        .where(eq(serviceTicketsTable.id, data.ticketId));
+      if (!ticket) throw new Error("Ticket not found");
+      const [record] = await db.insert(serviceRecordsTable).values(data).returning();
+      const ticketPatch: Partial<ServiceTicket> = {};
+      if (data.statusAfter) ticketPatch.status = data.statusAfter;
+      if (data.nextFollowUpAt !== undefined) ticketPatch.nextFollowUpAt = data.nextFollowUpAt;
+      let updated = ticket;
+      if (Object.keys(ticketPatch).length > 0) {
+        const nextStatus = ticketPatch.status ?? ticket.status;
+        const resolvedAt =
+          nextStatus === "RESOLVED" || nextStatus === "CLOSED"
+            ? ticket.resolvedAt ?? new Date()
+            : nextStatus === "OPEN" ||
+                nextStatus === "IN_PROGRESS" ||
+                nextStatus === "WAITING_CLIENT"
+              ? null
+              : ticket.resolvedAt;
+        const [t] = await db
+          .update(serviceTicketsTable)
+          .set({ ...ticketPatch, resolvedAt, updatedAt: new Date() })
+          .where(eq(serviceTicketsTable.id, data.ticketId))
+          .returning();
+        updated = t ?? ticket;
+      }
+      return { record, ticket: updated };
+    },
+    countOverdueServiceFollowUps: async () => {
+      const tickets = await db.select().from(serviceTicketsTable);
+      return tickets.filter((t) => isTicketFollowUpOverdue(t)).length;
     },
     insertActivityLog: async (data: Omit<ActivityLog, "id" | "createdAt">) => {
       await db.insert(activityLogsTable).values(data);
@@ -1200,6 +1343,7 @@ export function createPostgresStore() {
         listUpcomingDeadlines: (limit) => snapshotStore.listUpcomingDeadlines(limit),
         countActiveProjectsByTeam: (teamId) => snapshotStore.countActiveProjectsByTeam(teamId),
         countUsersByTeam: (teamId) => snapshotStore.countUsersByTeam(teamId),
+        countOverdueServiceFollowUps: () => snapshotStore.countOverdueServiceFollowUps(),
       });
     },
   };

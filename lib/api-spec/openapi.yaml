@@ -26,6 +26,8 @@ tags:
     description: Finance
   - name: clients
     description: Clients
+  - name: serviceTickets
+    description: Service desk tickets
   - name: approvals
     description: Approvals
   - name: reports
@@ -1137,6 +1139,146 @@ paths:
         "204":
           description: Deleted
 
+  # SERVICE TICKETS
+  /v1/service-tickets:
+    get:
+      operationId: listServiceTickets
+      tags: [serviceTickets]
+      summary: List service tickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: clientId
+          in: query
+          schema:
+            type: integer
+        - name: assigneeId
+          in: query
+          schema:
+            type: integer
+        - name: overdueFollowUp
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Service ticket list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceTicket"
+    post:
+      operationId: createServiceTicket
+      tags: [serviceTickets]
+      summary: Create service ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTicketInput"
+      responses:
+        "201":
+          description: Service ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTicket"
+
+  /v1/service-tickets/{id}:
+    get:
+      operationId: getServiceTicket
+      tags: [serviceTickets]
+      summary: Get service ticket with recent records
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTicketDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateServiceTicket
+      tags: [serviceTickets]
+      summary: Update service ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTicketUpdate"
+      responses:
+        "200":
+          description: Updated service ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTicket"
+        "404":
+          description: Not found
+
+  /v1/service-tickets/{id}/records:
+    get:
+      operationId: listServiceRecords
+      tags: [serviceTickets]
+      summary: List follow-up records for a ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service record timeline
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceRecord"
+    post:
+      operationId: createServiceRecord
+      tags: [serviceTickets]
+      summary: Add follow-up record to a ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceRecordInput"
+      responses:
+        "201":
+          description: Record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRecordCreateResponse"
+
   # APPROVALS
   /v1/approvals:
     get:
@@ -1856,6 +1998,8 @@ components:
           type: number
         myOpenTasksCount:
           type: integer
+        overdueServiceFollowUpsCount:
+          type: integer
         widgets:
           type: array
           items:
@@ -1986,6 +2130,161 @@ components:
           type: string
         completed:
           type: boolean
+
+    ServiceTicket:
+      type: object
+      required: [id, ticketNumber, title, clientId, status, priority, category]
+      properties:
+        id:
+          type: integer
+        ticketNumber:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        clientId:
+          type: integer
+        clientName:
+          type: ["string", "null"]
+        projectId:
+          type: ["integer", "null"]
+        projectName:
+          type: ["string", "null"]
+        assigneeId:
+          type: ["integer", "null"]
+        assigneeName:
+          type: ["string", "null"]
+        teamId:
+          type: ["integer", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+        category:
+          type: string
+        nextFollowUpAt:
+          type: ["string", "null"]
+        resolvedAt:
+          type: ["string", "null"]
+        createdById:
+          type: integer
+        createdByName:
+          type: ["string", "null"]
+        recordCount:
+          type: integer
+        lastRecordAt:
+          type: ["string", "null"]
+        followUpOverdue:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ServiceTicketDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServiceTicket"
+        - type: object
+          properties:
+            records:
+              type: array
+              items:
+                $ref: "#/components/schemas/ServiceRecord"
+
+    ServiceTicketInput:
+      type: object
+      required: [title, clientId]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        clientId:
+          type: integer
+        projectId:
+          type: integer
+        assigneeId:
+          type: integer
+        teamId:
+          type: integer
+        priority:
+          type: string
+        status:
+          type: string
+        category:
+          type: string
+        nextFollowUpAt:
+          type: string
+
+    ServiceTicketUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        projectId:
+          type: ["integer", "null"]
+        assigneeId:
+          type: ["integer", "null"]
+        teamId:
+          type: ["integer", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+        category:
+          type: string
+        nextFollowUpAt:
+          type: ["string", "null"]
+
+    ServiceRecord:
+      type: object
+      required: [id, ticketId, recordType, body, createdById, createdAt]
+      properties:
+        id:
+          type: integer
+        ticketId:
+          type: integer
+        recordType:
+          type: string
+        body:
+          type: string
+        statusAfter:
+          type: ["string", "null"]
+        nextFollowUpAt:
+          type: ["string", "null"]
+        createdById:
+          type: integer
+        authorName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ServiceRecordInput:
+      type: object
+      required: [body]
+      properties:
+        recordType:
+          type: string
+        body:
+          type: string
+          minLength: 1
+        statusAfter:
+          type: string
+        nextFollowUpAt:
+          type: string
+
+    ServiceRecordCreateResponse:
+      type: object
+      required: [record, ticket]
+      properties:
+        record:
+          $ref: "#/components/schemas/ServiceRecord"
+        ticket:
+          $ref: "#/components/schemas/ServiceTicket"
 
     Task:
       type: object

@@ -15,3 +15,5 @@ export * from "./reports";
 export * from "./channels";
 export * from "./activity";
 export * from "./calendar";
+export * from "./service_tickets";
+export * from "./service_records";

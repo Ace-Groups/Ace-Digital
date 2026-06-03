@@ -161,6 +161,72 @@ async function seed() {
     createdAt: now,
   });
 
+  const followUpSoon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+  const followUpOverdue = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+  await setDoc("service_tickets", 1, {
+    ticketNumber: "ST-2026-0001",
+    title: "ERP login errors after patch",
+    description: "Client reports intermittent 500s on SSO after weekend deploy.",
+    clientId: 1,
+    projectId: 1,
+    assigneeId: 3,
+    teamId: 1,
+    priority: "HIGH",
+    status: "IN_PROGRESS",
+    category: "SUPPORT",
+    nextFollowUpAt: followUpSoon,
+    resolvedAt: null,
+    createdById: 5,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await setDoc("service_tickets", 2, {
+    ticketNumber: "ST-2026-0002",
+    title: "Monthly billing export mismatch",
+    description: "Finance totals do not match contract line items.",
+    clientId: 1,
+    projectId: null,
+    assigneeId: 6,
+    teamId: 4,
+    priority: "MEDIUM",
+    status: "OPEN",
+    category: "BILLING",
+    nextFollowUpAt: followUpOverdue,
+    resolvedAt: null,
+    createdById: 5,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await setDoc("service_records", 1, {
+    ticketId: 1,
+    recordType: "PHONE",
+    body: "Spoke with Raj — asked for error logs from 6pm IST window.",
+    statusAfter: "IN_PROGRESS",
+    nextFollowUpAt: followUpSoon,
+    createdById: 3,
+    createdAt: now,
+  });
+  await setDoc("service_records", 2, {
+    ticketId: 1,
+    recordType: "NOTE",
+    body: "Collected logs; engineering reproducing on staging.",
+    statusAfter: null,
+    nextFollowUpAt: null,
+    createdById: 7,
+    createdAt: now,
+  });
+  await setDoc("service_records", 3, {
+    ticketId: 2,
+    recordType: "EMAIL",
+    body: "Sent reconciliation template to client finance contact.",
+    statusAfter: "WAITING_CLIENT",
+    nextFollowUpAt: followUpOverdue,
+    createdById: 6,
+    createdAt: now,
+  });
+
   await db.collection("_meta").doc("counters").set({
     teams: 6,
     users: 12,
@@ -177,6 +243,9 @@ async function seed() {
     messages: 10,
     activity_logs: 8,
     notifications: 0,
+    service_tickets: 2,
+    service_records: 3,
+    serviceTicketSeq: 2,
   });
 
   console.log("✅ Firestore seeded. Login: admin@acedigital.com / Admin@123");

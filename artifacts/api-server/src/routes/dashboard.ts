@@ -58,6 +58,7 @@ router.get(
     activeClientsCount: dash.activeClientsCount ?? 0,
     contractValueTotal: dash.contractValueTotal ?? 0,
     myOpenTasksCount: dash.myOpenTasksCount ?? 0,
+    overdueServiceFollowUpsCount: dash.overdueServiceFollowUpsCount ?? 0,
     widgets: dash.widgets,
     recentActivity: dash.recentActivity.map((a) => ({
       id: a.id,
