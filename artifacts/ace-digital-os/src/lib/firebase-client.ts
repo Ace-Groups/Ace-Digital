@@ -83,7 +83,8 @@ export async function ensureFirebaseAuth(): Promise<boolean> {
         headers: authHeader(),
       });
       if (!res.ok) {
-        if (res.status === 404 || res.status === 503) {
+        // 404 = feature disabled; 503 is transient (do not block retries after server/IAM fixes).
+        if (res.status === 404) {
           firebaseAuthUnavailable = true;
         }
         return false;

@@ -10,9 +10,12 @@ export async function createFirebaseCustomToken(
   claims: { role: string; teamId: number | null },
 ): Promise<string> {
   ensureAdminApp();
-  return getAuth().createCustomToken(String(userId), {
+  const customClaims: Record<string, string> = {
     userId: String(userId),
     role: claims.role,
-    teamId: claims.teamId != null ? String(claims.teamId) : null,
-  });
+  };
+  if (claims.teamId != null) {
+    customClaims.teamId = String(claims.teamId);
+  }
+  return getAuth().createCustomToken(String(userId), customClaims);
 }

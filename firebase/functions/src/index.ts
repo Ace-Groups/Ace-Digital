@@ -49,7 +49,8 @@ export const api = functions
     timeoutSeconds: 60,
     maxInstances: 10,
     secrets: [jwtSecret, resendApiKey, emailFrom],
-    serviceAccount: "ace-digital-os@appspot.gserviceaccount.com",
+    // Firebase Admin SDK SA can mint custom tokens; App Engine default SA often cannot.
+    serviceAccount: "firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {
     try {

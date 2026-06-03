@@ -6,6 +6,7 @@ import {
   useListChannels,
   useGetChannelMessages,
   getGetChannelMessagesQueryKey,
+  type MessageInput,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";

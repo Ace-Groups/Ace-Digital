@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (token && user) {
+      resetFirebaseAuthState();
       void ensureFirebaseAuth();
     }
   }, [token, user?.id]);

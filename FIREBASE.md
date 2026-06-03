@@ -155,7 +155,19 @@ Opening `…cloudfunctions.net/api` in Safari shows API metadata JSON after depl
 ## Deploy troubleshooting
 
 - **Hosting** `Assertion failed: resolving hosting target...` — `firebase.json` must include `"site": "ace-digital-os"` under `hosting`.
-- **Functions** `...-compute@developer.gserviceaccount.com doesn't exist` — use `serviceAccount: "ace-digital-os@appspot.gserviceaccount.com"` in `firebase/functions/src/index.ts` (`runWith`).
+- **Functions** `...-compute@developer.gserviceaccount.com doesn't exist` — the `api` function uses `firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com` in `firebase/functions/src/index.ts` (`runWith`) so custom tokens and Admin SDK calls work.
+- **`/api/v1/auth/firebase-custom-token` returns 503** — the function’s service account must be allowed to mint custom tokens. One-time IAM (replace project ID if needed):
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com \
+  --project=ace-digital-os \
+  --member="serviceAccount:ace-digital-os@appspot.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+gcloud iam service-accounts add-iam-policy-binding ace-digital-os@appspot.gserviceaccount.com \
+  --project=ace-digital-os \
+  --member="serviceAccount:ace-digital-os@appspot.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+```
 - **Artifact cleanup policy** (non-fatal after a successful deploy) — run `npx firebase-tools functions:artifacts:setpolicy --project ace-digital-os` or deploy functions with `--force`.
 
 ## Local commands

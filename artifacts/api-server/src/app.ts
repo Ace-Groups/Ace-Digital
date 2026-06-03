@@ -8,6 +8,9 @@ import { getCorsOptions } from "./lib/cors";
 
 const app: Express = express();
 
+// Firebase Hosting / Cloud Functions set X-Forwarded-*; required for express-rate-limit.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -28,7 +31,8 @@ app.use(
   }),
 );
 app.use(cors(getCorsOptions()));
-app.use(express.json({ limit: "1mb" }));
+// Chat messages may include compressed inline attachments (see MAX_ATTACHMENT_DATA_URL_LENGTH).
+app.use(express.json({ limit: "12mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 const apiLimiter = rateLimit({

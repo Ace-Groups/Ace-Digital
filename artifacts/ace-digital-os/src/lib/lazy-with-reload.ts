@@ -21,11 +21,11 @@ export function lazyWithReload<T extends ComponentType<object>>(
           if (!sessionStorage.getItem("ace-chunk-reload")) {
             sessionStorage.setItem("ace-chunk-reload", "1");
             window.location.reload();
-            return { default: (() => null) as T };
+            return { default: (() => null) as unknown as T };
           }
         } catch {
           window.location.reload();
-          return { default: (() => null) as T };
+          return { default: (() => null) as unknown as T };
         }
       }
       throw error;

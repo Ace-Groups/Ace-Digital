@@ -15,6 +15,7 @@ import {
   MAX_PENDING_ATTACHMENTS,
 } from "@/lib/chat-constants";
 import { prepareChatAttachment, prepareChatBlobAttachment } from "@/lib/chat-attachments";
+import { partitionAttachments, buildSendBatches } from "@/lib/chat-batch";
 
 const GALLERY_ACCEPT = "image/*,video/*";
 const DOCUMENT_ACCEPT =

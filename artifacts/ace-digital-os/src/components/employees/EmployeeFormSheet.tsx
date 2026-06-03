@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Employee } from "@workspace/api-client-react";
 import {
   useGetNextEmployeeCode,
+  getGetNextEmployeeCodeQueryKey,
   getListTeamsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -159,15 +160,14 @@ export function EmployeeFormSheet({
   const employeeCodeTouched = useRef(false);
   const queryClient = useQueryClient();
 
-  const { data: nextCode } = useGetNextEmployeeCode(
-    { startDate: startDateWatch || undefined },
-    {
-      query: {
-        enabled: open && mode === "create",
-        staleTime: 0,
-      },
+  const nextCodeParams = { startDate: startDateWatch || undefined };
+  const { data: nextCode } = useGetNextEmployeeCode(nextCodeParams, {
+    query: {
+      queryKey: getGetNextEmployeeCodeQueryKey(nextCodeParams),
+      enabled: open && mode === "create",
+      staleTime: 0,
     },
-  );
+  });
 
   useEffect(() => {
     if (!open || mode !== "create") {
@@ -214,7 +214,21 @@ export function EmployeeFormSheet({
     });
   }, [open, mode, createForm]);
 
-  function mapCommon<T extends { teamId?: string; baseSalary?: string; bonus?: string }>(data: T) {
+  function mapCommon<
+    T extends {
+      fullName: string;
+      email: string;
+      role: string;
+      teamId?: string;
+      jobTitle?: string;
+      phone?: string;
+      employeeCode?: string;
+      startDate?: string;
+      status: string;
+      baseSalary?: string;
+      bonus?: string;
+    },
+  >(data: T) {
     return {
       fullName: data.fullName,
       email: data.email,
@@ -360,9 +374,7 @@ function FormFields({
   onEmployeeCodeManualEdit,
   onCreateTeamClick,
 }: {
-  form: {
-    control: never;
-  };
+  form: ReturnType<typeof useForm<CreateForm>>;
   teams?: { id: number; name: string }[];
   roles: string[];
   canViewSalaries: boolean;
@@ -371,12 +383,11 @@ function FormFields({
   onEmployeeCodeManualEdit?: () => void;
   onCreateTeamClick?: () => void;
 }) {
-  const f = form as ReturnType<typeof useForm<CreateForm>>;
   return (
     <>
       <p className="text-sm font-medium text-muted-foreground">Personal</p>
       <FormField
-        control={f.control}
+        control={form.control}
         name="fullName"
         render={({ field }) => (
           <FormItem>
@@ -389,7 +400,7 @@ function FormFields({
         )}
       />
       <FormField
-        control={f.control}
+        control={form.control}
         name="email"
         render={({ field }) => (
           <FormItem>
@@ -408,7 +419,7 @@ function FormFields({
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
-          control={f.control}
+          control={form.control}
           name="phone"
           render={({ field }) => (
             <FormItem>
@@ -420,7 +431,7 @@ function FormFields({
           )}
         />
         <FormField
-          control={f.control}
+          control={form.control}
           name="employeeCode"
           render={({ field }) => (
             <FormItem>
@@ -445,7 +456,7 @@ function FormFields({
         />
       </div>
       <FormField
-        control={f.control}
+        control={form.control}
         name="startDate"
         render={({ field }) => (
           <FormItem>
@@ -465,7 +476,7 @@ function FormFields({
       <p className="text-sm font-medium text-muted-foreground">Role & team</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
-          control={f.control}
+          control={form.control}
           name="role"
           render={({ field }) => (
             <FormItem>
@@ -488,7 +499,7 @@ function FormFields({
           )}
         />
         <FormField
-          control={f.control}
+          control={form.control}
           name="teamId"
           render={({ field }) => (
             <FormItem>
@@ -522,7 +533,7 @@ function FormFields({
         />
       </div>
       <FormField
-        control={f.control}
+        control={form.control}
         name="jobTitle"
         render={({ field }) => (
           <FormItem>
@@ -534,7 +545,7 @@ function FormFields({
         )}
       />
       <FormField
-        control={f.control}
+        control={form.control}
         name="status"
         render={({ field }) => (
           <FormItem>
@@ -559,7 +570,7 @@ function FormFields({
           <p className="text-sm font-medium text-muted-foreground">Compensation</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
-              control={f.control}
+              control={form.control}
               name="baseSalary"
               render={({ field }) => (
                 <FormItem>
@@ -571,7 +582,7 @@ function FormFields({
               )}
             />
             <FormField
-              control={f.control}
+              control={form.control}
               name="bonus"
               render={({ field }) => (
                 <FormItem>
@@ -585,7 +596,7 @@ function FormFields({
           </div>
           {isEdit && (
             <FormField
-              control={f.control}
+              control={form.control}
               name="payrollStatus"
               render={({ field }) => (
                 <FormItem>

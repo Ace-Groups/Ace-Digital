@@ -404,32 +404,41 @@ router.post(
       res.status(400).json({ error: err instanceof Error ? err.message : "Invalid message" });
       return;
     }
-    const sender = await store.findUserById(ctx.userId);
-    const message = await store.createMessage({
-      channelId: id,
-      senderId: ctx.userId,
-      body: payload.body,
-      attachments: payload.attachments ?? null,
-      messageKind: payload.messageKind,
-      metadata: payload.metadata ?? null,
-      senderName: sender?.fullName ?? null,
-      senderAvatar: sender?.avatarUrl ?? null,
-    });
 
-    void notifyChannelMembers(
-      id,
-      ctx.userId,
-      access.channel.name,
-      messagePreview(message.body, message.attachments, message.messageKind),
-    ).catch((err) => console.error("[chat-notify]", err));
+    try {
+      const sender = await store.findUserById(ctx.userId);
+      const message = await store.createMessage({
+        channelId: id,
+        senderId: ctx.userId,
+        body: payload.body,
+        attachments: payload.attachments ?? null,
+        messageKind: payload.messageKind,
+        metadata: payload.metadata ?? null,
+        senderName: sender?.fullName ?? null,
+        senderAvatar: sender?.avatarUrl ?? null,
+      });
 
-    res.status(201).json(
-      messageToJson(
-        message,
-        sender?.fullName ?? "Unknown",
-        sender?.avatarUrl ?? null,
-      ),
-    );
+      void notifyChannelMembers(
+        id,
+        ctx.userId,
+        access.channel.name,
+        messagePreview(message.body, message.attachments, message.messageKind),
+      ).catch((err) => console.error("[chat-notify]", err));
+
+      res.status(201).json(
+        messageToJson(
+          message,
+          sender?.fullName ?? "Unknown",
+          sender?.avatarUrl ?? null,
+        ),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send message";
+      console.error("[channels/messages]", message);
+      const tooLarge =
+        /too large|payload|entity too large|exceed.*size|1\s*MiB|1048576/i.test(message);
+      res.status(tooLarge ? 413 : 500).json({ error: message });
+    }
   },
 );
 

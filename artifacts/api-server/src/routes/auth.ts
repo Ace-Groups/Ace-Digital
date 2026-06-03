@@ -114,9 +114,9 @@ router.get("/v1/auth/firebase-custom-token", requireAuth, async (req, res): Prom
     });
     res.json({ token });
   } catch (err) {
-    res.status(503).json({
-      error: err instanceof Error ? err.message : "Firebase auth unavailable",
-    });
+    const message = err instanceof Error ? err.message : "Firebase auth unavailable";
+    console.error("[firebase-custom-token]", message);
+    res.status(503).json({ error: message });
   }
 });
 
