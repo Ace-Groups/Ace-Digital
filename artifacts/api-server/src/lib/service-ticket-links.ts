@@ -62,30 +62,29 @@ export async function resolveServiceTicketCreateLinks(input: {
     };
   }
 
-  if (input.clientId == null) {
-    return { ok: false, error: "Client is required" };
+  if (input.projectId == null) {
+    return { ok: false, error: "Project is required" };
   }
-  const client = await store.findClientById(input.clientId);
-  if (!client) return { ok: false, error: "Client not found" };
+  const project = await store.findProjectById(input.projectId);
+  if (!project) return { ok: false, error: "Project not found" };
 
-  let projectId = input.projectId ?? null;
-  if (projectId != null) {
-    const project = await store.findProjectById(projectId);
-    if (!project) return { ok: false, error: "Project not found" };
-    if (project.clientId != null && project.clientId !== input.clientId) {
+  let clientId = input.clientId ?? null;
+  if (clientId != null) {
+    const client = await store.findClientById(clientId);
+    if (!client) return { ok: false, error: "Client not found" };
+    if (project.clientId != null && project.clientId !== clientId) {
       return { ok: false, error: "Project does not belong to this client" };
     }
   }
+
+  const projectId = project.id;
 
   let taskId = input.taskId ?? null;
   if (taskId != null) {
     const task = await store.findTaskById(taskId);
     if (!task) return { ok: false, error: "Task not found" };
-    if (projectId != null && task.projectId != null && task.projectId !== projectId) {
+    if (task.projectId != null && task.projectId !== projectId) {
       return { ok: false, error: "Task does not belong to this project" };
-    }
-    if (projectId == null && task.projectId != null) {
-      projectId = task.projectId;
     }
   }
 
@@ -93,7 +92,7 @@ export async function resolveServiceTicketCreateLinks(input: {
     ok: true,
     links: {
       linkType: "CLIENT",
-      clientId: input.clientId,
+      clientId,
       projectId,
       taskId,
       teamId: input.defaultTeamId,

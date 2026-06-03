@@ -44,8 +44,8 @@ const schema = z
   })
   .superRefine((data, ctx) => {
     if (data.linkType === "CLIENT") {
-      if (!data.clientId) {
-        ctx.addIssue({ code: "custom", message: "Client required", path: ["clientId"] });
+      if (!data.projectId || data.projectId === NO_PROJECT) {
+        ctx.addIssue({ code: "custom", message: "Project required", path: ["projectId"] });
       }
     } else if (!data.todoTaskId) {
       ctx.addIssue({ code: "custom", message: "Select a to-do", path: ["todoTaskId"] });
@@ -55,6 +55,7 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 const NO_PROJECT = "__none__";
+const NO_CLIENT = "__none__";
 const NO_TASK = "__none__";
 const NO_ASSIGNEE = "__none__";
 
@@ -86,7 +87,7 @@ export function CreateServiceTicketSheet({
     defaultValues: {
       linkType: "CLIENT",
       title: "",
-      clientId: "",
+      clientId: NO_CLIENT,
       description: "",
       priority: "MEDIUM",
       category: "SUPPORT",
@@ -102,9 +103,10 @@ export function CreateServiceTicketSheet({
   const projectId = form.watch("projectId");
 
   const clientProjects = useMemo(() => {
-    if (!clientId) return projects ?? [];
+    const all = projects ?? [];
+    if (!clientId || clientId === NO_CLIENT) return all;
     const cid = Number(clientId);
-    return (projects ?? []).filter((p) => p.clientId == null || p.clientId === cid);
+    return all.filter((p) => p.clientId == null || p.clientId === cid);
   }, [projects, clientId]);
 
   const projectTasks = useMemo(() => {
@@ -122,7 +124,7 @@ export function CreateServiceTicketSheet({
     if (linkType === "CLIENT") {
       form.setValue("todoTaskId", "");
     } else {
-      form.setValue("clientId", "");
+      form.setValue("clientId", NO_CLIENT);
       form.setValue("projectId", NO_PROJECT);
       form.setValue("taskId", NO_TASK);
     }
@@ -139,7 +141,10 @@ export function CreateServiceTicketSheet({
       : data.taskId && data.taskId !== NO_TASK
         ? Number(data.taskId)
         : undefined;
-    const resolvedClientId = isTodo ? undefined : Number(data.clientId);
+    const resolvedClientId =
+      isTodo || !data.clientId || data.clientId === NO_CLIENT
+        ? undefined
+        : Number(data.clientId);
     const resolvedProjectId =
       !isTodo && data.projectId && data.projectId !== NO_PROJECT
         ? Number(data.projectId)
@@ -156,9 +161,14 @@ export function CreateServiceTicketSheet({
       clientId: resolvedClientId ?? null,
       clientName: isTodo
         ? "Internal to-do"
-        : clients?.find((c) => c.id === resolvedClientId)?.companyName ?? null,
+        : resolvedClientId != null
+          ? (clients?.find((c) => c.id === resolvedClientId)?.companyName ?? null)
+          : null,
       projectId: resolvedProjectId ?? null,
-      projectName: null,
+      projectName:
+        resolvedProjectId != null
+          ? (projects?.find((p) => p.id === resolvedProjectId)?.name ?? null)
+          : null,
       taskId: resolvedTaskId ?? null,
       taskTitle: tasks?.find((t) => t.id === resolvedTaskId)?.title ?? null,
       assigneeId:
@@ -285,20 +295,21 @@ export function CreateServiceTicketSheet({
             <>
               <FormField
                 control={form.control}
-                name="clientId"
+                name="projectId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client</FormLabel>
+                    <FormLabel>Project</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="min-h-11">
-                          <SelectValue placeholder="Select client" />
+                          <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(clients ?? []).map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.companyName}
+                        {clientProjects.map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name}
+                            {p.clientName ? ` · ${p.clientName}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -309,25 +320,21 @@ export function CreateServiceTicketSheet({
               />
               <FormField
                 control={form.control}
-                name="projectId"
+                name="clientId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project (optional)</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={!clientId}
-                    >
+                    <FormLabel>Client (optional)</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="min-h-11">
-                          <SelectValue placeholder={clientId ? "None" : "Select client first"} />
+                          <SelectValue placeholder="None" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_PROJECT}>None</SelectItem>
-                        {clientProjects.map((p) => (
-                          <SelectItem key={p.id} value={String(p.id)}>
-                            {p.name}
+                        <SelectItem value={NO_CLIENT}>None</SelectItem>
+                        {(clients ?? []).map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.companyName}
                           </SelectItem>
                         ))}
                       </SelectContent>

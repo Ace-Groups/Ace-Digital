@@ -160,9 +160,13 @@ export default function ServiceDeskPage() {
                         </div>
                         <p className="truncate font-medium text-foreground">{t.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t.linkType === "TODO" ? "To-do" : t.clientName ?? "—"}
+                          {t.linkType === "TODO"
+                            ? "To-do"
+                            : t.clientName ?? t.projectName ?? "—"}
                           {t.taskTitle ? ` · ${t.taskTitle}` : ""}
-                          {t.projectName && t.linkType === "CLIENT" ? ` · ${t.projectName}` : ""}
+                          {t.projectName && t.clientName && t.linkType === "CLIENT"
+                            ? ` · ${t.projectName}`
+                            : ""}
                           {t.assigneeName ? ` · ${t.assigneeName}` : ""}
                           {t.recordCount ? ` · ${t.recordCount} follow-up${t.recordCount === 1 ? "" : "s"}` : ""}
                         </p>
