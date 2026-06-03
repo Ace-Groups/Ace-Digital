@@ -281,8 +281,13 @@ export function MessageComposer({
   return (
     <>
       <div
-        className="z-10 shrink-0 border-t border-border bg-card/95 px-2 py-2 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 sm:py-2.5"
-        style={{ transform: keyboardOffset ? `translateY(-${keyboardOffset}px)` : undefined }}
+        className="z-10 shrink-0 border-t border-border bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4"
+        style={{
+          paddingBottom:
+            keyboardOffset > 0
+              ? `${keyboardOffset}px`
+              : "max(0.75rem, env(safe-area-inset-bottom))",
+        }}
       >
         {pendingFiles.length > 0 && !isRecording && (
           <div className="mb-2 flex gap-2 overflow-x-auto pb-1 touch-scroll px-1">
@@ -331,10 +336,10 @@ export function MessageComposer({
         )}
 
         {isRecording ? (
-          <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-2 py-1.5">
+          <div className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-muted/40 px-2">
             <button
               type="button"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive active:bg-destructive/10"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-destructive active:bg-destructive/10"
               onClick={() => voice.cancel()}
               aria-label="Cancel recording"
             >
@@ -353,7 +358,7 @@ export function MessageComposer({
             <button
               type="button"
               disabled={sending || disabled}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
               onClick={() => void handleVoiceSend()}
               aria-label="Send voice message"
             >
@@ -361,25 +366,25 @@ export function MessageComposer({
             </button>
           </div>
         ) : (
-          <div className="flex items-end gap-1 sm:gap-1.5">
+          <div className="flex items-end gap-2">
             <button
               type="button"
               data-testid="btn-attach"
               disabled={attachDisabled}
               onClick={() => setAttachOpen(true)}
               className={cn(
-                "mb-0.5 flex h-11 w-10 shrink-0 items-center justify-center rounded-full sm:w-11",
+                "flex size-11 shrink-0 items-center justify-center rounded-full",
                 "text-muted-foreground transition-colors hover:bg-muted/60 active:bg-muted disabled:opacity-40",
               )}
               aria-label="Attach"
             >
-              <Paperclip size={22} />
+              <Paperclip size={22} className="shrink-0" />
             </button>
 
             <div
               className={cn(
-                "flex min-h-11 min-w-0 flex-1 items-center rounded-3xl border border-border/80",
-                "bg-muted/30 px-3 py-1.5 shadow-sm",
+                "flex min-h-11 min-w-0 flex-1 items-center rounded-full border border-border/80",
+                "bg-muted/30 px-4 shadow-sm",
               )}
             >
               <textarea
@@ -394,7 +399,7 @@ export function MessageComposer({
                   autoResize();
                 }}
                 onKeyDown={handleKeyDown}
-                className="max-h-32 min-h-[2.25rem] w-full resize-none border-0 bg-transparent py-1.5 text-base leading-snug shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
+                className="my-2 max-h-32 min-h-6 w-full resize-none border-0 bg-transparent py-0 text-base leading-5 shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 sm:text-[0.9375rem]"
               />
             </div>
 
@@ -404,10 +409,10 @@ export function MessageComposer({
                 data-testid="btn-send-message"
                 onClick={() => void handleSend()}
                 disabled={!canSend}
-                className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
-                <Send size={20} />
+                <Send size={20} className="shrink-0" />
               </button>
             )}
 
@@ -416,10 +421,10 @@ export function MessageComposer({
                 type="button"
                 data-testid="btn-voice-message"
                 onClick={() => void handleMicPress()}
-                className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97]"
                 aria-label="Record voice message"
               >
-                <Mic size={22} />
+                <Mic size={22} className="shrink-0" />
               </button>
             )}
           </div>

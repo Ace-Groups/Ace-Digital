@@ -295,7 +295,7 @@ export default function ChannelsPage() {
     selectedChannelId &&
     typeof document !== "undefined"
       ? createPortal(
-          <div className="fixed inset-0 z-[100] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background pt-[env(safe-area-inset-top)]">
+          <div className="fixed inset-0 z-[100] grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             {threadContent}
           </div>,
           document.body,

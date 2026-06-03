@@ -16,13 +16,13 @@ export function ChannelThreadHeader({
   onOpenSettings,
 }: ChannelThreadHeaderProps) {
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-3 sm:gap-3 sm:px-4">
+    <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:gap-3 sm:px-4">
       {isMobile && onBack && (
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-11 w-11 shrink-0"
+          className="size-11 shrink-0"
           onClick={onBack}
           aria-label="Back to channels"
         >
@@ -30,21 +30,25 @@ export function ChannelThreadHeader({
         </Button>
       )}
       {channel.type === "ANNOUNCEMENT" ? (
-        <Megaphone size={18} className="text-primary shrink-0" />
+        <Megaphone size={20} className="shrink-0 text-primary" />
       ) : (
-        <Hash size={18} className="text-primary shrink-0" />
+        <Hash size={20} className="shrink-0 text-primary" />
       )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-foreground">{channel.name}</p>
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <p className="truncate font-semibold leading-tight text-foreground">{channel.name}</p>
         {channel.description ? (
-          <p className="truncate text-xs text-muted-foreground">{channel.description}</p>
+          <p className="truncate text-xs leading-tight text-muted-foreground">
+            {channel.description}
+          </p>
         ) : channel.teamName ? (
-          <p className="text-xs text-muted-foreground">{channel.teamName} team</p>
+          <p className="truncate text-xs leading-tight text-muted-foreground">
+            {channel.teamName} team
+          </p>
         ) : null}
       </div>
       {channel.memberCount != null && (
-        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-          <Users size={14} />
+        <span className="flex h-11 shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <Users size={16} className="shrink-0" />
           {channel.memberCount}
         </span>
       )}
@@ -53,12 +57,12 @@ export function ChannelThreadHeader({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="size-11 shrink-0"
           onClick={onOpenSettings}
           aria-label="Channel settings"
           data-testid="btn-channel-settings"
         >
-          <Settings size={18} />
+          <Settings size={20} />
         </Button>
       )}
     </div>
