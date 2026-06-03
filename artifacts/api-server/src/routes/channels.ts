@@ -67,6 +67,7 @@ router.get(
         id: c.id,
         name: c.name,
         description: c.description,
+        avatarUrl: c.avatarUrl ?? null,
         teamId: c.teamId,
         teamName: c.teamId ? (teamMap[c.teamId] ?? null) : null,
         type: c.type,
@@ -193,8 +194,13 @@ router.patch(
       return;
     }
 
-    const { name, description, archived } = req.body ?? {};
-    const patch: { name?: string; description?: string | null; archived?: boolean } = {};
+    const { name, description, archived, avatarUrl } = req.body ?? {};
+    const patch: {
+      name?: string;
+      description?: string | null;
+      archived?: boolean;
+      avatarUrl?: string | null;
+    } = {};
     if (name !== undefined) {
       const normalized = normalizeChannelName(name);
       if (!normalized) {
@@ -205,6 +211,27 @@ router.patch(
     }
     if (description !== undefined) patch.description = description;
     if (archived !== undefined) patch.archived = Boolean(archived);
+    if (avatarUrl !== undefined) {
+      if (avatarUrl === null || avatarUrl === "") {
+        patch.avatarUrl = null;
+      } else if (typeof avatarUrl === "string" && avatarUrl.length <= 2048) {
+        try {
+          const u = new URL(avatarUrl);
+          if (u.protocol === "http:" || u.protocol === "https:") {
+            patch.avatarUrl = avatarUrl;
+          } else {
+            res.status(400).json({ error: "Avatar URL must be http or https" });
+            return;
+          }
+        } catch {
+          res.status(400).json({ error: "Invalid avatar URL" });
+          return;
+        }
+      } else {
+        res.status(400).json({ error: "Invalid avatar URL" });
+        return;
+      }
+    }
 
     const updated = await store.updateChannel(id, patch);
     if (!updated) {

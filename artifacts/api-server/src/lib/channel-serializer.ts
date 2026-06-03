@@ -28,6 +28,7 @@ export async function channelToJson(
     id: channel.id,
     name: channel.name,
     description: channel.description,
+    avatarUrl: channel.avatarUrl ?? null,
     teamId: channel.teamId,
     teamName: team?.name ?? null,
     type: channel.type,

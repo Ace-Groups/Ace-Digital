@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ChannelMembersPanel } from "./ChannelMembersPanel";
+import { ChannelIcon } from "./ChannelIcon";
 import type { Channel } from "@workspace/api-client-react";
 import { Loader2, Archive } from "lucide-react";
 
@@ -34,11 +35,13 @@ export function ChannelSettingsSheet({
   const updateChannel = useUpdateChannel();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
     if (channel) {
       setName(channel.name);
       setDescription(channel.description ?? "");
+      setAvatarUrl(channel.avatarUrl ?? "");
     }
   }, [channel]);
 
@@ -51,12 +54,14 @@ export function ChannelSettingsSheet({
 
   async function handleSave() {
     if (!channel) return;
+    const trimmedAvatar = avatarUrl.trim();
     try {
       await updateChannel.mutateAsync({
         id: channel.id,
         data: {
           name: name.trim(),
           description: description.trim() || null,
+          avatarUrl: trimmedAvatar ? trimmedAvatar : null,
         },
       });
       await invalidate();
@@ -89,6 +94,30 @@ export function ChannelSettingsSheet({
       <div className="space-y-6 px-1 pb-6">
         {canManage ? (
           <>
+            <div className="flex items-center gap-4">
+              <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
+                <ChannelIcon
+                  channel={{
+                    ...channel,
+                    avatarUrl: avatarUrl.trim() || channel.avatarUrl || null,
+                  }}
+                  size={40}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <Label htmlFor="settings-avatar">Channel image URL</Label>
+                <Input
+                  id="settings-avatar"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste a public image link (https). Leave empty for the default icon.
+                </p>
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="settings-name">Name</Label>
@@ -113,7 +142,9 @@ export function ChannelSettingsSheet({
                 className="w-full"
               >
                 {updateChannel.isPending ? (
-                  <><Loader2 size={16} className="animate-spin mr-2" /> Saving…</>
+                  <>
+                    <Loader2 size={16} className="animate-spin mr-2" /> Saving…
+                  </>
                 ) : (
                   "Save changes"
                 )}
@@ -136,10 +167,23 @@ export function ChannelSettingsSheet({
             </div>
           </>
         ) : (
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Members</h3>
-            <ChannelMembersPanel channelId={channel.id} canManage={false} />
-          </div>
+          <>
+            <div className="flex items-center gap-3">
+              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
+                <ChannelIcon channel={channel} size={32} className="rounded-xl" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold">{channel.name}</p>
+                {channel.description ? (
+                  <p className="text-sm text-muted-foreground">{channel.description}</p>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Members</h3>
+              <ChannelMembersPanel channelId={channel.id} canManage={false} />
+            </div>
+          </>
         )}
       </div>
     </ResponsiveSheet>

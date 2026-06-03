@@ -2750,6 +2750,8 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
         teamId:
           type: ["integer", "null"]
         teamName:
@@ -2801,6 +2803,8 @@ components:
         name:
           type: string
         description:
+          type: ["string", "null"]
+        avatarUrl:
           type: ["string", "null"]
         archived:
           type: boolean

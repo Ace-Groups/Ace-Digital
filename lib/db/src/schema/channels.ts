@@ -13,6 +13,7 @@ export const channelsTable = pgTable("channels", {
   type: text("type").notNull().default("TEAM"),
   visibility: text("visibility").notNull().default("PRIVATE"),
   archived: boolean("archived").notNull().default(false),
+  avatarUrl: text("avatar_url"),
   lastPostAt: timestamp("last_post_at", { withTimezone: true }),
   messageCount: integer("message_count").notNull().default(0),
   createdById: integer("created_by_id").references(() => usersTable.id),

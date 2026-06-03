@@ -5,7 +5,9 @@ import {
   useListChannels,
   useGetChannelMessages,
   useDeleteMessage,
+  useListChannelMembers,
   getGetChannelMessagesQueryKey,
+  getListChannelMembersQueryKey,
   type Message,
   type MessageInput,
 } from "@workspace/api-client-react";
@@ -79,9 +81,19 @@ export default function ChannelsPage() {
     ? { userId: user.id, role: user.role, teamId: user.teamId }
     : null;
 
-  const membership = selectedChannel?.myRole
-    ? { role: selectedChannel.myRole }
-    : null;
+  const { data: channelMembers } = useListChannelMembers(selectedChannelId ?? 0, {
+    query: {
+      enabled: !!selectedChannelId,
+      queryKey: getListChannelMembersQueryKey(selectedChannelId ?? 0),
+      staleTime: 60_000,
+    },
+  });
+
+  const myRoleFromMembers = channelMembers?.find((m) => m.userId === user?.id)?.role;
+  const membership =
+    selectedChannel?.myRole || myRoleFromMembers
+      ? { role: selectedChannel?.myRole ?? myRoleFromMembers ?? "member" }
+      : null;
 
   const canPost =
     selectedChannel &&
@@ -215,9 +227,22 @@ export default function ChannelsPage() {
     setRoomSearch("");
   }, [selectedChannelId, setActiveReply]);
 
+  const latestPersistedMessageId = useMemo(() => {
+    for (let i = roomMessages.length - 1; i >= 0; i--) {
+      const m = roomMessages[i]!;
+      if (!("status" in m)) return m.id;
+    }
+    return null;
+  }, [roomMessages]);
+
   const handleMarkRead = useCallback(() => {
-    if (selectedChannelId) void markRead(selectedChannelId);
-  }, [selectedChannelId, markRead]);
+    if (selectedChannelId) markRead(selectedChannelId, latestPersistedMessageId);
+  }, [selectedChannelId, markRead, latestPersistedMessageId]);
+
+  useEffect(() => {
+    if (!selectedChannelId || !latestPersistedMessageId || !shouldAutoScroll) return;
+    markRead(selectedChannelId, latestPersistedMessageId);
+  }, [selectedChannelId, latestPersistedMessageId, shouldAutoScroll, markRead]);
 
   const handleLoadOlder = useCallback(async () => {
     setLoadingOlder(true);
@@ -337,7 +362,7 @@ export default function ChannelsPage() {
   }
 
   const showList = !isMobile || !mobileThreadOpen;
-  const canCreate = can("channels:write");
+  const canCreate = can("channels:write") || can("channels:all");
 
   const threadContent = (
     <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background">

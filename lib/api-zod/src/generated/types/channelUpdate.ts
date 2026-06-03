@@ -10,5 +10,7 @@ export interface ChannelUpdate {
   name?: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  avatarUrl?: string | null;
   archived?: boolean;
 }

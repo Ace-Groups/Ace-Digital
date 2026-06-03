@@ -839,7 +839,13 @@ export function createFirestoreStore() {
           const cid = Number(data.channelId);
           counts.set(cid, (counts.get(cid) ?? 0) + 1);
           if (Number(data.userId) === userId) {
-            roles.set(cid, data.role as ChannelMemberRole);
+            const role = String(data.role ?? "member").toLowerCase();
+            roles.set(
+              cid,
+              (role === "owner" || role === "member" || role === "viewer"
+                ? role
+                : "member") as ChannelMemberRole,
+            );
             lastReadMessageIds.set(cid, (data.lastReadMessageId as number) ?? null);
             memberByChannel.set(cid, {
               lastReadAt: data.lastReadAt as string | undefined,
@@ -1545,6 +1551,7 @@ function mapChannel(data: FirebaseFirestore.DocumentData, id: string): Channel {
     id: Number(id),
     name: data.name as string,
     description: (data.description as string) ?? null,
+    avatarUrl: (data.avatarUrl as string) ?? null,
     teamId: (data.teamId as number) ?? null,
     type: data.type as string,
     visibility: (data.visibility as string) ?? "PRIVATE",

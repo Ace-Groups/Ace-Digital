@@ -686,7 +686,13 @@ export function createPostgresStore() {
       for (const row of rows) {
         counts.set(row.channelId, (counts.get(row.channelId) ?? 0) + 1);
         if (row.userId === userId) {
-          roleByChannel.set(row.channelId, row.role as ChannelMemberRole);
+          const role = String(row.role ?? "member").toLowerCase();
+          roleByChannel.set(
+            row.channelId,
+            (role === "owner" || role === "member" || role === "viewer"
+              ? role
+              : "member") as ChannelMemberRole,
+          );
           lastReadMessageIds.set(row.channelId, row.lastReadMessageId ?? null);
         }
       }

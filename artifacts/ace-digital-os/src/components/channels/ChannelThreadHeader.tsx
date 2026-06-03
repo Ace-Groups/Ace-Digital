@@ -1,4 +1,5 @@
-import { Hash, Megaphone, ArrowLeft, Settings, Users, Search } from "lucide-react";
+import { ArrowLeft, Settings, Users, Search } from "lucide-react";
+import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -58,11 +59,7 @@ export function ChannelThreadHeader({
             <ArrowLeft size={20} />
           </Button>
         )}
-        {channel.type === "ANNOUNCEMENT" ? (
-          <Megaphone size={20} className="shrink-0 text-primary" />
-        ) : (
-          <Hash size={20} className="shrink-0 text-primary" />
-        )}
+        <ChannelIcon channel={channel} size={20} className="text-primary" />
         <div className="flex min-w-0 flex-1 flex-col justify-center">
           <p className="truncate font-semibold leading-tight text-foreground">{channel.name}</p>
           {channel.description ? (

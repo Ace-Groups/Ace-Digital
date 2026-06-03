@@ -1402,6 +1402,7 @@ export const ListChannelsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "type": zod.string(),
@@ -1442,6 +1443,7 @@ export const GetChannelResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "type": zod.string(),
@@ -1468,6 +1470,7 @@ export const UpdateChannelParams = zod.object({
 export const UpdateChannelBody = zod.object({
   "name": zod.string().optional(),
   "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
   "archived": zod.boolean().optional()
 })
 
@@ -1475,6 +1478,7 @@ export const UpdateChannelResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
   "teamId": zod.number().nullish(),
   "teamName": zod.string().nullish(),
   "type": zod.string(),

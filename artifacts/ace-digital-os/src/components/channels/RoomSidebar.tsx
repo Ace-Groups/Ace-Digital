@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Hash, Megaphone, Plus, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,11 +65,7 @@ function RoomRow({
       )}
     >
       <div className="flex items-center gap-2">
-        {ch.type === "ANNOUNCEMENT" ? (
-          <Megaphone size={16} className="shrink-0" />
-        ) : (
-          <Hash size={16} className="shrink-0" />
-        )}
+        <ChannelIcon channel={ch} size={16} />
         <span
           className={cn(
             "min-w-0 flex-1 truncate",
@@ -191,19 +188,20 @@ export function RoomSidebar({
         isMobile ? "min-h-0 w-full flex-1" : "w-64 shrink-0 border-r border-sidebar-border",
       )}
     >
-      <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-3">
+      <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-3 py-3">
         <h2 className="text-sm font-semibold">Chat</h2>
         {canCreate && (
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            variant="secondary"
+            size="sm"
+            className="h-8 shrink-0 gap-1.5 px-2.5 text-xs"
             onClick={onCreateClick}
             aria-label="Create channel"
             data-testid="btn-create-channel"
           >
-            <Plus size={18} />
+            <Plus size={14} />
+            New channel
           </Button>
         )}
       </div>

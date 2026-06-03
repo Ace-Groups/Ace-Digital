@@ -160,6 +160,7 @@ export type UpdateChannelInput = Partial<{
   name: string;
   description: string | null;
   archived: boolean;
+  avatarUrl: string | null;
 }>;
 
 export type ChannelMemberWithUser = ChannelMember & {

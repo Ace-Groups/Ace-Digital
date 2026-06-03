@@ -34,12 +34,16 @@ export function canPostInChannel(
   return membership.role === "owner" || membership.role === "member";
 }
 
+function isChannelOwnerRole(role: string | undefined | null): boolean {
+  return role?.toLowerCase() === "owner";
+}
+
 export function canManageChannel(
   ctx: AccessContext,
   membership: ChannelMembershipInfo,
 ): boolean {
   if (hasPermission(ctx, "channels:all")) return true;
-  return membership?.role === "owner";
+  return isChannelOwnerRole(membership?.role);
 }
 
 export type MessageDeleteInfo = {

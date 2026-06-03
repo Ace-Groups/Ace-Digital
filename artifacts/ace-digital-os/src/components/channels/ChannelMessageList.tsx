@@ -90,7 +90,9 @@ export function ChannelMessageList({
   const newMessagesDividerIndex = useMemo(() => {
     const anchor = lastReadMessageId;
     if (!anchor || !filtered.length) return -1;
-    const idx = filtered.findIndex((m) => m.id > anchor);
+    const last = filtered[filtered.length - 1];
+    if (last && !isPendingMessage(last) && last.id <= anchor) return -1;
+    const idx = filtered.findIndex((m) => !isPendingMessage(m) && m.id > anchor);
     return idx > 0 ? idx : -1;
   }, [filtered, lastReadMessageId]);
 

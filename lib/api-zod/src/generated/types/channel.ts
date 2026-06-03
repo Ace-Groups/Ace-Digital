@@ -12,6 +12,8 @@ export interface Channel {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  avatarUrl?: string | null;
+  /** @nullable */
   teamId?: number | null;
   /** @nullable */
   teamName?: string | null;
