@@ -21,7 +21,11 @@ import type { ReplyTarget } from "@/components/channels/ChannelMessageList";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { displayMessageBody } from "@/lib/chat-mentions";
-import { replyTargetFromMessage } from "@/lib/chat-reply";
+import {
+  replyQuoteFromMetadata,
+  replyTargetFromMessage,
+  resolveReplyQuoteDisplay,
+} from "@/lib/chat-reply";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,24 +56,12 @@ interface MessageBubbleProps {
   onDelete?: () => void | Promise<void>;
   onReply?: (target: ReplyTarget) => void;
   onScrollToQuotedMessage?: (messageId: number) => void;
+  liveMessagesById?: Map<number, Message>;
   onToggleReaction?: (emoji: string) => void | Promise<void>;
 }
 
 function isPending(msg: Message | PendingMessage): msg is PendingMessage {
   return "status" in msg && (msg.status === "sending" || msg.status === "failed");
-}
-
-function replyQuote(metadata: Message["metadata"]): ReplyTarget | null {
-  if (!metadata || typeof metadata !== "object") return null;
-  const r = (metadata as Record<string, unknown>).replyTo;
-  if (!r || typeof r !== "object") return null;
-  const o = r as Record<string, unknown>;
-  if (typeof o.id !== "number") return null;
-  return {
-    id: o.id,
-    body: typeof o.body === "string" ? o.body : "",
-    senderName: typeof o.senderName === "string" ? o.senderName : null,
-  };
 }
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉"];
@@ -84,6 +76,7 @@ export function MessageBubble({
   onDelete,
   onReply,
   onScrollToQuotedMessage,
+  liveMessagesById,
   onToggleReaction,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
@@ -94,7 +87,11 @@ export function MessageBubble({
   const otherAttachments = attachments.filter((a) => a.type !== "image" && a.type !== "video");
   const pending = isPending(msg);
   const deleted = !pending && Boolean((msg as Message).deleted);
-  const quote = !pending && !deleted ? replyQuote(msg.metadata) : null;
+  const quoteSnapshot =
+    !pending && !deleted ? replyQuoteFromMetadata(msg.metadata) : null;
+  const quote = quoteSnapshot
+    ? resolveReplyQuoteDisplay(quoteSnapshot, liveMessagesById ?? new Map())
+    : null;
   const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "");
   const showActions = !pending && !deleted && (onToggleReaction || onReply || canDelete);
 
@@ -266,7 +263,7 @@ export function MessageBubble({
             >
               <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
               <p className="line-clamp-2 opacity-70">
-                {quote.body.trim() ? quote.body : "Original message deleted"}
+                {quote.isDeleted ? "Original message deleted" : quote.preview}
               </p>
             </button>
           )}

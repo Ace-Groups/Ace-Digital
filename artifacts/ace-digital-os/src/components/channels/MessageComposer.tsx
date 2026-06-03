@@ -353,7 +353,7 @@ export function MessageComposer({
               <p className="text-xs font-medium text-muted-foreground">
                 Replying to {replyTo.senderName ?? "message"}
               </p>
-              <p className="line-clamp-2 text-sm">{replyTo.body}</p>
+              <p className="line-clamp-2 text-sm">{replyTo.body.trim() || "Message"}</p>
             </div>
             <button
               type="button"

@@ -79,6 +79,14 @@ export function ChannelMessageList({
     return messages.filter((m) => m.body.toLowerCase().includes(q));
   }, [messages, searchQuery]);
 
+  const liveMessagesById = useMemo(() => {
+    const map = new Map<number, Message>();
+    for (const m of messages ?? []) {
+      if (!("status" in m)) map.set(m.id, m);
+    }
+    return map;
+  }, [messages]);
+
   const newMessagesDividerIndex = useMemo(() => {
     const anchor = lastReadMessageId;
     if (!anchor || !filtered.length) return -1;
@@ -230,6 +238,7 @@ export function ChannelMessageList({
                 onDelete={onDeleteMessage ? () => void onDeleteMessage(msg) : undefined}
                 onReply={onReply}
                 onScrollToQuotedMessage={onScrollToMessage}
+                liveMessagesById={liveMessagesById}
                 onToggleReaction={
                   !isPendingMessage(msg)
                     ? async (emoji) => {
