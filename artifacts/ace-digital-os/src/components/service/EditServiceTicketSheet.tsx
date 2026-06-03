@@ -4,14 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   useListClients,
-  useListEmployees,
   useListProjects,
   useListTasks,
   useUpdateServiceTicket,
   getGetServiceTicketQueryKey,
   getListServiceTicketsQueryKey,
-  getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
+import {
+  NO_ASSIGNEE,
+  ServiceTicketAssigneeSelect,
+} from "@/components/service/ServiceTicketAssigneeSelect";
 import { useQueryClient } from "@tanstack/react-query";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,7 +29,6 @@ import { usePermissions } from "@/hooks/use-permissions";
 const NO_PROJECT = "__none__";
 const NO_CLIENT = "__none__";
 const NO_TASK = "__none__";
-const NO_ASSIGNEE = "__none__";
 
 function buildSchema(requireProject: boolean) {
   return z
@@ -65,9 +66,8 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
   const { data: clients } = useListClients();
   const { data: projects } = useListProjects();
   const { data: tasks } = useListTasks({});
-  const { data: employees } = useListEmployees(undefined, {
-    query: { enabled: can("employees:read"), queryKey: getListEmployeesQueryKey() },
-  });
+  const canWrite = can("service_tickets:write");
+  const canAssignOthers = can("service_tickets:assign");
 
   const isTodo = ticket.linkType === "TODO";
 
@@ -150,14 +150,8 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
           clientId: isTodo ? undefined : resolvedClientId,
           projectId: resolvedProjectId,
           taskId: isTodo ? ticket.taskId ?? undefined : resolvedTaskId,
-          ...(can("employees:read") || can("service_tickets:assign")
-            ? {
-                assigneeId:
-                  data.assigneeId && data.assigneeId !== NO_ASSIGNEE
-                    ? Number(data.assigneeId)
-                    : null,
-              }
-            : {}),
+          assigneeId:
+            data.assigneeId && data.assigneeId !== NO_ASSIGNEE ? Number(data.assigneeId) : null,
           priority: data.priority,
           category: data.category,
           nextFollowUpAt: data.nextFollowUpAt || null,
@@ -353,28 +347,22 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
             />
           </div>
 
-          {can("employees:read") && (
+          {canWrite && (
             <FormField
               control={form.control}
               name="assigneeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assignee</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="min-h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
-                      {(employees ?? []).map((e) => (
-                        <SelectItem key={e.id} value={String(e.id)}>
-                          {e.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Assign to</FormLabel>
+                  <FormControl>
+                    <ServiceTicketAssigneeSelect
+                      value={field.value ?? NO_ASSIGNEE}
+                      onValueChange={field.onChange}
+                      placeholder={
+                        canAssignOthers ? "Select team member" : "Assign to yourself"
+                      }
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

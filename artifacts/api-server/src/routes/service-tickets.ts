@@ -7,6 +7,10 @@ import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import {
+  assertServiceTicketAssignee,
+  listServiceTicketAssignees,
+} from "../lib/service-ticket-assignees";
+import {
   resolveServiceTicketCreateLinks,
   resolveServiceTicketUpdateLinks,
   type ServiceTicketLinkType,
@@ -79,6 +83,16 @@ async function enrichRecord(record: ServiceRecord) {
 }
 
 router.get(
+  "/v1/service-tickets/assignees",
+  requireAuth,
+  requirePermission("service_tickets:read", "service_tickets:write"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    res.json(await listServiceTicketAssignees(ctx));
+  },
+);
+
+router.get(
   "/v1/service-tickets",
   requireAuth,
   requirePermission("service_tickets:read"),
@@ -133,6 +147,13 @@ router.post(
       return;
     }
     const { links } = resolved;
+    const chosenAssigneeId =
+      assigneeId != null ? Number(assigneeId) : links.assigneeId ?? ctx.userId;
+    const assignCheck = await assertServiceTicketAssignee(ctx, chosenAssigneeId);
+    if (!assignCheck.ok) {
+      res.status(403).json({ error: assignCheck.error });
+      return;
+    }
     const ticket = await store.createServiceTicket({
       title: title.trim(),
       description: description ?? null,
@@ -140,7 +161,7 @@ router.post(
       clientId: links.clientId,
       projectId: links.projectId,
       taskId: links.taskId,
-      assigneeId: links.assigneeId,
+      assigneeId: chosenAssigneeId,
       teamId: links.teamId,
       priority: priority ?? "MEDIUM",
       status: status ?? "OPEN",
@@ -246,11 +267,11 @@ router.patch(
       linkPatch = resolved.links;
     }
 
-    if (assigneeId !== undefined && !hasPermission(ctx, "service_tickets:assign")) {
-      const isSelfAssign =
-        Number(assigneeId) === ctx.userId && existing.createdById === ctx.userId;
-      if (!isSelfAssign) {
-        res.status(403).json({ error: "Cannot reassign this ticket" });
+    if (assigneeId !== undefined) {
+      const nextAssignee = assigneeId != null ? Number(assigneeId) : null;
+      const assignCheck = await assertServiceTicketAssignee(ctx, nextAssignee);
+      if (!assignCheck.ok) {
+        res.status(403).json({ error: assignCheck.error });
         return;
       }
     }
@@ -282,6 +303,26 @@ router.patch(
         entityType: "service_ticket",
         entityId: ticket.id,
         metadata: { from: existing.status, to: status },
+      });
+    }
+    if (
+      assigneeId !== undefined &&
+      (assigneeId != null ? Number(assigneeId) : null) !== existing.assigneeId
+    ) {
+      const nextName =
+        ticket.assigneeId != null
+          ? (await store.findUserById(ticket.assigneeId))?.fullName ?? null
+          : null;
+      await store.insertActivityLog({
+        actorId: ctx.userId,
+        action: "assigned",
+        entityType: "service_ticket",
+        entityId: ticket.id,
+        metadata: {
+          fromAssigneeId: existing.assigneeId,
+          toAssigneeId: ticket.assigneeId,
+          toAssigneeName: nextName,
+        },
       });
     }
     res.json(await enrichTicket(ticket));

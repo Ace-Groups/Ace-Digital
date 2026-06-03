@@ -6,7 +6,12 @@ import {
   getListServiceTicketsQueryKey,
   useListServiceTickets,
   useListClients,
+  useListServiceTicketAssignees,
+  getListServiceTicketAssigneesQueryKey,
 } from "@workspace/api-client-react";
+import {
+  NO_ASSIGNEE,
+} from "@/components/service/ServiceTicketAssigneeSelect";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +23,7 @@ import { cn, formatRelativeTime, priorityColor, statusColor } from "@/lib/utils"
 
 const ALL_STATUS = "__all__";
 const ALL_CLIENTS = "__all_clients__";
+const ALL_ASSIGNEES = "__all_assignees__";
 
 const STATUS_TABS = [
   { value: ALL_STATUS, label: "All" },
@@ -33,23 +39,47 @@ export default function ServiceDeskPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS);
   const [clientFilter, setClientFilter] = useState<string>(ALL_CLIENTS);
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(ALL_ASSIGNEES);
   const [overdueOnly, setOverdueOnly] = useState(false);
 
   const listParams = useMemo(
     () => ({
       status: statusFilter !== ALL_STATUS ? statusFilter : undefined,
       clientId: clientFilter !== ALL_CLIENTS ? Number(clientFilter) : undefined,
+      assigneeId: assigneeFilter !== ALL_ASSIGNEES ? Number(assigneeFilter) : undefined,
       overdueFollowUp: overdueOnly ? true : undefined,
     }),
-    [statusFilter, clientFilter, overdueOnly],
+    [statusFilter, clientFilter, assigneeFilter, overdueOnly],
   );
 
-  const { data: tickets, isLoading } = useListServiceTickets(listParams, {
-    query: { queryKey: getListServiceTicketsQueryKey(listParams) },
-  });
-  const { data: clients } = useListClients();
-
   const canWrite = can("service_tickets:write");
+
+  const apiListParams = useMemo(
+    () => ({
+      ...listParams,
+      assigneeId:
+        assigneeFilter !== ALL_ASSIGNEES && assigneeFilter !== NO_ASSIGNEE
+          ? listParams.assigneeId
+          : undefined,
+    }),
+    [listParams, assigneeFilter],
+  );
+
+  const { data: ticketsRaw, isLoading } = useListServiceTickets(apiListParams, {
+    query: { queryKey: getListServiceTicketsQueryKey(apiListParams) },
+  });
+
+  const tickets = useMemo(() => {
+    if (assigneeFilter !== NO_ASSIGNEE) return ticketsRaw;
+    return ticketsRaw?.filter((t) => t.assigneeId == null);
+  }, [ticketsRaw, assigneeFilter]);
+  const { data: clients } = useListClients();
+  const { data: assignees } = useListServiceTicketAssignees({
+    query: {
+      enabled: canWrite,
+      queryKey: getListServiceTicketAssigneesQueryKey(),
+    },
+  });
 
   return (
     <AppLayout title="Service Desk">
@@ -100,6 +130,22 @@ export default function ServiceDeskPage() {
                 ))}
               </SelectContent>
             </Select>
+            {canWrite && (
+              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                <SelectTrigger className="min-h-10 w-full sm:w-[11rem]">
+                  <SelectValue placeholder="All assignees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ASSIGNEES}>All assignees</SelectItem>
+                  <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
+                  {(assignees ?? []).map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {e.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               type="button"
               size="sm"

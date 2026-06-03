@@ -1189,6 +1189,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ServiceTicket"
 
+  /v1/service-tickets/assignees:
+    get:
+      operationId: listServiceTicketAssignees
+      tags: [serviceTickets]
+      summary: List employees who can be assigned to service tickets
+      responses:
+        "200":
+          description: Assignee options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceTicketAssignee"
+
   /v1/service-tickets/{id}:
     get:
       operationId: getServiceTicket
@@ -2130,6 +2145,19 @@ components:
           type: string
         completed:
           type: boolean
+
+    ServiceTicketAssignee:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        teamName:
+          type: ["string", "null"]
 
     ServiceTicket:
       type: object

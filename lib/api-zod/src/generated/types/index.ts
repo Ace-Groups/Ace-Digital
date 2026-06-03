@@ -103,6 +103,7 @@ export * from './serviceRecord';
 export * from './serviceRecordCreateResponse';
 export * from './serviceRecordInput';
 export * from './serviceTicket';
+export * from './serviceTicketAssignee';
 export * from './serviceTicketDetail';
 export * from './serviceTicketInput';
 export * from './serviceTicketInputLinkType';

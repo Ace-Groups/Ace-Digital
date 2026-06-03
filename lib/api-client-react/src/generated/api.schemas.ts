@@ -212,6 +212,15 @@ export interface TaskAssignee {
   completed: boolean;
 }
 
+export interface ServiceTicketAssignee {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  teamId?: number | null;
+  /** @nullable */
+  teamName?: string | null;
+}
+
 export type ServiceTicketLinkType = typeof ServiceTicketLinkType[keyof typeof ServiceTicketLinkType];
 
 

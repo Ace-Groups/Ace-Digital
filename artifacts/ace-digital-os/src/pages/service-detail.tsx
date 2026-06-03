@@ -17,6 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditServiceTicketSheet } from "@/components/service/EditServiceTicketSheet";
 import { ServiceTicketClientReport } from "@/components/service/ServiceTicketClientReport";
+import {
+  NO_ASSIGNEE,
+  ServiceTicketAssigneeSelect,
+} from "@/components/service/ServiceTicketAssigneeSelect";
 import { ArrowLeft, Building2, User, Clock, Pencil, FileOutput } from "lucide-react";
 import type { ServiceTicket, ServiceTicketDetail } from "@workspace/api-client-react";
 import { cn, formatRelativeTime, priorityColor, statusColor } from "@/lib/utils";
@@ -42,6 +46,24 @@ export default function ServiceDetailPage() {
 
   const canWrite = can("service_tickets:write");
   const records = useMemo(() => ticket?.records ?? [], [ticket?.records]);
+
+  async function patchAssignee(assigneeValue: string) {
+    if (!ticket) return;
+    const listKey = getListServiceTicketsQueryKey();
+    const nextId =
+      assigneeValue && assigneeValue !== NO_ASSIGNEE ? Number(assigneeValue) : null;
+    try {
+      const updated = await updateTicket.mutateAsync({
+        id: ticketId,
+        data: { assigneeId: nextId },
+      });
+      queryClient.setQueryData(detailKey, { ...ticket, ...updated, records });
+      patchListItem(queryClient, listKey, ticketId, () => updated as ServiceTicket);
+      toast({ title: nextId ? "Assignee updated" : "Ticket unassigned" });
+    } catch {
+      toast({ title: "Could not update assignee", variant: "destructive" });
+    }
+  }
 
   async function patchStatus(status: string) {
     if (!ticket) return;
@@ -164,12 +186,21 @@ export default function ServiceDetailPage() {
                       (ticket.linkType === "TODO" ? "Internal to-do" : ticket.projectName ?? "—")}
                   </span>
                 </div>
-                {ticket.assigneeName && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User size={14} className="shrink-0" />
-                    <span>{ticket.assigneeName}</span>
-                  </div>
-                )}
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-muted-foreground">Assigned to</span>
+                  {canWrite ? (
+                    <ServiceTicketAssigneeSelect
+                      value={ticket.assigneeId ? String(ticket.assigneeId) : NO_ASSIGNEE}
+                      onValueChange={(v) => void patchAssignee(v)}
+                      triggerClassName="min-h-10 max-w-xs"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User size={14} className="shrink-0" />
+                      <span>{ticket.assigneeName ?? "Unassigned"}</span>
+                    </div>
+                  )}
+                </div>
                 {ticket.linkType === "TODO" && (
                   <div className="text-muted-foreground">
                     Linked to-do

@@ -93,6 +93,7 @@ import type {
   ServiceRecordCreateResponse,
   ServiceRecordInput,
   ServiceTicket,
+  ServiceTicketAssignee,
   ServiceTicketDetail,
   ServiceTicketInput,
   ServiceTicketUpdate,
@@ -4524,6 +4525,83 @@ export const useCreateServiceTicket = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateServiceTicketMutationOptions(options));
     }
+
+export const getListServiceTicketAssigneesUrl = () => {
+
+
+
+
+  return `/api/v1/service-tickets/assignees`
+}
+
+/**
+ * @summary List employees who can be assigned to service tickets
+ */
+export const listServiceTicketAssignees = async ( options?: RequestInit): Promise<ServiceTicketAssignee[]> => {
+
+  return customFetch<ServiceTicketAssignee[]>(getListServiceTicketAssigneesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListServiceTicketAssigneesQueryKey = () => {
+    return [
+    `/api/v1/service-tickets/assignees`
+    ] as const;
+    }
+
+
+export const getListServiceTicketAssigneesQueryOptions = <TData = Awaited<ReturnType<typeof listServiceTicketAssignees>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listServiceTicketAssignees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListServiceTicketAssigneesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listServiceTicketAssignees>>> = ({ signal }) => listServiceTicketAssignees({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listServiceTicketAssignees>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListServiceTicketAssigneesQueryResult = NonNullable<Awaited<ReturnType<typeof listServiceTicketAssignees>>>
+export type ListServiceTicketAssigneesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List employees who can be assigned to service tickets
+ */
+
+export function useListServiceTicketAssignees<TData = Awaited<ReturnType<typeof listServiceTicketAssignees>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listServiceTicketAssignees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListServiceTicketAssigneesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetServiceTicketUrl = (id: number,) => {
 

@@ -1337,6 +1337,18 @@ export const CreateServiceTicketBody = zod.object({
 
 
 /**
+ * @summary List employees who can be assigned to service tickets
+ */
+export const ListServiceTicketAssigneesResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish()
+})
+export const ListServiceTicketAssigneesResponse = zod.array(ListServiceTicketAssigneesResponseItem)
+
+
+/**
  * @summary Get service ticket with recent records
  */
 export const GetServiceTicketParams = zod.object({

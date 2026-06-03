@@ -5,12 +5,14 @@ import { z } from "zod";
 import {
   useCreateServiceTicket,
   useListClients,
-  useListEmployees,
   useListProjects,
   useListTasks,
   getListServiceTicketsQueryKey,
-  getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
+import {
+  NO_ASSIGNEE,
+  ServiceTicketAssigneeSelect,
+} from "@/components/service/ServiceTicketAssigneeSelect";
 import { useQueryClient } from "@tanstack/react-query";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -57,7 +59,6 @@ type FormValues = z.infer<typeof schema>;
 const NO_PROJECT = "__none__";
 const NO_CLIENT = "__none__";
 const NO_TASK = "__none__";
-const NO_ASSIGNEE = "__none__";
 
 interface CreateServiceTicketSheetProps {
   open: boolean;
@@ -72,15 +73,14 @@ export function CreateServiceTicketSheet({
 }: CreateServiceTicketSheetProps) {
   const { user } = useAuth();
   const { can } = usePermissions();
+  const canWrite = can("service_tickets:write");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const createTicket = useCreateServiceTicket();
   const { data: clients } = useListClients();
   const { data: projects } = useListProjects();
   const { data: tasks } = useListTasks({});
-  const { data: employees } = useListEmployees(undefined, {
-    query: { enabled: can("employees:read"), queryKey: getListEmployeesQueryKey() },
-  });
+  const canAssignOthers = can("service_tickets:assign");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -94,7 +94,7 @@ export function CreateServiceTicketSheet({
       projectId: NO_PROJECT,
       taskId: NO_TASK,
       todoTaskId: "",
-      assigneeId: user?.id ? String(user.id) : NO_ASSIGNEE,
+      assigneeId: canAssignOthers ? NO_ASSIGNEE : user?.id ? String(user.id) : NO_ASSIGNEE,
     },
   });
 
@@ -473,28 +473,27 @@ export function CreateServiceTicketSheet({
             />
           </div>
 
-          {can("employees:read") && (
+          {canWrite && (
             <FormField
               control={form.control}
               name="assigneeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assignee</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="min-h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
-                      {(employees ?? []).map((e) => (
-                        <SelectItem key={e.id} value={String(e.id)}>
-                          {e.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Assign to</FormLabel>
+                  <FormControl>
+                    <ServiceTicketAssigneeSelect
+                      value={field.value ?? NO_ASSIGNEE}
+                      onValueChange={field.onChange}
+                      placeholder={
+                        canAssignOthers ? "Select team member" : "Assign to yourself"
+                      }
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    {canAssignOthers
+                      ? "Choose who will own follow-ups on this ticket."
+                      : "You can assign this ticket to yourself."}
+                  </p>
                 </FormItem>
               )}
             />
