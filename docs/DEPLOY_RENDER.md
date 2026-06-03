@@ -30,6 +30,16 @@ In Render → **Environment** → add:
 | `GCLOUD_PROJECT` | `ace-digital-os` |
 | `JWT_SECRET` | Same secret as production auth (32+ chars) |
 
+## Render build failures (read this)
+
+| Error | Root cause | Fix |
+|-------|------------|-----|
+| `EROFS` on `/usr/bin/pnpm` | `corepack enable` or `npm install -g pnpm` | Never use global pnpm on Render |
+| `ERR_PNPM_OUTDATED_LOCKFILE` + `pnpm@^10.33.2` added | **`npm install pnpm` in build** mutates `package.json` during CI | Use **`bash scripts/render-build.sh`** only |
+| Build runs old command after git push | **Dashboard build command ≠ repo** | **Settings → Build Command** → paste `bash scripts/render-build.sh` → Save → Manual Deploy |
+
+`render.yaml` does **not** update an existing service’s build command automatically. You must paste it in the dashboard once.
+
 ## 3. Create the Render service
 
 **Option A — Blueprint**
@@ -41,8 +51,8 @@ In Render → **Environment** → add:
 
 | Setting | Value |
 |---------|--------|
-| Build | `npx --yes pnpm@10.33.2 install && npx --yes pnpm@10.33.2 --filter @workspace/api-server run build` |
-| Env | `SKIP_INSTALL_DEPS=true` (stops Render from running its own install first) |
+| Build | `bash scripts/render-build.sh` |
+| Env | `SKIP_INSTALL_DEPS=true` (required — stops Render’s default npm install) |
 | Start | `node --enable-source-maps artifacts/api-server/dist/index.mjs` |
 | Health check | `/api/healthz` |
 | Plan | Free |
