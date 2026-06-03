@@ -19,6 +19,7 @@ import {
 import { useCreateChannel, useListEmployees, useListTeams, getListChannelsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +31,13 @@ interface CreateChannelDialogProps {
 
 export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelDialogProps) {
   const { toast } = useToast();
+  const { can } = usePermissions();
   const queryClient = useQueryClient();
   const createChannel = useCreateChannel();
-  const { data: employees } = useListEmployees();
+  const canCreateAnnouncement = can("channels:all");
+  const { data: employees } = useListEmployees(undefined, {
+    query: { enabled: open && (can("employees:read") || can("channels:write")) },
+  });
   const { data: teams } = useListTeams();
 
   const [name, setName] = useState("");
@@ -63,7 +68,7 @@ export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelD
         data: {
           name: name.trim(),
           description: description.trim() || undefined,
-          type,
+          type: canCreateAnnouncement ? type : "TEAM",
           teamId: teamId ? Number(teamId) : undefined,
           memberIds: memberIds.length > 0 ? memberIds : undefined,
         },
@@ -114,18 +119,20 @@ export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelD
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as "TEAM" | "ANNOUNCEMENT")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TEAM">Team channel</SelectItem>
-                <SelectItem value="ANNOUNCEMENT">Announcement (read-only for most)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {canCreateAnnouncement ? (
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={type} onValueChange={(v) => setType(v as "TEAM" | "ANNOUNCEMENT")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TEAM">Team channel</SelectItem>
+                  <SelectItem value="ANNOUNCEMENT">Announcement (read-only for most)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
           {type === "TEAM" && (
             <div className="space-y-2">
               <Label>Link to team (adds all team members)</Label>

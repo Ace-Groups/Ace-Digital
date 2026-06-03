@@ -23,6 +23,10 @@ describe("hasPermission", () => {
     assert.equal(hasPermission(employee, "employees:read"), false);
     assert.equal(hasPermission(employee, "employees:read_self"), true);
   });
+  it("employee can create channels", () => {
+    assert.equal(hasPermission(employee, "channels:write"), true);
+    assert.equal(hasPermission(employee, "channels:post"), true);
+  });
   it("management can read salaries and payroll but not approve expenses", () => {
     assert.equal(hasPermission(management, "finance:salaries_all"), true);
     assert.equal(hasPermission(management, "finance:payroll"), true);

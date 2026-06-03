@@ -102,6 +102,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "reports:write",
     "channels:read",
     "channels:post",
+    "channels:write",
     "activity:read",
     "activity:read_org",
     "calendar:read",
@@ -120,6 +121,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "reports:read",
     "channels:read",
     "channels:post",
+    "channels:write",
     "activity:read",
     "activity:read_org",
     "calendar:read",
@@ -172,11 +174,17 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "approvals:submit",
     "channels:read",
     "channels:post",
+    "channels:write",
     "activity:read",
     "calendar:read",
     "calendar:write",
   ],
 };
+
+/** List coworkers when creating channels or similar collaboration flows. */
+export function canBrowseEmployeeDirectory(ctx: AccessContext): boolean {
+  return hasPermission(ctx, "employees:read") || hasPermission(ctx, "channels:write");
+}
 
 export function getPermissionsForRole(role: string): Permission[] {
   if (!isRole(role)) return [];

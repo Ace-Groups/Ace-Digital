@@ -1,6 +1,11 @@
 import type { User } from "@workspace/db";
 import type { AccessContext } from "@workspace/db";
-import { canViewSalaries, stripSalaryFields } from "@workspace/rbac";
+import {
+  canBrowseEmployeeDirectory,
+  canViewSalaries,
+  hasPermission,
+  stripSalaryFields,
+} from "@workspace/rbac";
 import { store } from "@workspace/db";
 
 export async function employeeWithProfile(user: User, ctx: AccessContext) {
@@ -25,5 +30,20 @@ export async function employeeWithProfile(user: User, ctx: AccessContext) {
     payrollStatus: profile?.payrollStatus ?? null,
     createdAt: user.createdAt.toISOString(),
   };
-  return canViewSalaries(ctx) ? row : stripSalaryFields(row);
+  if (canViewSalaries(ctx)) return row;
+  if (
+    canBrowseEmployeeDirectory(ctx) &&
+    !hasPermission(ctx, "employees:read")
+  ) {
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      avatarUrl: row.avatarUrl,
+      teamId: row.teamId,
+      teamName: row.teamName,
+      jobTitle: row.jobTitle,
+      status: row.status,
+    };
+  }
+  return stripSalaryFields(row);
 }

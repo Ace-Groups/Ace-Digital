@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
-import { canAssignRole, canViewSalaries, isRole } from "@workspace/rbac";
+import { canAssignRole, canViewSalaries, hasPermission, isRole } from "@workspace/rbac";
 import { requireAuth, hashPassword } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
@@ -25,13 +25,15 @@ function parseStartDate(value: unknown): Date | null | undefined {
 router.get(
   "/v1/employees",
   requireAuth,
-  requirePermission("employees:read"),
+  requirePermission("employees:read", "channels:write"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
     const { teamId, status } = req.query;
+    const directoryOnly =
+      hasPermission(ctx, "channels:write") && !hasPermission(ctx, "employees:read");
     const users = await store.listUsers({
       teamId: teamId ? Number(teamId) : undefined,
-      status: status as string | undefined,
+      status: (status as string | undefined) ?? (directoryOnly ? "active" : undefined),
     });
     res.json(await Promise.all(users.map((u) => employeeWithProfile(u, ctx))));
   },

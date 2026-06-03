@@ -103,6 +103,10 @@ router.post(
     }
 
     const channelType = type === "ANNOUNCEMENT" ? "ANNOUNCEMENT" : "TEAM";
+    if (channelType === "ANNOUNCEMENT" && !hasPermission(ctx, "channels:all")) {
+      res.status(403).json({ error: "Only admins can create announcement channels" });
+      return;
+    }
     const channel = await store.createChannel({
       name: normalized,
       description: description ?? null,

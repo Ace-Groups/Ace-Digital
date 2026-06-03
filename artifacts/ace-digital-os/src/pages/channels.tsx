@@ -368,7 +368,7 @@ export default function ChannelsPage() {
   }
 
   const showList = !isMobile || !mobileThreadOpen;
-  const canCreate = can("channels:write") || can("channels:all");
+  const canCreate = can("channels:write");
 
   const threadContent = (
     <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
