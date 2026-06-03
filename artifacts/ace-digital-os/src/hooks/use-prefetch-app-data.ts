@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { parseChannelIdFromSearch } from "@/lib/channel-url";
+import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 
 /** Warm critical caches right after login so navigation feels instant. */
 export function usePrefetchAppData() {
@@ -21,19 +22,21 @@ export function usePrefetchAppData() {
     const channelId = parseChannelIdFromSearch();
     if (channelId) {
       void queryClient.prefetchQuery(
-        getGetChannelMessagesQueryOptions(channelId, { limit: 50 }),
+        getGetChannelMessagesQueryOptions(channelId, CHANNEL_MESSAGE_PARAMS),
       );
-    } else {
-      void listChannels().then((channels) => {
-        const unread = channels
-          .filter((c) => (c.unreadCount ?? 0) > 0)
-          .slice(0, 3);
-        for (const ch of unread) {
-          void queryClient.prefetchQuery(
-            getGetChannelMessagesQueryOptions(ch.id, { limit: 50 }),
-          );
-        }
-      });
     }
+    void listChannels().then((channels) => {
+      const ids = new Set<number>();
+      if (channelId) ids.add(channelId);
+      for (const ch of channels) {
+        if ((ch.unreadCount ?? 0) > 0) ids.add(ch.id);
+      }
+      for (const ch of channels.slice(0, 8)) ids.add(ch.id);
+      for (const id of ids) {
+        void queryClient.prefetchQuery(
+          getGetChannelMessagesQueryOptions(id, CHANNEL_MESSAGE_PARAMS),
+        );
+      }
+    });
   }, [isAuthenticated, queryClient]);
 }

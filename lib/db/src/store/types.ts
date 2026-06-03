@@ -65,7 +65,10 @@ export type CreateSalaryPostingInput = {
 export type { AccessContext } from "./scoping";
 
 export type ActivityLogWithActor = ActivityLog & { actorName: string | null };
-export type MessageWithSender = Message & { senderName: string | null };
+export type MessageWithSender = Message & {
+  senderName: string | null;
+  senderAvatar?: string | null;
+};
 export type SalaryRow = {
   userId: number;
   fullName: string;

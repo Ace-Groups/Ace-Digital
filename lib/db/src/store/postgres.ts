@@ -850,6 +850,7 @@ export function createPostgresStore() {
           deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
           senderName: usersTable.fullName,
+          senderAvatar: usersTable.avatarUrl,
         })
         .from(messagesTable)
         .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
@@ -869,6 +870,7 @@ export function createPostgresStore() {
         deletedById: r.deletedById,
         createdAt: r.createdAt,
         senderName: r.senderName,
+        senderAvatar: r.senderAvatar ?? null,
       }));
     },
     createMessage: async (

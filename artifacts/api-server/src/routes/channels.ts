@@ -444,15 +444,13 @@ router.get(
       limit,
       before: Number.isFinite(before) ? before : undefined,
     });
-    const users = await store.listUsers();
-    const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
 
     res.json(
       messages.map((m) =>
         messageToJson(
           m,
           m.senderName ?? "Unknown",
-          avatarMap[m.senderId] ?? null,
+          m.senderAvatar ?? null,
         ),
       ),
     );

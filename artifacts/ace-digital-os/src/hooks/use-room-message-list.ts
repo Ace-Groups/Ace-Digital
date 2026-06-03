@@ -1,45 +1,92 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import type { Message } from "@workspace/api-client-react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  getChannelMessages,
+  type Message,
+  getGetChannelMessagesQueryKey,
+} from "@workspace/api-client-react";
 import { RecordList } from "@/lib/record-list";
-import { getChannelMessages } from "@workspace/api-client-react";
 
 export const CHANNEL_MESSAGE_PARAMS = { limit: 50 } as const;
 
-export function useRoomMessageList(channelId: number | null, enabled: boolean) {
-  const listRef = useRef<RecordList<Message> | null>(null);
+const channelLists = new Map<number, RecordList<Message>>();
 
-  if (!listRef.current) {
-    listRef.current = new RecordList<Message>();
+function getChannelList(channelId: number): RecordList<Message> {
+  let list = channelLists.get(channelId);
+  if (!list) {
+    list = new RecordList<Message>();
+    channelLists.set(channelId, list);
   }
-  const list = listRef.current;
+  return list;
+}
 
-  const subscribe = useCallback((onStoreChange: () => void) => list.subscribe(onStoreChange), [list]);
-  const getSnapshot = useCallback(() => list.getSnapshot(), [list]);
+function hydrateFromCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  channelId: number,
+  list: RecordList<Message>,
+): boolean {
+  const cached = queryClient.getQueryData<Message[]>(
+    getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
+  );
+  if (cached === undefined) return false;
+  const snap = list.getSnapshot();
+  if (snap.status === "ready" && snap.items.length > 0) return true;
+  list.setInitial(cached, cached.length >= CHANNEL_MESSAGE_PARAMS.limit);
+  return true;
+}
+
+export function useRoomMessageList(channelId: number | null, enabled: boolean) {
+  const queryClient = useQueryClient();
+  const list = channelId && enabled ? getChannelList(channelId) : null;
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => list?.subscribe(onStoreChange) ?? (() => {}),
+    [list],
+  );
+  const getSnapshot = useCallback(
+    () =>
+      list?.getSnapshot() ?? {
+        items: [] as Message[],
+        status: "loading" as const,
+        hasMoreBefore: true,
+      },
+    [list],
+  );
 
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  useEffect(() => {
-    if (!enabled || !channelId) {
+  useLayoutEffect(() => {
+    if (!enabled || !channelId || !list) return;
+    if (hydrateFromCache(queryClient, channelId, list)) return;
+    if (list.getSnapshot().status !== "ready") {
       list.setLoading();
-      return;
     }
-    list.setLoading();
-  }, [channelId, enabled, list]);
+  }, [channelId, enabled, list, queryClient]);
 
   const syncFromQuery = useCallback(
     (items: Message[]) => {
+      if (!list) return;
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
         list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
-      } else if (items.length > 0) {
+        return;
+      }
+      if (items.length > 0) {
         list.mergeRealtime(items);
+      } else if (snap.items.length === 0) {
+        list.setInitial([], false);
       }
     },
     [list],
   );
 
   const loadOlder = useCallback(async (): Promise<boolean> => {
-    if (!channelId) return false;
+    if (!channelId || !list) return false;
     const snap = list.getSnapshot();
     const first = snap.items[0];
     if (!first || !snap.hasMoreBefore) return false;
@@ -59,6 +106,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
 
   const applyRealtime = useCallback(
     (items: Message[]) => {
+      if (!list) return;
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
         list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
@@ -71,14 +119,14 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
 
   const appendMessage = useCallback(
     (msg: Message) => {
-      list.append([msg]);
+      list?.append([msg]);
     },
     [list],
   );
 
   const patchMessage = useCallback(
     (id: number, updater: (m: Message) => Message) => {
-      list.patch(id, updater);
+      list?.patch(id, updater);
     },
     [list],
   );
@@ -94,6 +142,6 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     applyRealtime,
     appendMessage,
     patchMessage,
-    isLoading: state.status === "loading",
+    isLoading: state.status === "loading" && state.items.length === 0,
   };
 }

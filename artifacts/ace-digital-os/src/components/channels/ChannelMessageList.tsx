@@ -101,10 +101,12 @@ export function ChannelMessageList({
     if (newMessagesDividerIndex < 0) return;
     jumpedUnreadRef.current = true;
     onShouldAutoScrollChange(false);
+    const index = newMessagesDividerIndex;
     requestAnimationFrame(() => {
-      rowVirtualizer.scrollToIndex(newMessagesDividerIndex, { align: "start" });
+      rowVirtualizer.scrollToIndex(index, { align: "start" });
     });
-  }, [filtered.length, newMessagesDividerIndex, rowVirtualizer, onShouldAutoScrollChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rowVirtualizer identity changes each render
+  }, [filtered.length, newMessagesDividerIndex, onShouldAutoScrollChange]);
 
   useEffect(() => {
     if (!filtered.length) return;

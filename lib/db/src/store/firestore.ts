@@ -953,24 +953,50 @@ export function createFirestoreStore() {
       options?: { limit?: number; before?: number },
     ): Promise<MessageWithSender[]> {
       const limit = options?.limit ?? 100;
-      const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
-      let messages = snap.docs.map((d) => mapMessage(d.data(), d.id));
-      messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
+      let beforeAt: string | null = null;
       if (options?.before) {
-        const ref = messages.find((m) => m.id === options.before);
-        if (ref) {
-          messages = messages.filter((m) => m.createdAt < ref.createdAt);
-        }
+        const refSnap = await db.collection(COL.messages).doc(docId(options.before)).get();
+        const raw = refSnap.data()?.createdAt;
+        beforeAt =
+          raw instanceof Date
+            ? raw.toISOString()
+            : typeof raw === "string"
+              ? raw
+              : raw && typeof raw === "object" && "toDate" in raw
+                ? (raw as { toDate: () => Date }).toDate().toISOString()
+                : null;
       }
 
-      const sorted = messages.slice(-limit);
-      const users = await this.listUsers();
-      const userMap = new Map(users.map((u) => [u.id, u.fullName]));
-      return sorted.map((m) => ({
-        ...m,
-        senderName: userMap.get(m.senderId) ?? null,
-      }));
+      let q = db
+        .collection(COL.messages)
+        .where("channelId", "==", channelId)
+        .orderBy("createdAt", "desc")
+        .limit(limit);
+      if (beforeAt) {
+        q = db
+          .collection(COL.messages)
+          .where("channelId", "==", channelId)
+          .where("createdAt", "<", beforeAt)
+          .orderBy("createdAt", "desc")
+          .limit(limit);
+      }
+
+      const snap = await q.get();
+      return snap.docs
+        .map((d) => {
+          const data = d.data();
+          const m = mapMessage(data, d.id);
+          return {
+            ...m,
+            senderName:
+              typeof data.senderName === "string" ? data.senderName : null,
+            senderAvatar:
+              typeof data.senderAvatar === "string" || data.senderAvatar === null
+                ? (data.senderAvatar as string | null)
+                : null,
+          };
+        })
+        .reverse();
     },
 
     async createMessage(

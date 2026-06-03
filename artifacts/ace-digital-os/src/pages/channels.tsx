@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -37,6 +37,7 @@ import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-cl
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import { parseChannelIdFromSearch, setChannelIdInSearch } from "@/lib/channel-url";
 import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
+import { usePrefetchChannelMessages } from "@/hooks/use-prefetch-channel-messages";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -48,6 +49,8 @@ export default function ChannelsPage() {
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(() =>
     parseChannelIdFromSearch(),
   );
+  const channelIds = useMemo(() => channels?.map((c) => c.id), [channels]);
+  usePrefetchChannelMessages(channelIds, selectedChannelId);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -93,37 +96,54 @@ export default function ChannelsPage() {
       return;
     }
     void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
-  }, [selectedChannelId]);
+  }, []);
 
-  const { data: latestMessages, isLoading: messagesLoading } = useGetChannelMessages(
+  const { data: latestMessages, isPending: messagesPending } = useGetChannelMessages(
     selectedChannelId ?? 0,
     CHANNEL_MESSAGE_PARAMS,
     {
       query: {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
-        staleTime: 30_000,
-        refetchInterval: firebaseLive ? false : 10_000,
+        staleTime: 120_000,
+        refetchInterval: firebaseLive ? false : 30_000,
+        placeholderData: () =>
+          selectedChannelId
+            ? queryClient.getQueryData<Message[]>(
+                getGetChannelMessagesQueryKey(selectedChannelId, CHANNEL_MESSAGE_PARAMS),
+              )
+            : undefined,
       },
     },
   );
 
   const realtimeReady = threadActive && !!selectedChannelId && isFirebaseChatEnabled();
 
-  const room = useRoomMessageList(selectedChannelId, !!selectedChannelId);
+  const {
+    messages: roomMessages,
+    hasMoreBefore,
+    loadOlder,
+    syncFromQuery,
+    applyRealtime,
+    appendMessage,
+    patchMessage,
+    isLoading: roomLoading,
+  } = useRoomMessageList(selectedChannelId, !!selectedChannelId);
+
+  const showMessageSkeleton =
+    roomMessages.length === 0 &&
+    (roomLoading || (messagesPending && latestMessages === undefined));
 
   useEffect(() => {
-    if (latestMessages !== undefined) room.syncFromQuery(latestMessages);
-  }, [latestMessages, room]);
+    if (latestMessages !== undefined) syncFromQuery(latestMessages);
+  }, [latestMessages, syncFromQuery]);
 
-  useChannelMessagesRealtime(selectedChannelId, realtimeReady, room.applyRealtime);
+  useChannelMessagesRealtime(selectedChannelId, realtimeReady, applyRealtime);
 
   const deleteMessageMutation = useDeleteMessage();
 
   const { send, queuePending, flushPending, markPendingFailed, isPending: sending } =
-    useSendChannelMessage(selectedChannelId, {
-      onAppend: (msg) => room.appendMessage(msg as Message),
-    });
+    useSendChannelMessage(selectedChannelId, { onAppend: appendMessage });
 
   const canDeleteForMessage = useCallback(
     (msg: Message) => {
@@ -146,7 +166,7 @@ export default function ChannelsPage() {
           id: selectedChannelId,
           messageId: msg.id,
         });
-        room.patchMessage(msg.id, () => updated);
+        patchMessage(msg.id, () => updated);
         queryClient.setQueryData<Message[]>(
           getGetChannelMessagesQueryKey(selectedChannelId, CHANNEL_MESSAGE_PARAMS),
           (prev) => prev?.map((m) => (m.id === updated.id ? updated : m)) ?? prev,
@@ -155,7 +175,7 @@ export default function ChannelsPage() {
         toast({ title: "Could not delete message", variant: "destructive" });
       }
     },
-    [selectedChannelId, deleteMessageMutation, room, toast],
+    [selectedChannelId, deleteMessageMutation, patchMessage, queryClient, toast],
   );
 
   useEffect(() => {
@@ -188,11 +208,11 @@ export default function ChannelsPage() {
   const handleLoadOlder = useCallback(async () => {
     setLoadingOlder(true);
     try {
-      return await room.loadOlder();
+      return await loadOlder();
     } finally {
       setLoadingOlder(false);
     }
-  }, [room]);
+  }, [loadOlder]);
 
   const handleReply = useCallback((target: ListReplyTarget) => {
     setReplyTo(target);
@@ -305,8 +325,8 @@ export default function ChannelsPage() {
       {selectedChannelId ? (
         <ChannelMessageList
           channelId={selectedChannelId}
-          messages={room.messages}
-          isLoading={room.isLoading || messagesLoading}
+          messages={roomMessages}
+          isLoading={showMessageSkeleton}
           currentUserId={user?.id}
           lastReadMessageId={selectedChannel?.lastReadMessageId}
           shouldAutoScroll={shouldAutoScroll}
@@ -314,10 +334,10 @@ export default function ChannelsPage() {
           onMarkRead={handleMarkRead}
           onLoadOlder={handleLoadOlder}
           loadingOlder={loadingOlder}
-          hasMoreBefore={room.hasMoreBefore}
+          hasMoreBefore={hasMoreBefore}
           onReply={handleReply}
           searchQuery={roomSearch}
-          onMessagePatched={(updated) => room.patchMessage(updated.id, () => updated)}
+          onMessagePatched={(updated) => patchMessage(updated.id, () => updated)}
           canDeleteMessage={canDeleteForMessage}
           onDeleteMessage={handleDeleteMessage}
         />

@@ -33,23 +33,37 @@ export class RecordList<T extends { id: number }> {
     for (const l of this.listeners) l();
   }
 
-  setLoading(): void {
-    this.state = { items: [], status: "loading", hasMoreBefore: true };
+  private commit(next: RecordListState<T>): void {
+    if (
+      this.state.status === next.status &&
+      this.state.hasMoreBefore === next.hasMoreBefore &&
+      sameItemsSnapshot(this.state.items, next.items)
+    ) {
+      return;
+    }
+    this.state = next;
     this.emit();
+  }
+
+  setLoading(): void {
+    if (this.state.status === "loading" && this.state.items.length === 0) return;
+    this.commit({ items: [], status: "loading", hasMoreBefore: true });
   }
 
   setInitial(items: T[], hasMoreBefore = true): void {
-    this.state = { items: sortByCreatedAt(dedupeById(items)), status: "ready", hasMoreBefore };
-    this.emit();
+    this.commit({
+      items: sortByCreatedAt(dedupeById(items)),
+      status: "ready",
+      hasMoreBefore,
+    });
   }
 
   replace(items: T[], hasMoreBefore?: boolean): void {
-    this.state = {
+    this.commit({
       items: sortByCreatedAt(dedupeById(items)),
       status: "ready",
       hasMoreBefore: hasMoreBefore ?? this.state.hasMoreBefore,
-    };
-    this.emit();
+    });
   }
 
   mergeRealtime(incoming: T[]): void {
@@ -63,45 +77,43 @@ export class RecordList<T extends { id: number }> {
     );
     const byId = new Map<number, T>();
     for (const m of olderKept) byId.set(m.id, m);
-    for (const m of incoming) byId.set(m.id, m);
-    this.state = {
+    for (const m of incoming) {
+      const existing = byId.get(m.id);
+      byId.set(m.id, existing && shallowRecordEqual(existing, m) ? existing : m);
+    }
+    this.commit({
       ...snap,
       items: sortByCreatedAt([...byId.values()]),
       status: "ready",
-    };
-    this.emit();
+    });
   }
 
   prepend(older: T[]): void {
     if (!older.length) {
-      this.state = { ...this.state, hasMoreBefore: false };
-      this.emit();
+      this.commit({ ...this.state, hasMoreBefore: false });
       return;
     }
     const ids = new Set(this.state.items.map((m) => m.id));
     const merged = [...older.filter((m) => !ids.has(m.id)), ...this.state.items];
-    this.state = {
+    this.commit({
       ...this.state,
       items: sortByCreatedAt(merged),
       status: "ready",
       hasMoreBefore: older.length > 0,
-    };
-    this.emit();
+    });
   }
 
   append(newer: T[]): void {
     if (!newer.length) return;
     const ids = new Set(this.state.items.map((m) => m.id));
     const merged = [...this.state.items, ...newer.filter((m) => !ids.has(m.id))];
-    this.state = { ...this.state, items: sortByCreatedAt(merged), status: "ready" };
-    this.emit();
+    this.commit({ ...this.state, items: sortByCreatedAt(merged), status: "ready" });
   }
 
   remove(id: number): void {
     const items = this.state.items.filter((m) => m.id !== id);
     if (items.length === this.state.items.length) return;
-    this.state = { ...this.state, items };
-    this.emit();
+    this.commit({ ...this.state, items });
   }
 
   patch(id: number, updater: (item: T) => T): void {
@@ -109,15 +121,33 @@ export class RecordList<T extends { id: number }> {
     if (idx < 0) return;
     const items = [...this.state.items];
     items[idx] = updater(items[idx]!);
-    this.state = { ...this.state, items };
-    this.emit();
+    this.commit({ ...this.state, items });
   }
 
   setHasMoreBefore(value: boolean): void {
     if (this.state.hasMoreBefore === value) return;
-    this.state = { ...this.state, hasMoreBefore: value };
-    this.emit();
+    this.commit({ ...this.state, hasMoreBefore: value });
   }
+}
+
+function shallowRecordEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if ((a as Record<string, unknown>)[k] !== (b as Record<string, unknown>)[k]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function sameItemsSnapshot<T>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 function createdAtMs(m: HasCreatedAt): number {
