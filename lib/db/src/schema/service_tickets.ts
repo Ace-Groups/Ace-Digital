@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clientsTable } from "./clients";
 import { projectsTable } from "./projects";
+import { tasksTable } from "./tasks";
 import { usersTable } from "./users";
 import { teamsTable } from "./teams";
 
@@ -11,10 +12,11 @@ export const serviceTicketsTable = pgTable("service_tickets", {
   ticketNumber: text("ticket_number").notNull(),
   title: text("title").notNull(),
   description: text("description"),
-  clientId: integer("client_id")
-    .notNull()
-    .references(() => clientsTable.id),
+  /** CLIENT = linked via client/project; TODO = linked to an existing task (to-do). */
+  linkType: text("link_type").notNull().default("CLIENT"),
+  clientId: integer("client_id").references(() => clientsTable.id),
   projectId: integer("project_id").references(() => projectsTable.id),
+  taskId: integer("task_id").references(() => tasksTable.id),
   assigneeId: integer("assignee_id").references(() => usersTable.id),
   teamId: integer("team_id").references(() => teamsTable.id),
   priority: text("priority").notNull().default("MEDIUM"),

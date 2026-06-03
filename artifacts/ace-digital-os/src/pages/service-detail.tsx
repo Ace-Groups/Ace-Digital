@@ -137,8 +137,17 @@ export default function ServiceDetailPage() {
                     <span>{ticket.assigneeName}</span>
                   </div>
                 )}
+                {ticket.linkType === "TODO" && (
+                  <div className="text-muted-foreground">
+                    Linked to-do
+                    {ticket.taskTitle ? `: ${ticket.taskTitle}` : ""}
+                  </div>
+                )}
                 {ticket.projectName && (
                   <div className="text-muted-foreground">Project: {ticket.projectName}</div>
+                )}
+                {ticket.linkType === "CLIENT" && ticket.taskTitle && (
+                  <div className="text-muted-foreground">Task: {ticket.taskTitle}</div>
                 )}
                 <div className="text-muted-foreground">
                   Category: {ticket.category} · Updated {formatRelativeTime(ticket.updatedAt)}

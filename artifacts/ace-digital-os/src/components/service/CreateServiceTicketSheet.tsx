@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,6 +7,7 @@ import {
   useListClients,
   useListEmployees,
   useListProjects,
+  useListTasks,
   getListServiceTicketsQueryKey,
   getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
@@ -16,27 +18,44 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { prependListItem, setList, snapshotList } from "@/lib/optimistic";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import type { ServiceTicket } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
+import { cn } from "@/lib/utils";
 
-const schema = z.object({
-  title: z.string().min(1, "Title required"),
-  clientId: z.string().min(1, "Client required"),
-  description: z.string().optional(),
-  projectId: z.string().optional(),
-  assigneeId: z.string().optional(),
-  priority: z.string(),
-  category: z.string(),
-  nextFollowUpAt: z.string().optional(),
-});
+const schema = z
+  .object({
+    linkType: z.enum(["CLIENT", "TODO"]),
+    title: z.string().min(1, "Title required"),
+    clientId: z.string().optional(),
+    description: z.string().optional(),
+    projectId: z.string().optional(),
+    taskId: z.string().optional(),
+    todoTaskId: z.string().optional(),
+    assigneeId: z.string().optional(),
+    priority: z.string(),
+    category: z.string(),
+    nextFollowUpAt: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.linkType === "CLIENT") {
+      if (!data.clientId) {
+        ctx.addIssue({ code: "custom", message: "Client required", path: ["clientId"] });
+      }
+    } else if (!data.todoTaskId) {
+      ctx.addIssue({ code: "custom", message: "Select a to-do", path: ["todoTaskId"] });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
 const NO_PROJECT = "__none__";
+const NO_TASK = "__none__";
 const NO_ASSIGNEE = "__none__";
 
 interface CreateServiceTicketSheetProps {
@@ -57,6 +76,7 @@ export function CreateServiceTicketSheet({
   const createTicket = useCreateServiceTicket();
   const { data: clients } = useListClients();
   const { data: projects } = useListProjects();
+  const { data: tasks } = useListTasks({});
   const { data: employees } = useListEmployees(undefined, {
     query: { enabled: can("employees:read"), queryKey: getListEmployeesQueryKey() },
   });
@@ -64,17 +84,67 @@ export function CreateServiceTicketSheet({
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      linkType: "CLIENT",
       title: "",
       clientId: "",
       description: "",
       priority: "MEDIUM",
       category: "SUPPORT",
       projectId: NO_PROJECT,
+      taskId: NO_TASK,
+      todoTaskId: "",
       assigneeId: user?.id ? String(user.id) : NO_ASSIGNEE,
     },
   });
 
+  const linkType = form.watch("linkType");
+  const clientId = form.watch("clientId");
+  const projectId = form.watch("projectId");
+
+  const clientProjects = useMemo(() => {
+    if (!clientId) return projects ?? [];
+    const cid = Number(clientId);
+    return (projects ?? []).filter((p) => p.clientId == null || p.clientId === cid);
+  }, [projects, clientId]);
+
+  const projectTasks = useMemo(() => {
+    if (!projectId || projectId === NO_PROJECT) return [];
+    const pid = Number(projectId);
+    return (tasks ?? []).filter((t) => t.projectId === pid && t.status !== "DONE");
+  }, [tasks, projectId]);
+
+  const openTodos = useMemo(
+    () => (tasks ?? []).filter((t) => t.status !== "DONE"),
+    [tasks],
+  );
+
+  useEffect(() => {
+    if (linkType === "CLIENT") {
+      form.setValue("todoTaskId", "");
+    } else {
+      form.setValue("clientId", "");
+      form.setValue("projectId", NO_PROJECT);
+      form.setValue("taskId", NO_TASK);
+    }
+  }, [linkType, form]);
+
+  useEffect(() => {
+    if (projectId === NO_PROJECT) form.setValue("taskId", NO_TASK);
+  }, [projectId, form]);
+
   async function onSubmit(data: FormValues) {
+    const isTodo = data.linkType === "TODO";
+    const resolvedTaskId = isTodo
+      ? Number(data.todoTaskId)
+      : data.taskId && data.taskId !== NO_TASK
+        ? Number(data.taskId)
+        : undefined;
+    const resolvedClientId = isTodo ? undefined : Number(data.clientId);
+    const resolvedProjectId =
+      !isTodo && data.projectId && data.projectId !== NO_PROJECT
+        ? Number(data.projectId)
+        : undefined;
+
     const listKey = getListServiceTicketsQueryKey();
     const tempId = -Date.now();
     const optimistic: ServiceTicket = {
@@ -82,10 +152,15 @@ export function CreateServiceTicketSheet({
       ticketNumber: "…",
       title: data.title,
       description: data.description ?? null,
-      clientId: Number(data.clientId),
-      clientName: clients?.find((c) => c.id === Number(data.clientId))?.companyName ?? null,
-      projectId: data.projectId && data.projectId !== NO_PROJECT ? Number(data.projectId) : null,
+      linkType: data.linkType,
+      clientId: resolvedClientId ?? null,
+      clientName: isTodo
+        ? "Internal to-do"
+        : clients?.find((c) => c.id === resolvedClientId)?.companyName ?? null,
+      projectId: resolvedProjectId ?? null,
       projectName: null,
+      taskId: resolvedTaskId ?? null,
+      taskTitle: tasks?.find((t) => t.id === resolvedTaskId)?.title ?? null,
       assigneeId:
         data.assigneeId && data.assigneeId !== NO_ASSIGNEE ? Number(data.assigneeId) : user?.id ?? null,
       assigneeName: user?.fullName ?? null,
@@ -118,10 +193,11 @@ export function CreateServiceTicketSheet({
         createTicket.mutateAsync({
           data: {
             title: data.title,
-            clientId: Number(data.clientId),
+            linkType: data.linkType,
             description: data.description,
-            projectId:
-              data.projectId && data.projectId !== NO_PROJECT ? Number(data.projectId) : undefined,
+            clientId: resolvedClientId,
+            projectId: resolvedProjectId,
+            taskId: resolvedTaskId,
             assigneeId:
               data.assigneeId && data.assigneeId !== NO_ASSIGNEE
                 ? Number(data.assigneeId)
@@ -149,10 +225,48 @@ export function CreateServiceTicketSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="New service ticket"
-      description="Create a client support ticket and schedule follow-up."
+      description="Link to a client and project, or tie the ticket to an existing to-do."
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="linkType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Link ticket to</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="grid gap-2 sm:grid-cols-2"
+                  >
+                    <Label
+                      htmlFor="link-client"
+                      className={cn(
+                        "flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2",
+                        field.value === "CLIENT" && "border-primary bg-primary/10",
+                      )}
+                    >
+                      <RadioGroupItem value="CLIENT" id="link-client" />
+                      <span className="text-sm">Client, project & task</span>
+                    </Label>
+                    <Label
+                      htmlFor="link-todo"
+                      className={cn(
+                        "flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2",
+                        field.value === "TODO" && "border-primary bg-primary/10",
+                      )}
+                    >
+                      <RadioGroupItem value="TODO" id="link-todo" />
+                      <span className="text-sm">To-do</span>
+                    </Label>
+                  </RadioGroup>
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="title"
@@ -166,30 +280,130 @@ export function CreateServiceTicketSheet({
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="clientId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Client</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger className="min-h-11">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {(clients ?? []).map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.companyName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
+          {linkType === "CLIENT" ? (
+            <>
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="min-h-11">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(clients ?? []).map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="projectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project (optional)</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!clientId}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="min-h-11">
+                          <SelectValue placeholder={clientId ? "None" : "Select client first"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_PROJECT}>None</SelectItem>
+                        {clientProjects.map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="taskId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task (optional)</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!projectId || projectId === NO_PROJECT}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="min-h-11">
+                          <SelectValue
+                            placeholder={
+                              projectId && projectId !== NO_PROJECT
+                                ? "None"
+                                : "Select a project first"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_TASK}>None</SelectItem>
+                        {projectTasks.map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </>
+          ) : (
+            <FormField
+              control={form.control}
+              name="todoTaskId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>To-do</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="min-h-11">
+                        <SelectValue placeholder="Select open task" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {openTodos.length === 0 ? (
+                        <SelectItem value="__empty__" disabled>
+                          No open tasks
+                        </SelectItem>
+                      ) : (
+                        openTodos.map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.title}
+                            {t.projectName ? ` · ${t.projectName}` : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
           <FormField
             control={form.control}
             name="description"
@@ -199,10 +413,10 @@ export function CreateServiceTicketSheet({
                 <FormControl>
                   <Textarea {...field} rows={3} placeholder="Details for the team" />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
@@ -251,30 +465,7 @@ export function CreateServiceTicketSheet({
               )}
             />
           </div>
-          <FormField
-            control={form.control}
-            name="projectId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project (optional)</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger className="min-h-11">
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={NO_PROJECT}>None</SelectItem>
-                    {(projects ?? []).map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
+
           {can("employees:read") && (
             <FormField
               control={form.control}
@@ -301,6 +492,7 @@ export function CreateServiceTicketSheet({
               )}
             />
           )}
+
           <FormField
             control={form.control}
             name="nextFollowUpAt"
@@ -313,6 +505,7 @@ export function CreateServiceTicketSheet({
               </FormItem>
             )}
           />
+
           <Button type="submit" className="min-h-11 w-full" disabled={createTicket.isPending}>
             Create ticket
           </Button>

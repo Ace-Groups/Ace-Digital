@@ -212,19 +212,33 @@ export interface TaskAssignee {
   completed: boolean;
 }
 
+export type ServiceTicketLinkType = typeof ServiceTicketLinkType[keyof typeof ServiceTicketLinkType];
+
+
+export const ServiceTicketLinkType = {
+  CLIENT: 'CLIENT',
+  TODO: 'TODO',
+} as const;
+
 export interface ServiceTicket {
   id: number;
   ticketNumber: string;
   title: string;
   /** @nullable */
   description?: string | null;
-  clientId: number;
+  linkType: ServiceTicketLinkType;
+  /** @nullable */
+  clientId?: number | null;
   /** @nullable */
   clientName?: string | null;
   /** @nullable */
   projectId?: number | null;
   /** @nullable */
   projectName?: string | null;
+  /** @nullable */
+  taskId?: number | null;
+  /** @nullable */
+  taskTitle?: string | null;
   /** @nullable */
   assigneeId?: number | null;
   /** @nullable */
@@ -268,12 +282,22 @@ export type ServiceTicketDetail = ServiceTicket & {
   records?: ServiceRecord[];
 };
 
+export type ServiceTicketInputLinkType = typeof ServiceTicketInputLinkType[keyof typeof ServiceTicketInputLinkType];
+
+
+export const ServiceTicketInputLinkType = {
+  CLIENT: 'CLIENT',
+  TODO: 'TODO',
+} as const;
+
 export interface ServiceTicketInput {
   /** @minLength 1 */
   title: string;
   description?: string;
-  clientId: number;
+  linkType: ServiceTicketInputLinkType;
+  clientId?: number;
   projectId?: number;
+  taskId?: number;
   assigneeId?: number;
   teamId?: number;
   priority?: string;

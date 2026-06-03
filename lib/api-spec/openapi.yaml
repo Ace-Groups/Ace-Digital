@@ -2133,7 +2133,7 @@ components:
 
     ServiceTicket:
       type: object
-      required: [id, ticketNumber, title, clientId, status, priority, category]
+      required: [id, ticketNumber, title, linkType, status, priority, category]
       properties:
         id:
           type: integer
@@ -2143,13 +2143,20 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        linkType:
+          type: string
+          enum: [CLIENT, TODO]
         clientId:
-          type: integer
+          type: ["integer", "null"]
         clientName:
           type: ["string", "null"]
         projectId:
           type: ["integer", "null"]
         projectName:
+          type: ["string", "null"]
+        taskId:
+          type: ["integer", "null"]
+        taskTitle:
           type: ["string", "null"]
         assigneeId:
           type: ["integer", "null"]
@@ -2194,16 +2201,21 @@ components:
 
     ServiceTicketInput:
       type: object
-      required: [title, clientId]
+      required: [title, linkType]
       properties:
         title:
           type: string
           minLength: 1
         description:
           type: string
+        linkType:
+          type: string
+          enum: [CLIENT, TODO]
         clientId:
           type: integer
         projectId:
+          type: integer
+        taskId:
           type: integer
         assigneeId:
           type: integer

@@ -6,6 +6,10 @@ import { hasPermission } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import {
+  resolveServiceTicketCreateLinks,
+  type ServiceTicketLinkType,
+} from "../lib/service-ticket-links";
 
 const router = Router();
 
@@ -17,9 +21,10 @@ async function enrichTicket(
   ticket: ServiceTicket,
   opts?: { records?: ServiceRecord[] },
 ) {
-  const [client, project, assignee, creator] = await Promise.all([
-    store.findClientById(ticket.clientId),
+  const [client, project, task, assignee, creator] = await Promise.all([
+    ticket.clientId != null ? store.findClientById(ticket.clientId) : null,
     ticket.projectId ? store.findProjectById(ticket.projectId) : null,
+    ticket.taskId ? store.findTaskById(ticket.taskId) : null,
     ticket.assigneeId ? store.findUserById(ticket.assigneeId) : null,
     store.findUserById(ticket.createdById),
   ]);
@@ -30,10 +35,15 @@ async function enrichTicket(
     ticketNumber: ticket.ticketNumber,
     title: ticket.title,
     description: ticket.description,
+    linkType: ticket.linkType ?? "CLIENT",
     clientId: ticket.clientId,
-    clientName: client?.companyName ?? null,
+    clientName:
+      client?.companyName ??
+      (ticket.linkType === "TODO" ? "Internal to-do" : null),
     projectId: ticket.projectId,
     projectName: project?.name ?? null,
+    taskId: ticket.taskId,
+    taskTitle: task?.title ?? null,
     assigneeId: ticket.assigneeId,
     assigneeName: assignee?.fullName ?? null,
     teamId: ticket.teamId,
@@ -93,8 +103,10 @@ router.post(
     const {
       title,
       description,
+      linkType: linkTypeRaw,
       clientId,
       projectId,
+      taskId,
       assigneeId,
       teamId,
       priority,
@@ -102,25 +114,36 @@ router.post(
       category,
       nextFollowUpAt,
     } = req.body;
-    if (!title || !clientId) {
-      res.status(400).json({ error: "Title and clientId are required" });
+    if (!title?.trim()) {
+      res.status(400).json({ error: "Title is required" });
       return;
     }
-    const client = await store.findClientById(Number(clientId));
-    if (!client) {
-      res.status(400).json({ error: "Client not found" });
-      return;
-    }
-    const ticket = await store.createServiceTicket({
-      title,
-      description: description ?? null,
-      clientId: Number(clientId),
+    const linkType = (linkTypeRaw === "TODO" ? "TODO" : "CLIENT") as ServiceTicketLinkType;
+    const resolved = await resolveServiceTicketCreateLinks({
+      linkType,
+      clientId: clientId != null ? Number(clientId) : null,
       projectId: projectId != null ? Number(projectId) : null,
-      assigneeId: assigneeId != null ? Number(assigneeId) : ctx.userId,
-      teamId: teamId != null ? Number(teamId) : ctx.teamId,
+      taskId: taskId != null ? Number(taskId) : null,
+      defaultTeamId: teamId != null ? Number(teamId) : ctx.teamId,
+      defaultAssigneeId: assigneeId != null ? Number(assigneeId) : ctx.userId,
+    });
+    if (!resolved.ok) {
+      res.status(400).json({ error: resolved.error });
+      return;
+    }
+    const { links } = resolved;
+    const ticket = await store.createServiceTicket({
+      title: title.trim(),
+      description: description ?? null,
+      linkType: links.linkType,
+      clientId: links.clientId,
+      projectId: links.projectId,
+      taskId: links.taskId,
+      assigneeId: links.assigneeId,
+      teamId: links.teamId,
       priority: priority ?? "MEDIUM",
       status: status ?? "OPEN",
-      category: category ?? "SUPPORT",
+      category: category ?? (linkType === "TODO" ? "OTHER" : "SUPPORT"),
       nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
       resolvedAt: null,
       createdById: ctx.userId,

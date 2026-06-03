@@ -5,6 +5,7 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ServiceTicketLinkType } from './serviceTicketLinkType';
 
 export interface ServiceTicket {
   id: number;
@@ -12,13 +13,19 @@ export interface ServiceTicket {
   title: string;
   /** @nullable */
   description?: string | null;
-  clientId: number;
+  linkType: ServiceTicketLinkType;
+  /** @nullable */
+  clientId?: number | null;
   /** @nullable */
   clientName?: string | null;
   /** @nullable */
   projectId?: number | null;
   /** @nullable */
   projectName?: string | null;
+  /** @nullable */
+  taskId?: number | null;
+  /** @nullable */
+  taskTitle?: string | null;
   /** @nullable */
   assigneeId?: number | null;
   /** @nullable */

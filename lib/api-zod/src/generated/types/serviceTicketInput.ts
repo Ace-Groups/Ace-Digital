@@ -5,13 +5,16 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ServiceTicketInputLinkType } from './serviceTicketInputLinkType';
 
 export interface ServiceTicketInput {
   /** @minLength 1 */
   title: string;
   description?: string;
-  clientId: number;
+  linkType: ServiceTicketInputLinkType;
+  clientId?: number;
   projectId?: number;
+  taskId?: number;
   assigneeId?: number;
   teamId?: number;
   priority?: string;

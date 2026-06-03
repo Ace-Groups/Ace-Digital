@@ -105,6 +105,8 @@ export * from './serviceRecordInput';
 export * from './serviceTicket';
 export * from './serviceTicketDetail';
 export * from './serviceTicketInput';
+export * from './serviceTicketInputLinkType';
+export * from './serviceTicketLinkType';
 export * from './serviceTicketUpdate';
 export * from './task';
 export * from './taskAssignee';
