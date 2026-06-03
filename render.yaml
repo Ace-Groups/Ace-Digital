@@ -15,7 +15,7 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npm install -g pnpm@10.33.2 && pnpm install && pnpm --filter @workspace/api-server run build
+    buildCommand: npm install pnpm@10.33.2 --ignore-scripts && npm exec -- pnpm install && npm exec -- pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
     envVars:
@@ -35,3 +35,5 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: https://ace-digital-os.web.app,https://ace-digital-os.firebaseapp.com
+      - key: SKIP_INSTALL_DEPS
+        value: "true"

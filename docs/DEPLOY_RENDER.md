@@ -41,7 +41,8 @@ In Render → **Environment** → add:
 
 | Setting | Value |
 |---------|--------|
-| Build | `npm install -g pnpm@10.33.2 && pnpm install && pnpm --filter @workspace/api-server run build` |
+| Build | `npm install pnpm@10.33.2 --ignore-scripts && npm exec -- pnpm install && npm exec -- pnpm --filter @workspace/api-server run build` |
+| Env | `SKIP_INSTALL_DEPS=true` (stops Render from running its own install first) |
 | Start | `node --enable-source-maps artifacts/api-server/dist/index.mjs` |
 | Health check | `/api/healthz` |
 | Plan | Free |
