@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   useCreateServiceRecord,
   getGetServiceTicketQueryKey,
+  getListServiceTicketsQueryKey,
   type ServiceTicketDetail,
   type ServiceRecord,
 } from "@workspace/api-client-react";
@@ -13,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useToast } from "@/hooks/use-toast";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
@@ -96,13 +97,15 @@ export function AddServiceRecordForm({ ticketId, currentStatus }: AddServiceReco
           },
         }),
       reconcile: (res) => {
-        const prior = queryClient
-          .getQueryData<ServiceTicketDetail>(detailKey)
-          ?.records?.filter((r) => r.id !== tempRecordId) ?? [];
+        const prev = queryClient.getQueryData<ServiceTicketDetail>(detailKey);
+        const withoutTemp = (prev?.records ?? []).filter((r) => r.id !== tempRecordId);
+        const records = [res.record, ...withoutTemp.filter((r) => r.id !== res.record.id)];
         queryClient.setQueryData<ServiceTicketDetail>(detailKey, {
           ...res.ticket,
-          records: [res.record, ...prior],
+          records,
         });
+        void queryClient.invalidateQueries({ queryKey: detailKey });
+        void queryClient.invalidateQueries({ queryKey: getListServiceTicketsQueryKey() });
       },
     })
       .then(() => form.reset({ recordType: "NOTE", body: "", statusAfter: NO_STATUS }))
@@ -190,7 +193,12 @@ export function AddServiceRecordForm({ ticketId, currentStatus }: AddServiceReco
             <FormItem>
               <FormLabel className="text-xs">Next follow-up</FormLabel>
               <FormControl>
-                <Input type="datetime-local" {...field} className="min-h-11" />
+                <DateTimePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="Pick date & time"
+                />
               </FormControl>
             </FormItem>
           )}

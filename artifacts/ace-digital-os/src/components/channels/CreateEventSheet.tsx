@@ -3,6 +3,7 @@ import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 interface CreateEventSheetProps {
   open: boolean;
@@ -56,20 +57,20 @@ export function CreateEventSheet({ open, onOpenChange, onCreate }: CreateEventSh
         </div>
         <div className="space-y-2">
           <Label htmlFor="event-start">Starts</Label>
-          <Input
+          <DateTimePicker
             id="event-start"
-            type="datetime-local"
             value={startAt}
-            onChange={(e) => setStartAt(e.target.value)}
+            onChange={setStartAt}
+            placeholder="Start date & time"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="event-end">Ends (optional)</Label>
-          <Input
+          <DateTimePicker
             id="event-end"
-            type="datetime-local"
             value={endAt}
-            onChange={(e) => setEndAt(e.target.value)}
+            onChange={setEndAt}
+            placeholder="End date & time"
           />
         </div>
         <div className="space-y-2">

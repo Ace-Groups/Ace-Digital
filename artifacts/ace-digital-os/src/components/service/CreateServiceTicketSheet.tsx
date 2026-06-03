@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -506,7 +507,12 @@ export function CreateServiceTicketSheet({
               <FormItem>
                 <FormLabel>Next follow-up</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} className="min-h-11" />
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Pick date & time"
+                  />
                 </FormControl>
               </FormItem>
             )}

@@ -245,7 +245,7 @@ export default function ServiceDetailPage() {
               onOpenChange={setEditOpen}
             />
             <ServiceTicketClientReport
-              ticket={ticket as ServiceTicketDetail}
+              ticketId={ticketId}
               open={reportOpen}
               onOpenChange={setReportOpen}
             />

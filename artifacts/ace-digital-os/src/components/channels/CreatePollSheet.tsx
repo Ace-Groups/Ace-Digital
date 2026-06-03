@@ -4,6 +4,7 @@ import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Switch } from "@/components/ui/switch";
 
 interface CreatePollSheetProps {
@@ -102,11 +103,11 @@ export function CreatePollSheet({ open, onOpenChange, onCreate }: CreatePollShee
         </div>
         <div className="space-y-2">
           <Label htmlFor="poll-closes">Closes (optional)</Label>
-          <Input
+          <DateTimePicker
             id="poll-closes"
-            type="datetime-local"
             value={closesAt}
-            onChange={(e) => setClosesAt(e.target.value)}
+            onChange={setClosesAt}
+            placeholder="Closing date & time"
           />
         </div>
         <Button className="w-full" onClick={handleSubmit} disabled={!question.trim()}>

@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { patchListItem } from "@/lib/optimistic";
 import type { ServiceTicket, ServiceTicketDetail } from "@workspace/api-client-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { toDateTimeInputValue, parseDateTimeInput } from "@/lib/utils";
 
 const NO_PROJECT = "__none__";
 const NO_CLIENT = "__none__";
@@ -83,7 +85,7 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
       priority: ticket.priority,
       category: ticket.category,
       nextFollowUpAt: ticket.nextFollowUpAt
-        ? new Date(ticket.nextFollowUpAt).toISOString().slice(0, 16)
+        ? toDateTimeInputValue(parseDateTimeInput(ticket.nextFollowUpAt) ?? new Date(ticket.nextFollowUpAt))
         : "",
     },
   });
@@ -116,7 +118,7 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
       priority: ticket.priority,
       category: ticket.category,
       nextFollowUpAt: ticket.nextFollowUpAt
-        ? new Date(ticket.nextFollowUpAt).toISOString().slice(0, 16)
+        ? toDateTimeInputValue(parseDateTimeInput(ticket.nextFollowUpAt) ?? new Date(ticket.nextFollowUpAt))
         : "",
     });
   }, [open, ticket, form]);
@@ -375,7 +377,12 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
               <FormItem>
                 <FormLabel>Next follow-up</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} className="min-h-11" />
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Pick date & time"
+                  />
                 </FormControl>
               </FormItem>
             )}

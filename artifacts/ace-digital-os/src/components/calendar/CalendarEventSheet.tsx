@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { toDateTimeInputValue } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -51,8 +53,7 @@ interface CalendarEventSheetProps {
 }
 
 function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toDateTimeInputValue(d);
 }
 
 export function CalendarEventSheet({
@@ -193,11 +194,21 @@ export function CalendarEventSheet({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Starts</Label>
-            <Input type="datetime-local" {...form.register("startAt")} disabled={readOnly} />
+            <DateTimePicker
+              value={form.watch("startAt")}
+              onChange={(v) => form.setValue("startAt", v)}
+              disabled={readOnly}
+              placeholder="Start date & time"
+            />
           </div>
           <div className="space-y-2">
             <Label>Ends</Label>
-            <Input type="datetime-local" {...form.register("endAt")} disabled={readOnly} />
+            <DateTimePicker
+              value={form.watch("endAt")}
+              onChange={(v) => form.setValue("endAt", v)}
+              disabled={readOnly}
+              placeholder="End date & time (optional)"
+            />
           </div>
         </div>
         <div className="space-y-2">

@@ -72,6 +72,72 @@ export function formatDateLabel(
   return date.toLocaleDateString("en-IN", options);
 }
 
+/** Parse `YYYY-MM-DDTHH:mm` (datetime-local) or ISO strings as local time. */
+export function parseDateTimeInput(value: string | undefined | null): Date | undefined {
+  if (!value?.trim()) return undefined;
+  const trimmed = value.trim();
+  const localMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(trimmed);
+  if (localMatch) {
+    const date = new Date(
+      Number(localMatch[1]),
+      Number(localMatch[2]) - 1,
+      Number(localMatch[3]),
+      Number(localMatch[4]),
+      Number(localMatch[5]),
+    );
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
+
+/** Format for form state / datetime-local compatible values. */
+export function toDateTimeInputValue(date: Date | undefined | null): string {
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+export function formatDateTimeLabel(value: string | undefined | null): string {
+  const date = parseDateTimeInput(value);
+  if (!date) return "";
+  return date.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export type TimeParts = { hour12: number; minute: number; meridiem: "AM" | "PM" };
+
+export function getTimeParts(date: Date): TimeParts {
+  const h24 = date.getHours();
+  const meridiem: "AM" | "PM" = h24 >= 12 ? "PM" : "AM";
+  const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return { hour12, minute: date.getMinutes(), meridiem };
+}
+
+export function applyTimeParts(
+  base: Date,
+  hour12: number,
+  minute: number,
+  meridiem: "AM" | "PM",
+): Date {
+  const next = new Date(base);
+  let h24 = hour12 % 12;
+  if (meridiem === "PM") h24 += 12;
+  if (hour12 === 12 && meridiem === "AM") h24 = 0;
+  next.setHours(h24, minute, 0, 0);
+  return next;
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")
