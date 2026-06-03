@@ -19,6 +19,23 @@ export function isMediaAttachment(type: MessageAttachmentType): boolean {
   return type === "image" || type === "video";
 }
 
+/** Firestore rejects explicit `undefined` on optional fields (e.g. thumbUrl). */
+export function sanitizeMessageAttachment(att: MessageAttachment): MessageAttachment {
+  const out: MessageAttachment = { type: att.type, url: att.url };
+  if (att.name) out.name = att.name;
+  if (att.mimeType) out.mimeType = att.mimeType;
+  if (typeof att.size === "number") out.size = att.size;
+  if (att.thumbUrl) out.thumbUrl = att.thumbUrl;
+  return out;
+}
+
+export function sanitizeMessageAttachments(
+  attachments?: MessageAttachment[] | null,
+): MessageAttachment[] | null {
+  if (!attachments?.length) return null;
+  return attachments.map(sanitizeMessageAttachment);
+}
+
 export function validateAttachmentBatch(attachments: MessageAttachment[]): void {
   const media = attachments.filter((a) => isMediaAttachment(a.type)).length;
   const files = attachments.filter((a) => !isMediaAttachment(a.type)).length;
@@ -41,23 +58,32 @@ export function normalizeMessageAttachments(
     const url = (item as MessageAttachment).url;
     if (type !== "image" && type !== "file" && type !== "video" && type !== "audio") continue;
     if (typeof url !== "string" || !url.trim()) continue;
-    out.push({
-      type,
-      url: url.trim(),
-      name: typeof (item as MessageAttachment).name === "string" ? (item as MessageAttachment).name : undefined,
-      mimeType:
-        typeof (item as MessageAttachment).mimeType === "string"
-          ? (item as MessageAttachment).mimeType
-          : undefined,
-      size:
-        typeof (item as MessageAttachment).size === "number"
-          ? (item as MessageAttachment).size
-          : undefined,
-      thumbUrl:
-        typeof (item as MessageAttachment).thumbUrl === "string"
-          ? (item as MessageAttachment).thumbUrl
-          : undefined,
-    });
+    const name =
+      typeof (item as MessageAttachment).name === "string"
+        ? (item as MessageAttachment).name
+        : undefined;
+    const mimeType =
+      typeof (item as MessageAttachment).mimeType === "string"
+        ? (item as MessageAttachment).mimeType
+        : undefined;
+    const size =
+      typeof (item as MessageAttachment).size === "number"
+        ? (item as MessageAttachment).size
+        : undefined;
+    const thumbUrl =
+      typeof (item as MessageAttachment).thumbUrl === "string"
+        ? (item as MessageAttachment).thumbUrl
+        : undefined;
+    out.push(
+      sanitizeMessageAttachment({
+        type,
+        url: url.trim(),
+        ...(name ? { name } : {}),
+        ...(mimeType ? { mimeType } : {}),
+        ...(size != null ? { size } : {}),
+        ...(thumbUrl ? { thumbUrl } : {}),
+      }),
+    );
     if (out.length >= MAX_MEDIA_PER_MESSAGE + MAX_FILES_PER_MESSAGE) break;
   }
   return out.length ? out : undefined;

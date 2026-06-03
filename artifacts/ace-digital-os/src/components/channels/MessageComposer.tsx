@@ -16,6 +16,7 @@ import {
 } from "@/lib/chat-constants";
 import { prepareChatAttachment, prepareChatBlobAttachment } from "@/lib/chat-attachments";
 import { partitionAttachments, buildSendBatches } from "@/lib/chat-batch";
+import { compactMessageAttachments } from "@/lib/chat-attachment-serialize";
 
 const GALLERY_ACCEPT = "image/*,video/*";
 const DOCUMENT_ACCEPT =
@@ -33,6 +34,16 @@ interface MessageComposerProps {
   disabled?: boolean;
   sending?: boolean;
   onSend: (payload: MessageInput, previewAttachments?: MessageAttachment[]) => Promise<void>;
+  onQueuePending: (
+    payload: MessageInput,
+    previewAttachments?: MessageAttachment[],
+  ) => string;
+  onFlushPending: (
+    clientId: string,
+    payload: MessageInput,
+    previewAttachments?: MessageAttachment[],
+  ) => Promise<void>;
+  onMarkPendingFailed: (clientId: string) => void;
 }
 
 function formatRecordTime(seconds: number): string {
@@ -47,6 +58,9 @@ export function MessageComposer({
   disabled,
   sending,
   onSend,
+  onQueuePending,
+  onFlushPending,
+  onMarkPendingFailed,
 }: MessageComposerProps) {
   const { toast } = useToast();
   const keyboardOffset = useKeyboardOffset();
@@ -94,30 +108,54 @@ export function MessageComposer({
     else if (action === "event") setEventOpen(true);
   }
 
-  async function resolveAttachments(): Promise<MessageAttachment[]> {
-    const out: MessageAttachment[] = [];
-    for (let i = 0; i < pendingFiles.length; i++) {
-      const pf = pendingFiles[i]!;
-      setPendingFiles((prev) =>
-        prev.map((p, idx) => (idx === i ? { ...p, progress: 0 } : p)),
-      );
-      try {
-        const att = await prepareChatAttachment(channelId, pf.file, (pct) => {
-          setPendingFiles((prev) =>
-            prev.map((p, idx) => (idx === i ? { ...p, progress: pct } : p)),
-          );
-        });
-        out.push(att);
-      } finally {
-        setPendingFiles((prev) =>
-          prev.map((p, idx) => (idx === i ? { ...p, progress: undefined } : p)),
-        );
-      }
-    }
-    return out;
+  function clearComposerUI() {
+    setMessage("");
+    setPendingFiles([]);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
   }
 
-  async function sendAttachmentBatches(caption: string, attachments: MessageAttachment[]) {
+  function revokeSnapshotPreviews(files: PendingFile[]) {
+    for (const pf of files) {
+      if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
+    }
+  }
+
+  async function resolveAttachmentsFromSnapshot(
+    files: PendingFile[],
+    onFileProgress?: (index: number, pct: number) => void,
+  ): Promise<MessageAttachment[]> {
+    const results = await Promise.all(
+      files.map((pf, i) =>
+        prepareChatAttachment(channelId, pf.file, (pct) => onFileProgress?.(i, pct)),
+      ),
+    );
+    return compactMessageAttachments(results);
+  }
+
+  function attachmentTypeFromFile(file: File): MessageAttachment["type"] {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("video/")) return "video";
+    if (file.type.startsWith("audio/")) return "audio";
+    return "file";
+  }
+
+  function previewsFromSnapshot(files: PendingFile[]): MessageAttachment[] {
+    return compactMessageAttachments(
+      files.map((pf) => ({
+        type: attachmentTypeFromFile(pf.file),
+        url: pf.previewUrl ?? URL.createObjectURL(pf.file),
+        name: pf.file.name,
+        ...(pf.file.type ? { mimeType: pf.file.type } : {}),
+        size: pf.file.size,
+      })),
+    );
+  }
+
+  async function sendAttachmentBatches(
+    caption: string,
+    attachments: MessageAttachment[],
+    queuedIds: string[],
+  ) {
     const { media, files } = partitionAttachments(attachments);
     const batches = [
       ...buildSendBatches(media, "media"),
@@ -128,7 +166,8 @@ export function MessageComposer({
       return;
     }
     for (let i = 0; i < batches.length; i++) {
-      await onSend(
+      await onFlushPending(
+        queuedIds[i]!,
         {
           body: i === 0 ? caption.trim() : "",
           attachments: batches[i],
@@ -141,12 +180,6 @@ export function MessageComposer({
   async function sendPayload(payload: MessageInput, preview?: MessageAttachment[]) {
     try {
       await onSend(payload, preview);
-      setMessage("");
-      setPendingFiles((prev) => {
-        prev.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
-        return [];
-      });
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch {
       /* parent shows toast */
     }
@@ -155,14 +188,31 @@ export function MessageComposer({
   async function handleSend() {
     if (!canSend) return;
     const caption = message.trim();
-    if (pendingFiles.length) {
+    const filesSnapshot = [...pendingFiles];
+    clearComposerUI();
+
+    if (filesSnapshot.length) {
+      const previewAtts = previewsFromSnapshot(filesSnapshot);
+      const { media, files } = partitionAttachments(previewAtts);
+      const previewBatches = [
+        ...buildSendBatches(media, "media"),
+        ...buildSendBatches(files, "file"),
+      ];
+      const queuedIds = previewBatches.map((batch, i) =>
+        onQueuePending(
+          { body: i === 0 ? caption : "", attachments: batch },
+          batch,
+        ),
+      );
+
       try {
-        const attachments = await resolveAttachments();
-        await sendAttachmentBatches(caption, attachments);
-        setMessage("");
-        setPendingFiles([]);
-        if (textareaRef.current) textareaRef.current.style.height = "auto";
+        const attachments = await resolveAttachmentsFromSnapshot(filesSnapshot);
+        revokeSnapshotPreviews(filesSnapshot);
+        await sendAttachmentBatches(caption, attachments, queuedIds);
       } catch (err) {
+        for (const id of queuedIds) onMarkPendingFailed(id);
+        setMessage(caption);
+        setPendingFiles(filesSnapshot);
         toast({
           title: "Failed to send",
           description: err instanceof Error ? err.message : "Upload failed",
@@ -171,7 +221,17 @@ export function MessageComposer({
       }
       return;
     }
-    await sendPayload({ body: caption });
+
+    try {
+      await onSend({ body: caption });
+    } catch (err) {
+      setMessage(caption);
+      toast({
+        title: "Failed to send",
+        description: err instanceof Error ? err.message : "Send failed",
+        variant: "destructive",
+      });
+    }
   }
 
   async function handleVoiceSend() {

@@ -5,6 +5,7 @@ import {
   type UploadTaskSnapshot,
 } from "firebase/storage";
 import type { MessageAttachment } from "@workspace/api-client-react";
+import { compactMessageAttachment } from "@/lib/chat-attachment-serialize";
 import { getFirebaseStorage, canUseFirebaseStorage } from "@/lib/firebase-client";
 
 export type UploadProgress = {
@@ -84,14 +85,14 @@ export async function uploadChatFile(
   const type = attachmentTypeFromFile(file);
   const thumbUrl = type === "image" ? await generateImageThumb(file) : undefined;
 
-  return {
+  return compactMessageAttachment({
     type,
     url,
     name: file.name,
-    mimeType: file.type || undefined,
+    ...(file.type ? { mimeType: file.type } : {}),
     size: file.size,
-    thumbUrl,
-  };
+    ...(thumbUrl ? { thumbUrl } : {}),
+  });
 }
 
 export async function uploadChatBlob(

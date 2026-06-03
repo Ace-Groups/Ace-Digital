@@ -18,7 +18,7 @@ import type {
   CalendarEvent,
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
-import { normalizeMessageAttachments } from "../message-attachments";
+import { normalizeMessageAttachments, sanitizeMessageAttachments } from "../message-attachments";
 import type {
   ActivityLogWithActor,
   AccessContext,
@@ -84,8 +84,14 @@ function app(): App {
   return getApps()[0]!;
 }
 
+let firestoreDb: Firestore | null = null;
+
 function fs(): Firestore {
-  return getFirestore(app());
+  if (!firestoreDb) {
+    firestoreDb = getFirestore(app());
+    firestoreDb.settings({ ignoreUndefinedProperties: true });
+  }
+  return firestoreDb;
 }
 
 function toDate(v: unknown): Date {
@@ -873,7 +879,7 @@ export function createFirestoreStore() {
         channelId: data.channelId,
         senderId: data.senderId,
         body: data.body,
-        attachments: data.attachments,
+        attachments: sanitizeMessageAttachments(data.attachments ?? null),
         messageKind: data.messageKind ?? "text",
         metadata: data.metadata ?? null,
         senderName: data.senderName ?? null,

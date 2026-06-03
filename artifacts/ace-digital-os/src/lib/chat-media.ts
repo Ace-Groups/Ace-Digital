@@ -1,4 +1,5 @@
 import type { MessageAttachment } from "@workspace/api-client-react";
+import { compactMessageAttachment } from "@/lib/chat-attachment-serialize";
 import { resizeImageFile } from "@/lib/avatar";
 
 const MAX_IMAGE_DIMENSION = 1200;
@@ -40,26 +41,26 @@ export async function blobToAudioAttachment(blob: Blob): Promise<MessageAttachme
     throw new Error("Voice message is too large to send");
   }
   const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
-  return {
+  return compactMessageAttachment({
     type: "audio",
     url,
     name: `voice-${Date.now()}.${ext}`,
-    mimeType: blob.type || "audio/webm",
+    ...(blob.type ? { mimeType: blob.type } : { mimeType: "audio/webm" }),
     size: blob.size,
-  };
+  });
 }
 
 export async function fileToMessageAttachment(file: File): Promise<MessageAttachment> {
   const type = attachmentTypeFromFile(file);
   const base = {
     name: file.name,
-    mimeType: file.type || undefined,
+    ...(file.type ? { mimeType: file.type } : {}),
     size: file.size,
   };
 
   if (type === "image") {
     const url = await resizeImageFile(file, MAX_IMAGE_DIMENSION);
-    return { type, url, ...base, size: url.length };
+    return compactMessageAttachment({ type, url, ...base, size: url.length });
   }
 
   if (type === "audio") {
@@ -70,7 +71,7 @@ export async function fileToMessageAttachment(file: File): Promise<MessageAttach
     if (url.length > 520_000) {
       throw new Error("Audio is too large to send");
     }
-    return { type, url, ...base };
+    return compactMessageAttachment({ type, url, ...base });
   }
 
   if (type === "video") {
@@ -81,7 +82,7 @@ export async function fileToMessageAttachment(file: File): Promise<MessageAttach
     if (url.length > 520_000) {
       throw new Error("Video is too large to send");
     }
-    return { type, url, ...base };
+    return compactMessageAttachment({ type, url, ...base });
   }
 
   if (file.size > MAX_FILE_BYTES) {
@@ -91,7 +92,7 @@ export async function fileToMessageAttachment(file: File): Promise<MessageAttach
   if (url.length > 520_000) {
     throw new Error("File is too large to send");
   }
-  return { type, url, ...base };
+  return compactMessageAttachment({ type, url, ...base });
 }
 
 export function formatFileSize(bytes?: number): string {

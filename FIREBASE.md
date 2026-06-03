@@ -17,6 +17,14 @@
 - **Hosting** — production build of `artifacts/ace-digital-os` (SPA).
 - **Cloud Functions (API)** — Gen 1 HTTPS `api` in `asia-south1`; Hosting rewrites `/api/**` to this function.
 
+## Firebase web app (chat client SDK)
+
+The hosted app uses the Firebase **Web** app `Ace Digital OS` (`1:468590312757:web:90d5fa23bd3cb78e68e07c`). SDK values are embedded in `artifacts/ace-digital-os/src/lib/firebase-config.ts` (override with `VITE_FIREBASE_*` at build time if needed).
+
+```bash
+npx firebase-tools@latest apps:sdkconfig WEB 1:468590312757:web:90d5fa23bd3cb78e68e07c --project ace-digital-os
+```
+
 ## Production login (single admin)
 
 | Field | Value |

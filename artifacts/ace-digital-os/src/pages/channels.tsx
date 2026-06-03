@@ -96,7 +96,8 @@ export default function ChannelsPage() {
 
   useChannelMessagesRealtime(selectedChannelId, realtimeReady);
 
-  const { send, isPending: sending } = useSendChannelMessage(selectedChannelId);
+  const { send, queuePending, flushPending, markPendingFailed, isPending: sending } =
+    useSendChannelMessage(selectedChannelId);
 
   const rowVirtualizer = useVirtualizer({
     count: messages?.length ?? 0,
@@ -150,6 +151,42 @@ export default function ChannelsPage() {
       }
     },
     [selectedChannelId, canPost, send, toast],
+  );
+
+  const handleQueuePending = useCallback(
+    (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
+      if (!selectedChannelId || !canPost) throw new Error("Not ready");
+      return queuePending(payload, previewAttachments);
+    },
+    [selectedChannelId, canPost, queuePending],
+  );
+
+  const handleFlushPending = useCallback(
+    async (
+      clientId: string,
+      payload: MessageInput,
+      previewAttachments?: MessageInput["attachments"],
+    ) => {
+      if (!selectedChannelId || !canPost) return;
+      try {
+        await flushPending(clientId, payload, previewAttachments);
+        setShouldAutoScroll(true);
+      } catch (err) {
+        const detail =
+          err instanceof Error
+            ? err.message
+            : typeof err === "object" && err && "error" in err
+              ? String((err as { error: unknown }).error)
+              : undefined;
+        toast({
+          title: "Failed to send message",
+          description: detail ?? "Check your connection and try again.",
+          variant: "destructive",
+        });
+        throw err;
+      }
+    },
+    [selectedChannelId, canPost, flushPending, toast],
   );
 
   function selectChannel(id: number) {
@@ -236,6 +273,9 @@ export default function ChannelsPage() {
           channelName={selectedChannel.name}
           sending={sending}
           onSend={handleSend}
+          onQueuePending={handleQueuePending}
+          onFlushPending={handleFlushPending}
+          onMarkPendingFailed={markPendingFailed}
         />
       )}
 

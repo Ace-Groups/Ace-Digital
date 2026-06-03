@@ -3,6 +3,7 @@ import {
   MAX_FILES_PER_MESSAGE,
   MAX_MEDIA_PER_MESSAGE,
   normalizeMessageAttachments,
+  sanitizeMessageAttachments,
   validateAttachmentBatch,
   type MessageAttachment,
 } from "@workspace/db";
@@ -18,8 +19,11 @@ export function parseMessageAttachmentsInput(raw: unknown): MessageAttachment[] 
       }
       continue;
     }
-    if (att.thumbUrl?.startsWith("data:") && att.thumbUrl.length > MAX_ATTACHMENT_DATA_URL_LENGTH) {
-      att.thumbUrl = undefined;
+    if (
+      att.thumbUrl?.startsWith("data:") &&
+      att.thumbUrl.length > MAX_ATTACHMENT_DATA_URL_LENGTH
+    ) {
+      delete att.thumbUrl;
     }
     if (!att.url.startsWith("https://")) {
       throw new Error("Invalid attachment URL");
@@ -27,7 +31,7 @@ export function parseMessageAttachmentsInput(raw: unknown): MessageAttachment[] 
   }
 
   validateAttachmentBatch(normalized);
-  return normalized;
+  return sanitizeMessageAttachments(normalized) ?? undefined;
 }
 
 export function validateMessagePayload(

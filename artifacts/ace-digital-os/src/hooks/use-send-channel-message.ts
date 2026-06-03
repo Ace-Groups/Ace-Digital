@@ -84,21 +84,33 @@ export function useSendChannelMessage(channelId: number | null) {
     [channelId, queryClient],
   );
 
-  const send = useCallback(
-    async (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
+  const queuePending = useCallback(
+    (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
       if (!channelId || !user) throw new Error("Not ready");
-
       const clientId = crypto.randomUUID();
-      const pending = makePendingMessage(
-        channelId,
-        user,
-        {
-          ...payload,
-          attachments: previewAttachments ?? payload.attachments,
-        },
-        clientId,
+      appendPending(
+        makePendingMessage(
+          channelId,
+          user,
+          {
+            ...payload,
+            attachments: previewAttachments ?? payload.attachments,
+          },
+          clientId,
+        ),
       );
-      appendPending(pending);
+      return clientId;
+    },
+    [channelId, user, appendPending],
+  );
+
+  const flushPending = useCallback(
+    async (
+      clientId: string,
+      payload: MessageInput,
+      previewAttachments?: MessageInput["attachments"],
+    ) => {
+      if (!channelId || !user) throw new Error("Not ready");
 
       try {
         const result = await sendMessage.mutateAsync({
@@ -118,11 +130,22 @@ export function useSendChannelMessage(channelId: number | null) {
         throw new Error(message);
       }
     },
-    [channelId, user, appendPending, replacePending, markFailed, sendMessage],
+    [channelId, user, replacePending, markFailed, sendMessage],
+  );
+
+  const send = useCallback(
+    async (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
+      const clientId = queuePending(payload, previewAttachments);
+      return flushPending(clientId, payload, previewAttachments);
+    },
+    [queuePending, flushPending],
   );
 
   return {
     send,
+    queuePending,
+    flushPending,
+    markPendingFailed: markFailed,
     isPending: sendMessage.isPending,
   };
 }
