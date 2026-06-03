@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
-import { useRoomMessageList } from "@/hooks/use-room-message-list";
+import { useRoomMessageList, useMessageListSyncKey } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canDeleteMessage, canManageChannel, canPostInChannel } from "@workspace/rbac";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +38,7 @@ import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import { parseChannelIdFromSearch, setChannelIdInSearch } from "@/lib/channel-url";
 import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
 import { usePrefetchChannelMessages } from "@/hooks/use-prefetch-channel-messages";
+import { replyMetadataFromTarget } from "@/lib/chat-reply";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -57,8 +58,15 @@ export default function ChannelsPage() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
+  const replyToRef = useRef<ReplyTarget | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [roomSearch, setRoomSearch] = useState("");
   const { markRead } = useMarkChannelRead();
+
+  const setActiveReply = useCallback((target: ReplyTarget | null) => {
+    replyToRef.current = target;
+    setReplyTo(target);
+  }, []);
 
   useMobileChromeFlags({
     immersivePage: isMobile,
@@ -135,9 +143,14 @@ export default function ChannelsPage() {
     roomMessages.length === 0 &&
     (roomLoading || (messagesPending && latestMessages === undefined));
 
+  const latestMessagesRef = useRef(latestMessages);
+  latestMessagesRef.current = latestMessages;
+  const messageSyncKey = useMessageListSyncKey(latestMessages);
+
   useEffect(() => {
-    if (latestMessages !== undefined) syncFromQuery(latestMessages);
-  }, [latestMessages, syncFromQuery]);
+    const msgs = latestMessagesRef.current;
+    if (msgs !== undefined) syncFromQuery(msgs);
+  }, [messageSyncKey, syncFromQuery]);
 
   useChannelMessagesRealtime(selectedChannelId, realtimeReady, applyRealtime);
 
@@ -197,10 +210,10 @@ export default function ChannelsPage() {
   }, [channels, selectedChannelId, isMobile]);
 
   useEffect(() => {
-    setReplyTo(null);
+    setActiveReply(null);
     setShouldAutoScroll(true);
     setRoomSearch("");
-  }, [selectedChannelId]);
+  }, [selectedChannelId, setActiveReply]);
 
   const handleMarkRead = useCallback(() => {
     if (selectedChannelId) void markRead(selectedChannelId);
@@ -215,33 +228,44 @@ export default function ChannelsPage() {
     }
   }, [loadOlder]);
 
-  const handleReply = useCallback((target: ListReplyTarget) => {
-    setReplyTo(target);
+  const handleScrollToMessage = useCallback((messageId: number) => {
+    document
+      .querySelector(`[data-testid="message-${messageId}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
-  const wrapPayload = useCallback(
-    (payload: MessageInput): MessageInput => {
-      if (!replyTo) return payload;
-      const metadata = {
-        ...(payload.metadata ?? {}),
-        replyTo: {
-          id: replyTo.id,
-          body: replyTo.body.slice(0, 280),
-          senderName: replyTo.senderName ?? null,
-        },
-      };
-      return { ...payload, metadata };
+  const handleReply = useCallback(
+    (target: ListReplyTarget) => {
+      setActiveReply(target);
+      setShouldAutoScroll(true);
+      requestAnimationFrame(() => {
+        composerRef.current?.focus();
+        composerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     },
-    [replyTo],
+    [setActiveReply],
   );
+
+  const wrapPayload = useCallback((payload: MessageInput): MessageInput => {
+    const target = replyToRef.current;
+    if (!target) return payload;
+    return {
+      ...payload,
+      metadata: {
+        ...(payload.metadata ?? {}),
+        ...replyMetadataFromTarget(target),
+      },
+    };
+  }, []);
 
   const handleSend = useCallback(
     async (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
       if (!selectedChannelId || !canPost) return;
+      const wrapped = wrapPayload(payload);
+      setActiveReply(null);
       try {
-        await send(wrapPayload(payload), previewAttachments);
+        await send(wrapped, previewAttachments);
         setShouldAutoScroll(true);
-        setReplyTo(null);
       } catch (err) {
         const detail =
           err instanceof Error
@@ -262,9 +286,11 @@ export default function ChannelsPage() {
   const handleQueuePending = useCallback(
     (payload: MessageInput, previewAttachments?: MessageInput["attachments"]) => {
       if (!selectedChannelId || !canPost) throw new Error("Not ready");
-      return queuePending(wrapPayload(payload), previewAttachments);
+      const wrapped = wrapPayload(payload);
+      if (replyToRef.current) setActiveReply(null);
+      return queuePending(wrapped, previewAttachments);
     },
-    [selectedChannelId, canPost, queuePending, wrapPayload],
+    [selectedChannelId, canPost, queuePending, wrapPayload, setActiveReply],
   );
 
   const handleFlushPending = useCallback(
@@ -274,10 +300,10 @@ export default function ChannelsPage() {
       previewAttachments?: MessageInput["attachments"],
     ) => {
       if (!selectedChannelId || !canPost) return;
+      const wrapped = wrapPayload(payload);
       try {
-        await flushPending(clientId, wrapPayload(payload), previewAttachments);
+        await flushPending(clientId, wrapped, previewAttachments);
         setShouldAutoScroll(true);
-        setReplyTo(null);
       } catch (err) {
         const detail =
           err instanceof Error
@@ -295,6 +321,10 @@ export default function ChannelsPage() {
     },
     [selectedChannelId, canPost, flushPending, wrapPayload, toast],
   );
+
+  const handleShouldAutoScrollChange = useCallback((value: boolean) => {
+    setShouldAutoScroll(value);
+  }, []);
 
   function selectChannel(id: number) {
     setSelectedChannelId(id);
@@ -331,12 +361,13 @@ export default function ChannelsPage() {
           currentUserId={user?.id}
           lastReadMessageId={selectedChannel?.lastReadMessageId}
           shouldAutoScroll={shouldAutoScroll}
-          onShouldAutoScrollChange={setShouldAutoScroll}
+          onShouldAutoScrollChange={handleShouldAutoScrollChange}
           onMarkRead={handleMarkRead}
           onLoadOlder={handleLoadOlder}
           loadingOlder={loadingOlder}
           hasMoreBefore={hasMoreBefore}
           onReply={handleReply}
+          onScrollToMessage={handleScrollToMessage}
           searchQuery={roomSearch}
           onMessagePatched={(updated) => patchMessage(updated.id, () => updated)}
           canDeleteMessage={canDeleteForMessage}
@@ -354,7 +385,8 @@ export default function ChannelsPage() {
           channelName={selectedChannel.name}
           sending={sending}
           replyTo={replyTo}
-          onClearReply={() => setReplyTo(null)}
+          composerRef={composerRef}
+          onClearReply={() => setActiveReply(null)}
           onSend={handleSend}
           onQueuePending={handleQueuePending}
           onFlushPending={handleFlushPending}

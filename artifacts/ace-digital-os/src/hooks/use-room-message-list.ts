@@ -10,19 +10,31 @@ import {
   type Message,
   getGetChannelMessagesQueryKey,
 } from "@workspace/api-client-react";
-import { RecordList } from "@/lib/record-list";
+import { RecordList, type RecordListState } from "@/lib/record-list";
+import { sameOrderedMessageIds } from "@/lib/message-list-equality";
 
 export const CHANNEL_MESSAGE_PARAMS = { limit: 50 } as const;
 
-function sameMessageArrayRefs(a: Message[], b: Message[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
 const channelLists = new Map<number, RecordList<Message>>();
+
+/** Stable snapshot when no channel list is mounted (useSyncExternalStore contract). */
+const EMPTY_MESSAGE_LIST_SNAPSHOT: RecordListState<Message> = {
+  items: [],
+  status: "loading",
+  hasMoreBefore: true,
+};
+
+function shouldSkipIncomingMerge(existing: Message[], incoming: Message[]): boolean {
+  if (!incoming.length) return true;
+  if (existing.length === incoming.length) {
+    return sameOrderedMessageIds(existing, incoming);
+  }
+  if (existing.length > incoming.length) {
+    const tail = existing.slice(-incoming.length);
+    return sameOrderedMessageIds(tail, incoming);
+  }
+  return false;
+}
 
 function getChannelList(channelId: number): RecordList<Message> {
   let list = channelLists.get(channelId);
@@ -56,15 +68,11 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     (onStoreChange: () => void) => list?.subscribe(onStoreChange) ?? (() => {}),
     [list],
   );
-  const getSnapshot = useCallback(
-    () =>
-      list?.getSnapshot() ?? {
-        items: [] as Message[],
-        status: "loading" as const,
-        hasMoreBefore: true,
-      },
-    [list],
-  );
+
+  const getSnapshot = useCallback(() => {
+    if (list) return list.getSnapshot();
+    return EMPTY_MESSAGE_LIST_SNAPSHOT;
+  }, [list]);
 
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
@@ -85,7 +93,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
         return;
       }
       if (items.length > 0) {
-        if (!sameMessageArrayRefs(snap.items, items)) {
+        if (!shouldSkipIncomingMerge(snap.items, items)) {
           list.mergeRealtime(items);
         }
       } else if (snap.items.length === 0) {
@@ -120,7 +128,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
         list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
-      } else if (!sameMessageArrayRefs(snap.items, items)) {
+      } else if (!shouldSkipIncomingMerge(snap.items, items)) {
         list.mergeRealtime(items);
       }
     },
@@ -154,4 +162,12 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     patchMessage,
     isLoading: state.status === "loading" && state.items.length === 0,
   };
+}
+
+/** Stable key so sync effect does not run when React Query returns a new array ref with same ids. */
+export function useMessageListSyncKey(messages: Message[] | undefined): string {
+  return useMemo(
+    () => (messages?.length ? messages.map((m) => m.id).join(",") : ""),
+    [messages],
+  );
 }

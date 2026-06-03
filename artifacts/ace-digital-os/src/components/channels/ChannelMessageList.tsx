@@ -38,6 +38,7 @@ interface ChannelMessageListProps {
   loadingOlder: boolean;
   hasMoreBefore: boolean;
   onReply?: (target: ReplyTarget) => void;
+  onScrollToMessage?: (messageId: number) => void;
   searchQuery?: string;
   onMessagePatched?: (message: Message) => void;
   canDeleteMessage?: (message: Message) => boolean;
@@ -57,6 +58,7 @@ export function ChannelMessageList({
   loadingOlder,
   hasMoreBefore,
   onReply,
+  onScrollToMessage,
   searchQuery = "",
   onMessagePatched,
   canDeleteMessage,
@@ -227,6 +229,7 @@ export function ChannelMessageList({
                 canDelete={canDeleteMessage?.(msg) ?? false}
                 onDelete={onDeleteMessage ? () => void onDeleteMessage(msg) : undefined}
                 onReply={onReply}
+                onScrollToQuotedMessage={onScrollToMessage}
                 onToggleReaction={
                   !isPendingMessage(msg)
                     ? async (emoji) => {

@@ -21,6 +21,7 @@ import type { ReplyTarget } from "@/components/channels/ChannelMessageList";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { displayMessageBody } from "@/lib/chat-mentions";
+import { replyTargetFromMessage } from "@/lib/chat-reply";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ interface MessageBubbleProps {
   canDelete?: boolean;
   onDelete?: () => void | Promise<void>;
   onReply?: (target: ReplyTarget) => void;
+  onScrollToQuotedMessage?: (messageId: number) => void;
   onToggleReaction?: (emoji: string) => void | Promise<void>;
 }
 
@@ -81,6 +83,7 @@ export function MessageBubble({
   canDelete = false,
   onDelete,
   onReply,
+  onScrollToQuotedMessage,
   onToggleReaction,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
@@ -218,13 +221,7 @@ export function MessageBubble({
                 {onReply && (
                   <DropdownMenuItem
                     className="min-h-11 sm:min-h-9"
-                    onClick={() =>
-                      onReply({
-                        id: msg.id,
-                        body: msg.body,
-                        senderName: msg.senderName,
-                      })
-                    }
+                    onClick={() => onReply(replyTargetFromMessage(msg as Message))}
                   >
                     <Reply size={14} className="mr-2" />
                     Reply
@@ -259,17 +256,19 @@ export function MessageBubble({
           ) : (
             <>
           {quote && (
-            <div
+            <button
+              type="button"
               className={cn(
-                "rounded-lg border-l-2 px-3 py-2 text-xs",
-                isMe ? "border-primary-foreground/50 bg-primary/20" : "border-primary bg-muted/80",
+                "w-full rounded-lg border-l-2 px-3 py-2 text-left text-xs transition-colors",
+                isMe ? "border-primary-foreground/50 bg-primary/20 hover:bg-primary/30" : "border-primary bg-muted/80 hover:bg-muted",
               )}
+              onClick={() => onScrollToQuotedMessage?.(quote.id)}
             >
               <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
               <p className="line-clamp-2 opacity-70">
                 {quote.body.trim() ? quote.body : "Original message deleted"}
               </p>
-            </div>
+            </button>
           )}
 
           {msg.messageKind === "poll" && (

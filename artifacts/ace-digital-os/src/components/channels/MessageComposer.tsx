@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import { Mic, Paperclip, Send, Trash2, X } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useMentionAutocomplete } from "@/hooks/use-mention-autocomplete";
@@ -38,6 +38,7 @@ interface MessageComposerProps {
   disabled?: boolean;
   sending?: boolean;
   replyTo?: ReplyTarget | null;
+  composerRef?: RefObject<HTMLTextAreaElement | null>;
   onClearReply?: () => void;
   onSend: (payload: MessageInput, previewAttachments?: MessageAttachment[]) => Promise<void>;
   onQueuePending: (
@@ -64,6 +65,7 @@ export function MessageComposer({
   disabled,
   sending,
   replyTo,
+  composerRef,
   onClearReply,
   onSend,
   onQueuePending,
@@ -81,6 +83,14 @@ export function MessageComposer({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const setTextareaRef = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      textareaRef.current = el;
+      if (composerRef) composerRef.current = el;
+    },
+    [composerRef],
+  );
 
   const mention = useMentionAutocomplete(channelId, message, cursor);
 
@@ -488,7 +498,7 @@ export function MessageComposer({
                 )}
               >
                 <textarea
-                  ref={textareaRef}
+                  ref={setTextareaRef}
                   data-testid="input-message"
                   rows={1}
                   disabled={disabled}
