@@ -5,12 +5,18 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ServiceTicketUpdateLinkType } from './serviceTicketUpdateLinkType';
 
 export interface ServiceTicketUpdate {
   title?: string;
   description?: string;
+  linkType?: ServiceTicketUpdateLinkType;
+  /** @nullable */
+  clientId?: number | null;
   /** @nullable */
   projectId?: number | null;
+  /** @nullable */
+  taskId?: number | null;
   /** @nullable */
   assigneeId?: number | null;
   /** @nullable */

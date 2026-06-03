@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ServiceRecordTimeline } from "@/components/service/ServiceRecordTimeline";
@@ -15,11 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Building2, User, Clock } from "lucide-react";
+import { EditServiceTicketSheet } from "@/components/service/EditServiceTicketSheet";
+import { ServiceTicketClientReport } from "@/components/service/ServiceTicketClientReport";
+import { ArrowLeft, Building2, User, Clock, Pencil, FileOutput } from "lucide-react";
+import type { ServiceTicket, ServiceTicketDetail } from "@workspace/api-client-react";
 import { cn, formatRelativeTime, priorityColor, statusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { patchListItem } from "@/lib/optimistic";
-import type { ServiceTicket } from "@workspace/api-client-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ServiceDetailPage() {
@@ -30,6 +32,8 @@ export default function ServiceDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateTicket = useUpdateServiceTicket();
+  const [editOpen, setEditOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const detailKey = getGetServiceTicketQueryKey(ticketId);
   const { data: ticket, isLoading } = useGetServiceTicket(ticketId, {
@@ -110,26 +114,55 @@ export default function ServiceDetailPage() {
                     </p>
                   )}
                 </div>
-                {canWrite && (
-                  <Select value={ticket.status} onValueChange={(v) => void patchStatus(v)}>
-                    <SelectTrigger className="min-h-11 w-full sm:w-[10rem]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["OPEN", "IN_PROGRESS", "WAITING_CLIENT", "RESOLVED", "CLOSED"].map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s.replace("_", " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+                  {canWrite && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-h-10 gap-1.5"
+                        onClick={() => setEditOpen(true)}
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-h-10 gap-1.5"
+                        onClick={() => setReportOpen(true)}
+                      >
+                        <FileOutput size={14} />
+                        Client report
+                      </Button>
+                    </div>
+                  )}
+                  {canWrite && (
+                    <Select value={ticket.status} onValueChange={(v) => void patchStatus(v)}>
+                      <SelectTrigger className="min-h-11 w-full sm:w-[10rem]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["OPEN", "IN_PROGRESS", "WAITING_CLIENT", "RESOLVED", "CLOSED"].map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s.replace("_", " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
 
               <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Building2 size={14} className="shrink-0" />
-                  <span>{ticket.clientName ?? "Client"}</span>
+                  <span>
+                    {ticket.clientName ??
+                      (ticket.linkType === "TODO" ? "Internal to-do" : ticket.projectName ?? "—")}
+                  </span>
                 </div>
                 {ticket.assigneeName && (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -174,6 +207,17 @@ export default function ServiceDetailPage() {
                 <AddServiceRecordForm ticketId={ticketId} currentStatus={ticket.status} />
               </div>
             )}
+
+            <EditServiceTicketSheet
+              ticket={ticket as ServiceTicketDetail}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+            />
+            <ServiceTicketClientReport
+              ticket={ticket as ServiceTicketDetail}
+              open={reportOpen}
+              onOpenChange={setReportOpen}
+            />
           </>
         )}
       </div>

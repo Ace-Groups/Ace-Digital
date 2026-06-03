@@ -53,7 +53,10 @@ export function getNavRoutesForRole(role: string): NavRoute[] {
 
 export function canAccessRoute(role: string, href: string): boolean {
   const allowed = getNavRoutesForRole(role);
-  const item = NAV_ROUTES.find((n) => n.href === href);
+  const path = href.split("?")[0].replace(/\/$/, "") || "/";
+  const item =
+    NAV_ROUTES.find((n) => n.href === path) ??
+    NAV_ROUTES.find((n) => n.href !== "/" && path.startsWith(`${n.href}/`));
   if (!item) return true;
   return allowed.includes(item.route);
 }

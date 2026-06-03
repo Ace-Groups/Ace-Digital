@@ -108,6 +108,7 @@ export * from './serviceTicketInput';
 export * from './serviceTicketInputLinkType';
 export * from './serviceTicketLinkType';
 export * from './serviceTicketUpdate';
+export * from './serviceTicketUpdateLinkType';
 export * from './task';
 export * from './taskAssignee';
 export * from './taskInput';

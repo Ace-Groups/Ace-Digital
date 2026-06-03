@@ -2237,7 +2237,14 @@ components:
           type: string
         description:
           type: string
+        linkType:
+          type: string
+          enum: [CLIENT, TODO]
+        clientId:
+          type: ["integer", "null"]
         projectId:
+          type: ["integer", "null"]
+        taskId:
           type: ["integer", "null"]
         assigneeId:
           type: ["integer", "null"]

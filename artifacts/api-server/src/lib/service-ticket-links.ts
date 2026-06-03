@@ -100,3 +100,80 @@ export async function resolveServiceTicketCreateLinks(input: {
     },
   };
 }
+
+export async function resolveServiceTicketUpdateLinks(
+  existing: {
+    linkType?: string | null;
+    clientId?: number | null;
+    projectId?: number | null;
+    taskId?: number | null;
+  },
+  input: {
+    linkType?: ServiceTicketLinkType;
+    clientId?: number | null;
+    projectId?: number | null;
+    taskId?: number | null;
+  },
+): Promise<
+  | {
+      ok: true;
+      links: Pick<ResolvedServiceTicketLinks, "linkType" | "clientId" | "projectId" | "taskId">;
+    }
+  | { ok: false; error: string }
+> {
+  const linkType = (input.linkType ??
+    existing.linkType ??
+    "CLIENT") as ServiceTicketLinkType;
+
+  if (linkType === "TODO") {
+    const taskId = input.taskId !== undefined ? input.taskId : existing.taskId;
+    if (taskId == null) return { ok: false, error: "Select a to-do task" };
+    const task = await store.findTaskById(taskId);
+    if (!task) return { ok: false, error: "Task not found" };
+    const fromTask = await resolveLinksFromTask(task);
+    return {
+      ok: true,
+      links: {
+        linkType: "TODO",
+        clientId: fromTask.clientId,
+        projectId: fromTask.projectId,
+        taskId: task.id,
+      },
+    };
+  }
+
+  const projectId =
+    input.projectId !== undefined ? input.projectId : existing.projectId;
+  if (projectId == null) return { ok: false, error: "Project is required" };
+
+  const project = await store.findProjectById(projectId);
+  if (!project) return { ok: false, error: "Project not found" };
+
+  let clientId = input.clientId !== undefined ? input.clientId : existing.clientId ?? null;
+  if (clientId != null) {
+    const client = await store.findClientById(clientId);
+    if (!client) return { ok: false, error: "Client not found" };
+    if (project.clientId != null && project.clientId !== clientId) {
+      return { ok: false, error: "Project does not belong to this client" };
+    }
+  }
+
+  let taskId = input.taskId !== undefined ? input.taskId : existing.taskId ?? null;
+  if (taskId != null) {
+    const task = await store.findTaskById(taskId);
+    if (!task) return { ok: false, error: "Task not found" };
+    if (task.projectId != null && task.projectId !== projectId) {
+      return { ok: false, error: "Task does not belong to this project" };
+    }
+  }
+
+  return {
+    ok: true,
+    links: {
+      linkType: "CLIENT",
+      clientId,
+      projectId: project.id,
+      taskId,
+    },
+  };
+}

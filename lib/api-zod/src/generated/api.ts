@@ -1395,7 +1395,10 @@ export const UpdateServiceTicketParams = zod.object({
 export const UpdateServiceTicketBody = zod.object({
   "title": zod.string().optional(),
   "description": zod.string().optional(),
+  "linkType": zod.enum(['CLIENT', 'TODO']).optional(),
+  "clientId": zod.number().nullish(),
   "projectId": zod.number().nullish(),
+  "taskId": zod.number().nullish(),
   "assigneeId": zod.number().nullish(),
   "teamId": zod.number().nullish(),
   "priority": zod.string().optional(),

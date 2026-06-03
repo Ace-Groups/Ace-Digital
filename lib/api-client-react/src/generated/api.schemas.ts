@@ -306,11 +306,24 @@ export interface ServiceTicketInput {
   nextFollowUpAt?: string;
 }
 
+export type ServiceTicketUpdateLinkType = typeof ServiceTicketUpdateLinkType[keyof typeof ServiceTicketUpdateLinkType];
+
+
+export const ServiceTicketUpdateLinkType = {
+  CLIENT: 'CLIENT',
+  TODO: 'TODO',
+} as const;
+
 export interface ServiceTicketUpdate {
   title?: string;
   description?: string;
+  linkType?: ServiceTicketUpdateLinkType;
+  /** @nullable */
+  clientId?: number | null;
   /** @nullable */
   projectId?: number | null;
+  /** @nullable */
+  taskId?: number | null;
   /** @nullable */
   assigneeId?: number | null;
   /** @nullable */

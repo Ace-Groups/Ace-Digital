@@ -50,14 +50,9 @@ function PageFallback() {
   return <LoadingScreen />;
 }
 
-function ProtectedRoute({
-  component: Component,
-  path,
-}: {
-  component: ComponentType;
-  path: string;
-}) {
+function ProtectedRoute({ component: Component }: { component: ComponentType }) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -67,11 +62,11 @@ function ProtectedRoute({
     return <Redirect to="/login" />;
   }
 
-  if (user?.mustChangePassword && path !== "/change-password") {
+  if (user?.mustChangePassword && location !== "/change-password") {
     return <Redirect to="/change-password" />;
   }
 
-  if (user && !AUTH_ONLY_PATHS.has(path) && !canAccessRoute(user.role, path)) {
+  if (user && !AUTH_ONLY_PATHS.has(location) && !canAccessRoute(user.role, location)) {
     return (
       <Suspense fallback={<PageFallback />}>
         <ForbiddenPage />
@@ -107,62 +102,29 @@ function AppRouter() {
         <Route path="/login" component={LoginPage} />
         <Route
           path="/change-password"
-          component={() => <ProtectedRoute path="/change-password" component={ChangePasswordPage} />}
+          component={() => <ProtectedRoute component={ChangePasswordPage} />}
         />
         <Route
           path="/settings"
-          component={() => <ProtectedRoute path="/settings" component={SettingsPage} />}
+          component={() => <ProtectedRoute component={SettingsPage} />}
         />
         <Route
           path="/notifications"
-          component={() => <ProtectedRoute path="/notifications" component={NotificationsPage} />}
+          component={() => <ProtectedRoute component={NotificationsPage} />}
         />
-        <Route path="/" component={() => <ProtectedRoute path="/" component={DashboardPage} />} />
-        <Route
-          path="/projects"
-          component={() => <ProtectedRoute path="/projects" component={ProjectsPage} />}
-        />
-        <Route path="/tasks" component={() => <ProtectedRoute path="/tasks" component={TasksPage} />} />
-        <Route
-          path="/calendar"
-          component={() => <ProtectedRoute path="/calendar" component={CalendarPage} />}
-        />
-        <Route
-          path="/employees"
-          component={() => <ProtectedRoute path="/employees" component={EmployeesPage} />}
-        />
-        <Route
-          path="/finance"
-          component={() => <ProtectedRoute path="/finance" component={FinancePage} />}
-        />
-        <Route
-          path="/clients"
-          component={() => <ProtectedRoute path="/clients" component={ClientsPage} />}
-        />
-        <Route
-          path="/service/:id"
-          component={() => <ProtectedRoute path="/service/0" component={ServiceDetailPage} />}
-        />
-        <Route
-          path="/service"
-          component={() => <ProtectedRoute path="/service" component={ServiceDeskPage} />}
-        />
-        <Route
-          path="/approvals"
-          component={() => <ProtectedRoute path="/approvals" component={ApprovalsPage} />}
-        />
-        <Route
-          path="/reports"
-          component={() => <ProtectedRoute path="/reports" component={ReportsPage} />}
-        />
-        <Route
-          path="/channels"
-          component={() => <ProtectedRoute path="/channels" component={ChannelsPage} />}
-        />
-        <Route
-          path="/activity"
-          component={() => <ProtectedRoute path="/activity" component={ActivityPage} />}
-        />
+        <Route path="/" component={() => <ProtectedRoute component={DashboardPage} />} />
+        <Route path="/projects" component={() => <ProtectedRoute component={ProjectsPage} />} />
+        <Route path="/tasks" component={() => <ProtectedRoute component={TasksPage} />} />
+        <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
+        <Route path="/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
+        <Route path="/finance" component={() => <ProtectedRoute component={FinancePage} />} />
+        <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
+        <Route path="/service" component={() => <ProtectedRoute component={ServiceDeskPage} />} />
+        <Route path="/service/:id" component={() => <ProtectedRoute component={ServiceDetailPage} />} />
+        <Route path="/approvals" component={() => <ProtectedRoute component={ApprovalsPage} />} />
+        <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
+        <Route path="/channels" component={() => <ProtectedRoute component={ChannelsPage} />} />
+        <Route path="/activity" component={() => <ProtectedRoute component={ActivityPage} />} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

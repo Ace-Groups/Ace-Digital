@@ -8,6 +8,7 @@ import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import {
   resolveServiceTicketCreateLinks,
+  resolveServiceTicketUpdateLinks,
   type ServiceTicketLinkType,
 } from "../lib/service-ticket-links";
 
@@ -204,7 +205,10 @@ router.patch(
     const {
       title,
       description,
+      linkType: linkTypeRaw,
+      clientId,
       projectId,
+      taskId,
       assigneeId,
       teamId,
       priority,
@@ -212,6 +216,36 @@ router.patch(
       category,
       nextFollowUpAt,
     } = req.body;
+
+    const linkFieldsTouched =
+      linkTypeRaw !== undefined ||
+      clientId !== undefined ||
+      projectId !== undefined ||
+      taskId !== undefined;
+
+    let linkPatch: {
+      linkType?: ServiceTicketLinkType;
+      clientId?: number | null;
+      projectId?: number | null;
+      taskId?: number | null;
+    } = {};
+
+    if (linkFieldsTouched) {
+      const linkType = (linkTypeRaw === "TODO" ? "TODO" : "CLIENT") as ServiceTicketLinkType;
+      const resolved = await resolveServiceTicketUpdateLinks(existing, {
+        linkType,
+        clientId: clientId !== undefined ? (clientId != null ? Number(clientId) : null) : undefined,
+        projectId:
+          projectId !== undefined ? (projectId != null ? Number(projectId) : null) : undefined,
+        taskId: taskId !== undefined ? (taskId != null ? Number(taskId) : null) : undefined,
+      });
+      if (!resolved.ok) {
+        res.status(400).json({ error: resolved.error });
+        return;
+      }
+      linkPatch = resolved.links;
+    }
+
     if (assigneeId !== undefined && !hasPermission(ctx, "service_tickets:assign")) {
       const isSelfAssign =
         Number(assigneeId) === ctx.userId && existing.createdById === ctx.userId;
@@ -223,7 +257,11 @@ router.patch(
     const ticket = await store.updateServiceTicket(id, {
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
-      ...(projectId !== undefined && { projectId: projectId != null ? Number(projectId) : null }),
+      ...linkPatch,
+      ...(projectId !== undefined &&
+        !linkFieldsTouched && {
+          projectId: projectId != null ? Number(projectId) : null,
+        }),
       ...(assigneeId !== undefined && { assigneeId: assigneeId != null ? Number(assigneeId) : null }),
       ...(teamId !== undefined && { teamId: teamId != null ? Number(teamId) : null }),
       ...(priority !== undefined && { priority }),
