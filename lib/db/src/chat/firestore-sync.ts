@@ -84,6 +84,26 @@ export async function mirrorMessagePatchToFirestore(
   await db.collection("messages").doc(docId(id)).set(data, { merge: true });
 }
 
+export async function mirrorMessageDeleteToFirestore(
+  id: number,
+  deletedAt: Date,
+  deletedById: number,
+): Promise<void> {
+  const db = ensureFirestore();
+  if (!db) return;
+
+  await db.collection("messages").doc(docId(id)).set(
+    {
+      body: "",
+      attachments: null,
+      metadata: null,
+      deletedAt: deletedAt.toISOString(),
+      deletedById,
+    },
+    { merge: true },
+  );
+}
+
 export async function mirrorChannelActivityToFirestore(
   channelId: number,
   lastPostAt: Date,

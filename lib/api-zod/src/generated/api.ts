@@ -1413,6 +1413,7 @@ export const ListChannelsResponseItem = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListChannelsResponse = zod.array(ListChannelsResponseItem)
@@ -1452,6 +1453,7 @@ export const GetChannelResponse = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1484,6 +1486,7 @@ export const UpdateChannelResponse = zod.object({
   "lastPostAt": zod.string().nullish(),
   "lastMessagePreview": zod.string().nullish(),
   "lastReadMessageId": zod.number().nullish(),
+  "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1599,6 +1602,7 @@ export const GetChannelMessagesResponseItem = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 export const GetChannelMessagesResponse = zod.array(GetChannelMessagesResponseItem)
@@ -1625,6 +1629,38 @@ export const SendMessageBody = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional()
+})
+
+
+/**
+ * @summary Delete a message (soft delete)
+ */
+export const DeleteMessageParams = zod.object({
+  "id": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const DeleteMessageResponse = zod.object({
+  "id": zod.number(),
+  "channelId": zod.number(),
+  "senderId": zod.number(),
+  "senderName": zod.string().optional(),
+  "senderAvatar": zod.string().nullish(),
+  "body": zod.string(),
+  "attachments": zod.array(zod.object({
+  "type": zod.enum(['image', 'file', 'video', 'audio']),
+  "url": zod.string(),
+  "name": zod.string().optional(),
+  "mimeType": zod.string().optional(),
+  "size": zod.number().optional(),
+  "thumbUrl": zod.string().optional()
+})).optional(),
+  "messageKind": zod.enum(['text', 'poll', 'event']).optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "deleted": zod.boolean().optional(),
+  "createdAt": zod.string()
 })
 
 
@@ -1663,6 +1699,7 @@ export const ToggleMessageReactionResponse = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 
@@ -1698,6 +1735,7 @@ export const VotePollResponse = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 
@@ -1733,6 +1771,7 @@ export const RsvpEventResponse = zod.object({
   "metadata": zod.object({
 
 }).passthrough().optional(),
+  "deleted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 

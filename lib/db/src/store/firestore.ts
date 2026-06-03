@@ -987,6 +987,8 @@ export function createFirestoreStore() {
         attachments: sanitizeMessageAttachments(data.attachments ?? null),
         messageKind: data.messageKind ?? "text",
         metadata: data.metadata ?? null,
+        deletedAt: data.deletedAt?.toISOString() ?? null,
+        deletedById: data.deletedById ?? null,
         senderName: data.senderName ?? null,
         senderAvatar: data.senderAvatar ?? null,
         createdAt: new Date().toISOString(),
@@ -1022,6 +1024,50 @@ export function createFirestoreStore() {
       const snap = await db.collection(COL.messages).doc(docId(id)).get();
       if (!snap.exists) return null;
       return mapMessage(snap.data()!, snap.id);
+    },
+
+    async softDeleteMessage(
+      channelId: number,
+      messageId: number,
+      deletedById: number,
+    ): Promise<Message | null> {
+      const m = await this.findMessageById(messageId);
+      if (!m || m.channelId !== channelId) return null;
+      if (m.deletedAt) return m;
+
+      const deletedAt = new Date();
+      const ref = db.collection(COL.messages).doc(docId(messageId));
+      await ref.set(
+        {
+          body: "",
+          attachments: null,
+          metadata: null,
+          deletedAt: deletedAt.toISOString(),
+          deletedById,
+        },
+        { merge: true },
+      );
+
+      const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
+      const active = snap.docs
+        .map((d) => mapMessage(d.data(), d.id))
+        .filter((row) => !row.deletedAt)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const latest = active[0];
+      const channelRef = db.collection(COL.channels).doc(docId(channelId));
+      if (latest) {
+        await channelRef.set(
+          {
+            lastPostAt: latest.createdAt.toISOString(),
+            messageCount: active.length,
+          },
+          { merge: true },
+        );
+      } else {
+        await channelRef.set({ messageCount: 0 }, { merge: true });
+      }
+
+      return mapMessage((await ref.get()).data()!, String(messageId));
     },
 
     async findMessageByIdWithSender(id: number): Promise<MessageWithSender | null> {
@@ -1505,6 +1551,8 @@ function mapMessage(data: FirebaseFirestore.DocumentData, id: string): Message {
     attachments: normalizeMessageAttachments(data.attachments) ?? null,
     messageKind: (data.messageKind as string) ?? "text",
     metadata: (data.metadata as Record<string, unknown> | null) ?? null,
+    deletedAt: data.deletedAt ? toDate(data.deletedAt) : null,
+    deletedById: (data.deletedById as number | null | undefined) ?? null,
     createdAt: toDate(data.createdAt),
   };
 }

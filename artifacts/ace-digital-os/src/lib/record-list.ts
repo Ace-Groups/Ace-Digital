@@ -10,6 +10,8 @@ export type RecordListState<T extends { id: number }> = {
 
 type Listener = () => void;
 
+type HasCreatedAt = { id: number; createdAt: string };
+
 export class RecordList<T extends { id: number }> {
   private state: RecordListState<T> = {
     items: [],
@@ -37,15 +39,35 @@ export class RecordList<T extends { id: number }> {
   }
 
   setInitial(items: T[], hasMoreBefore = true): void {
-    this.state = { items: dedupeById(items), status: "ready", hasMoreBefore };
+    this.state = { items: sortByCreatedAt(dedupeById(items)), status: "ready", hasMoreBefore };
     this.emit();
   }
 
   replace(items: T[], hasMoreBefore?: boolean): void {
     this.state = {
-      items: dedupeById(items),
+      items: sortByCreatedAt(dedupeById(items)),
       status: "ready",
       hasMoreBefore: hasMoreBefore ?? this.state.hasMoreBefore,
+    };
+    this.emit();
+  }
+
+  mergeRealtime(incoming: T[]): void {
+    if (!incoming.length) return;
+    const snap = this.state;
+    const minIncomingTime = Math.min(
+      ...incoming.map((m) => createdAtMs(m as T & HasCreatedAt)),
+    );
+    const olderKept = snap.items.filter(
+      (m) => createdAtMs(m as T & HasCreatedAt) < minIncomingTime,
+    );
+    const byId = new Map<number, T>();
+    for (const m of olderKept) byId.set(m.id, m);
+    for (const m of incoming) byId.set(m.id, m);
+    this.state = {
+      ...snap,
+      items: sortByCreatedAt([...byId.values()]),
+      status: "ready",
     };
     this.emit();
   }
@@ -60,10 +82,25 @@ export class RecordList<T extends { id: number }> {
     const merged = [...older.filter((m) => !ids.has(m.id)), ...this.state.items];
     this.state = {
       ...this.state,
-      items: merged,
+      items: sortByCreatedAt(merged),
       status: "ready",
       hasMoreBefore: older.length > 0,
     };
+    this.emit();
+  }
+
+  append(newer: T[]): void {
+    if (!newer.length) return;
+    const ids = new Set(this.state.items.map((m) => m.id));
+    const merged = [...this.state.items, ...newer.filter((m) => !ids.has(m.id))];
+    this.state = { ...this.state, items: sortByCreatedAt(merged), status: "ready" };
+    this.emit();
+  }
+
+  remove(id: number): void {
+    const items = this.state.items.filter((m) => m.id !== id);
+    if (items.length === this.state.items.length) return;
+    this.state = { ...this.state, items };
     this.emit();
   }
 
@@ -81,6 +118,17 @@ export class RecordList<T extends { id: number }> {
     this.state = { ...this.state, hasMoreBefore: value };
     this.emit();
   }
+}
+
+function createdAtMs(m: HasCreatedAt): number {
+  return new Date(m.createdAt).getTime();
+}
+
+function sortByCreatedAt<T extends { id: number }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) =>
+      createdAtMs(a as T & HasCreatedAt) - createdAtMs(b as T & HasCreatedAt),
+  );
 }
 
 function dedupeById<T extends { id: number }>(items: T[]): T[] {

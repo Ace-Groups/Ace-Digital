@@ -28,5 +28,7 @@ export interface Channel {
   lastMessagePreview?: string | null;
   /** @nullable */
   lastReadMessageId?: number | null;
+  /** @nullable */
+  createdById?: number | null;
   createdAt?: string;
 }

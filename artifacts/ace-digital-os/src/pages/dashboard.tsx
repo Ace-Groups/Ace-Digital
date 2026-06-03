@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useMemo } from "react";
 import { ChatWidget } from "@/components/dashboard/ChatWidget";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -26,6 +27,7 @@ function getGreeting(): string {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { can } = usePermissions();
+  const isMobile = useIsMobile();
   const showChat = can("channels:read");
   const { data: dash, isLoading, isFetching } = useGetDashboard({
     query: {
@@ -162,9 +164,15 @@ export default function DashboardPage() {
           </div>
         </StaggerItem>
 
+        {showChat && isMobile && (
+          <StaggerItem>
+            <ChatWidget />
+          </StaggerItem>
+        )}
+
         <StaggerItem>
         <div className="grid gap-4 lg:grid-cols-3 xl:gap-6">
-          {showChat && (
+          {showChat && !isMobile && (
             <div className="lg:col-span-1">
               <ChatWidget />
             </div>

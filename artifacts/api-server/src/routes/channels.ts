@@ -2,6 +2,7 @@ import { Router } from "express";
 import { store } from "@workspace/db";
 import {
   canAccessChannel,
+  canDeleteMessage,
   canManageChannel,
   canPostInChannel,
   hasPermission,
@@ -458,6 +459,63 @@ router.get(
   },
 );
 
+router.delete(
+  "/v1/channels/:id/messages/:messageId",
+  requireAuth,
+  requirePermission("channels:read"),
+  async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
+    const channelId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const messageId = Number(
+      Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId,
+    );
+    const access = await requireChannelAccess(ctx, channelId);
+    if (access.error === "not_found") {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    if (access.error === "forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const message = await store.findMessageById(messageId);
+    if (!message || message.channelId !== channelId) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    if (
+      !canDeleteMessage(
+        ctx,
+        { senderId: message.senderId },
+        { createdById: access.channel.createdById ?? null },
+        access.membership,
+      )
+    ) {
+      res.status(403).json({ error: "Cannot delete this message" });
+      return;
+    }
+
+    const deleted = await store.softDeleteMessage(channelId, messageId, ctx.userId);
+    if (!deleted) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    const users = await store.listUsers();
+    const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
+    const sender = users.find((u) => u.id === deleted.senderId);
+    res.json(
+      messageToJson(
+        deleted,
+        sender?.fullName ?? "Unknown",
+        avatarMap[deleted.senderId] ?? null,
+      ),
+    );
+  },
+);
+
 router.post(
   "/v1/channels/:id/messages",
   requireAuth,
@@ -501,6 +559,8 @@ router.post(
         attachments: payload.attachments ?? null,
         messageKind: payload.messageKind,
         metadata: payload.metadata ?? null,
+        deletedAt: null,
+        deletedById: null,
         senderName: sender?.fullName ?? null,
         senderAvatar: sender?.avatarUrl ?? null,
       });

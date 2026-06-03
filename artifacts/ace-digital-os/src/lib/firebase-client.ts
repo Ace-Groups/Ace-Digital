@@ -169,6 +169,7 @@ function mapFirestoreMessage(id: string, data: Record<string, unknown>): Message
       data.metadata && typeof data.metadata === "object"
         ? (data.metadata as Message["metadata"])
         : undefined,
+    deleted: Boolean(data.deletedAt),
     createdAt:
       typeof data.createdAt === "string"
         ? data.createdAt
@@ -197,16 +198,16 @@ export function subscribeChannelMessages(
     const q = query(
       collection(getFirebaseDb(), "messages"),
       where("channelId", "==", channelId),
-      orderBy("createdAt", "asc"),
-      limit(150),
+      orderBy("createdAt", "desc"),
+      limit(50),
     );
 
     unsub = onSnapshot(
       q,
       (snap) => {
-        const items = snap.docs.map((d) =>
-          mapFirestoreMessage(d.id, d.data() as Record<string, unknown>),
-        );
+        const items = snap.docs
+          .map((d) => mapFirestoreMessage(d.id, d.data() as Record<string, unknown>))
+          .reverse();
         onMessages(items);
       },
       (err) => {

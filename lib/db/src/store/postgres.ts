@@ -846,6 +846,8 @@ export function createPostgresStore() {
           attachments: messagesTable.attachments,
           messageKind: messagesTable.messageKind,
           metadata: messagesTable.metadata,
+          deletedAt: messagesTable.deletedAt,
+          deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
           senderName: usersTable.fullName,
         })
@@ -863,6 +865,8 @@ export function createPostgresStore() {
         attachments: r.attachments ?? null,
         messageKind: r.messageKind,
         metadata: r.metadata ?? null,
+        deletedAt: r.deletedAt,
+        deletedById: r.deletedById,
         createdAt: r.createdAt,
         senderName: r.senderName,
       }));
@@ -927,6 +931,78 @@ export function createPostgresStore() {
       const [m] = await db.select().from(messagesTable).where(eq(messagesTable.id, id)).limit(1);
       return m ?? null;
     },
+    softDeleteMessage: async (channelId: number, messageId: number, deletedById: number) => {
+      const existing = await db
+        .select()
+        .from(messagesTable)
+        .where(
+          and(eq(messagesTable.id, messageId), eq(messagesTable.channelId, channelId)),
+        )
+        .limit(1);
+      const m = existing[0];
+      if (!m) return null;
+      if (m.deletedAt) return m;
+
+      const deletedAt = new Date();
+      const [updated] = await db
+        .update(messagesTable)
+        .set({
+          deletedAt,
+          deletedById,
+          body: "",
+          attachments: null,
+          metadata: null,
+        })
+        .where(eq(messagesTable.id, messageId))
+        .returning();
+
+      const { mirrorMessageDeleteToFirestore } = await import("../chat/firestore-sync");
+      void mirrorMessageDeleteToFirestore(messageId, deletedAt, deletedById).catch((err) =>
+        console.error("[firestore-mirror-delete]", err),
+      );
+
+      const latestRows = await db
+        .select({
+          id: messagesTable.id,
+          body: messagesTable.body,
+          messageKind: messagesTable.messageKind,
+          attachments: messagesTable.attachments,
+          createdAt: messagesTable.createdAt,
+        })
+        .from(messagesTable)
+        .where(
+          and(
+            eq(messagesTable.channelId, channelId),
+            sql`${messagesTable.deletedAt} IS NULL`,
+          ),
+        )
+        .orderBy(desc(messagesTable.createdAt))
+        .limit(1);
+
+      const latest = latestRows[0];
+      if (latest) {
+        const [countRow] = await db
+          .select({ n: count() })
+          .from(messagesTable)
+          .where(
+            and(
+              eq(messagesTable.channelId, channelId),
+              sql`${messagesTable.deletedAt} IS NULL`,
+            ),
+          );
+        const messageCount = Number(countRow?.n ?? 0);
+        await db
+          .update(channelsTable)
+          .set({ lastPostAt: latest.createdAt, messageCount })
+          .where(eq(channelsTable.id, channelId));
+        const { mirrorChannelActivityToFirestore } = await import("../chat/firestore-sync");
+        void mirrorChannelActivityToFirestore(channelId, latest.createdAt, messageCount).catch(
+          (err) => console.error("[firestore-mirror-channel]", err),
+        );
+      }
+
+      return updated ?? null;
+    },
     findMessageByIdWithSender: async (id: number): Promise<MessageWithSender | null> => {
       const [r] = await db
         .select({
@@ -937,6 +1013,8 @@ export function createPostgresStore() {
           attachments: messagesTable.attachments,
           messageKind: messagesTable.messageKind,
           metadata: messagesTable.metadata,
+          deletedAt: messagesTable.deletedAt,
+          deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
           senderName: usersTable.fullName,
         })
@@ -953,6 +1031,8 @@ export function createPostgresStore() {
         attachments: r.attachments ?? null,
         messageKind: r.messageKind,
         metadata: r.metadata ?? null,
+        deletedAt: r.deletedAt,
+        deletedById: r.deletedById,
         createdAt: r.createdAt,
         senderName: r.senderName,
       };

@@ -39,6 +39,7 @@ export async function channelToJson(
     lastPostAt: channel.lastPostAt?.toISOString() ?? null,
     lastMessagePreview,
     lastReadMessageId,
+    createdById: channel.createdById ?? null,
     createdAt: channel.createdAt.toISOString(),
   };
 }

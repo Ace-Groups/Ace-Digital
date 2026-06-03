@@ -40,6 +40,8 @@ interface ChannelMessageListProps {
   onReply?: (target: ReplyTarget) => void;
   searchQuery?: string;
   onMessagePatched?: (message: Message) => void;
+  canDeleteMessage?: (message: Message) => boolean;
+  onDeleteMessage?: (message: Message) => void | Promise<void>;
 }
 
 export function ChannelMessageList({
@@ -57,6 +59,8 @@ export function ChannelMessageList({
   onReply,
   searchQuery = "",
   onMessagePatched,
+  canDeleteMessage,
+  onDeleteMessage,
 }: ChannelMessageListProps) {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -218,6 +222,8 @@ export function ChannelMessageList({
                 showMeta={showMeta}
                 channelId={channelId}
                 currentUserId={currentUserId}
+                canDelete={canDeleteMessage?.(msg) ?? false}
+                onDelete={onDeleteMessage ? () => void onDeleteMessage(msg) : undefined}
                 onReply={onReply}
                 onToggleReaction={
                   !isPendingMessage(msg)

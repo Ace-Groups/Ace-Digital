@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canApproveApproval,
   canAssignRole,
+  canDeleteMessage,
   getNavRoutesForRole,
   getPermissionsForRole,
   hasPermission,
@@ -76,5 +77,26 @@ describe("permissions list", () => {
   it("client_manager has clients write", () => {
     const perms = getPermissionsForRole("client_manager");
     assert.ok(perms.includes("clients:write"));
+  });
+});
+
+describe("canDeleteMessage", () => {
+  const channel = { createdById: 10 };
+  const msg = { senderId: 99 };
+
+  it("sender can delete own message", () => {
+    assert.equal(canDeleteMessage(employee, { senderId: 4 }, channel, { role: "member" }), true);
+  });
+  it("channel creator can delete others messages", () => {
+    assert.equal(canDeleteMessage({ userId: 10, role: "employee", teamId: 1 }, msg, channel, { role: "member" }), true);
+  });
+  it("channel owner can delete others messages", () => {
+    assert.equal(canDeleteMessage(teamLead, msg, { createdById: 99 }, { role: "owner" }), true);
+  });
+  it("super_admin can delete any message", () => {
+    assert.equal(canDeleteMessage(superAdmin, msg, channel, null), true);
+  });
+  it("management cannot delete others without owner/creator", () => {
+    assert.equal(canDeleteMessage(management, msg, { createdById: 99 }, { role: "member" }), false);
   });
 });

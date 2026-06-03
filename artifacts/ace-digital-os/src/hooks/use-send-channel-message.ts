@@ -7,11 +7,16 @@ import {
   type MessageInput,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 
 export type PendingMessage = Message & {
   clientId: string;
   status: "sending" | "failed";
 };
+
+function messageQueryKey(channelId: number) {
+  return getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS);
+}
 
 function makePendingMessage(
   channelId: number,
@@ -35,50 +40,53 @@ function makePendingMessage(
   };
 }
 
-export function useSendChannelMessage(channelId: number | null) {
+type SendOptions = {
+  onAppend?: (msg: Message | PendingMessage) => void;
+};
+
+export function useSendChannelMessage(channelId: number | null, options?: SendOptions) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const sendMessage = useSendMessage();
   const pendingRef = useRef<Map<string, PendingMessage>>(new Map());
+  const onAppend = options?.onAppend;
 
   const appendPending = useCallback(
     (pending: PendingMessage) => {
       if (!channelId) return;
       pendingRef.current.set(pending.clientId, pending);
-      queryClient.setQueryData<Message[]>(
-        getGetChannelMessagesQueryKey(channelId),
-        (old) => [...(old ?? []), pending],
-      );
+      queryClient.setQueryData<Message[]>(messageQueryKey(channelId), (old) => [
+        ...(old ?? []),
+        pending,
+      ]);
+      onAppend?.(pending);
     },
-    [channelId, queryClient],
+    [channelId, queryClient, onAppend],
   );
 
   const replacePending = useCallback(
     (clientId: string, serverMsg: Message) => {
       if (!channelId) return;
       pendingRef.current.delete(clientId);
-      queryClient.setQueryData<Message[]>(
-        getGetChannelMessagesQueryKey(channelId),
-        (old) =>
-          (old ?? []).map((m) =>
-            "clientId" in m && (m as PendingMessage).clientId === clientId ? serverMsg : m,
-          ),
+      queryClient.setQueryData<Message[]>(messageQueryKey(channelId), (old) =>
+        (old ?? []).map((m) =>
+          "clientId" in m && (m as PendingMessage).clientId === clientId ? serverMsg : m,
+        ),
       );
+      onAppend?.(serverMsg);
     },
-    [channelId, queryClient],
+    [channelId, queryClient, onAppend],
   );
 
   const markFailed = useCallback(
     (clientId: string) => {
       if (!channelId) return;
-      queryClient.setQueryData<Message[]>(
-        getGetChannelMessagesQueryKey(channelId),
-        (old) =>
-          (old ?? []).map((m) =>
-            "clientId" in m && (m as PendingMessage).clientId === clientId
-              ? { ...(m as PendingMessage), status: "failed" as const }
-              : m,
-          ),
+      queryClient.setQueryData<Message[]>(messageQueryKey(channelId), (old) =>
+        (old ?? []).map((m) =>
+          "clientId" in m && (m as PendingMessage).clientId === clientId
+            ? { ...(m as PendingMessage), status: "failed" as const }
+            : m,
+        ),
       );
     },
     [channelId, queryClient],

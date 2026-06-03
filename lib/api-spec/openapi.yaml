@@ -1534,6 +1534,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Message"
 
+  /v1/channels/{id}/messages/{messageId}:
+    delete:
+      operationId: deleteMessage
+      tags: [channels]
+      summary: Delete a message (soft delete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /v1/channels/{id}/messages/{messageId}/reactions:
     post:
       operationId: toggleMessageReaction
@@ -2744,6 +2772,8 @@ components:
           type: ["string", "null"]
         lastReadMessageId:
           type: ["integer", "null"]
+        createdById:
+          type: ["integer", "null"]
         createdAt:
           type: string
 
@@ -2845,6 +2875,8 @@ components:
           enum: [text, poll, event]
         metadata:
           type: object
+        deleted:
+          type: boolean
         createdAt:
           type: string
 

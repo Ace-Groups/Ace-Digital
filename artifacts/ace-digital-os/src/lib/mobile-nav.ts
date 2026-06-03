@@ -1,17 +1,21 @@
 import { getNavRoutesForRole, NAV_ROUTES, type NavRoute } from "@workspace/rbac";
 
-const PRIMARY_ORDER: NavRoute[] = [
-  "dashboard",
+/** Always shown in the bottom bar when the role has access (in order). */
+const PINNED_ROUTES: NavRoute[] = ["dashboard", "channels"];
+
+const FILL_ORDER: NavRoute[] = [
   "projects",
   "tasks",
   "calendar",
-  "channels",
   "employees",
   "finance",
   "clients",
+  "approvals",
+  "reports",
+  "activity",
 ];
 
-const MOBILE_PRIMARY_MAX = 4;
+const MOBILE_PRIMARY_MAX = 5;
 
 export type MobileNavItem = {
   route: NavRoute;
@@ -37,21 +41,22 @@ export function getMobileNavItems(role: string): {
     href: n.href,
     label: labelForRoute(n.route, role),
   }));
+  const byRoute = new Map(items.map((i) => [i.route, i]));
 
   const primaryRoutes: NavRoute[] = [];
-  for (const route of PRIMARY_ORDER) {
+  for (const route of PINNED_ROUTES) {
     if (primaryRoutes.length >= MOBILE_PRIMARY_MAX) break;
     if (allowed.has(route)) primaryRoutes.push(route);
   }
-
-  if (primaryRoutes.length < MOBILE_PRIMARY_MAX) {
-    for (const item of items) {
-      if (primaryRoutes.length >= MOBILE_PRIMARY_MAX) break;
-      if (!primaryRoutes.includes(item.route)) primaryRoutes.push(item.route);
-    }
+  for (const route of FILL_ORDER) {
+    if (primaryRoutes.length >= MOBILE_PRIMARY_MAX) break;
+    if (allowed.has(route) && !primaryRoutes.includes(route)) primaryRoutes.push(route);
   }
 
-  const primary = items.filter((i) => primaryRoutes.includes(i.route));
-  const overflow = items.filter((i) => !primaryRoutes.includes(i.route));
+  const primary = primaryRoutes
+    .map((r) => byRoute.get(r))
+    .filter((i): i is MobileNavItem => i != null);
+  const primarySet = new Set(primaryRoutes);
+  const overflow = items.filter((i) => !primarySet.has(i.route));
   return { primary, overflow };
 }

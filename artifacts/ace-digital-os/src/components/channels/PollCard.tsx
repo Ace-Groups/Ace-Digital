@@ -1,4 +1,5 @@
 import { useVotePoll, getGetChannelMessagesQueryKey, useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
+import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import type { Message } from "@workspace/api-client-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +28,9 @@ export function PollCard({ msg, channelId, isMe }: PollCardProps) {
   const votePoll = useVotePoll({
     mutation: {
       onSuccess: (updated) => {
-        queryClient.setQueryData<Message[]>(getGetChannelMessagesQueryKey(channelId), (old) =>
+        queryClient.setQueryData<Message[]>(
+          getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
+          (old) =>
           (old ?? []).map((m) => (m.id === updated.id ? updated : m)),
         );
       },

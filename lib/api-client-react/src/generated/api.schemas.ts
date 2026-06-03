@@ -747,6 +747,8 @@ export interface Channel {
   lastMessagePreview?: string | null;
   /** @nullable */
   lastReadMessageId?: number | null;
+  /** @nullable */
+  createdById?: number | null;
   createdAt?: string;
 }
 
@@ -838,6 +840,7 @@ export interface Message {
   attachments?: MessageAttachment[];
   messageKind?: MessageMessageKind;
   metadata?: MessageMetadata;
+  deleted?: boolean;
   createdAt: string;
 }
 

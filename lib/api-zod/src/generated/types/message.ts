@@ -20,5 +20,6 @@ export interface Message {
   attachments?: MessageAttachment[];
   messageKind?: MessageMessageKind;
   metadata?: MessageMetadata;
+  deleted?: boolean;
   createdAt: string;
 }

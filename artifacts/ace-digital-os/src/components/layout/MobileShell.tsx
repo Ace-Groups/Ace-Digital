@@ -147,12 +147,12 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] font-medium transition-colors",
+                  "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-medium transition-colors sm:text-[10px]",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 <Icon size={22} strokeWidth={active ? 2.25 : 1.75} aria-hidden />
-                <span className="truncate max-w-[4.5rem]">{item.label}</span>
+                <span className="max-w-[3.25rem] truncate sm:max-w-[4.5rem]">{item.label}</span>
               </Link>
             );
           })}

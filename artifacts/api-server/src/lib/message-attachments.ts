@@ -97,21 +97,24 @@ export function messageToJson(
     attachments?: MessageAttachment[] | null;
     messageKind?: string | null;
     metadata?: Record<string, unknown> | null;
+    deletedAt?: Date | null;
     createdAt: Date;
   },
   senderName: string,
   senderAvatar: string | null,
 ) {
+  const deleted = Boolean(m.deletedAt);
   return {
     id: m.id,
     channelId: m.channelId,
     senderId: m.senderId,
     senderName,
     senderAvatar,
-    body: m.body,
-    attachments: m.attachments?.length ? m.attachments : undefined,
+    body: deleted ? "" : m.body,
+    attachments: deleted ? undefined : m.attachments?.length ? m.attachments : undefined,
     messageKind: m.messageKind ?? "text",
-    metadata: m.metadata ?? undefined,
+    metadata: deleted ? undefined : m.metadata ?? undefined,
+    deleted: deleted || undefined,
     createdAt: m.createdAt.toISOString(),
   };
 }

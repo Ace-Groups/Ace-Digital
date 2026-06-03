@@ -41,3 +41,24 @@ export function canManageChannel(
   if (hasPermission(ctx, "channels:all")) return true;
   return membership?.role === "owner";
 }
+
+export type MessageDeleteInfo = {
+  senderId: number;
+};
+
+export type ChannelDeleteInfo = {
+  createdById: number | null;
+};
+
+export function canDeleteMessage(
+  ctx: AccessContext,
+  message: MessageDeleteInfo,
+  channel: ChannelDeleteInfo,
+  membership: ChannelMembershipInfo,
+): boolean {
+  if (ctx.role === "super_admin") return true;
+  if (message.senderId === ctx.userId) return true;
+  if (channel.createdById != null && channel.createdById === ctx.userId) return true;
+  if (membership?.role === "owner") return true;
+  return false;
+}

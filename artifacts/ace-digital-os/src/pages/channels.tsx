@@ -4,16 +4,20 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
   useGetChannelMessages,
+  useDeleteMessage,
   getGetChannelMessagesQueryKey,
+  type Message,
   type MessageInput,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
 import { useRoomMessageList } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
-import { canManageChannel, canPostInChannel } from "@workspace/rbac";
+import { canDeleteMessage, canManageChannel, canPostInChannel } from "@workspace/rbac";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileChromeFlags } from "@/contexts/MobileChromeContext";
 import { RoomSidebar } from "@/components/channels/RoomSidebar";
@@ -38,6 +42,7 @@ export default function ChannelsPage() {
   const { user } = useAuth();
   const { can } = usePermissions();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: channels, isLoading: channelsLoading } = useListChannels();
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(() =>
@@ -90,34 +95,68 @@ export default function ChannelsPage() {
     void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
   }, [selectedChannelId]);
 
-  const messageParams = { limit: 50 } as const;
-
   const { data: latestMessages, isLoading: messagesLoading } = useGetChannelMessages(
     selectedChannelId ?? 0,
-    messageParams,
+    CHANNEL_MESSAGE_PARAMS,
     {
       query: {
         enabled: !!selectedChannelId,
-        queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, messageParams),
+        queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
         staleTime: 30_000,
         refetchInterval: firebaseLive ? false : 10_000,
       },
     },
   );
 
-  const realtimeReady =
-    threadActive && !!selectedChannelId && !messagesLoading && latestMessages !== undefined;
+  const realtimeReady = threadActive && !!selectedChannelId && isFirebaseChatEnabled();
 
   const room = useRoomMessageList(selectedChannelId, !!selectedChannelId);
 
   useEffect(() => {
-    if (latestMessages) room.syncFromQuery(latestMessages);
+    if (latestMessages !== undefined) room.syncFromQuery(latestMessages);
   }, [latestMessages, room]);
 
   useChannelMessagesRealtime(selectedChannelId, realtimeReady, room.applyRealtime);
 
+  const deleteMessageMutation = useDeleteMessage();
+
   const { send, queuePending, flushPending, markPendingFailed, isPending: sending } =
-    useSendChannelMessage(selectedChannelId);
+    useSendChannelMessage(selectedChannelId, {
+      onAppend: (msg) => room.appendMessage(msg as Message),
+    });
+
+  const canDeleteForMessage = useCallback(
+    (msg: Message) => {
+      if (!ctx || !selectedChannel) return false;
+      return canDeleteMessage(
+        ctx,
+        { senderId: msg.senderId },
+        { createdById: selectedChannel.createdById ?? null },
+        membership,
+      );
+    },
+    [ctx, selectedChannel, membership],
+  );
+
+  const handleDeleteMessage = useCallback(
+    async (msg: Message) => {
+      if (!selectedChannelId) return;
+      try {
+        const updated = await deleteMessageMutation.mutateAsync({
+          id: selectedChannelId,
+          messageId: msg.id,
+        });
+        room.patchMessage(msg.id, () => updated);
+        queryClient.setQueryData<Message[]>(
+          getGetChannelMessagesQueryKey(selectedChannelId, CHANNEL_MESSAGE_PARAMS),
+          (prev) => prev?.map((m) => (m.id === updated.id ? updated : m)) ?? prev,
+        );
+      } catch {
+        toast({ title: "Could not delete message", variant: "destructive" });
+      }
+    },
+    [selectedChannelId, deleteMessageMutation, room, toast],
+  );
 
   useEffect(() => {
     if (!channels?.length) return;
@@ -279,6 +318,8 @@ export default function ChannelsPage() {
           onReply={handleReply}
           searchQuery={roomSearch}
           onMessagePatched={(updated) => room.patchMessage(updated.id, () => updated)}
+          canDeleteMessage={canDeleteForMessage}
+          onDeleteMessage={handleDeleteMessage}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">

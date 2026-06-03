@@ -45,6 +45,8 @@ export const messagesTable = pgTable("messages", {
   attachments: jsonb("attachments").$type<MessageAttachment[]>(),
   messageKind: text("message_kind").notNull().default("text"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedById: integer("deleted_by_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

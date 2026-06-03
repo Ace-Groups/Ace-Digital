@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  getChannelMessages,
-  getGetChannelMessagesQueryKey,
-  type Message,
-} from "@workspace/api-client-react";
+import type { Message } from "@workspace/api-client-react";
 import { RecordList } from "@/lib/record-list";
+import { getChannelMessages } from "@workspace/api-client-react";
 
-const MESSAGE_PARAMS = { limit: 50 } as const;
+export const CHANNEL_MESSAGE_PARAMS = { limit: 50 } as const;
 
 export function useRoomMessageList(channelId: number | null, enabled: boolean) {
-  const queryClient = useQueryClient();
   const listRef = useRef<RecordList<Message> | null>(null);
 
   if (!listRef.current) {
@@ -24,33 +19,20 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   useEffect(() => {
-    if (!channelId) {
+    if (!enabled || !channelId) {
       list.setLoading();
       return;
     }
     list.setLoading();
-    let cancelled = false;
-    void getChannelMessages(channelId, MESSAGE_PARAMS).then((items) => {
-      if (cancelled) return;
-      list.setInitial(items, items.length >= MESSAGE_PARAMS.limit);
-      queryClient.setQueryData(
-        getGetChannelMessagesQueryKey(channelId, MESSAGE_PARAMS),
-        items,
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [channelId, list, queryClient]);
+  }, [channelId, enabled, list]);
 
   const syncFromQuery = useCallback(
     (items: Message[]) => {
-      if (!items.length) return;
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
-        list.setInitial(items, items.length >= MESSAGE_PARAMS.limit);
-      } else {
-        list.replace(items);
+        list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
+      } else if (items.length > 0) {
+        list.mergeRealtime(items);
       }
     },
     [list],
@@ -79,10 +61,17 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     (items: Message[]) => {
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
-        list.setInitial(items, items.length >= MESSAGE_PARAMS.limit);
+        list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
       } else {
-        list.replace(items);
+        list.mergeRealtime(items);
       }
+    },
+    [list],
+  );
+
+  const appendMessage = useCallback(
+    (msg: Message) => {
+      list.append([msg]);
     },
     [list],
   );
@@ -103,6 +92,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     loadOlder,
     syncFromQuery,
     applyRealtime,
+    appendMessage,
     patchMessage,
     isLoading: state.status === "loading",
   };

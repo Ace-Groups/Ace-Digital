@@ -1,4 +1,15 @@
-import { Download, FileText, Check, AlertCircle, Loader2, Reply, Copy } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Download,
+  FileText,
+  Check,
+  AlertCircle,
+  Loader2,
+  Reply,
+  Copy,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
 import { VoiceMessagePlayer } from "@/components/channels/VoiceMessagePlayer";
 import { MediaAlbum } from "@/components/channels/MediaAlbum";
 import { PollCard } from "@/components/channels/PollCard";
@@ -12,6 +23,23 @@ import { formatFileSize } from "@/lib/chat-media";
 import { displayMessageBody } from "@/lib/chat-mentions";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageBubbleProps {
   msg: Message | PendingMessage;
@@ -19,6 +47,8 @@ interface MessageBubbleProps {
   showMeta: boolean;
   channelId: number;
   currentUserId?: number;
+  canDelete?: boolean;
+  onDelete?: () => void | Promise<void>;
   onReply?: (target: ReplyTarget) => void;
   onToggleReaction?: (emoji: string) => void | Promise<void>;
 }
@@ -48,20 +78,57 @@ export function MessageBubble({
   showMeta,
   channelId,
   currentUserId,
+  canDelete = false,
+  onDelete,
   onReply,
   onToggleReaction,
 }: MessageBubbleProps) {
+  const isMobile = useIsMobile();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachments = msg.attachments ?? [];
   const mediaAttachments = attachments.filter((a) => a.type === "image" || a.type === "video");
   const otherAttachments = attachments.filter((a) => a.type !== "image" && a.type !== "video");
   const pending = isPending(msg);
-  const quote = !pending ? replyQuote(msg.metadata) : null;
-  const displayBody = displayMessageBody(msg.body ?? "");
+  const deleted = !pending && Boolean((msg as Message).deleted);
+  const quote = !pending && !deleted ? replyQuote(msg.metadata) : null;
+  const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "");
+  const showActions = !pending && !deleted && (onToggleReaction || onReply || canDelete);
+
+  function clearLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function handleDeleteClick() {
+    if (!onDelete) return;
+    if (!isMe && canDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    void onDelete();
+  }
 
   return (
     <div
       data-testid={`message-${msg.id}`}
       className={cn("group flex gap-2.5 sm:gap-3", isMe && "flex-row-reverse")}
+      onPointerDown={
+        isMobile && showActions
+          ? () => {
+              clearLongPress();
+              longPressTimer.current = setTimeout(() => {
+                const trigger = document.getElementById(`msg-menu-${msg.id}`);
+                trigger?.click();
+              }, 450);
+            }
+          : undefined
+      }
+      onPointerUp={clearLongPress}
+      onPointerLeave={clearLongPress}
+      onPointerCancel={clearLongPress}
     >
       {showMeta ? (
         <UserAvatar
@@ -101,61 +168,96 @@ export function MessageBubble({
           </div>
         )}
 
-        {!pending && (onToggleReaction || onReply) && (
+        {showActions && (
           <div
             className={cn(
-              "mb-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
+              "mb-1 flex items-center gap-0.5",
               isMe && "justify-end",
+              isMobile ? "opacity-100" : "opacity-0 transition-opacity group-hover:opacity-100",
             )}
           >
-            {onToggleReaction &&
+            {!isMobile &&
+              onToggleReaction &&
               QUICK_REACTIONS.map((emoji) => (
                 <Button
                   key={emoji}
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-base"
+                  className="h-11 w-11 text-base sm:h-7 sm:w-7"
                   onClick={() => void onToggleReaction(emoji)}
                   aria-label={`React ${emoji}`}
                 >
                   {emoji}
                 </Button>
               ))}
-            {onReply && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() =>
-                  onReply({
-                    id: msg.id,
-                    body: msg.body,
-                    senderName: msg.senderName,
-                  })
-                }
-                aria-label="Reply"
-              >
-                <Reply size={14} />
-              </Button>
-            )}
-            {msg.body?.trim() && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => void navigator.clipboard.writeText(msg.body)}
-                aria-label="Copy"
-              >
-                <Copy size={14} />
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id={`msg-menu-${msg.id}`}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 sm:h-7 sm:w-7"
+                  aria-label="Message actions"
+                >
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={isMe ? "end" : "start"} className="min-w-[10rem]">
+                {onToggleReaction &&
+                  QUICK_REACTIONS.map((emoji) => (
+                    <DropdownMenuItem
+                      key={emoji}
+                      onClick={() => void onToggleReaction(emoji)}
+                      className="min-h-11 sm:min-h-9"
+                    >
+                      React {emoji}
+                    </DropdownMenuItem>
+                  ))}
+                {onReply && (
+                  <DropdownMenuItem
+                    className="min-h-11 sm:min-h-9"
+                    onClick={() =>
+                      onReply({
+                        id: msg.id,
+                        body: msg.body,
+                        senderName: msg.senderName,
+                      })
+                    }
+                  >
+                    <Reply size={14} className="mr-2" />
+                    Reply
+                  </DropdownMenuItem>
+                )}
+                {msg.body?.trim() && (
+                  <DropdownMenuItem
+                    className="min-h-11 sm:min-h-9"
+                    onClick={() => void navigator.clipboard.writeText(msg.body)}
+                  >
+                    <Copy size={14} className="mr-2" />
+                    Copy
+                  </DropdownMenuItem>
+                )}
+                {canDelete && onDelete && (
+                  <DropdownMenuItem
+                    className="min-h-11 text-destructive focus:text-destructive sm:min-h-9"
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 
         <div className="space-y-2">
+          {deleted ? (
+            <p className="text-sm italic text-muted-foreground">Message deleted</p>
+          ) : (
+            <>
           {quote && (
             <div
               className={cn(
@@ -164,7 +266,9 @@ export function MessageBubble({
               )}
             >
               <p className="font-medium opacity-80">{quote.senderName ?? "Message"}</p>
-              <p className="line-clamp-2 opacity-70">{quote.body}</p>
+              <p className="line-clamp-2 opacity-70">
+                {quote.body.trim() ? quote.body : "Original message deleted"}
+              </p>
             </div>
           )}
 
@@ -205,8 +309,33 @@ export function MessageBubble({
               className={isMe ? "justify-end" : undefined}
             />
           )}
+            </>
+          )}
         </div>
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the message for everyone in the channel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setConfirmDelete(false);
+                void onDelete?.();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
