@@ -1,9 +1,7 @@
-import { useVotePoll, getGetChannelMessagesQueryKey, useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import { useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
 import type { Message } from "@workspace/api-client-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { Check, CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -20,22 +18,11 @@ interface PollCardProps {
   msg: Message;
   channelId: number;
   isMe?: boolean;
+  onVote?: (optionId: string) => void;
 }
 
-export function PollCard({ msg, channelId, isMe }: PollCardProps) {
+export function PollCard({ msg, channelId, isMe, onVote }: PollCardProps) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const votePoll = useVotePoll({
-    mutation: {
-      onSuccess: (updated) => {
-        queryClient.setQueryData<Message[]>(
-          getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
-          (old) =>
-          (old ?? []).map((m) => (m.id === updated.id ? updated : m)),
-        );
-      },
-    },
-  });
   const linkChat = useLinkChatToCalendar();
   const { toast } = useToast();
   const { data: linkStatus } = useCheckCalendarChatLink(
@@ -52,13 +39,11 @@ export function PollCard({ msg, channelId, isMe }: PollCardProps) {
       .map(([id]) => id),
   );
 
-  async function handleVote(optionId: string) {
-    if (votePoll.isPending) return;
-    await votePoll.mutateAsync({
-      id: channelId,
-      messageId: msg.id,
-      data: { optionId },
-    });
+  function handleVote(optionId: string) {
+    if (onVote) {
+      onVote(optionId);
+      return;
+    }
   }
 
   return (
@@ -78,8 +63,7 @@ export function PollCard({ msg, channelId, isMe }: PollCardProps) {
             <button
               key={opt.id}
               type="button"
-              disabled={votePoll.isPending}
-              onClick={() => void handleVote(opt.id)}
+              onClick={() => handleVote(opt.id)}
               className={cn(
                 "relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition-colors",
                 selected

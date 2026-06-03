@@ -36,6 +36,9 @@ import { Plus } from "lucide-react";
 import { statusColor, cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { appendListItem, patchListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+import type { Expense } from "@workspace/api-client-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -134,18 +137,36 @@ export default function FinancePage() {
   }
 
   async function onExpenseSubmit(data: RecordExpenseFormValues) {
+    const expensesKey = getListExpensesQueryKey();
+    const tempId = -Date.now();
+    setExpenseOpen(false);
     try {
-      await createExpense.mutateAsync({
-        data: {
-          description: data.description,
-          amount: Number(data.amount),
-          teamId: data.teamId ? Number(data.teamId) : undefined,
-          submittedById: Number(data.submittedById),
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Expense>(queryClient, expensesKey);
+          appendListItem(queryClient, expensesKey, {
+            id: tempId,
+            description: data.description,
+            amount: Number(data.amount),
+            status: "PENDING",
+            submittedById: Number(data.submittedById),
+            createdAt: new Date().toISOString(),
+          } as Expense);
+          return prev;
         },
+        rollback: (prev) => setList(queryClient, expensesKey, prev),
+        commit: () =>
+          createExpense.mutateAsync({
+            data: {
+              description: data.description,
+              amount: Number(data.amount),
+              teamId: data.teamId ? Number(data.teamId) : undefined,
+              submittedById: Number(data.submittedById),
+            },
+          }),
+        reconcile: () => invalidateFinance(),
       });
-      invalidateFinance();
       toast({ title: "Expense recorded" });
-      setExpenseOpen(false);
     } catch (error) {
       toast({
         title: "Failed to record expense",
@@ -206,9 +227,18 @@ export default function FinancePage() {
   }
 
   async function handleApproveExpense(id: number) {
+    const expensesKey = getListExpensesQueryKey();
     try {
-      await patchExpenseStatus.mutateAsync({ id, data: { status: "APPROVED" } });
-      invalidateFinance();
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Expense>(queryClient, expensesKey);
+          patchListItem(queryClient, expensesKey, id, (e) => ({ ...e, status: "APPROVED" }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, expensesKey, prev),
+        commit: () => patchExpenseStatus.mutateAsync({ id, data: { status: "APPROVED" } }),
+        reconcile: () => invalidateFinance(),
+      });
       toast({ title: "Expense approved" });
     } catch (error) {
       toast({
@@ -220,9 +250,18 @@ export default function FinancePage() {
   }
 
   async function handleRejectExpense(id: number) {
+    const expensesKey = getListExpensesQueryKey();
     try {
-      await patchExpenseStatus.mutateAsync({ id, data: { status: "REJECTED" } });
-      invalidateFinance();
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Expense>(queryClient, expensesKey);
+          patchListItem(queryClient, expensesKey, id, (e) => ({ ...e, status: "REJECTED" }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, expensesKey, prev),
+        commit: () => patchExpenseStatus.mutateAsync({ id, data: { status: "REJECTED" } }),
+        reconcile: () => invalidateFinance(),
+      });
       toast({ title: "Expense rejected", variant: "destructive" });
     } catch (error) {
       toast({

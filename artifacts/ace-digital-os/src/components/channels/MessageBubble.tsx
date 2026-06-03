@@ -52,7 +52,9 @@ interface MessageBubbleProps {
   onReply?: (target: ReplyTarget) => void;
   onScrollToQuotedMessage?: (messageId: number) => void;
   liveMessagesById?: Map<number, Message>;
-  onToggleReaction?: (emoji: string) => void | Promise<void>;
+  onToggleReaction?: (emoji: string) => void;
+  onVotePoll?: (optionId: string) => void;
+  onRsvpEvent?: (status: "going" | "maybe" | "no") => void;
 }
 
 function isPending(msg: Message | PendingMessage): msg is PendingMessage {
@@ -73,6 +75,8 @@ export function MessageBubble({
   onScrollToQuotedMessage,
   liveMessagesById,
   onToggleReaction,
+  onVotePoll,
+  onRsvpEvent,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -241,10 +245,10 @@ export function MessageBubble({
           )}
 
           {msg.messageKind === "poll" && (
-            <PollCard msg={msg} channelId={channelId} isMe={isMe} />
+            <PollCard msg={msg} channelId={channelId} isMe={isMe} onVote={onVotePoll} />
           )}
           {msg.messageKind === "event" && (
-            <EventCard msg={msg} channelId={channelId} isMe={isMe} />
+            <EventCard msg={msg} channelId={channelId} isMe={isMe} onRsvp={onRsvpEvent} />
           )}
 
           {mediaAttachments.length > 0 && (
@@ -273,7 +277,7 @@ export function MessageBubble({
             <MessageReactions
               msg={msg}
               currentUserId={currentUserId}
-              onToggle={(emoji) => void onToggleReaction(emoji)}
+              onToggle={(emoji) => onToggleReaction(emoji)}
               className={isMe ? "justify-end" : undefined}
             />
           )}

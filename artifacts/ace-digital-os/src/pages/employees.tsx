@@ -27,6 +27,14 @@ import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
+import {
+  patchListItem,
+  prependListItem,
+  removeListItem,
+  setList,
+  snapshotList,
+} from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import { EmployeeCard } from "@/components/employees/EmployeeCard";
 import {
   EmployeeFormSheet,
@@ -94,27 +102,49 @@ export default function EmployeesPage() {
   });
 
   async function handleCreate(data: EmployeeFormSubmitCreate) {
+    const employeesKey = getListEmployeesQueryKey();
+    const tempId = -Date.now();
+    setCreateOpen(false);
     try {
-      const result = await createEmployee.mutateAsync({
-        data: {
-          fullName: data.fullName,
-          email: data.email,
-          role: data.role,
-          teamId: data.teamId,
-          jobTitle: data.jobTitle,
-          phone: data.phone,
-          employeeCode: data.employeeCode,
-          startDate: data.startDate,
-          status: data.status,
-          baseSalary: data.baseSalary,
-          bonus: data.bonus,
-          passwordMode: data.passwordMode,
-          password: data.password,
-          sendWelcomeEmail: data.sendWelcomeEmail,
+      const result = await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Employee>(queryClient, employeesKey);
+          prependListItem(queryClient, employeesKey, {
+            id: tempId,
+            fullName: data.fullName,
+            email: data.email,
+            role: data.role,
+            teamId: data.teamId ?? null,
+            jobTitle: data.jobTitle ?? null,
+            status: data.status,
+            createdAt: new Date().toISOString(),
+          } as Employee);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, employeesKey, prev),
+        commit: () =>
+          createEmployee.mutateAsync({
+            data: {
+              fullName: data.fullName,
+              email: data.email,
+              role: data.role,
+              teamId: data.teamId,
+              jobTitle: data.jobTitle,
+              phone: data.phone,
+              employeeCode: data.employeeCode,
+              startDate: data.startDate,
+              status: data.status,
+              baseSalary: data.baseSalary,
+              bonus: data.bonus,
+              passwordMode: data.passwordMode,
+              password: data.password,
+              sendWelcomeEmail: data.sendWelcomeEmail,
+            },
+          }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: employeesKey });
         },
       });
-      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
-      setCreateOpen(false);
       toast({
         title: "Employee created",
         description: result.emailSent
@@ -143,14 +173,26 @@ export default function EmployeesPage() {
       bonus: data.bonus,
       payrollStatus: data.payrollStatus,
     };
+    const employeesKey = getListEmployeesQueryKey();
+    const employeeId = editing.id;
+    setEditOpen(false);
+    setEditing(null);
     try {
-      await updateEmployee.mutateAsync({
-        id: editing.id,
-        data: patchBody,
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Employee>(queryClient, employeesKey);
+          patchListItem(queryClient, employeesKey, employeeId, (e) => ({
+            ...e,
+            ...patchBody,
+          }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, employeesKey, prev),
+        commit: () => updateEmployee.mutateAsync({ id: employeeId, data: patchBody }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: employeesKey });
+        },
       });
-      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
-      setEditOpen(false);
-      setEditing(null);
       toast({ title: "Employee updated" });
     } catch {
       toast({ title: "Could not save changes", variant: "destructive" });
@@ -159,11 +201,20 @@ export default function EmployeesPage() {
 
   async function confirmDelete() {
     if (!deleteTarget) return;
+    const employeesKey = getListEmployeesQueryKey();
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
     try {
-      await deleteEmployee.mutateAsync({ id: deleteTarget.id });
-      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Employee>(queryClient, employeesKey);
+          removeListItem(queryClient, employeesKey, id);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, employeesKey, prev),
+        commit: () => deleteEmployee.mutateAsync({ id }),
+      });
       toast({ title: "Employee removed" });
-      setDeleteTarget(null);
     } catch {
       toast({ title: "Could not delete employee", variant: "destructive" });
     }
@@ -212,9 +263,15 @@ export default function EmployeesPage() {
           profile={meProfile}
           loading={meLoading}
           onSavePhone={async (phone) => {
-            await updateMyProfile.mutateAsync({ data: { phone } });
-            queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
             toast({ title: "Profile updated" });
+            void updateMyProfile
+              .mutateAsync({ data: { phone } })
+              .then(() => {
+                void queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
+              })
+              .catch(() => {
+                toast({ title: "Could not save profile", variant: "destructive" });
+              });
           }}
         />
       </AppLayout>

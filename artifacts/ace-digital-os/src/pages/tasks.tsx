@@ -38,6 +38,15 @@ import { AssigneeMultiSelect } from "@/components/tasks/AssigneeMultiSelect";
 import { TaskAssigneesDisplay } from "@/components/tasks/TaskAssigneesDisplay";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
+import {
+  patchListItem,
+  prependListItem,
+  removeListItem,
+  replaceListItem,
+  setList,
+  snapshotList,
+} from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title required"),
@@ -234,31 +243,63 @@ export default function TasksPage() {
     const teamId = data.teamId && data.teamId !== ALL_TEAMS_VALUE ? Number(data.teamId) : undefined;
     const assigneeIds = selectedAssigneeIds;
     const projectId = resolveProjectId(data.projectId);
-
-    await createTask.mutateAsync({
-      data: {
-        title: data.title,
-        projectId,
-        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
-        teamId,
-        priority: data.priority,
-        dueDate: data.dueDate || undefined,
-        status: data.status,
-      },
-    });
-
-    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-    toast({
-      title: "Task created",
-      description:
-        assigneeIds.length > 1
-          ? `One shared task for ${assigneeIds.length} people.`
-          : assigneeIds.length === 1
-            ? "Task assigned."
-            : "Common task created.",
-    });
+    const queryKey = getListTasksQueryKey(taskParams);
+    const tempId = -Date.now();
+    const optimistic: Task = {
+      id: tempId,
+      title: data.title,
+      projectId: projectId ?? null,
+      assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+      assignees: assigneeIds.map((uid) => ({
+        userId: uid,
+        fullName: employees?.find((e) => e.id === uid)?.fullName ?? "Assignee",
+        completed: false,
+      })),
+      teamId: teamId ?? null,
+      priority: data.priority,
+      dueDate: data.dueDate || null,
+      status: data.status,
+      progress: 0,
+      createdById: user?.id ?? null,
+      createdByName: user?.fullName ?? null,
+      createdAt: new Date().toISOString(),
+    };
     setOpen(false);
     resetCreateForm();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Task>(queryClient, queryKey);
+          prependListItem(queryClient, queryKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, queryKey, prev),
+        commit: () =>
+          createTask.mutateAsync({
+            data: {
+              title: data.title,
+              projectId,
+              assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+              teamId,
+              priority: data.priority,
+              dueDate: data.dueDate || undefined,
+              status: data.status,
+            },
+          }),
+        reconcile: (created) => replaceListItem(queryClient, queryKey, tempId, created),
+      });
+      toast({
+        title: "Task created",
+        description:
+          assigneeIds.length > 1
+            ? `One shared task for ${assigneeIds.length} people.`
+            : assigneeIds.length === 1
+              ? "Task assigned."
+              : "Common task created.",
+      });
+    } catch {
+      toast({ title: "Couldn't create task", variant: "destructive" });
+    }
   }
 
   async function handleToggle(task: Task, checked: boolean) {
@@ -301,11 +342,20 @@ export default function TasksPage() {
 
   async function confirmDeleteTask() {
     if (!taskToDelete) return;
+    const id = taskToDelete.id;
+    const queryKey = getListTasksQueryKey(taskParams);
+    setTaskToDelete(null);
     try {
-      await deleteTask.mutateAsync({ id: taskToDelete.id });
-      queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Task>(queryClient, queryKey);
+          removeListItem(queryClient, queryKey, id);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, queryKey, prev),
+        commit: () => deleteTask.mutateAsync({ id }),
+      });
       toast({ title: "Task deleted" });
-      setTaskToDelete(null);
     } catch {
       toast({ title: "Couldn't delete task", variant: "destructive" });
     }
@@ -333,22 +383,41 @@ export default function TasksPage() {
   async function onEditSubmit(data: EditForm) {
     if (!editingTask) return;
     const assigneeIds = editSelectedAssigneeIds;
+    const queryKey = getListTasksQueryKey(taskParams);
+    const taskId = editingTask.id;
+    setEditOpen(false);
+    setEditingTask(null);
     try {
-      await updateTask.mutateAsync({
-        id: editingTask.id,
-        data: {
-          title: data.title,
-          projectId: resolveProjectId(data.projectId),
-          assigneeIds,
-          priority: data.priority,
-          dueDate: data.dueDate || undefined,
-          status: data.status,
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Task>(queryClient, queryKey);
+          patchListItem(queryClient, queryKey, taskId, (t) => ({
+            ...t,
+            title: data.title,
+            projectId: resolveProjectId(data.projectId),
+            assigneeIds,
+            priority: data.priority,
+            dueDate: data.dueDate || null,
+            status: data.status,
+          }));
+          return prev;
         },
+        rollback: (prev) => setList(queryClient, queryKey, prev),
+        commit: () =>
+          updateTask.mutateAsync({
+            id: taskId,
+            data: {
+              title: data.title,
+              projectId: resolveProjectId(data.projectId),
+              assigneeIds,
+              priority: data.priority,
+              dueDate: data.dueDate || undefined,
+              status: data.status,
+            },
+          }),
+        reconcile: (updated) => patchListItem(queryClient, queryKey, taskId, () => updated),
       });
-      queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
       toast({ title: "Task updated" });
-      setEditOpen(false);
-      setEditingTask(null);
     } catch {
       toast({ title: "Couldn't save task", variant: "destructive" });
     }
@@ -356,14 +425,27 @@ export default function TasksPage() {
 
   async function handleProjectTask(task: Task, projectIdValue: string) {
     if (!canManageTask(task)) return;
-    await updateTask.mutateAsync({
-      id: task.id,
-      data: {
-        projectId: projectIdValue === NO_PROJECT_VALUE ? null : Number(projectIdValue),
-      } as never,
-    });
-    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-    toast({ title: "Task project updated" });
+    const queryKey = getListTasksQueryKey(taskParams);
+    const projectId = projectIdValue === NO_PROJECT_VALUE ? null : Number(projectIdValue);
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Task>(queryClient, queryKey);
+          patchListItem(queryClient, queryKey, task.id, (t) => ({ ...t, projectId }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, queryKey, prev),
+        commit: () =>
+          updateTask.mutateAsync({
+            id: task.id,
+            data: { projectId } as never,
+          }),
+        reconcile: (updated) => patchListItem(queryClient, queryKey, task.id, () => updated),
+      });
+      toast({ title: "Task project updated" });
+    } catch {
+      toast({ title: "Couldn't update task", variant: "destructive" });
+    }
   }
 
   const visibleTasks = useMemo(() => {

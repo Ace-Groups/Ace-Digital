@@ -51,8 +51,25 @@ export function useMarkChannelRead() {
     [mutateAsync, queryClient],
   );
 
+  const patchChannelsUnread = useCallback(
+    (channelId: number, latestReadMessageId?: number | null) => {
+      queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), (old) =>
+        (old ?? []).map((c) => {
+          if (c.id !== channelId) return c;
+          return {
+            ...c,
+            unreadCount: 0,
+            lastReadMessageId: mergeLastReadId(c.lastReadMessageId, latestReadMessageId),
+          };
+        }),
+      );
+    },
+    [queryClient],
+  );
+
   const markRead = useCallback(
     (channelId: number, latestReadMessageId?: number | null) => {
+      patchChannelsUnread(channelId, latestReadMessageId);
       const existing = timers.current.get(channelId);
       if (existing) clearTimeout(existing);
       timers.current.set(
@@ -63,7 +80,7 @@ export function useMarkChannelRead() {
         }, DEBOUNCE_MS),
       );
     },
-    [markReadNow],
+    [markReadNow, patchChannelsUnread],
   );
 
   return { markRead };

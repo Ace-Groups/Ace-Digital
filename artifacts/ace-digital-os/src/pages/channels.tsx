@@ -4,7 +4,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
   useGetChannelMessages,
-  useDeleteMessage,
   useListChannelMembers,
   getGetChannelMessagesQueryKey,
   getListChannelMembersQueryKey,
@@ -39,6 +38,7 @@ import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-cl
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import { parseChannelIdFromSearch, setChannelIdInSearch } from "@/lib/channel-url";
 import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
+import { useChannelMessageOptimistic } from "@/hooks/use-channel-message-optimistic";
 import { usePrefetchChannelMessages } from "@/hooks/use-prefetch-channel-messages";
 import { replyMetadataFromTarget } from "@/lib/chat-reply";
 
@@ -172,10 +172,13 @@ export default function ChannelsPage() {
 
   useChannelMessagesRealtime(selectedChannelId, realtimeReady, applyRealtime);
 
-  const deleteMessageMutation = useDeleteMessage();
+  const { queuePending, flushPending, markPendingFailed } = useSendChannelMessage(
+    selectedChannelId,
+    { onAppend: appendMessage },
+  );
 
-  const { send, queuePending, flushPending, markPendingFailed, isPending: sending } =
-    useSendChannelMessage(selectedChannelId, { onAppend: appendMessage });
+  const { toggleReactionInstant, deleteMessage, votePollInstant, rsvpInstant } =
+    useChannelMessageOptimistic(selectedChannelId, patchMessage);
 
   const canDeleteForMessage = useCallback(
     (msg: Message) => {
@@ -191,23 +194,10 @@ export default function ChannelsPage() {
   );
 
   const handleDeleteMessage = useCallback(
-    async (msg: Message) => {
-      if (!selectedChannelId) return;
-      try {
-        const updated = await deleteMessageMutation.mutateAsync({
-          id: selectedChannelId,
-          messageId: msg.id,
-        });
-        patchMessage(msg.id, () => updated);
-        queryClient.setQueryData<Message[]>(
-          getGetChannelMessagesQueryKey(selectedChannelId, CHANNEL_MESSAGE_PARAMS),
-          (prev) => prev?.map((m) => (m.id === updated.id ? updated : m)) ?? prev,
-        );
-      } catch {
-        toast({ title: "Could not delete message", variant: "destructive" });
-      }
+    (msg: Message) => {
+      void deleteMessage(msg);
     },
-    [selectedChannelId, deleteMessageMutation, patchMessage, queryClient, toast],
+    [deleteMessage],
   );
 
   useEffect(() => {
@@ -294,24 +284,33 @@ export default function ChannelsPage() {
       if (!selectedChannelId || !canPost) return;
       const wrapped = wrapPayload(payload);
       setActiveReply(null);
-      try {
-        await send(wrapped, previewAttachments);
-        setShouldAutoScroll(true);
-      } catch (err) {
-        const detail =
-          err instanceof Error
-            ? err.message
-            : typeof err === "object" && err && "error" in err
-              ? String((err as { error: unknown }).error)
-              : undefined;
+      setShouldAutoScroll(true);
+      const hasFiles =
+        (previewAttachments?.length ?? 0) > 0 ||
+        (wrapped.attachments?.length ?? 0) > 0;
+      if (hasFiles) {
+        const clientId = queuePending(wrapped, previewAttachments);
+        void flushPending(clientId, wrapped, previewAttachments).catch((err) => {
+          const detail = err instanceof Error ? err.message : undefined;
+          toast({
+            title: "Failed to send message",
+            description: detail ?? "Check your connection and try again.",
+            variant: "destructive",
+          });
+        });
+        return;
+      }
+      const clientId = queuePending(wrapped, previewAttachments);
+      void flushPending(clientId, wrapped, previewAttachments).catch((err) => {
+        const detail = err instanceof Error ? err.message : undefined;
         toast({
           title: "Failed to send message",
           description: detail ?? "Check your connection and try again.",
           variant: "destructive",
         });
-      }
+      });
     },
-    [selectedChannelId, canPost, send, wrapPayload, toast],
+    [selectedChannelId, canPost, queuePending, flushPending, wrapPayload, toast],
   );
 
   const handleQueuePending = useCallback(
@@ -403,6 +402,19 @@ export default function ChannelsPage() {
           onMessagePatched={(updated) => patchMessage(updated.id, () => updated)}
           canDeleteMessage={canDeleteForMessage}
           onDeleteMessage={handleDeleteMessage}
+          onToggleReaction={
+            user
+              ? (msg, emoji) => toggleReactionInstant(msg, emoji, user.id)
+              : undefined
+          }
+          onVotePoll={
+            user ? (msg, optionId) => votePollInstant(msg, optionId, user.id) : undefined
+          }
+          onRsvpEvent={
+            user
+              ? (msg, status) => rsvpInstant(msg, status, user.id)
+              : undefined
+          }
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -414,7 +426,7 @@ export default function ChannelsPage() {
         <MessageComposer
           channelId={selectedChannelId}
           channelName={selectedChannel.name}
-          sending={sending}
+          sending={false}
           replyTo={replyTo}
           composerRef={composerRef}
           onClearReply={() => setActiveReply(null)}

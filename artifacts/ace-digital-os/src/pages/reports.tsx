@@ -20,6 +20,9 @@ import { z } from "zod";
 import { Plus, FileText, Download, BarChart3, DollarSign, Users, TrendingUp } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { prependListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+import type { Report } from "@workspace/api-client-react";
 
 const REPORT_TYPES = [
   { value: "REVENUE", label: "Revenue Report", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -48,11 +51,35 @@ export default function ReportsPage() {
   });
 
   async function onSubmit(data: CreateForm) {
-    await generateReport.mutateAsync({ data: { type: data.type, period: data.period } });
-    queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
-    toast({ title: "Report generated!" });
+    const reportsKey = getListReportsQueryKey();
+    const tempId = -Date.now();
     setOpen(false);
     form.reset();
+    toast({ title: "Generating report…" });
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Report>(queryClient, reportsKey);
+          prependListItem(queryClient, reportsKey, {
+            id: tempId,
+            type: data.type,
+            period: data.period,
+            title: `${data.type} · ${data.period}`,
+            generatedAt: new Date().toISOString(),
+          } as Report);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, reportsKey, prev),
+        commit: () =>
+          generateReport.mutateAsync({ data: { type: data.type, period: data.period } }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: reportsKey });
+        },
+      });
+      toast({ title: "Report generated!" });
+    } catch {
+      toast({ title: "Could not generate report", variant: "destructive" });
+    }
   }
 
   function getReportMeta(type: string) {
@@ -114,10 +141,16 @@ export default function ReportsPage() {
             onClick={() => {
               const now = new Date();
               const period = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-              generateReport.mutateAsync({ data: { type: value, period } }).then(() => {
-                queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
-                toast({ title: `${label} generated for ${period}` });
-              });
+              toast({ title: `Generating ${label}…` });
+              void generateReport
+                .mutateAsync({ data: { type: value, period } })
+                .then(() => {
+                  void queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
+                  toast({ title: `${label} generated for ${period}` });
+                })
+                .catch(() => {
+                  toast({ title: "Could not generate report", variant: "destructive" });
+                });
             }}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:shadow-brand-md transition-all group"
           >

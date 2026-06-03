@@ -14,6 +14,8 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { patchListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { canManageChannel } from "@workspace/rbac";
@@ -136,17 +138,36 @@ export function ChannelSettingsSheet({
   async function handleSave() {
     if (!channel || !name.trim()) return;
     const trimmedAvatar = avatarUrl.trim();
+    const channelId = channel.id;
+    const channelsKey = getListChannelsQueryKey();
+    const nextName = name.trim();
+    const nextDesc = description.trim() || null;
+    const nextAvatar = trimmedAvatar ? trimmedAvatar : null;
+    toast({ title: "Channel updated" });
     try {
-      await updateChannel.mutateAsync({
-        id: channel.id,
-        data: {
-          name: name.trim(),
-          description: description.trim() || null,
-          avatarUrl: trimmedAvatar ? trimmedAvatar : null,
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList(queryClient, channelsKey);
+          patchListItem(queryClient, channelsKey, channelId, (c) => ({
+            ...c,
+            name: nextName,
+            description: nextDesc,
+            avatarUrl: nextAvatar,
+          }));
+          return prev;
         },
+        rollback: (prev) => setList(queryClient, channelsKey, prev),
+        commit: () =>
+          updateChannel.mutateAsync({
+            id: channelId,
+            data: {
+              name: nextName,
+              description: nextDesc,
+              avatarUrl: nextAvatar,
+            },
+          }),
+        reconcile: () => void invalidate(),
       });
-      await invalidate();
-      toast({ title: "Channel updated" });
     } catch {
       toast({
         title: "Update failed",
@@ -158,16 +179,23 @@ export function ChannelSettingsSheet({
 
   async function handleArchive() {
     if (!channel) return;
+    const channelId = channel.id;
+    const channelsKey = getListChannelsQueryKey();
+    setArchiveConfirmOpen(false);
+    onArchived?.();
+    onClose();
+    toast({ title: "Channel archived" });
     try {
-      await updateChannel.mutateAsync({
-        id: channel.id,
-        data: { archived: true },
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList(queryClient, channelsKey);
+          patchListItem(queryClient, channelsKey, channelId, (c) => ({ ...c, archived: true }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, channelsKey, prev),
+        commit: () => updateChannel.mutateAsync({ id: channelId, data: { archived: true } }),
+        reconcile: () => void invalidate(),
       });
-      await invalidate();
-      toast({ title: "Channel archived" });
-      setArchiveConfirmOpen(false);
-      onArchived?.();
-      onClose();
     } catch {
       toast({ title: "Could not archive channel", variant: "destructive" });
     }

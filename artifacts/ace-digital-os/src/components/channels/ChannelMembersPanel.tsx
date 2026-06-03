@@ -5,7 +5,10 @@ import {
   useRemoveChannelMember,
   getListChannelMembersQueryKey,
   getListChannelsQueryKey,
+  type ChannelMember,
 } from "@workspace/api-client-react";
+import { appendListItem, patchList, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useListEmployees } from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -58,21 +61,37 @@ export function ChannelMembersPanel({
     );
   }, [available, memberSearch]);
 
-  async function invalidate() {
-    await queryClient.invalidateQueries({
-      queryKey: getListChannelMembersQueryKey(channelId),
-    });
-    await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
-  }
+  const membersKey = getListChannelMembersQueryKey(channelId);
 
   async function handleAdd(userId: number) {
+    const emp = employees?.find((e) => e.id === userId);
+    const optimistic: ChannelMember = {
+      userId,
+      fullName: emp?.fullName ?? "Member",
+      email: emp?.email,
+      avatarUrl: emp?.avatarUrl ?? null,
+      role: "member",
+      joinedAt: new Date().toISOString(),
+    };
+    setMemberSearch("");
     try {
-      await addMember.mutateAsync({
-        id: channelId,
-        data: { userId, role: "member" },
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<ChannelMember>(queryClient, membersKey);
+          appendListItem(queryClient, membersKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, membersKey, prev),
+        commit: () =>
+          addMember.mutateAsync({
+            id: channelId,
+            data: { userId, role: "member" },
+          }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: membersKey });
+          void queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
+        },
       });
-      setMemberSearch("");
-      await invalidate();
       toast({ title: "Member added" });
     } catch {
       toast({ title: "Could not add member", variant: "destructive" });
@@ -81,8 +100,21 @@ export function ChannelMembersPanel({
 
   async function handleRemove(userId: number, fullName: string) {
     try {
-      await removeMember.mutateAsync({ id: channelId, userId });
-      await invalidate();
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<ChannelMember>(queryClient, membersKey);
+          patchList<ChannelMember>(queryClient, membersKey, (list) =>
+            list.filter((m) => m.userId !== userId),
+          );
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, membersKey, prev),
+        commit: () => removeMember.mutateAsync({ id: channelId, userId }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: membersKey });
+          void queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
+        },
+      });
       toast({ title: `${fullName} removed` });
     } catch {
       toast({

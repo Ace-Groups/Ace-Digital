@@ -104,7 +104,7 @@ export function MessageComposer({
   const showMic =
     !hasContent && !isRecording && voice.state !== "unsupported" && !disabled;
 
-  const canSend = !disabled && !sending && !isRecording && (hasText || hasAttachments);
+  const canSend = !disabled && !isRecording && (hasText || hasAttachments);
   const attachDisabled = disabled || pendingFiles.length >= MAX_PENDING_ATTACHMENTS;
 
   async function addFiles(files: FileList | null) {

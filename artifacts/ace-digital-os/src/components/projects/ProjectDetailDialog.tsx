@@ -41,6 +41,13 @@ import {
 } from "lucide-react";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  patchListItem,
+  removeListItem,
+  setList,
+  snapshotList,
+} from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 const STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -133,47 +140,106 @@ export function ProjectDetailDialog({
       data.teamId && data.teamId !== "__none__" ? Number(data.teamId) : null;
     const clientId =
       data.clientId && data.clientId !== "__none__" ? Number(data.clientId) : null;
-
-    await updateProject.mutateAsync({
-      id: project.id,
-      data: {
-        name: data.name,
-        description: data.description || undefined,
-        teamId,
-        clientId,
-        priority: data.priority,
-        status: data.status,
-        progress: data.progress,
-        deadline: data.deadline || undefined,
-        budget: data.budget ? Number(data.budget) : undefined,
-      } as Parameters<typeof updateProject.mutateAsync>[0]["data"],
-    });
-    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
-    toast({ title: "Project updated" });
+    const projectsKey = getListProjectsQueryKey();
+    const projectId = project.id;
     onOpenChange(false);
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Project>(queryClient, projectsKey);
+          patchListItem(queryClient, projectsKey, projectId, (p) => ({
+            ...p,
+            name: data.name,
+            description: data.description || null,
+            teamId,
+            clientId,
+            priority: data.priority,
+            status: data.status,
+            progress: data.progress,
+            deadline: data.deadline || null,
+            budget: data.budget ? Number(data.budget) : null,
+          }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, projectsKey, prev),
+        commit: () =>
+          updateProject.mutateAsync({
+            id: projectId,
+            data: {
+              name: data.name,
+              description: data.description || undefined,
+              teamId,
+              clientId,
+              priority: data.priority,
+              status: data.status,
+              progress: data.progress,
+              deadline: data.deadline || undefined,
+              budget: data.budget ? Number(data.budget) : undefined,
+            } as Parameters<typeof updateProject.mutateAsync>[0]["data"],
+          }),
+        reconcile: (updated) =>
+          patchListItem(queryClient, projectsKey, projectId, () => updated),
+      });
+      toast({ title: "Project updated" });
+    } catch {
+      toast({ title: "Couldn't save project", variant: "destructive" });
+    }
   }
 
   async function handleDelete() {
     if (!project) return;
-    await deleteProject.mutateAsync({ id: project.id });
-    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
-    toast({ title: "Project deleted" });
+    const projectsKey = getListProjectsQueryKey();
+    const projectId = project.id;
     setDeleteOpen(false);
     onOpenChange(false);
-    onDeleted?.();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Project>(queryClient, projectsKey);
+          removeListItem(queryClient, projectsKey, projectId);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, projectsKey, prev),
+        commit: () => deleteProject.mutateAsync({ id: projectId }),
+      });
+      toast({ title: "Project deleted" });
+      onDeleted?.();
+    } catch {
+      toast({ title: "Couldn't delete project", variant: "destructive" });
+    }
   }
 
   async function markComplete() {
     if (!project) return;
+    const projectsKey = getListProjectsQueryKey();
+    const projectId = project.id;
     form.setValue("status", "DONE");
     form.setValue("progress", 100);
-    await updateProject.mutateAsync({
-      id: project.id,
-      data: { status: "DONE", progress: 100 },
-    });
-    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
-    toast({ title: "Marked as complete" });
     onOpenChange(false);
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Project>(queryClient, projectsKey);
+          patchListItem(queryClient, projectsKey, projectId, (p) => ({
+            ...p,
+            status: "DONE",
+            progress: 100,
+          }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, projectsKey, prev),
+        commit: () =>
+          updateProject.mutateAsync({
+            id: projectId,
+            data: { status: "DONE", progress: 100 },
+          }),
+        reconcile: (updated) =>
+          patchListItem(queryClient, projectsKey, projectId, () => updated),
+      });
+      toast({ title: "Marked as complete" });
+    } catch {
+      toast({ title: "Couldn't update project", variant: "destructive" });
+    }
   }
 
   const pendingTasks = projectTasks?.filter((t) => t.status !== "DONE").length ?? 0;

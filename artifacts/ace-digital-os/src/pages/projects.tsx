@@ -38,6 +38,14 @@ import {
 } from "lucide-react";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  patchListItem,
+  prependListItem,
+  replaceListItem,
+  setList,
+  snapshotList,
+} from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 const STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -95,27 +103,68 @@ export default function ProjectsPage() {
   });
 
   async function onSubmit(data: CreateForm) {
-    await createProject.mutateAsync({
-      data: {
-        name: data.name,
-        description: data.description,
-        teamId: data.teamId ? Number(data.teamId) : undefined,
-        clientId: data.clientId ? Number(data.clientId) : undefined,
-        priority: data.priority,
-        status: "TODO",
-        deadline: data.deadline || undefined,
-        budget: data.budget ? Number(data.budget) : undefined,
-      },
-    });
-    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
-    toast({ title: "Project created!" });
+    const projectsKey = getListProjectsQueryKey();
+    const tempId = -Date.now();
+    const optimistic: Project = {
+      id: tempId,
+      name: data.name,
+      description: data.description ?? null,
+      teamId: data.teamId ? Number(data.teamId) : null,
+      clientId: data.clientId ? Number(data.clientId) : null,
+      priority: data.priority,
+      status: "TODO",
+      progress: 0,
+      deadline: data.deadline || null,
+      budget: data.budget ? Number(data.budget) : null,
+    };
     setCreateOpen(false);
     form.reset();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Project>(queryClient, projectsKey);
+          prependListItem(queryClient, projectsKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, projectsKey, prev),
+        commit: () =>
+          createProject.mutateAsync({
+            data: {
+              name: data.name,
+              description: data.description,
+              teamId: data.teamId ? Number(data.teamId) : undefined,
+              clientId: data.clientId ? Number(data.clientId) : undefined,
+              priority: data.priority,
+              status: "TODO",
+              deadline: data.deadline || undefined,
+              budget: data.budget ? Number(data.budget) : undefined,
+            },
+          }),
+        reconcile: (created) => replaceListItem(queryClient, projectsKey, tempId, created),
+      });
+      toast({ title: "Project created!" });
+    } catch {
+      toast({ title: "Couldn't create project", variant: "destructive" });
+    }
   }
 
   async function handleDrop(status: string, projectId: number) {
-    await updateStatus.mutateAsync({ id: projectId, data: { status } });
-    queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+    const projectsKey = getListProjectsQueryKey();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Project>(queryClient, projectsKey);
+          patchListItem(queryClient, projectsKey, projectId, (p) => ({ ...p, status }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, projectsKey, prev),
+        commit: () => updateStatus.mutateAsync({ id: projectId, data: { status } }),
+        reconcile: (updated) =>
+          patchListItem(queryClient, projectsKey, projectId, () => updated),
+      });
+    } catch {
+      toast({ title: "Couldn't move project", variant: "destructive" });
+    }
   }
 
   function openProject(project: Project) {

@@ -22,6 +22,15 @@ import { Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { statusColor, cn, formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  appendListItem,
+  patchListItem,
+  setList,
+  snapshotList,
+} from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+import type { Approval } from "@workspace/api-client-react";
 
 const TYPES = ["LEAVE", "EXPENSE", "HIRING", "PROJECT_BUDGET", "OTHER"];
 
@@ -35,10 +44,11 @@ type CreateForm = z.infer<typeof createSchema>;
 
 export default function ApprovalsPage() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState("all");
-  const { data: approvals, isLoading } = useListApprovals(
-    filterStatus !== "all" ? { status: filterStatus } : {}
-  );
+  const listParams = filterStatus !== "all" ? { status: filterStatus } : {};
+  const approvalsKey = getListApprovalsQueryKey(listParams);
+  const { data: approvals, isLoading } = useListApprovals(listParams);
   const createApproval = useCreateApproval();
   const approveApproval = useApproveApproval();
   const rejectApproval = useRejectApproval();
@@ -53,30 +63,95 @@ export default function ApprovalsPage() {
   });
 
   async function onSubmit(data: CreateForm) {
-    await createApproval.mutateAsync({
-      data: {
-        type: data.type,
-        title: data.title,
-        description: data.description,
-        amount: data.amount ? Number(data.amount) : undefined,
-      },
-    });
-    queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
-    toast({ title: "Approval request submitted!" });
+    const tempId = -Date.now();
+    const optimistic: Approval = {
+      id: tempId,
+      type: data.type,
+      title: data.title,
+      description: data.description ?? null,
+      amount: data.amount ? Number(data.amount) : null,
+      requestedById: user?.id,
+      requesterName: user?.fullName ?? null,
+      teamId: user?.teamId ?? null,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+    };
     setOpen(false);
     form.reset();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Approval>(queryClient, approvalsKey);
+          appendListItem(queryClient, approvalsKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, approvalsKey, prev),
+        commit: () =>
+          createApproval.mutateAsync({
+            data: {
+              type: data.type,
+              title: data.title,
+              description: data.description,
+              amount: data.amount ? Number(data.amount) : undefined,
+            },
+          }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
+        },
+      });
+      toast({ title: "Approval request submitted!" });
+    } catch {
+      toast({ title: "Could not submit request", variant: "destructive" });
+    }
   }
 
   async function handleApprove(id: number) {
-    await approveApproval.mutateAsync({ id, data: {} });
-    queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
-    toast({ title: "Approved!" });
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Approval>(queryClient, approvalsKey);
+          patchListItem(queryClient, approvalsKey, id, (a) => ({
+            ...a,
+            status: "APPROVED",
+            reviewedAt: new Date().toISOString(),
+          }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, approvalsKey, prev),
+        commit: () => approveApproval.mutateAsync({ id, data: {} }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
+        },
+      });
+      toast({ title: "Approved!" });
+    } catch {
+      toast({ title: "Could not approve", variant: "destructive" });
+    }
   }
 
   async function handleReject(id: number) {
-    await rejectApproval.mutateAsync({ id, data: { note: "Rejected" } });
-    queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
-    toast({ title: "Rejected", variant: "destructive" });
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Approval>(queryClient, approvalsKey);
+          patchListItem(queryClient, approvalsKey, id, (a) => ({
+            ...a,
+            status: "REJECTED",
+            note: "Rejected",
+            reviewedAt: new Date().toISOString(),
+          }));
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, approvalsKey, prev),
+        commit: () => rejectApproval.mutateAsync({ id, data: { note: "Rejected" } }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: getListApprovalsQueryKey() });
+        },
+      });
+      toast({ title: "Rejected", variant: "destructive" });
+    } catch {
+      toast({ title: "Could not reject", variant: "destructive" });
+    }
   }
 
   const pending = approvals?.filter((a) => a.status === "PENDING").length ?? 0;

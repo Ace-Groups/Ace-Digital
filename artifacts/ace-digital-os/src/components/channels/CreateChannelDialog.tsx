@@ -16,7 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateChannel, useListEmployees, useListTeams, getListChannelsQueryKey } from "@workspace/api-client-react";
+import {
+  useCreateChannel,
+  useListEmployees,
+  useListTeams,
+  getListChannelsQueryKey,
+  getListEmployeesQueryKey,
+  type Channel,
+} from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { prependListItem, replaceListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -31,12 +41,17 @@ interface CreateChannelDialogProps {
 
 export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { can } = usePermissions();
   const queryClient = useQueryClient();
   const createChannel = useCreateChannel();
+  const channelsKey = getListChannelsQueryKey();
   const canCreateAnnouncement = can("channels:all");
   const { data: employees } = useListEmployees(undefined, {
-    query: { enabled: open && (can("employees:read") || can("channels:write")) },
+    query: {
+      enabled: open && (can("employees:read") || can("channels:write")),
+      queryKey: getListEmployeesQueryKey(),
+    },
   });
   const { data: teams } = useListTeams();
 
@@ -62,22 +77,58 @@ export function CreateChannelDialog({ open, onClose, onCreated }: CreateChannelD
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !user) return;
+    const nameVal = name.trim();
+    const descVal = description.trim() || undefined;
+    const typeVal = canCreateAnnouncement ? type : "TEAM";
+    const teamIdVal = teamId ? Number(teamId) : undefined;
+    const memberIdsVal = memberIds.length > 0 ? memberIds : undefined;
+    const normalized = nameVal.toLowerCase().replace(/\s+/g, "-");
+    const tempId = -Date.now();
+    const optimistic: Channel = {
+      id: tempId,
+      name: normalized,
+      description: descVal ?? null,
+      avatarUrl: null,
+      teamId: teamId ? Number(teamId) : null,
+      teamName: null,
+      type: typeVal,
+      visibility: "PRIVATE",
+      archived: false,
+      memberCount: 1,
+      myRole: "owner",
+      unreadCount: 0,
+      lastPostAt: null,
+      lastMessagePreview: null,
+      lastReadMessageId: null,
+      createdAt: new Date().toISOString(),
+    };
+    reset();
+    onClose();
     try {
-      const channel = await createChannel.mutateAsync({
-        data: {
-          name: name.trim(),
-          description: description.trim() || undefined,
-          type: canCreateAnnouncement ? type : "TEAM",
-          teamId: teamId ? Number(teamId) : undefined,
-          memberIds: memberIds.length > 0 ? memberIds : undefined,
+      const channel = await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Channel>(queryClient, channelsKey);
+          prependListItem(queryClient, channelsKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, channelsKey, prev),
+        commit: () =>
+          createChannel.mutateAsync({
+            data: {
+              name: name.trim(),
+              description: description.trim() || undefined,
+              type: typeVal,
+              teamId: teamIdVal,
+              memberIds: memberIdsVal,
+            },
+          }),
+        reconcile: (created) => {
+          replaceListItem(queryClient, channelsKey, tempId, created);
         },
       });
-      await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
       toast({ title: "Channel created", description: `#${channel.name} is ready.` });
-      reset();
       onCreated?.(channel.id);
-      onClose();
     } catch {
       toast({
         title: "Could not create channel",

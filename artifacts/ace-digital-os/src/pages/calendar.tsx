@@ -24,6 +24,8 @@ import { CalendarWeekView, startOfWeek } from "@/components/calendar/CalendarWee
 import { CalendarEventSheet } from "@/components/calendar/CalendarEventSheet";
 import type { CalendarEvent, CalendarFeedItem } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { patchList, prependListItem, removeListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 type ViewMode = "month" | "week" | "agenda";
 
@@ -102,9 +104,11 @@ export default function CalendarPage() {
     setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
   }
 
-  async function refreshFeed() {
-    await queryClient.invalidateQueries({ queryKey: getGetCalendarFeedQueryKey() });
-  }
+  const feedKey = getGetCalendarFeedQueryKey({
+    from: range.from,
+    to: range.to,
+    userId: viewUserId,
+  });
 
   async function handleCreate(values: {
     title: string;
@@ -117,21 +121,65 @@ export default function CalendarPage() {
     attendeeIds: number[];
     visibility: string;
   }) {
+    const tempId = `temp-${Date.now()}`;
+    const startAt = new Date(values.startAt).toISOString();
+    const endAt = values.endAt ? new Date(values.endAt).toISOString() : null;
+    setSheetOpen(false);
     try {
-      await createEvent.mutateAsync({
-        data: {
-          title: values.title,
-          description: values.description || undefined,
-          eventType: values.eventType as CalendarEventInputEventType,
-          startAt: new Date(values.startAt).toISOString(),
-          endAt: values.endAt ? new Date(values.endAt).toISOString() : undefined,
-          location: values.location || undefined,
-          ownerId: Number(values.ownerId),
-          attendeeIds: values.attendeeIds,
-          visibility: values.visibility as CalendarEventInputVisibility,
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
+          prependListItem(queryClient, feedKey, {
+            id: tempId,
+            kind: "event",
+            title: values.title,
+            description: values.description || null,
+            eventType: values.eventType,
+            startAt,
+            endAt,
+            location: values.location || null,
+            readOnly: false,
+            ownerId: Number(values.ownerId),
+          });
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, feedKey, prev),
+        commit: () =>
+          createEvent.mutateAsync({
+            data: {
+              title: values.title,
+              description: values.description || undefined,
+              eventType: values.eventType as CalendarEventInputEventType,
+              startAt,
+              endAt: endAt ?? undefined,
+              location: values.location || undefined,
+              ownerId: Number(values.ownerId),
+              attendeeIds: values.attendeeIds,
+              visibility: values.visibility as CalendarEventInputVisibility,
+            },
+          }),
+        reconcile: (created) => {
+          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
+            list.map((item) =>
+              item.id === tempId
+                ? {
+                    id: `event-${created.id}`,
+                    kind: "event",
+                    title: created.title,
+                    description: created.description ?? null,
+                    eventType: created.eventType,
+                    startAt: created.startAt,
+                    endAt: created.endAt ?? null,
+                    location: created.location ?? null,
+                    readOnly: false,
+                    ownerId: created.ownerId,
+                    eventId: created.id,
+                  }
+                : item,
+            ),
+          );
         },
       });
-      await refreshFeed();
       toast({ title: "Event created" });
     } catch {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -149,21 +197,50 @@ export default function CalendarPage() {
     visibility: string;
   }) {
     if (!editing) return;
+    const eventId = editing.id;
+    const startAt = new Date(values.startAt).toISOString();
+    const endAt = values.endAt ? new Date(values.endAt).toISOString() : null;
+    setSheetOpen(false);
     try {
-      await updateEvent.mutateAsync({
-        id: editing.id,
-        data: {
-          title: values.title,
-          description: values.description || undefined,
-          eventType: values.eventType as CalendarEventInputEventType,
-          startAt: new Date(values.startAt).toISOString(),
-          endAt: values.endAt ? new Date(values.endAt).toISOString() : undefined,
-          location: values.location || undefined,
-          attendeeIds: values.attendeeIds,
-          visibility: values.visibility as CalendarEventInputVisibility,
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
+          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
+            list.map((item) =>
+              item.eventId === eventId
+                ? {
+                    ...item,
+                    title: values.title,
+                    description: values.description || null,
+                    eventType: values.eventType,
+                    startAt,
+                    endAt,
+                    location: values.location || null,
+                  }
+                : item,
+            ),
+          );
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, feedKey, prev),
+        commit: () =>
+          updateEvent.mutateAsync({
+            id: eventId,
+            data: {
+              title: values.title,
+              description: values.description || undefined,
+              eventType: values.eventType as CalendarEventInputEventType,
+              startAt,
+              endAt: endAt ?? undefined,
+              location: values.location || undefined,
+              attendeeIds: values.attendeeIds,
+              visibility: values.visibility as CalendarEventInputVisibility,
+            },
+          }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: feedKey });
         },
       });
-      await refreshFeed();
       toast({ title: "Event updated" });
     } catch {
       toast({ title: "Failed to update event", variant: "destructive" });
@@ -172,10 +249,20 @@ export default function CalendarPage() {
 
   async function handleDelete() {
     if (!editing) return;
+    const eventId = editing.id;
+    setSheetOpen(false);
     try {
-      await deleteEvent.mutateAsync({ id: editing.id });
-      await refreshFeed();
-      setSheetOpen(false);
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
+          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
+            list.filter((item) => item.eventId !== eventId),
+          );
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, feedKey, prev),
+        commit: () => deleteEvent.mutateAsync({ id: eventId }),
+      });
       toast({ title: "Event deleted" });
     } catch {
       toast({ title: "Failed to delete", variant: "destructive" });

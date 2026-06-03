@@ -67,16 +67,20 @@ export default function SettingsPage() {
   }
 
   async function handleSaveProfile() {
-    try {
-      await updateProfile.mutateAsync({
-        data: { fullName: fullName.trim(), phone: phone.trim() || undefined },
+    const savedName = fullName.trim();
+    const savedPhone = phone.trim() || undefined;
+    toast({ title: "Profile updated" });
+    void updateProfile
+      .mutateAsync({
+        data: { fullName: savedName, phone: savedPhone },
+      })
+      .then(async () => {
+        await refreshUser();
+        await queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
+      })
+      .catch(() => {
+        toast({ title: "Could not save profile", variant: "destructive" });
       });
-      await refreshUser();
-      queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
-      toast({ title: "Profile updated" });
-    } catch {
-      toast({ title: "Could not save profile", variant: "destructive" });
-    }
   }
 
   async function handleChangePassword({

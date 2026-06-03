@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  toggleMessageReaction,
-  type Message,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { getGetChannelMessagesQueryKey } from "@workspace/api-client-react";
+import type { Message } from "@workspace/api-client-react";
 import { MessageBubble } from "@/components/channels/MessageBubble";
 import { DateSeparator } from "@/components/channels/DateSeparator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { messageDayKey } from "@/lib/chat-display";
 import type { PendingMessage } from "@/hooks/use-send-channel-message";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +37,9 @@ interface ChannelMessageListProps {
   onMessagePatched?: (message: Message) => void;
   canDeleteMessage?: (message: Message) => boolean;
   onDeleteMessage?: (message: Message) => void | Promise<void>;
+  onToggleReaction?: (message: Message, emoji: string) => void;
+  onVotePoll?: (message: Message, optionId: string) => void;
+  onRsvpEvent?: (message: Message, status: "going" | "maybe" | "no") => void;
 }
 
 export function ChannelMessageList({
@@ -63,8 +60,10 @@ export function ChannelMessageList({
   onMessagePatched,
   canDeleteMessage,
   onDeleteMessage,
+  onToggleReaction,
+  onVotePoll,
+  onRsvpEvent,
 }: ChannelMessageListProps) {
-  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [pendingNewCount, setPendingNewCount] = useState(0);
@@ -242,18 +241,18 @@ export function ChannelMessageList({
                 onScrollToQuotedMessage={onScrollToMessage}
                 liveMessagesById={liveMessagesById}
                 onToggleReaction={
-                  !isPendingMessage(msg)
-                    ? async (emoji) => {
-                        const updated = await toggleMessageReaction(channelId, msg.id, {
-                          emoji,
-                        });
-                        onMessagePatched?.(updated);
-                        queryClient.setQueryData<Message[]>(
-                          getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
-                          (prev) =>
-                            prev?.map((m) => (m.id === updated.id ? updated : m)) ?? prev,
-                        );
-                      }
+                  !isPendingMessage(msg) && onToggleReaction
+                    ? (emoji) => onToggleReaction(msg as Message, emoji)
+                    : undefined
+                }
+                onVotePoll={
+                  !isPendingMessage(msg) && onVotePoll
+                    ? (optionId) => onVotePoll(msg as Message, optionId)
+                    : undefined
+                }
+                onRsvpEvent={
+                  !isPendingMessage(msg) && onRsvpEvent
+                    ? (status) => onRsvpEvent(msg as Message, status)
                     : undefined
                 }
               />

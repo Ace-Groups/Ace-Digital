@@ -1,9 +1,7 @@
-import { useRsvpEvent, getGetChannelMessagesQueryKey, useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import { useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
 import type { Message } from "@workspace/api-client-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, MapPin, CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -26,22 +24,11 @@ interface EventCardProps {
   msg: Message;
   channelId: number;
   isMe?: boolean;
+  onRsvp?: (status: "going" | "maybe" | "no") => void;
 }
 
-export function EventCard({ msg, channelId, isMe }: EventCardProps) {
+export function EventCard({ msg, channelId, isMe, onRsvp }: EventCardProps) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const rsvpEvent = useRsvpEvent({
-    mutation: {
-      onSuccess: (updated) => {
-        queryClient.setQueryData<Message[]>(
-          getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
-          (old) =>
-          (old ?? []).map((m) => (m.id === updated.id ? updated : m)),
-        );
-      },
-    },
-  });
   const linkChat = useLinkChatToCalendar();
   const { toast } = useToast();
   const { data: linkStatus } = useCheckCalendarChatLink(
@@ -55,13 +42,8 @@ export function EventCard({ msg, channelId, isMe }: EventCardProps) {
     meta.rsvps?.[status]?.includes(user?.id ?? -1),
   )?.status;
 
-  async function handleRsvp(status: "going" | "maybe" | "no") {
-    if (rsvpEvent.isPending) return;
-    await rsvpEvent.mutateAsync({
-      id: channelId,
-      messageId: msg.id,
-      data: { status },
-    });
+  function handleRsvp(status: "going" | "maybe" | "no") {
+    onRsvp?.(status);
   }
 
   const going = meta.rsvps?.going?.length ?? 0;
@@ -94,8 +76,7 @@ export function EventCard({ msg, channelId, isMe }: EventCardProps) {
           <button
             key={status}
             type="button"
-            disabled={rsvpEvent.isPending}
-            onClick={() => void handleRsvp(status)}
+            onClick={() => handleRsvp(status)}
             className={cn(
               "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               myStatus === status

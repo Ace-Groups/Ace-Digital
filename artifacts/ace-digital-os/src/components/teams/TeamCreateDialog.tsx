@@ -8,8 +8,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateTeam } from "@workspace/api-client-react";
+import { useCreateTeam, getListTeamsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { prependListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 const TEAM_COLORS = [
   "#5483B3",
@@ -31,19 +34,37 @@ export function TeamCreateDialog({ open, onOpenChange, onCreated }: TeamCreateDi
   const [name, setName] = useState("");
   const [color, setColor] = useState(TEAM_COLORS[0]);
   const createTeam = useCreateTeam();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const teamsKey = getListTeamsQueryKey();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    const tempId = -Date.now();
+    onOpenChange(false);
+    setName("");
+    setColor(TEAM_COLORS[0]);
+    onCreated({ id: tempId, name: trimmed });
     try {
-      const team = await createTeam.mutateAsync({ data: { name: trimmed, color } });
+      const team = await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<{ id: number; name: string; color?: string }>(
+            queryClient,
+            teamsKey,
+          );
+          prependListItem(queryClient, teamsKey, { id: tempId, name: trimmed, color });
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, teamsKey, prev),
+        commit: () => createTeam.mutateAsync({ data: { name: trimmed, color } }),
+        reconcile: (created) => {
+          onCreated({ id: created.id, name: created.name });
+          void queryClient.invalidateQueries({ queryKey: teamsKey });
+        },
+      });
       toast({ title: `Team "${team.name}" ready` });
-      onCreated({ id: team.id, name: team.name });
-      setName("");
-      setColor(TEAM_COLORS[0]);
-      onOpenChange(false);
     } catch {
       toast({ title: "Could not create team", variant: "destructive" });
     }

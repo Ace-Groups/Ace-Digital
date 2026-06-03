@@ -20,6 +20,9 @@ import { z } from "zod";
 import { Plus, Mail, Phone, Calendar, Building2 } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { prependListItem, setList, snapshotList } from "@/lib/optimistic";
+import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+import type { Client } from "@workspace/api-client-react";
 
 const createSchema = z.object({
   contactName: z.string().min(1, "Contact name required"),
@@ -46,21 +49,48 @@ export default function ClientsPage() {
   });
 
   async function onSubmit(data: CreateForm) {
-    await createClient.mutateAsync({
-      data: {
-        contactName: data.contactName,
-        companyName: data.companyName,
-        email: data.email,
-        phone: data.phone,
-        assignedTeamId: data.assignedTeamId ? Number(data.assignedTeamId) : undefined,
-        status: data.status,
-        contractValue: data.contractValue ? Number(data.contractValue) : undefined,
-      },
-    });
-    queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
-    toast({ title: "Client added!" });
+    const clientsKey = getListClientsQueryKey();
+    const tempId = -Date.now();
+    const optimistic: Client = {
+      id: tempId,
+      contactName: data.contactName,
+      companyName: data.companyName,
+      email: data.email,
+      phone: data.phone ?? null,
+      assignedTeamId: data.assignedTeamId ? Number(data.assignedTeamId) : null,
+      status: data.status,
+      contractValue: data.contractValue ? Number(data.contractValue) : null,
+    };
     setOpen(false);
     form.reset();
+    try {
+      await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Client>(queryClient, clientsKey);
+          prependListItem(queryClient, clientsKey, optimistic);
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, clientsKey, prev),
+        commit: () =>
+          createClient.mutateAsync({
+            data: {
+              contactName: data.contactName,
+              companyName: data.companyName,
+              email: data.email,
+              phone: data.phone,
+              assignedTeamId: data.assignedTeamId ? Number(data.assignedTeamId) : undefined,
+              status: data.status,
+              contractValue: data.contractValue ? Number(data.contractValue) : undefined,
+            },
+          }),
+        reconcile: () => {
+          void queryClient.invalidateQueries({ queryKey: clientsKey });
+        },
+      });
+      toast({ title: "Client added!" });
+    } catch {
+      toast({ title: "Could not add client", variant: "destructive" });
+    }
   }
 
   const activeClients = clients?.filter((c) => c.status === "ACTIVE") ?? [];
