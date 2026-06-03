@@ -1,4 +1,4 @@
-import { getApps, initializeApp } from "firebase-admin/app";
+import { ensureFirebaseAdminApp } from "@workspace/db";
 import { getFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
@@ -106,7 +106,7 @@ async function queueFirebaseMail(
   }
 
   try {
-    if (!getApps().length) initializeApp();
+    ensureFirebaseAdminApp();
     const db = getFirestore();
     await db.collection(MAIL_COLLECTION).add({
       to: [to],

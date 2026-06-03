@@ -200,8 +200,9 @@ pnpm run deploy:firebase
 - **Firestore** — NoSQL; Spark free tier (50K reads / 20K writes per day). All business data stays server-side via Cloud Functions (Admin SDK); clients never touch Firestore directly (`firestore.rules` denies client access).
 - **Hosting** — Free CDN + SSL.
 - **Cloud Functions (gen 1)** — `asia-south1`, 512MB, max 10 instances — Express app bundled as `api-app.mjs` using `USE_FIRESTORE=true`.
+- **Cloud Run (`ace-realtime`)** — WebSocket server for channel chat; subscribes to **Redis** (`REDIS_URL`) for events published by the API. Deploy: `pnpm run deploy:realtime`. Set `VITE_REALTIME_WS_URL` on Hosting builds. See [`docs/CHAT.md`](docs/CHAT.md).
 
-Postgres (`DATABASE_URL`) is still supported locally for development; production Firebase uses Firestore only.
+Postgres (`DATABASE_URL`) is still supported locally for development; production Firebase uses Firestore only. Local dev attaches WebSocket on the api-server at `/ws` without Cloud Run.
 
 ## Estimated monthly cost (Ace Digital OS, small team)
 
@@ -220,7 +221,7 @@ There is **no** fixed “Blaze monthly fee” — you pay for usage above free t
 
 ## Role-based access control (RBAC)
 
-Permissions are defined in `lib/rbac` and enforced by the API (Cloud Functions). Firestore rules remain **deny-all** for clients; the browser never reads Firestore directly.
+Permissions are defined in `lib/rbac` and enforced by the API (Cloud Functions) and the realtime server's subscribe handler. Firestore rules allow **read-only** access to mirrored `messages` for chat fallback when WebSocket is down; writes remain server-only.
 
 ### Roles (7)
 

@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/realtime-hub",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "@workspace/rbac": "workspace:*",
+    "@workspace/realtime-protocol": "workspace:*",
+    "jsonwebtoken": "^9.0.3",
+    "redis": "^5.10.0",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "catalog:",
+    "@types/ws": "^8.18.1",
+    "typescript": "~5.9.3"
+  }
+}

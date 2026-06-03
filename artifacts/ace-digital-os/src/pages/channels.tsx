@@ -16,6 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
+import { useChannelWsRealtime } from "@/hooks/use-channel-ws-realtime";
+import { useRealtime } from "@/contexts/RealtimeContext";
 import { useRoomMessageList, useMessageListSyncKey } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canDeleteMessage, canManageChannel, canPostInChannel } from "@workspace/rbac";
@@ -114,15 +116,16 @@ export default function ChannelsPage() {
 
   const threadActive = Boolean(selectedChannelId && (!isMobile || mobileThreadOpen));
 
+  const { wsLive } = useRealtime();
   const [firebaseLive, setFirebaseLive] = useState(false);
 
   useEffect(() => {
-    if (!isFirebaseChatEnabled()) {
+    if (wsLive || !isFirebaseChatEnabled()) {
       setFirebaseLive(false);
       return;
     }
     void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
-  }, []);
+  }, [wsLive]);
 
   const { data: latestMessages, isPending: messagesPending } = useGetChannelMessages(
     selectedChannelId ?? 0,
@@ -132,7 +135,7 @@ export default function ChannelsPage() {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
         staleTime: 120_000,
-        refetchInterval: firebaseLive ? false : 30_000,
+        refetchInterval: firebaseLive || wsLive ? false : 30_000,
         placeholderData: (previousData) =>
           previousData ??
           (selectedChannelId
@@ -170,7 +173,18 @@ export default function ChannelsPage() {
     if (msgs !== undefined) syncFromQuery(msgs);
   }, [messageSyncKey, syncFromQuery]);
 
-  useChannelMessagesRealtime(selectedChannelId, realtimeReady, applyRealtime);
+  useChannelWsRealtime({
+    channelId: selectedChannelId,
+    enabled: realtimeReady,
+    appendMessage,
+    patchMessage,
+  });
+
+  useChannelMessagesRealtime(
+    selectedChannelId,
+    realtimeReady && !wsLive && isFirebaseChatEnabled(),
+    applyRealtime,
+  );
 
   const { queuePending, flushPending, markPendingFailed } = useSendChannelMessage(
     selectedChannelId,

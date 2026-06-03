@@ -1,4 +1,4 @@
-import { getApps, initializeApp } from "firebase-admin/app";
+import { ensureFirebaseAdminApp } from "../firebase-admin-init";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import {
   sanitizeMessageAttachments,
@@ -33,12 +33,10 @@ function ensureFirestore(): Firestore | null {
     process.env.GOOGLE_CLOUD_PROJECT;
   if (!project && !process.env.FIRESTORE_EMULATOR_HOST) return null;
 
-  if (!getApps().length) {
-    try {
-      initializeApp(project ? { projectId: project } : undefined);
-    } catch {
-      return null;
-    }
+  try {
+    ensureFirebaseAdminApp();
+  } catch {
+    return null;
   }
   return getFirestore();
 }

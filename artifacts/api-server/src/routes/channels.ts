@@ -13,6 +13,11 @@ import { requirePermission } from "../lib/rbac-middleware";
 import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
 import { messageToJson, messagePreview, validateMessagePayload } from "../lib/message-attachments";
 import { notifyChannelMembers } from "../lib/chat-notify";
+import {
+  publishMessageNew,
+  publishMessageUpdated,
+  publishMessageDeleted,
+} from "../lib/realtime-publish";
 import { extractMentionedUserIds } from "../lib/chat-mentions";
 import { sortChannelsForSidebar } from "@workspace/db";
 
@@ -552,13 +557,15 @@ router.delete(
     const users = await store.listUsers();
     const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
     const sender = users.find((u) => u.id === deleted.senderId);
-    res.json(
-      messageToJson(
-        deleted,
-        sender?.fullName ?? "Unknown",
-        avatarMap[deleted.senderId] ?? null,
-      ),
+    const deletedJson = messageToJson(
+      deleted,
+      sender?.fullName ?? "Unknown",
+      avatarMap[deleted.senderId] ?? null,
     );
+    void publishMessageDeleted(channelId, messageId).catch((err) =>
+      console.error("[realtime-delete]", err),
+    );
+    res.json(deletedJson);
   },
 );
 
@@ -636,13 +643,16 @@ router.post(
         console.error("[channels/mark-read]", e),
       );
 
-      res.status(201).json(
-        messageToJson(
-          message,
-          sender?.fullName ?? "Unknown",
-          sender?.avatarUrl ?? null,
-        ),
+      const createdJson = messageToJson(
+        message,
+        sender?.fullName ?? "Unknown",
+        sender?.avatarUrl ?? null,
       );
+      void publishMessageNew(createdJson).catch((err) =>
+        console.error("[realtime-message-new]", err),
+      );
+
+      res.status(201).json(createdJson);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to send message";
       console.error("[channels/messages]", message);
@@ -709,9 +719,15 @@ router.post(
     }
 
     const sender = await store.findUserById(updated.senderId);
-    res.json(
-      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
+    const reactionJson = messageToJson(
+      updated,
+      sender?.fullName ?? "Unknown",
+      sender?.avatarUrl ?? null,
     );
+    void publishMessageUpdated(reactionJson).catch((err) =>
+      console.error("[realtime-reaction]", err),
+    );
+    res.json(reactionJson);
   },
 );
 
@@ -783,9 +799,15 @@ router.patch(
     }
 
     const sender = await store.findUserById(updated.senderId);
-    res.json(
-      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
+    const pollJson = messageToJson(
+      updated,
+      sender?.fullName ?? "Unknown",
+      sender?.avatarUrl ?? null,
     );
+    void publishMessageUpdated(pollJson).catch((err) =>
+      console.error("[realtime-poll]", err),
+    );
+    res.json(pollJson);
   },
 );
 
@@ -854,9 +876,15 @@ router.patch(
     }
 
     const sender = await store.findUserById(updated.senderId);
-    res.json(
-      messageToJson(updated, sender?.fullName ?? "Unknown", sender?.avatarUrl ?? null),
+    const rsvpJson = messageToJson(
+      updated,
+      sender?.fullName ?? "Unknown",
+      sender?.avatarUrl ?? null,
     );
+    void publishMessageUpdated(rsvpJson).catch((err) =>
+      console.error("[realtime-rsvp]", err),
+    );
+    res.json(rsvpJson);
   },
 );
 

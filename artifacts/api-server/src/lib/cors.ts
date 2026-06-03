@@ -3,6 +3,7 @@ import type cors from "cors";
 const DEFAULT_ORIGINS = [
   "https://ace-digital-os.web.app",
   "https://ace-digital-os.firebaseapp.com",
+  // Render preview/production API same-origin not needed; frontend on Firebase calls API cross-origin
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:21973",

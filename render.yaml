@@ -1,0 +1,37 @@
+# Ace Digital OS — single Render web service (REST + WebSocket /ws)
+# Connect repo in Render Dashboard → New Blueprint or link render.yaml
+#
+# Required secrets (Dashboard → Environment):
+#   JWT_SECRET              — 32+ random chars (match Firebase if sharing tokens)
+#   FIREBASE_SERVICE_ACCOUNT_JSON — full Firebase Admin JSON (one line)
+#   REDIS_URL               — rediss://default:PASSWORD@host:port (Redis Cloud TLS)
+# Optional:
+#   CORS_ORIGINS            — e.g. https://ace-digital-os.web.app
+#   RESEND_API_KEY, EMAIL_FROM — transactional email
+
+services:
+  - type: web
+    name: ace-digital-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: corepack enable && pnpm install && pnpm --filter @workspace/api-server run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_FIRESTORE
+        value: "true"
+      - key: GCLOUD_PROJECT
+        value: ace-digital-os
+      - key: FIREBASE_PROJECT_ID
+        value: ace-digital-os
+      - key: JWT_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://ace-digital-os.web.app,https://ace-digital-os.firebaseapp.com

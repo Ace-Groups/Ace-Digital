@@ -1,15 +1,11 @@
-import { getApps, initializeApp } from "firebase-admin/app";
+import { ensureFirebaseAdminApp } from "@workspace/db";
 import { getAuth } from "firebase-admin/auth";
-
-function ensureAdminApp() {
-  if (!getApps().length) initializeApp();
-}
 
 export async function createFirebaseCustomToken(
   userId: number,
   claims: { role: string; teamId: number | null },
 ): Promise<string> {
-  ensureAdminApp();
+  ensureFirebaseAdminApp();
   const customClaims: Record<string, string> = {
     userId: String(userId),
     role: claims.role,

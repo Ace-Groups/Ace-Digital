@@ -52,7 +52,7 @@ An internal company operating system for Ace Digital — an IT company. Manages 
 - **Clients**: Cards with company info, status, contract value
 - **Approvals**: Submit requests; admins can approve/reject inline
 - **Reports**: Quick-generate by type; view report history
-- **Channels**: Full-screen team chat interface with real-time polling
+- **Channels**: Full-screen team chat with WebSocket realtime (Firestore fallback)
 - **Activity**: Complete audit log with actor, action, entity type
 
 ## Default Credentials

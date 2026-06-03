@@ -11,8 +11,12 @@
     "build:api": "pnpm --filter @workspace/api-server run build",
     "seed:firestore": "USE_FIRESTORE=true npx tsx scripts/src/seed-firestore.ts",
     "clear:prod": "USE_FIRESTORE=true npx tsx scripts/src/clear-db-for-prod.ts",
-    "deploy:firebase": "pnpm run build:web && pnpm run build:api && npx firebase-tools@latest deploy --project ace-digital-os"
+    "build:realtime": "pnpm --filter @workspace/realtime-server run build",
+    "deploy:firebase": "pnpm run build:web && pnpm run build:api && npx firebase-tools@latest deploy --project ace-digital-os",
+    "deploy:realtime": "pnpm run build:realtime && gcloud run deploy ace-realtime --source artifacts/realtime-server --region asia-south1 --allow-unauthenticated --set-secrets=JWT_SECRET=JWT_SECRET:latest",
+    "deploy:render:docs": "echo 'Connect repo at https://dashboard.render.com — see docs/DEPLOY_RENDER.md'"
   },
+  "packageManager": "pnpm@10.33.2",
   "private": true,
   "devDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.60.4",

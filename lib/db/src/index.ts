@@ -1,3 +1,4 @@
+export { ensureFirebaseAdminApp } from "./firebase-admin-init";
 export * from "./schema";
 export * from "./message-attachments";
 export * from "./tasks-logic";

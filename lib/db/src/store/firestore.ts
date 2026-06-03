@@ -1,4 +1,5 @@
-import { getApps, initializeApp, type App } from "firebase-admin/app";
+import type { App } from "firebase-admin/app";
+import { ensureFirebaseAdminApp } from "../firebase-admin-init";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import type {
   User,
@@ -87,8 +88,7 @@ const EMPLOYEE_CODE_SEQ_KEY = "employeeCodeSeq";
 const SERVICE_TICKET_SEQ_KEY = "serviceTicketSeq";
 
 function app(): App {
-  if (!getApps().length) initializeApp();
-  return getApps()[0]!;
+  return ensureFirebaseAdminApp();
 }
 
 let firestoreDb: Firestore | null = null;
