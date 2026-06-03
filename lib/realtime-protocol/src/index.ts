@@ -1,2 +1,2 @@
+/** Browser-safe exports (schemas + parsers only). */
 export * from "./schemas.js";
-export * from "./redis-publish.js";

@@ -1,5 +1,6 @@
 import type { PublishedEvent, RealtimeMessage, ChannelActivity } from "@workspace/realtime-protocol";
-import { publishToRedis, realtimeMessageSchema } from "@workspace/realtime-protocol";
+import { realtimeMessageSchema } from "@workspace/realtime-protocol";
+import { publishToRedis } from "@workspace/realtime-protocol/server";
 import { messagePreview } from "./message-attachments";
 import type { MessageAttachment } from "@workspace/db";
 import { store } from "@workspace/db";
