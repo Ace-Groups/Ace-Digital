@@ -41,7 +41,7 @@ In Render → **Environment** → add:
 
 | Setting | Value |
 |---------|--------|
-| Build | `corepack enable && pnpm install && pnpm --filter @workspace/api-server run build` |
+| Build | `npm install -g pnpm@10.33.2 && pnpm install && pnpm --filter @workspace/api-server run build` |
 | Start | `node --enable-source-maps artifacts/api-server/dist/index.mjs` |
 | Health check | `/api/healthz` |
 | Plan | Free |
