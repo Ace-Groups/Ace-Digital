@@ -14,6 +14,14 @@ import { RecordList } from "@/lib/record-list";
 
 export const CHANNEL_MESSAGE_PARAMS = { limit: 50 } as const;
 
+function sameMessageArrayRefs(a: Message[], b: Message[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 const channelLists = new Map<number, RecordList<Message>>();
 
 function getChannelList(channelId: number): RecordList<Message> {
@@ -77,7 +85,9 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
         return;
       }
       if (items.length > 0) {
-        list.mergeRealtime(items);
+        if (!sameMessageArrayRefs(snap.items, items)) {
+          list.mergeRealtime(items);
+        }
       } else if (snap.items.length === 0) {
         list.setInitial([], false);
       }
@@ -110,7 +120,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
         list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
-      } else {
+      } else if (!sameMessageArrayRefs(snap.items, items)) {
         list.mergeRealtime(items);
       }
     },

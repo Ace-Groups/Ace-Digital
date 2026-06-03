@@ -107,12 +107,13 @@ export default function ChannelsPage() {
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
         staleTime: 120_000,
         refetchInterval: firebaseLive ? false : 30_000,
-        placeholderData: () =>
-          selectedChannelId
+        placeholderData: (previousData) =>
+          previousData ??
+          (selectedChannelId
             ? queryClient.getQueryData<Message[]>(
                 getGetChannelMessagesQueryKey(selectedChannelId, CHANNEL_MESSAGE_PARAMS),
               )
-            : undefined,
+            : undefined),
       },
     },
   );

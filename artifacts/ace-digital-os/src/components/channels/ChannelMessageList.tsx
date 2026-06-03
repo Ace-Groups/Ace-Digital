@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   toggleMessageReaction,
   type Message,
@@ -12,12 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { messageDayKey } from "@/lib/chat-display";
 import type { PendingMessage } from "@/hooks/use-send-channel-message";
+import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
+import { cn } from "@/lib/utils";
 
 function isPendingMessage(msg: Message | PendingMessage): msg is PendingMessage {
   return "status" in msg && (msg.status === "sending" || msg.status === "failed");
 }
-import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
-import { cn } from "@/lib/utils";
 
 export type ReplyTarget = {
   id: number;
@@ -69,6 +69,7 @@ export function ChannelMessageList({
   const prevLenRef = useRef(0);
   const jumpedUnreadRef = useRef(false);
   const loadOlderLockRef = useRef(false);
+  const autoScrollRef = useRef(shouldAutoScroll);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -83,12 +84,9 @@ export function ChannelMessageList({
     return idx > 0 ? idx : -1;
   }, [filtered, lastReadMessageId]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: filtered.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 128,
-    overscan: 10,
-  });
+  useEffect(() => {
+    autoScrollRef.current = shouldAutoScroll;
+  }, [shouldAutoScroll]);
 
   useEffect(() => {
     jumpedUnreadRef.current = false;
@@ -100,12 +98,18 @@ export function ChannelMessageList({
     if (!filtered.length || jumpedUnreadRef.current) return;
     if (newMessagesDividerIndex < 0) return;
     jumpedUnreadRef.current = true;
-    onShouldAutoScrollChange(false);
-    const index = newMessagesDividerIndex;
+    if (autoScrollRef.current) {
+      autoScrollRef.current = false;
+      onShouldAutoScrollChange(false);
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const target = el.querySelector<HTMLElement>(
+      `[data-message-index="${newMessagesDividerIndex}"]`,
+    );
     requestAnimationFrame(() => {
-      rowVirtualizer.scrollToIndex(index, { align: "start" });
+      target?.scrollIntoView({ block: "start" });
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- rowVirtualizer identity changes each render
   }, [filtered.length, newMessagesDividerIndex, onShouldAutoScrollChange]);
 
   useEffect(() => {
@@ -127,7 +131,10 @@ export function ChannelMessageList({
     const onScroll = () => {
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       const nearBottom = distanceFromBottom < 96;
-      onShouldAutoScrollChange(nearBottom);
+      if (nearBottom !== autoScrollRef.current) {
+        autoScrollRef.current = nearBottom;
+        onShouldAutoScrollChange(nearBottom);
+      }
       if (nearBottom) {
         onMarkRead();
         setPendingNewCount(0);
@@ -182,31 +189,24 @@ export function ChannelMessageList({
   }
 
   return (
-    <div ref={containerRef} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6">
+    <div
+      ref={containerRef}
+      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+    >
       {loadingOlder && (
         <p className="mb-3 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
-      <div
-        style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}
-        className="w-full"
-      >
-        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const msg = filtered[virtualRow.index]!;
-          const prev = virtualRow.index > 0 ? filtered[virtualRow.index - 1] : null;
+      <div className="flex w-full flex-col gap-4">
+        {filtered.map((msg, index) => {
+          const prev = index > 0 ? filtered[index - 1]! : null;
           const isMe = msg.senderId === currentUserId;
           const showMeta = !prev || prev.senderId !== msg.senderId;
           const showDay =
             !prev || messageDayKey(prev.createdAt) !== messageDayKey(msg.createdAt);
-          const showNewDivider = virtualRow.index === newMessagesDividerIndex;
+          const showNewDivider = index === newMessagesDividerIndex;
 
           return (
-            <div
-              key={msg.id}
-              data-index={virtualRow.index}
-              ref={rowVirtualizer.measureElement}
-              className="absolute left-0 top-0 w-full pb-4"
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
-            >
+            <div key={msg.id} data-message-index={index}>
               {showDay && <DateSeparator createdAt={msg.createdAt} />}
               {showNewDivider && (
                 <div
@@ -235,7 +235,7 @@ export function ChannelMessageList({
                         });
                         onMessagePatched?.(updated);
                         queryClient.setQueryData<Message[]>(
-                          getGetChannelMessagesQueryKey(channelId, { limit: 50 }),
+                          getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS),
                           (prev) =>
                             prev?.map((m) => (m.id === updated.id ? updated : m)) ?? prev,
                         );
@@ -255,6 +255,7 @@ export function ChannelMessageList({
             size="sm"
             className={cn("pointer-events-auto shadow-md")}
             onClick={() => {
+              autoScrollRef.current = true;
               onShouldAutoScrollChange(true);
               setPendingNewCount(0);
               endRef.current?.scrollIntoView({ behavior: "smooth" });

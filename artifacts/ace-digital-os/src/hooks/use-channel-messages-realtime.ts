@@ -11,14 +11,7 @@ import {
 } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
-
-function sameMessageIds(a: Message[], b: Message[] | undefined): boolean {
-  if (!b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i]!.id !== b[i]!.id) return false;
-  }
-  return true;
-}
+import { sameOrderedMessageIds } from "@/lib/message-list-equality";
 
 export function useChannelMessagesRealtime(
   channelId: number | null,
@@ -43,7 +36,7 @@ export function useChannelMessagesRealtime(
         (messages) => {
           const key = getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS);
           const prev = queryClient.getQueryData<Message[]>(key);
-          if (!sameMessageIds(messages, prev)) {
+          if (!prev || !sameOrderedMessageIds(messages, prev)) {
             queryClient.setQueryData<Message[]>(key, messages);
           }
           onMessagesRef.current?.(messages);
