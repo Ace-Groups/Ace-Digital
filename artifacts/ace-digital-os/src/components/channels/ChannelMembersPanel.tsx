@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useListChannelMembers,
   useAddChannelMember,
@@ -11,37 +11,52 @@ import { useListEmployees } from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { X, UserPlus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Search, UserMinus, UserPlus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChannelMembersPanelProps {
   channelId: number;
   canManage: boolean;
+  /** Refetch members when settings opens */
+  active?: boolean;
 }
 
-export function ChannelMembersPanel({ channelId, canManage }: ChannelMembersPanelProps) {
+export function ChannelMembersPanel({
+  channelId,
+  canManage,
+  active = true,
+}: ChannelMembersPanelProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { data: members, isLoading } = useListChannelMembers(channelId, {
     query: {
-      enabled: channelId > 0,
+      enabled: channelId > 0 && active,
       queryKey: getListChannelMembersQueryKey(channelId),
+      staleTime: 30_000,
     },
   });
   const { data: employees } = useListEmployees();
   const addMember = useAddChannelMember();
   const removeMember = useRemoveChannelMember();
-  const [addUserId, setAddUserId] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const memberIds = new Set(members?.map((m) => m.userId) ?? []);
   const available = employees?.filter((e) => !memberIds.has(e.id)) ?? [];
+
+  const filteredAvailable = useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return available;
+    return available.filter(
+      (e) =>
+        e.fullName.toLowerCase().includes(q) ||
+        (e.email?.toLowerCase().includes(q) ?? false),
+    );
+  }, [available, memberSearch]);
 
   async function invalidate() {
     await queryClient.invalidateQueries({
@@ -50,14 +65,13 @@ export function ChannelMembersPanel({ channelId, canManage }: ChannelMembersPane
     await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
   }
 
-  async function handleAdd() {
-    if (!addUserId) return;
+  async function handleAdd(userId: number) {
     try {
       await addMember.mutateAsync({
         id: channelId,
-        data: { userId: Number(addUserId), role: "member" },
+        data: { userId, role: "member" },
       });
-      setAddUserId("");
+      setMemberSearch("");
       await invalidate();
       toast({ title: "Member added" });
     } catch {
@@ -65,11 +79,11 @@ export function ChannelMembersPanel({ channelId, canManage }: ChannelMembersPane
     }
   }
 
-  async function handleRemove(userId: number) {
+  async function handleRemove(userId: number, fullName: string) {
     try {
       await removeMember.mutateAsync({ id: channelId, userId });
       await invalidate();
-      toast({ title: "Member removed" });
+      toast({ title: `${fullName} removed` });
     } catch {
       toast({
         title: "Could not remove member",
@@ -80,66 +94,120 @@ export function ChannelMembersPanel({ channelId, canManage }: ChannelMembersPane
   }
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading members…</p>;
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {canManage && available.length > 0 && (
-        <div className="flex gap-2">
-          <Select value={addUserId} onValueChange={setAddUserId}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Add a person…" />
-            </SelectTrigger>
-            <SelectContent>
-              {available.map((e) => (
-                <SelectItem key={e.id} value={String(e.id)}>
-                  {e.fullName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            size="icon"
-            onClick={handleAdd}
-            disabled={!addUserId || addMember.isPending}
-            aria-label="Add member"
-          >
-            <UserPlus size={18} />
-          </Button>
+      {canManage && (
+        <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="text-sm font-medium">Add member</p>
+          {available.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Everyone on the team is already here.</p>
+          ) : (
+            <>
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  placeholder="Search by name or email"
+                  className={cn("pl-9", isMobile && "min-h-11 text-base")}
+                />
+              </div>
+              {memberSearch.trim() && filteredAvailable.length > 0 && (
+                <ul
+                  className={cn(
+                    "touch-scroll space-y-1 overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-background p-1",
+                    isMobile ? "max-h-40" : "max-h-36",
+                  )}
+                >
+                  {filteredAvailable.slice(0, 8).map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg px-3 text-left transition-colors hover:bg-muted/60 active:bg-muted",
+                          isMobile ? "min-h-11 py-2" : "min-h-9 py-1.5",
+                        )}
+                        onClick={() => void handleAdd(e.id)}
+                        disabled={addMember.isPending}
+                      >
+                        <UserPlus size={16} className="shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                          {e.fullName}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {memberSearch.trim() && filteredAvailable.length === 0 && (
+                <p className="text-xs text-muted-foreground">No matches.</p>
+              )}
+              {!memberSearch.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Search to find someone to add.
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
+
       <ul className="space-y-2">
         {members?.map((m) => (
           <li
             key={m.userId}
-            className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2"
+            className={cn(
+              "flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-3",
+              isMobile ? "min-h-[3.25rem] py-2.5" : "py-2",
+            )}
           >
             <UserAvatar
               avatarUrl={m.avatarUrl}
               fullName={m.fullName}
-              className="h-8 w-8"
-              iconSize={14}
+              className="h-9 w-9 shrink-0"
+              iconSize={16}
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{m.fullName}</p>
               <p className="truncate text-xs text-muted-foreground">{m.email}</p>
             </div>
-            <Badge variant="secondary" className="text-[10px] capitalize shrink-0">
+            <Badge variant="secondary" className="shrink-0 text-[10px] capitalize">
               {m.role}
             </Badge>
             {canManage && (
               <Button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => handleRemove(m.userId)}
+                variant={isMobile ? "outline" : "ghost"}
+                size={isMobile ? "sm" : "icon"}
+                className={cn(
+                  "shrink-0",
+                  !isMobile && "h-8 w-8 text-muted-foreground hover:text-destructive",
+                  isMobile && "min-h-9 gap-1 border-destructive/30 text-destructive",
+                )}
+                onClick={() => void handleRemove(m.userId, m.fullName)}
                 disabled={removeMember.isPending}
                 aria-label={`Remove ${m.fullName}`}
               >
-                <X size={14} />
+                {isMobile ? (
+                  <>
+                    <UserMinus size={14} />
+                    Remove
+                  </>
+                ) : (
+                  <X size={14} />
+                )}
               </Button>
             )}
           </li>

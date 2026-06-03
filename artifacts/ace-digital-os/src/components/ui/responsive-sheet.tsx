@@ -39,9 +39,9 @@ export function ResponsiveSheet({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className={cn("max-h-[92dvh]", className)}>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
+        <DrawerContent className={cn("max-h-[94dvh]", className)}>
+          <DrawerHeader className="shrink-0 text-left pb-2">
+            <DrawerTitle className="text-lg">{title}</DrawerTitle>
             {description ? (
               <DrawerDescription>{description}</DrawerDescription>
             ) : (

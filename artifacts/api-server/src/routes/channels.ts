@@ -189,7 +189,11 @@ router.patch(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!canManageChannel(ctx, access.membership)) {
+    if (
+      !canManageChannel(ctx, access.membership, {
+        createdById: access.channel.createdById ?? null,
+      })
+    ) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -308,7 +312,11 @@ router.post(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!canManageChannel(ctx, access.membership)) {
+    if (
+      !canManageChannel(ctx, access.membership, {
+        createdById: access.channel.createdById ?? null,
+      })
+    ) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -358,7 +366,11 @@ router.delete(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!canManageChannel(ctx, access.membership)) {
+    if (
+      !canManageChannel(ctx, access.membership, {
+        createdById: access.channel.createdById ?? null,
+      })
+    ) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

@@ -104,7 +104,13 @@ export default function ChannelsPage() {
       membership,
     );
 
-  const canManage = Boolean(ctx && canManageChannel(ctx, membership));
+  const canManage = Boolean(
+    ctx &&
+      selectedChannel &&
+      canManageChannel(ctx, membership, {
+        createdById: selectedChannel.createdById ?? null,
+      }),
+  );
 
   const threadActive = Boolean(selectedChannelId && (!isMobile || mobileThreadOpen));
 
@@ -483,7 +489,6 @@ export default function ChannelsPage() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         channel={selectedChannel ?? null}
-        canManage={!!canManage}
         onArchived={() => {
           setSelectedChannelId(null);
           setMobileThreadOpen(false);

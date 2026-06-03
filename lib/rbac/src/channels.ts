@@ -41,8 +41,10 @@ function isChannelOwnerRole(role: string | undefined | null): boolean {
 export function canManageChannel(
   ctx: AccessContext,
   membership: ChannelMembershipInfo,
+  channel?: ChannelDeleteInfo | null,
 ): boolean {
   if (hasPermission(ctx, "channels:all")) return true;
+  if (channel?.createdById != null && channel.createdById === ctx.userId) return true;
   return isChannelOwnerRole(membership?.role);
 }
 
