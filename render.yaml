@@ -15,7 +15,7 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npm install pnpm@10.33.2 --ignore-scripts && npm exec -- pnpm install && npm exec -- pnpm --filter @workspace/api-server run build
+    buildCommand: npx --yes pnpm@10.33.2 install && npx --yes pnpm@10.33.2 --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
     envVars:
