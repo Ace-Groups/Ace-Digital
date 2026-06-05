@@ -8,12 +8,14 @@ import {
 import {
   getFirestore,
   collection,
+  doc,
   query,
   where,
   orderBy,
   limit,
   onSnapshot,
   type Firestore,
+  type DocumentChangeType,
 } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 import {
@@ -162,7 +164,9 @@ function mapFirestoreMessage(id: string, data: Record<string, unknown>): Message
       ? (data.attachments as Message["attachments"])
       : undefined,
     messageKind:
-      data.messageKind === "poll" || data.messageKind === "event"
+      data.messageKind === "poll" ||
+      data.messageKind === "event" ||
+      data.messageKind === "system"
         ? data.messageKind
         : "text",
     metadata:
@@ -170,6 +174,9 @@ function mapFirestoreMessage(id: string, data: Record<string, unknown>): Message
         ? (data.metadata as Message["metadata"])
         : undefined,
     deleted: Boolean(data.deletedAt),
+    parentMessageId:
+      typeof data.parentMessageId === "number" ? data.parentMessageId : null,
+    editedAt: typeof data.editedAt === "string" ? data.editedAt : null,
     createdAt:
       typeof data.createdAt === "string"
         ? data.createdAt
@@ -179,9 +186,19 @@ function mapFirestoreMessage(id: string, data: Record<string, unknown>): Message
   };
 }
 
+export type FirestoreMessageChange = {
+  type: DocumentChangeType;
+  message: Message;
+};
+
+export type FirestoreChannelActivity = {
+  lastPostAt: string | null;
+  messageCount?: number;
+};
+
 export function subscribeChannelMessages(
   channelId: number,
-  onMessages: (messages: Message[]) => void,
+  onMessages: (messages: Message[], changes: FirestoreMessageChange[]) => void,
   onError?: (err: Error) => void,
 ): () => void {
   if (!isFirebaseChatEnabled()) {
@@ -208,7 +225,55 @@ export function subscribeChannelMessages(
         const items = snap.docs
           .map((d) => mapFirestoreMessage(d.id, d.data() as Record<string, unknown>))
           .reverse();
-        onMessages(items);
+        const changes = snap.docChanges().map((change) => ({
+          type: change.type,
+          message: mapFirestoreMessage(
+            change.doc.id,
+            change.doc.data() as Record<string, unknown>,
+          ),
+        }));
+        onMessages(items, changes);
+      },
+      (err) => {
+        if (!isFirebaseAuthReady()) return;
+        onError?.(err);
+      },
+    );
+  })();
+
+  return () => {
+    cancelled = true;
+    unsub();
+  };
+}
+
+export function subscribeChannelActivity(
+  channelId: number,
+  onActivity: (activity: FirestoreChannelActivity) => void,
+  onError?: (err: Error) => void,
+): () => void {
+  if (!isFirebaseChatEnabled()) {
+    return () => {};
+  }
+
+  let unsub = () => {};
+  let cancelled = false;
+
+  void (async () => {
+    const authed = await ensureFirebaseAuth();
+    if (cancelled || !authed) return;
+
+    unsub = onSnapshot(
+      doc(getFirebaseDb(), "channels", String(channelId)),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data() as Record<string, unknown>;
+        onActivity({
+          lastPostAt: typeof data.lastPostAt === "string" ? data.lastPostAt : null,
+          ...(typeof data.messageCount === "number"
+            ? { messageCount: data.messageCount }
+            : {}),
+        });
       },
       (err) => {
         if (!isFirebaseAuthReady()) return;

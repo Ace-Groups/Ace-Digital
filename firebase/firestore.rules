@@ -23,6 +23,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /channels/{channelId} {
+      allow read: if signedIn() && isChannelMember(int(channelId));
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

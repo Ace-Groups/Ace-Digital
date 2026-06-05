@@ -2,7 +2,7 @@
 
 Service: **https://ace-digital-api.onrender.com**
 
-Free Render web services sleep after **15 minutes** with no HTTP or WebSocket traffic. First request after sleep can take **~50 seconds**.
+Free Render web services sleep after **15 minutes** with no HTTP traffic. First request after sleep can take **~50 seconds**.
 
 Ping the health endpoint every **10–14 minutes** from an external cron (not Render Cron Jobs — use a free external monitor).
 
@@ -57,7 +57,7 @@ curl -w "\nTime: %{time_total}s\n" https://ace-digital-api.onrender.com/api/heal
 
 ## After cron: wire the web app
 
-Build hosting with Render API + WebSocket:
+Build hosting with the Render API:
 
 ```bash
 pnpm run build:web:render

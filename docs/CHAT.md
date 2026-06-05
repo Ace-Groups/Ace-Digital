@@ -1,60 +1,22 @@
-# Channel chat (WebSocket + Firestore fallback)
+# Channel chat
 
-Chat UX follows Slack-style patterns (flat rows, threads, DMs, stars, pins, files) on Ace shadcn — inspired by Rocket.Chat/Mattermost for unread/recency.
+Chat uses REST for writes and Firestore `onSnapshot` listeners for realtime client updates.
 
-## Slack parity matrix
+## Data flow
 
-| Slack pattern | Ace Digital |
-|---------------|-------------|
-| Flat message rows (avatar + name + time) | `MessageRow` + `MessageHoverToolbar` |
-| Sidebar: Starred, Channels (#), DMs | `RoomSidebar` + `starred` on `channel_members` |
-| Header tabs: Messages, Files | `ChannelThreadHeader` + `ChannelFilesPanel` |
-| Thread side panel | `ThreadSidePanel` + `parentMessageId` |
-| Edit message (24h) | `PATCH /v1/channels/{id}/messages/{messageId}` |
-| Star channel | `POST/DELETE /v1/channels/{id}/star` |
-| Pins | `channel_pins` + pin routes |
-| Markdown composer | `SlackComposer` + `react-markdown` render |
-| System join lines | `messageKind: system` |
-| Canvas / Huddle / Workflows | Out of scope |
+1. The client sends messages, edits, reactions, polls, RSVPs, and deletes through the REST API.
+2. The API writes to PostgreSQL through the shared store.
+3. The store mirrors message and channel activity documents to Firestore.
+4. Authenticated channel members receive read-only Firestore updates.
 
-## Realtime transport
-
-| Layer | Role |
-|-------|------|
-| **REST** | Send messages, reactions, polls, RSVP, edits, threads, pins, files |
-| **WebSocket** | Primary realtime (`message:new`, `message:updated`, `message:deleted`, `channel:activity`) |
-| **Firestore** | Fallback when WebSocket is unavailable |
-
-Protocol: [`lib/realtime-protocol`](../lib/realtime-protocol).
-
-## Schema (Postgres / Firestore)
-
-- `messages.parentMessageId`, `messages.editedAt`
-- `channel_members.starred`
-- `channel_pins` (channelId, messageId, pinnedById, pinnedAt)
-- `channels.type` includes `DM`
-
-Run `pnpm --filter @workspace/db push` after pulling.
-
-## API highlights
-
-- `GET /v1/channels/{id}/messages?threadRootId=` — thread replies (main feed excludes replies)
-- `PATCH /v1/channels/{id}/messages/{messageId}` — edit body
-- `POST /v1/dms/open`, `GET /v1/dms`
-- `GET /v1/channels/{id}/files`, `GET /v1/channels/{id}/pins`
-
-Codegen: `pnpm --filter @workspace/api-spec run codegen`
+Firestore message documents use the top-level `messages/{messageId}` path and include a numeric `channelId`. Channel activity uses `channels/{channelId}`.
 
 ## Firestore indexes
 
 Deploy [`firebase/firestore.indexes.json`](../firebase/firestore.indexes.json):
 
 - `messages`: `channelId` + `createdAt`
-- `messages`: `channelId` + `parentMessageId` + `createdAt` (threads)
-
-## Subagent
-
-Use `.cursor/agents/slack-chat-ux.md` for consistent Slack-parity UI work.
+- `messages`: `channelId` + `parentMessageId` + `createdAt`
 
 ## Local development
 

@@ -1,6 +1,6 @@
 # Firebase deployment (Ace Digital OS)
 
-**Current production:** the hosted SPA is on Firebase Hosting; **REST and WebSocket** run on [Render](https://ace-digital-api.onrender.com). Deploy the frontend with `pnpm run build:web:render` then `firebase deploy --only hosting`. See **[docs/PRODUCTION.md](docs/PRODUCTION.md)** for the full live architecture. Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
+**Current production:** the hosted SPA is on Firebase Hosting; REST runs on [Render](https://ace-digital-api.onrender.com), and Firestore supplies realtime chat updates. Deploy the frontend with `pnpm run build:web:render` then `firebase deploy --only hosting`. See **[docs/PRODUCTION.md](docs/PRODUCTION.md)** for the full live architecture. Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
 
 ## Project
 
@@ -201,14 +201,12 @@ pnpm run deploy:firebase
 
 | Component | Role |
 |-----------|------|
-| **Firestore** | Production database; API on Render uses Admin SDK (`FIREBASE_SERVICE_ACCOUNT_JSON`). Client writes denied in rules; chat fallback may read mirrored `messages`. |
+| **Firestore** | Production database and realtime chat transport; API on Render uses Admin SDK (`FIREBASE_SERVICE_ACCOUNT_JSON`). Client writes are denied. |
 | **Hosting** | SPA at https://ace-digital-os.web.app — build with `pnpm run build:web:render`. |
-| **Render (`ace-digital-api`)** | REST `/api/*` + WebSocket `/ws`; see [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). |
-| **Redis Cloud** (optional) | `REDIS_URL` on Render for pub/sub; not required on a single instance. |
+| **Render (`ace-digital-api`)** | REST `/api/*`; see [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). |
 | **Cloud Functions (gen 1)** | Legacy bundled API for Hosting `/api/**` rewrite; unused when the SPA calls Render via `VITE_API_BASE_URL`. |
-| **Cloud Run (`ace-realtime`)** | Optional split WS deploy (`pnpm run deploy:realtime`); not used in current Render-all-in-one setup. |
 
-Postgres (`DATABASE_URL`) is for local development. Local dev: api-server on port 8080 with `/ws` on the same process.
+Postgres (`DATABASE_URL`) is for local development. Local dev runs the API server on port 8080.
 
 Full diagram and deploy commands: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**. Chat: **[docs/CHAT.md](docs/CHAT.md)**.
 
@@ -229,7 +227,7 @@ There is **no** fixed “Blaze monthly fee” — you pay for usage above free t
 
 ## Role-based access control (RBAC)
 
-Permissions are defined in `lib/rbac` and enforced by the API (Cloud Functions) and the realtime server's subscribe handler. Firestore rules allow **read-only** access to mirrored `messages` for chat fallback when WebSocket is down; writes remain server-only.
+Permissions are defined in `lib/rbac` and enforced by the API. Firestore rules allow authenticated channel members **read-only** access to mirrored messages and channel activity; writes remain server-only.
 
 ### Roles (7)
 

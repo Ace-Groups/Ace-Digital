@@ -128,7 +128,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
       const snap = list.getSnapshot();
       if (snap.status === "loading") {
         list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
-      } else if (!shouldSkipIncomingMerge(snap.items, items)) {
+      } else {
         list.mergeRealtime(items);
       }
     },

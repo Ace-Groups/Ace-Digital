@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -138,7 +137,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <RealtimeProvider>
             <PrefetchBoot />
             <MobileChromeProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -148,7 +146,6 @@ function App() {
               <Toaster />
               <FormEnterNavigation />
             </MobileChromeProvider>
-            </RealtimeProvider>
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>

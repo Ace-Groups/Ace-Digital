@@ -1240,6 +1240,7 @@ export function createPostgresStore() {
         attachments: m!.attachments,
         messageKind: m!.messageKind,
         metadata: m!.metadata as Record<string, unknown> | null,
+        parentMessageId: m!.parentMessageId,
         createdAt: m!.createdAt,
         senderName: senderName ?? null,
         senderAvatar: senderAvatar ?? null,

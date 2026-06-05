@@ -14,11 +14,6 @@ import { requirePermission } from "../lib/rbac-middleware";
 import { channelToJson, normalizeChannelName } from "../lib/channel-serializer";
 import { messageToJson, messagePreview, validateMessagePayload } from "../lib/message-attachments";
 import { notifyChannelMembers } from "../lib/chat-notify";
-import {
-  publishMessageNew,
-  publishMessageUpdated,
-  publishMessageDeleted,
-} from "../lib/realtime-publish";
 import { extractMentionedUserIds } from "../lib/chat-mentions";
 import { sortChannelsForSidebar } from "@workspace/db";
 
@@ -397,10 +392,6 @@ router.post(
           senderName: sysSender?.fullName ?? null,
           senderAvatar: sysSender?.avatarUrl ?? null,
         })
-        .then((m) => {
-          const json = messageToJson(m, sysSender?.fullName ?? "System", sysSender?.avatarUrl ?? null);
-          void publishMessageNew(json).catch((err) => console.error("[realtime-system]", err));
-        })
         .catch((e) => console.error("[member-join-system]", e));
     }
     const members = await store.listChannelMembers(id);
@@ -628,9 +619,6 @@ router.delete(
       sender?.fullName ?? "Unknown",
       avatarMap[deleted.senderId] ?? null,
     );
-    void publishMessageDeleted(channelId, messageId).catch((err) =>
-      console.error("[realtime-delete]", err),
-    );
     res.json(deletedJson);
   },
 );
@@ -727,10 +715,6 @@ router.post(
         sender?.fullName ?? "Unknown",
         sender?.avatarUrl ?? null,
       );
-      void publishMessageNew(createdJson).catch((err) =>
-        console.error("[realtime-message-new]", err),
-      );
-
       res.status(201).json(createdJson);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to send message";
@@ -802,9 +786,6 @@ router.post(
       updated,
       sender?.fullName ?? "Unknown",
       sender?.avatarUrl ?? null,
-    );
-    void publishMessageUpdated(reactionJson).catch((err) =>
-      console.error("[realtime-reaction]", err),
     );
     res.json(reactionJson);
   },
@@ -883,9 +864,6 @@ router.patch(
       sender?.fullName ?? "Unknown",
       sender?.avatarUrl ?? null,
     );
-    void publishMessageUpdated(pollJson).catch((err) =>
-      console.error("[realtime-poll]", err),
-    );
     res.json(pollJson);
   },
 );
@@ -960,9 +938,6 @@ router.patch(
       sender?.fullName ?? "Unknown",
       sender?.avatarUrl ?? null,
     );
-    void publishMessageUpdated(rsvpJson).catch((err) =>
-      console.error("[realtime-rsvp]", err),
-    );
     res.json(rsvpJson);
   },
 );
@@ -1017,9 +992,6 @@ router.patch(
       updated,
       sender?.fullName ?? "Unknown",
       sender?.avatarUrl ?? null,
-    );
-    void publishMessageUpdated(json).catch((err) =>
-      console.error("[realtime-message-edit]", err),
     );
     res.json(json);
   },

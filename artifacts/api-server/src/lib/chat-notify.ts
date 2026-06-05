@@ -1,5 +1,4 @@
 import { store } from "@workspace/db";
-import { publishNotificationNew } from "./realtime-publish";
 
 export async function notifyChannelMembers(
   channelId: number,
@@ -16,20 +15,12 @@ export async function notifyChannelMembers(
   }
   await Promise.all(
     targets.map(async (m) => {
-      const notification = await store.createNotification({
+      await store.createNotification({
         userId: m.userId,
         title: `#${channelName}`,
         body: preview,
         link: `/channels?channel=${channelId}`,
       });
-      void publishNotificationNew({
-        userId: notification.userId,
-        id: notification.id,
-        title: notification.title,
-        body: notification.body,
-        link: notification.link,
-        createdAt: notification.createdAt,
-      }).catch((err) => console.error("[realtime-notify]", err));
     }),
   );
 }

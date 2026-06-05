@@ -66,7 +66,7 @@ Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_RENDER.md](docs
 - **Clients**: Cards with company info, status, contract value
 - **Approvals**: Submit requests; admins can approve/reject inline
 - **Reports**: Quick-generate by type; view report history
-- **Channels**: Full-screen team chat with WebSocket realtime (Firestore fallback)
+- **Channels**: Full-screen team chat with Firestore realtime updates
 - **Activity**: Complete audit log with actor, action, entity type
 
 ## Default Credentials

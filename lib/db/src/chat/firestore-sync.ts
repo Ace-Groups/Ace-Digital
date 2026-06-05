@@ -14,6 +14,7 @@ export type MirrorMessagePayload = {
   attachments?: MessageAttachment[] | null;
   messageKind: string;
   metadata?: Record<string, unknown> | null;
+  parentMessageId?: number | null;
   createdAt: Date;
   senderName?: string | null;
   senderAvatar?: string | null;
@@ -56,6 +57,7 @@ export async function mirrorMessageToFirestore(payload: MirrorMessagePayload): P
     attachments: sanitizeMessageAttachments(payload.attachments ?? null),
     messageKind: payload.messageKind ?? "text",
     metadata: payload.metadata ?? null,
+    parentMessageId: payload.parentMessageId ?? null,
     senderName: payload.senderName ?? null,
     senderAvatar: payload.senderAvatar ?? null,
     createdAt: payload.createdAt.toISOString(),

@@ -1,10 +1,9 @@
-# Ace Digital OS — single Render web service (REST + WebSocket /ws)
+# Ace Digital OS — single Render REST API service
 # Connect repo in Render Dashboard → New Blueprint or link render.yaml
 #
 # Required secrets (Dashboard → Environment):
 #   JWT_SECRET              — 32+ random chars (match Firebase if sharing tokens)
 #   FIREBASE_SERVICE_ACCOUNT_JSON — full Firebase Admin JSON (one line)
-#   REDIS_URL               — rediss://default:PASSWORD@host:port (Redis Cloud TLS)
 # Optional:
 #   CORS_ORIGINS            — e.g. https://ace-digital-os.web.app
 #   RESEND_API_KEY, EMAIL_FROM — transactional email
@@ -30,8 +29,6 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
-        sync: false
-      - key: REDIS_URL
         sync: false
       - key: CORS_ORIGINS
         value: https://ace-digital-os.web.app,https://ace-digital-os.firebaseapp.com
