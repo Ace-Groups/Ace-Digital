@@ -12,6 +12,7 @@ import {
   peekNextEmployeeCode,
   validateEmployeeCode,
 } from "../lib/employee-code";
+import { defaultMascotForRole, isRoleDefaultMascot } from "../lib/mascots";
 
 const router = Router();
 
@@ -83,6 +84,7 @@ router.post(
       bonus,
       status,
       sendWelcomeEmail: shouldSendEmail = true,
+      avatarUrl: bodyAvatarUrl,
     } = req.body;
 
     if (!fullName || !email || !role) {
@@ -128,6 +130,11 @@ router.post(
     }
 
     const passwordHash = await hashPassword(plainPassword);
+    const resolvedAvatar =
+      typeof bodyAvatarUrl === "string" && bodyAvatarUrl.length > 0
+        ? bodyAvatarUrl
+        : defaultMascotForRole(role);
+
     const user = await store.createUser({
       email,
       passwordHash,
@@ -139,6 +146,7 @@ router.post(
       employeeCode: resolvedCode,
       startDate: parsedStart ?? null,
       mustChangePassword: true,
+      avatarUrl: resolvedAvatar,
     });
     await store.updateUser(user.id, { status: status ?? "active" });
 
@@ -205,6 +213,7 @@ router.patch(
       bonus,
       status,
       payrollStatus,
+      avatarUrl: patchAvatarUrl,
     } = req.body;
 
     const parsedStart = parseStartDate(startDate);
@@ -249,10 +258,19 @@ router.patch(
       }
     }
 
+    const roleChanging = role !== undefined && role !== "" && role !== existingUser.role;
+    const newRole = roleChanging ? role : existingUser.role;
+    const avatarPatch: { avatarUrl?: string | null } = {};
+    if (patchAvatarUrl !== undefined) {
+      avatarPatch.avatarUrl = patchAvatarUrl || null;
+    } else if (roleChanging && isRoleDefaultMascot(existingUser.avatarUrl, existingUser.role)) {
+      avatarPatch.avatarUrl = defaultMascotForRole(newRole);
+    }
+
     const user = await store.updateUser(id, {
       ...(fullName !== undefined && { fullName }),
       ...(email !== undefined && { email: email.toLowerCase() }),
-      ...(role !== undefined && role !== "" && role !== existingUser.role && { role }),
+      ...(roleChanging && { role: newRole }),
       ...(teamId !== undefined && { teamId }),
       ...(jobTitle !== undefined && { jobTitle }),
       ...(phone !== undefined && { phone: phone || null }),
@@ -261,6 +279,7 @@ router.patch(
       }),
       ...(parsedStart !== undefined && { startDate: parsedStart }),
       ...(status !== undefined && { status }),
+      ...avatarPatch,
     });
     if (!user) {
       res.status(404).json({ error: "Employee not found" });

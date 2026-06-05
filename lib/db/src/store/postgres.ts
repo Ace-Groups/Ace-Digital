@@ -134,6 +134,7 @@ export function createPostgresStore() {
           employeeCode: data.employeeCode ?? null,
           startDate: data.startDate ?? null,
           mustChangePassword: data.mustChangePassword ?? true,
+          avatarUrl: data.avatarUrl ?? null,
         })
         .returning();
       return u;
@@ -730,6 +731,7 @@ export function createPostgresStore() {
           type: data.type ?? "TEAM",
           visibility: data.visibility ?? "PRIVATE",
           archived: false,
+          avatarUrl: data.avatarUrl ?? null,
           createdById: data.createdById,
         })
         .returning();

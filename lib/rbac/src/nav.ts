@@ -51,6 +51,13 @@ export function getNavRoutesForRole(role: string): NavRoute[] {
   return routes;
 }
 
+/** First allowed nav href for a role (dashboard fallback). */
+export function getDefaultRouteForRole(role: string): string {
+  const routes = getNavRoutesForRole(role);
+  const first = NAV_ROUTES.find((n) => routes.includes(n.route));
+  return first?.href ?? "/";
+}
+
 export function canAccessRoute(role: string, href: string): boolean {
   const allowed = getNavRoutesForRole(role);
   const path = href.split("?")[0].replace(/\/$/, "") || "/";

@@ -18,7 +18,7 @@ export function SlackComposer(props: MessageComposerProps) {
         paddingBottom:
           keyboardOffset > 0
             ? `${keyboardOffset}px`
-            : "max(0.5rem, env(safe-area-inset-bottom))",
+            : "max(0.75rem, env(safe-area-inset-bottom))",
       }}
     >
       <div

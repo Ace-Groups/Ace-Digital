@@ -42,6 +42,7 @@ export * from './channelPin';
 export * from './channelUpdate';
 export * from './checkCalendarChatLinkParams';
 export * from './client';
+export * from './clientCustomField';
 export * from './clientInput';
 export * from './clientUpdate';
 export * from './dashboardData';

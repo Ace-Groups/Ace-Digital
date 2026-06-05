@@ -19,4 +19,5 @@ export interface EmployeeUpdate {
   bonus?: number;
   status?: string;
   payrollStatus?: string;
+  avatarUrl?: string;
 }

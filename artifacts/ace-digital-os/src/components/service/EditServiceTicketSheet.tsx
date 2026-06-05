@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { formatClientLabel } from "@/lib/clients";
 import { patchListItem } from "@/lib/optimistic";
 import type { ServiceTicket, ServiceTicketDetail } from "@workspace/api-client-react";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -242,7 +243,7 @@ export function EditServiceTicketSheet({ ticket, open, onOpenChange }: EditServi
                         <SelectItem value={NO_CLIENT}>None</SelectItem>
                         {(clients ?? []).map((c) => (
                           <SelectItem key={c.id} value={String(c.id)}>
-                            {c.companyName}
+                            {formatClientLabel(c.salutation, c.contactName, c.companyName)}
                           </SelectItem>
                         ))}
                       </SelectContent>

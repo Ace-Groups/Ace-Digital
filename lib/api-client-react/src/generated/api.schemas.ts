@@ -619,6 +619,8 @@ export interface EmployeeInput {
   bonus?: number;
   status?: string;
   sendWelcomeEmail?: boolean;
+  /** Optional mascot or image URL; defaults to role mascot */
+  avatarUrl?: string;
 }
 
 export type EmployeeCreateResponse = Employee & {
@@ -670,6 +672,7 @@ export interface EmployeeUpdate {
   bonus?: number;
   status?: string;
   payrollStatus?: string;
+  avatarUrl?: string;
 }
 
 export interface FinanceSummary {
@@ -775,8 +778,17 @@ export interface PayrollRunInput {
   year: number;
 }
 
+export interface ClientCustomField {
+  /** @maxLength 80 */
+  key: string;
+  /** @maxLength 500 */
+  value: string;
+}
+
 export interface Client {
   id: number;
+  /** @nullable */
+  salutation?: string | null;
   contactName: string;
   companyName: string;
   email: string;
@@ -791,10 +803,15 @@ export interface Client {
   contractValue?: number | null;
   /** @nullable */
   nextMeetingAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  customFields?: ClientCustomField[] | null;
   createdAt?: string;
 }
 
 export interface ClientInput {
+  salutation?: string;
   contactName: string;
   companyName: string;
   email: string;
@@ -803,9 +820,13 @@ export interface ClientInput {
   status?: string;
   contractValue?: number;
   nextMeetingAt?: string;
+  notes?: string;
+  customFields?: ClientCustomField[];
 }
 
 export interface ClientUpdate {
+  /** @nullable */
+  salutation?: string | null;
   contactName?: string;
   companyName?: string;
   email?: string;
@@ -814,6 +835,10 @@ export interface ClientUpdate {
   status?: string;
   contractValue?: number;
   nextMeetingAt?: string;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  customFields?: ClientCustomField[] | null;
 }
 
 export interface Approval {
@@ -927,6 +952,8 @@ export interface ChannelInput {
   type?: ChannelInputType;
   teamId?: number;
   memberIds?: number[];
+  /** Channel icon preset (icon:hash) or image URL */
+  avatarUrl?: string;
 }
 
 export interface ChannelUpdate {

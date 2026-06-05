@@ -13,4 +13,6 @@ export interface ChannelInput {
   type?: ChannelInputType;
   teamId?: number;
   memberIds?: number[];
+  /** Channel icon preset (icon:hash) or image URL */
+  avatarUrl?: string;
 }

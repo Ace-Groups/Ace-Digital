@@ -1,8 +1,9 @@
 import { Link } from "wouter";
-import { Hash, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useListChannels } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { formatUnreadBadge } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 
@@ -43,11 +44,11 @@ export function ChatWidget() {
                 <Link
                   href={`/channels?channel=${ch.id}`}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/80",
+                    "flex min-h-[44px] items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/80",
                     (ch.unreadCount ?? 0) > 0 && "font-medium",
                   )}
                 >
-                  <Hash size={14} className="shrink-0 text-muted-foreground" />
+                  <ChannelIcon channel={ch} size={16} className="text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{ch.name}</span>
                   {(ch.unreadCount ?? 0) > 0 && (
                     <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">

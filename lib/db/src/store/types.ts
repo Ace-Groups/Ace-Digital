@@ -119,6 +119,7 @@ export type CreateUserInput = {
   employeeCode?: string | null;
   startDate?: Date | null;
   mustChangePassword?: boolean;
+  avatarUrl?: string | null;
 };
 
 export type UpdateUserInput = Partial<{
@@ -159,6 +160,7 @@ export type CreateChannelInput = {
   type?: string;
   visibility?: string;
   createdById: number;
+  avatarUrl?: string | null;
 };
 
 export type UpdateChannelInput = Partial<{

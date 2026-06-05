@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { formatClientLabel } from "@/lib/clients";
 import { useToast } from "@/hooks/use-toast";
 import { prependListItem, setList, snapshotList } from "@/lib/optimistic";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
@@ -163,7 +164,10 @@ export function CreateServiceTicketSheet({
       clientName: isTodo
         ? "Internal to-do"
         : resolvedClientId != null
-          ? (clients?.find((c) => c.id === resolvedClientId)?.companyName ?? null)
+          ? (() => {
+              const c = clients?.find((x) => x.id === resolvedClientId);
+              return c ? formatClientLabel(c.salutation, c.contactName, c.companyName) : null;
+            })()
           : null,
       projectId: resolvedProjectId ?? null,
       projectName:
@@ -335,7 +339,7 @@ export function CreateServiceTicketSheet({
                         <SelectItem value={NO_CLIENT}>None</SelectItem>
                         {(clients ?? []).map((c) => (
                           <SelectItem key={c.id} value={String(c.id)}>
-                            {c.companyName}
+                            {formatClientLabel(c.salutation, c.contactName, c.companyName)}
                           </SelectItem>
                         ))}
                       </SelectContent>

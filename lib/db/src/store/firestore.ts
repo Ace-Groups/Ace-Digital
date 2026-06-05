@@ -203,7 +203,7 @@ export function createFirestoreStore() {
           : null,
         startDate: data.startDate ? data.startDate.toISOString() : null,
         mustChangePassword: data.mustChangePassword ?? true,
-        avatarUrl: null,
+        avatarUrl: data.avatarUrl ?? null,
         status: "active",
         createdAt: now.toISOString(),
       };
@@ -858,6 +858,7 @@ export function createFirestoreStore() {
         type: data.type ?? "TEAM",
         visibility: data.visibility ?? "PRIVATE",
         archived: false,
+        avatarUrl: data.avatarUrl ?? null,
         messageCount: 0,
         lastPostAt: null,
         createdById: data.createdById,
@@ -1788,6 +1789,7 @@ function serializeTask(p: Partial<Task>): Record<string, unknown> {
 function mapClient(data: FirebaseFirestore.DocumentData, id: string): Client {
   return {
     id: Number(id),
+    salutation: (data.salutation as string) ?? null,
     contactName: data.contactName as string,
     companyName: data.companyName as string,
     email: data.email as string,
@@ -1796,6 +1798,8 @@ function mapClient(data: FirebaseFirestore.DocumentData, id: string): Client {
     status: data.status as string,
     contractValue: data.contractValue != null ? String(data.contractValue) : null,
     nextMeetingAt: data.nextMeetingAt ? toDate(data.nextMeetingAt) : null,
+    notes: (data.notes as string) ?? null,
+    customFields: (data.customFields as Client["customFields"]) ?? null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };

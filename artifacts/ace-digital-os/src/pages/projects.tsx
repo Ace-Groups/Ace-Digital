@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { formatClientLabel } from "@/lib/clients";
 import {
   Plus,
   Calendar,
@@ -298,7 +299,7 @@ export default function ProjectsPage() {
                         <SelectContent>
                           {clients?.map((c) => (
                             <SelectItem key={c.id} value={String(c.id)}>
-                              {c.companyName}
+                              {formatClientLabel(c.salutation, c.contactName, c.companyName)}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -33,18 +32,6 @@ export function ChatWorkspace({
           </div>
         ) : (
           <div className="flex h-full w-full flex-col overflow-hidden">
-            {/* Mobile sticky header with Back button */}
-            <div className="sticky top-0 z-50 flex h-12 shrink-0 items-center border-b border-border dark:border-white/10 bg-background/80 dark:bg-background/60 backdrop-blur-md px-3 pt-[env(safe-area-inset-top)]">
-              <button
-                type="button"
-                onClick={onClearSelection}
-                className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted active:bg-muted text-muted-foreground"
-                aria-label="Back to channels"
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <span className="ml-2 text-sm font-semibold">Back</span>
-            </div>
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               {main}
             </div>

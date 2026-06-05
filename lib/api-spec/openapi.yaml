@@ -2953,6 +2953,9 @@ components:
           type: string
         sendWelcomeEmail:
           type: boolean
+        avatarUrl:
+          type: string
+          description: Optional mascot or image URL; defaults to role mascot
 
     EmployeeCreateResponse:
       allOf:
@@ -3015,6 +3018,8 @@ components:
         status:
           type: string
         payrollStatus:
+          type: string
+        avatarUrl:
           type: string
 
     # FINANCE
@@ -3169,12 +3174,25 @@ components:
           type: integer
 
     # CLIENTS
+    ClientCustomField:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+          maxLength: 80
+        value:
+          type: string
+          maxLength: 500
+
     Client:
       type: object
       required: [id, contactName, companyName, email, status]
       properties:
         id:
           type: integer
+        salutation:
+          type: ["string", "null"]
         contactName:
           type: string
         companyName:
@@ -3193,6 +3211,12 @@ components:
           type: ["number", "null"]
         nextMeetingAt:
           type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        customFields:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
         createdAt:
           type: string
 
@@ -3200,6 +3224,8 @@ components:
       type: object
       required: [contactName, companyName, email]
       properties:
+        salutation:
+          type: string
         contactName:
           type: string
         companyName:
@@ -3216,10 +3242,18 @@ components:
           type: number
         nextMeetingAt:
           type: string
+        notes:
+          type: string
+        customFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
 
     ClientUpdate:
       type: object
       properties:
+        salutation:
+          type: ["string", "null"]
         contactName:
           type: string
         companyName:
@@ -3236,6 +3270,12 @@ components:
           type: number
         nextMeetingAt:
           type: string
+        notes:
+          type: ["string", "null"]
+        customFields:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
 
     # APPROVALS
     Approval:
@@ -3390,6 +3430,9 @@ components:
           type: array
           items:
             type: integer
+        avatarUrl:
+          type: string
+          description: Channel icon preset (icon:hash) or image URL
 
     ChannelUpdate:
       type: object

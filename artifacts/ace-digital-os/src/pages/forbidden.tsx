@@ -1,8 +1,17 @@
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogOut } from "lucide-react";
 
 export default function ForbiddenPage() {
+  const { logout } = useAuth();
+
+  async function handleSignOut() {
+    await logout();
+    window.location.href = "/login";
+  }
+
   return (
     <AppLayout title="Access denied">
       <div className="flex min-h-[50dvh] flex-col items-center justify-center px-4 py-16 text-center sm:py-24">
@@ -12,9 +21,20 @@ export default function ForbiddenPage() {
           Your role does not include permission to view this section. Contact your administrator if
           you need access.
         </p>
-        <Link href="/">
-          <Button className="mt-6">Back to dashboard</Button>
-        </Link>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <Link href="/">
+            <Button>Back to dashboard</Button>
+          </Link>
+          <Button variant="outline" className="gap-2" onClick={handleSignOut}>
+            <LogOut size={16} /> Sign out
+          </Button>
+        </div>
+        <a
+          href="mailto:admin@mybexo.com?subject=Ace%20Digital%20access%20request"
+          className="mt-4 text-sm text-primary hover:underline"
+        >
+          Contact administrator
+        </a>
       </div>
     </AppLayout>
   );

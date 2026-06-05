@@ -13,7 +13,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
-import { canAccessRoute } from "@workspace/rbac";
+import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
 const ForbiddenPage = lazyWithReload(() => import("@/pages/forbidden"));
 const LoginPage = lazyWithReload(() => import("@/pages/login"));
@@ -88,6 +88,10 @@ function ProtectedRoute({ component: Component }: { component: ComponentType }) 
   }
 
   if (user && !AUTH_ONLY_PATHS.has(location) && !canAccessRoute(user.role, location)) {
+    const fallback = getDefaultRouteForRole(user.role);
+    if (location !== fallback) {
+      return <Redirect to={fallback} />;
+    }
     return (
       <Suspense fallback={<PageFallback />}>
         <ForbiddenPage />

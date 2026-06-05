@@ -21,6 +21,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
+import { MascotPicker } from "@/components/MascotPicker";
+import { defaultMascotForRole } from "@/lib/mascots";
+import { encodeAvatarUrl, parseAvatarUrl } from "@/lib/avatar";
 
 const ROLES = [
   "employee",
@@ -49,6 +52,7 @@ const createSchema = z
     passwordMode: z.enum(["auto", "manual"]),
     password: z.string().optional(),
     sendWelcomeEmail: z.boolean(),
+    mascotId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.passwordMode === "manual" && (!data.password || data.password.length < 6)) {
@@ -72,6 +76,7 @@ const editSchema = z.object({
   baseSalary: z.string().optional(),
   bonus: z.string().optional(),
   payrollStatus: z.string().optional(),
+  mascotId: z.string().optional(),
 });
 
 type CreateForm = z.infer<typeof createSchema>;
@@ -92,6 +97,7 @@ export type EmployeeFormSubmitCreate = {
   passwordMode: "auto" | "manual";
   password?: string;
   sendWelcomeEmail: boolean;
+  avatarUrl?: string;
 };
 
 export type EmployeeFormSubmitEdit = {
@@ -107,6 +113,7 @@ export type EmployeeFormSubmitEdit = {
   baseSalary?: number;
   bonus?: number;
   payrollStatus?: string;
+  avatarUrl?: string;
 };
 
 interface EmployeeFormSheetProps {
@@ -160,6 +167,8 @@ export function EmployeeFormSheet({
 
   const passwordMode = createForm.watch("passwordMode");
   const startDateWatch = createForm.watch("startDate");
+  const createRoleWatch = createForm.watch("role");
+  const mascotTouched = useRef(false);
   const roleOptionsForEdit = useMemo(() => {
     const options = [...assignableRoles];
     if (employee?.role && isRole(employee.role) && !options.includes(employee.role)) {
@@ -198,6 +207,10 @@ export function EmployeeFormSheet({
     if (!open || mode !== "edit" || !employee) return;
     const normalizedRole =
       employee.role && isRole(employee.role) ? employee.role : "employee";
+    const parsed = parseAvatarUrl(employee.avatarUrl);
+    const mascotId = parsed.type === "mascot"
+      ? parsed.value
+      : defaultMascotForRole(normalizedRole).replace("mascot:", "");
     editForm.reset({
       fullName: employee.fullName,
       email: employee.email,
@@ -211,11 +224,13 @@ export function EmployeeFormSheet({
       baseSalary: employee.baseSalary != null ? String(employee.baseSalary) : "",
       bonus: employee.bonus != null ? String(employee.bonus) : "",
       payrollStatus: employee.payrollStatus ?? "PENDING",
+      mascotId,
     });
   }, [open, mode, employee, editForm]);
 
   useEffect(() => {
     if (!open || mode !== "create") return;
+    mascotTouched.current = false;
     createForm.reset({
       fullName: "",
       email: "",
@@ -224,8 +239,15 @@ export function EmployeeFormSheet({
       passwordMode: "auto",
       sendWelcomeEmail: true,
       payrollStatus: "PENDING",
+      mascotId: "7",
     });
   }, [open, mode, createForm]);
+
+  useEffect(() => {
+    if (!open || mode !== "create" || mascotTouched.current) return;
+    const id = defaultMascotForRole(createRoleWatch).replace("mascot:", "");
+    createForm.setValue("mascotId", id);
+  }, [createRoleWatch, open, mode, createForm]);
 
   function mapCommon<
     T extends {
@@ -272,6 +294,9 @@ export function EmployeeFormSheet({
                 passwordMode: data.passwordMode,
                 password: data.passwordMode === "manual" ? data.password : undefined,
                 sendWelcomeEmail: data.sendWelcomeEmail,
+                avatarUrl: data.mascotId
+                  ? encodeAvatarUrl(null, data.mascotId, "mascot") ?? undefined
+                  : defaultMascotForRole(data.role),
               });
             })}
             className="mobile-form space-y-5"
@@ -324,6 +349,23 @@ export function EmployeeFormSheet({
                 )}
               />
             )}
+            <Separator />
+            <p className="text-sm font-medium">Profile mascot</p>
+            <FormField
+              control={createForm.control}
+              name="mascotId"
+              render={({ field }) => (
+                <FormItem>
+                  <MascotPicker
+                    selectedId={field.value ?? null}
+                    onSelect={(id) => {
+                      mascotTouched.current = true;
+                      field.onChange(id);
+                    }}
+                  />
+                </FormItem>
+              )}
+            />
             <label className="flex min-h-11 cursor-pointer items-center gap-3">
               <Checkbox
                 checked={createForm.watch("sendWelcomeEmail")}
@@ -343,6 +385,9 @@ export function EmployeeFormSheet({
               void onEditSubmit({
                 ...mapCommon(data),
                 payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
+                avatarUrl: data.mascotId
+                  ? encodeAvatarUrl(null, data.mascotId, "mascot") ?? undefined
+                  : undefined,
               });
             })}
             className="mobile-form space-y-5"
@@ -354,6 +399,20 @@ export function EmployeeFormSheet({
               canViewSalaries={canViewSalaries}
               isEdit
               onCreateTeamClick={() => setTeamDialogOpen(true)}
+            />
+            <Separator />
+            <p className="text-sm font-medium">Profile mascot</p>
+            <FormField
+              control={editForm.control}
+              name="mascotId"
+              render={({ field }) => (
+                <FormItem>
+                  <MascotPicker
+                    selectedId={field.value ?? null}
+                    onSelect={field.onChange}
+                  />
+                </FormItem>
+              )}
             />
             <Button type="submit" className="h-11 w-full" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}

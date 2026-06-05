@@ -5,9 +5,12 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ClientCustomField } from './clientCustomField';
 
 export interface Client {
   id: number;
+  /** @nullable */
+  salutation?: string | null;
   contactName: string;
   companyName: string;
   email: string;
@@ -22,5 +25,9 @@ export interface Client {
   contractValue?: number | null;
   /** @nullable */
   nextMeetingAt?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  customFields?: ClientCustomField[] | null;
   createdAt?: string;
 }

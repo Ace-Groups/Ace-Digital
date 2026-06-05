@@ -33,8 +33,13 @@ export function Sidebar() {
   const [hovering, setHovering] = useState(false);
   const expanded = pinned || hovering;
   const collapsed = !expanded;
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+
+  async function handleLogout() {
+    await logout();
+    setLocation("/login");
+  }
   const [profileOpen, setProfileOpen] = useState(false);
 
   const handleMouseEnter = useCallback(() => setHovering(true), []);
@@ -187,7 +192,7 @@ export function Sidebar() {
                   <button
                     type="button"
                     data-testid="btn-logout"
-                    onClick={logout}
+                    onClick={() => void handleLogout()}
                     className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     aria-label="Sign out"
                   >
@@ -229,15 +234,6 @@ export function Sidebar() {
                   </p>
                 </div>
                 <UserCircle size={14} className="shrink-0 text-sidebar-foreground/40" />
-              </button>
-              <button
-                type="button"
-                data-testid="btn-logout"
-                onClick={logout}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              >
-                <LogOut size={16} className="shrink-0" />
-                <span>Sign Out</span>
               </button>
             </>
           )}

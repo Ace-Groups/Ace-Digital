@@ -2,6 +2,7 @@ import {
   User, Code2, Palette, TrendingUp, DollarSign,
   Settings, Users, Smile,
 } from "lucide-react";
+import { MASCOT_PREFIX } from "./mascots";
 
 export const PRESET_AVATARS = [
   { id: "user", icon: User, label: "Default", color: "bg-slate-500" },
@@ -21,10 +22,14 @@ const PRESET_PREFIX = "preset:";
 export type ParsedAvatar =
   | { type: "image"; value: string }
   | { type: "preset"; value: PresetAvatarId }
+  | { type: "mascot"; value: string }
   | { type: null; value: null };
 
 export function parseAvatarUrl(avatarUrl: string | null | undefined): ParsedAvatar {
   if (!avatarUrl) return { type: null, value: null };
+  if (avatarUrl.startsWith(MASCOT_PREFIX)) {
+    return { type: "mascot", value: avatarUrl.slice(MASCOT_PREFIX.length) };
+  }
   if (avatarUrl.startsWith(PRESET_PREFIX)) {
     const id = avatarUrl.slice(PRESET_PREFIX.length) as PresetAvatarId;
     if (PRESET_AVATARS.some((p) => p.id === id)) {
@@ -37,10 +42,15 @@ export function parseAvatarUrl(avatarUrl: string | null | undefined): ParsedAvat
 
 export function encodeAvatarUrl(
   imageData: string | null,
-  presetId: string | null,
+  mascotOrPresetId: string | null,
+  kind: "mascot" | "preset" = "mascot",
 ): string | null {
   if (imageData) return imageData;
-  if (presetId) return `${PRESET_PREFIX}${presetId}`;
+  if (mascotOrPresetId) {
+    return kind === "preset"
+      ? `${PRESET_PREFIX}${mascotOrPresetId}`
+      : `${MASCOT_PREFIX}${mascotOrPresetId}`;
+  }
   return null;
 }
 

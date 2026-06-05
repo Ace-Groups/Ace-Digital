@@ -117,6 +117,7 @@ export default function EmployeesPage() {
             teamId: data.teamId ?? null,
             jobTitle: data.jobTitle ?? null,
             status: data.status,
+            avatarUrl: data.avatarUrl ?? null,
             createdAt: new Date().toISOString(),
           } as Employee);
           return prev;
@@ -139,6 +140,7 @@ export default function EmployeesPage() {
               passwordMode: data.passwordMode,
               password: data.password,
               sendWelcomeEmail: data.sendWelcomeEmail,
+              avatarUrl: data.avatarUrl,
             },
           }),
         reconcile: () => {
@@ -172,6 +174,7 @@ export default function EmployeesPage() {
       baseSalary: data.baseSalary,
       bonus: data.bonus,
       payrollStatus: data.payrollStatus,
+      ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
     };
     const employeesKey = getListEmployeesQueryKey();
     const employeeId = editing.id;
@@ -237,7 +240,7 @@ export default function EmployeesPage() {
           data.mode === "email"
             ? result.emailSent
               ? "Reset email sent"
-              : "Password reset ‚Äî email not sent"
+              : "Password reset ù email not sent"
             : "Password updated",
         description: result.emailSent
           ? "The employee should receive their new temporary password shortly. Check spam if it does not arrive."
@@ -288,7 +291,7 @@ export default function EmployeesPage() {
           />
           <Input
             data-testid="input-search-employees"
-            placeholder="Search employees‚Ä¶"
+            placeholder="Search employeesù"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-11 pl-9"
@@ -435,7 +438,7 @@ function SelfProfileView({
             </div>
           </div>
           <p className="text-sm">
-            {profile.jobTitle ?? "‚Äî"} ¬∑ {profile.teamName ?? "No team"}
+            {profile.jobTitle ?? "ù"} ù {profile.teamName ?? "No team"}
           </p>
           {(profile.baseSalary != null || profile.bonus != null) && (
             <div className="border-t pt-3 text-sm">

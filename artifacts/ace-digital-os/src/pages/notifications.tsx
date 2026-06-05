@@ -1,5 +1,7 @@
 import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveSafeHref } from "@/lib/safe-nav";
 import {
   getListNotificationsQueryKey,
   useListNotifications,
@@ -17,6 +19,7 @@ import { patchList, setList, snapshotList } from "@/lib/optimistic";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -58,8 +61,8 @@ export default function NotificationsPage() {
         void queryClient.invalidateQueries({ queryKey: notificationsKey });
       });
     }
-    if (link) {
-      setLocation(link.startsWith("/") ? link : `/${link}`);
+    if (link && user?.role) {
+      setLocation(resolveSafeHref(user.role, link));
     }
   }
 

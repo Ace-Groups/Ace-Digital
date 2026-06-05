@@ -22,4 +22,6 @@ export interface EmployeeInput {
   bonus?: number;
   status?: string;
   sendWelcomeEmail?: boolean;
+  /** Optional mascot or image URL; defaults to role mascot */
+  avatarUrl?: string;
 }

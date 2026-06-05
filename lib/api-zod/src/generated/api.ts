@@ -910,7 +910,8 @@ export const CreateEmployeeBody = zod.object({
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
-  "sendWelcomeEmail": zod.boolean().optional()
+  "sendWelcomeEmail": zod.boolean().optional(),
+  "avatarUrl": zod.string().optional().describe('Optional mascot or image URL; defaults to role mascot')
 })
 
 
@@ -975,7 +976,8 @@ export const UpdateEmployeeBody = zod.object({
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
-  "payrollStatus": zod.string().optional()
+  "payrollStatus": zod.string().optional(),
+  "avatarUrl": zod.string().optional()
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -1203,8 +1205,15 @@ export const CreatePayrollRunBody = zod.object({
 /**
  * @summary List clients
  */
+export const listClientsResponseCustomFieldsItemKeyMax = 80;
+
+export const listClientsResponseCustomFieldsItemValueMax = 500;
+
+
+
 export const ListClientsResponseItem = zod.object({
   "id": zod.number(),
+  "salutation": zod.string().nullish(),
   "contactName": zod.string(),
   "companyName": zod.string(),
   "email": zod.string(),
@@ -1214,6 +1223,11 @@ export const ListClientsResponseItem = zod.object({
   "status": zod.string(),
   "contractValue": zod.number().nullish(),
   "nextMeetingAt": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "customFields": zod.array(zod.object({
+  "key": zod.string().max(listClientsResponseCustomFieldsItemKeyMax),
+  "value": zod.string().max(listClientsResponseCustomFieldsItemValueMax)
+})).nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListClientsResponse = zod.array(ListClientsResponseItem)
@@ -1222,7 +1236,14 @@ export const ListClientsResponse = zod.array(ListClientsResponseItem)
 /**
  * @summary Create client
  */
+export const createClientBodyCustomFieldsItemKeyMax = 80;
+
+export const createClientBodyCustomFieldsItemValueMax = 500;
+
+
+
 export const CreateClientBody = zod.object({
+  "salutation": zod.string().optional(),
   "contactName": zod.string(),
   "companyName": zod.string(),
   "email": zod.string(),
@@ -1230,7 +1251,12 @@ export const CreateClientBody = zod.object({
   "assignedTeamId": zod.number().optional(),
   "status": zod.string().optional(),
   "contractValue": zod.number().optional(),
-  "nextMeetingAt": zod.string().optional()
+  "nextMeetingAt": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "customFields": zod.array(zod.object({
+  "key": zod.string().max(createClientBodyCustomFieldsItemKeyMax),
+  "value": zod.string().max(createClientBodyCustomFieldsItemValueMax)
+})).optional()
 })
 
 
@@ -1241,8 +1267,15 @@ export const GetClientParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getClientResponseCustomFieldsItemKeyMax = 80;
+
+export const getClientResponseCustomFieldsItemValueMax = 500;
+
+
+
 export const GetClientResponse = zod.object({
   "id": zod.number(),
+  "salutation": zod.string().nullish(),
   "contactName": zod.string(),
   "companyName": zod.string(),
   "email": zod.string(),
@@ -1252,6 +1285,11 @@ export const GetClientResponse = zod.object({
   "status": zod.string(),
   "contractValue": zod.number().nullish(),
   "nextMeetingAt": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "customFields": zod.array(zod.object({
+  "key": zod.string().max(getClientResponseCustomFieldsItemKeyMax),
+  "value": zod.string().max(getClientResponseCustomFieldsItemValueMax)
+})).nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1263,7 +1301,14 @@ export const UpdateClientParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateClientBodyCustomFieldsItemKeyMax = 80;
+
+export const updateClientBodyCustomFieldsItemValueMax = 500;
+
+
+
 export const UpdateClientBody = zod.object({
+  "salutation": zod.string().nullish(),
   "contactName": zod.string().optional(),
   "companyName": zod.string().optional(),
   "email": zod.string().optional(),
@@ -1271,11 +1316,23 @@ export const UpdateClientBody = zod.object({
   "assignedTeamId": zod.number().optional(),
   "status": zod.string().optional(),
   "contractValue": zod.number().optional(),
-  "nextMeetingAt": zod.string().optional()
+  "nextMeetingAt": zod.string().optional(),
+  "notes": zod.string().nullish(),
+  "customFields": zod.array(zod.object({
+  "key": zod.string().max(updateClientBodyCustomFieldsItemKeyMax),
+  "value": zod.string().max(updateClientBodyCustomFieldsItemValueMax)
+})).nullish()
 })
+
+export const updateClientResponseCustomFieldsItemKeyMax = 80;
+
+export const updateClientResponseCustomFieldsItemValueMax = 500;
+
+
 
 export const UpdateClientResponse = zod.object({
   "id": zod.number(),
+  "salutation": zod.string().nullish(),
   "contactName": zod.string(),
   "companyName": zod.string(),
   "email": zod.string(),
@@ -1285,6 +1342,11 @@ export const UpdateClientResponse = zod.object({
   "status": zod.string(),
   "contractValue": zod.number().nullish(),
   "nextMeetingAt": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "customFields": zod.array(zod.object({
+  "key": zod.string().max(updateClientResponseCustomFieldsItemKeyMax),
+  "value": zod.string().max(updateClientResponseCustomFieldsItemValueMax)
+})).nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -1672,7 +1734,8 @@ export const CreateChannelBody = zod.object({
   "description": zod.string().optional(),
   "type": zod.enum(['TEAM', 'ANNOUNCEMENT']).optional(),
   "teamId": zod.number().optional(),
-  "memberIds": zod.array(zod.number()).optional()
+  "memberIds": zod.array(zod.number()).optional(),
+  "avatarUrl": zod.string().optional().describe('Channel icon preset (icon:hash) or image URL')
 })
 
 

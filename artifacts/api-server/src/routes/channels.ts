@@ -131,7 +131,7 @@ router.post(
   requirePermission("channels:write"),
   async (req, res): Promise<void> => {
     const ctx = getAccessContext(req);
-    const { name, description, type, teamId, memberIds } = req.body ?? {};
+    const { name, description, type, teamId, memberIds, avatarUrl } = req.body ?? {};
     const normalized = normalizeChannelName(name ?? "");
     if (!normalized) {
       res.status(400).json({
@@ -145,6 +145,24 @@ router.post(
       res.status(403).json({ error: "Only admins can create announcement channels" });
       return;
     }
+    let resolvedAvatar: string | null = null;
+    if (typeof avatarUrl === "string" && avatarUrl.length > 0 && avatarUrl.length <= 2048) {
+      if (avatarUrl.startsWith("icon:")) {
+        resolvedAvatar = avatarUrl;
+      } else {
+        try {
+          const u = new URL(avatarUrl);
+          if (u.protocol === "http:" || u.protocol === "https:" || avatarUrl.startsWith("data:")) {
+            resolvedAvatar = avatarUrl;
+          }
+        } catch {
+          /* ignore invalid URL */
+        }
+      }
+    } else if (channelType === "ANNOUNCEMENT") {
+      resolvedAvatar = "icon:megaphone";
+    }
+
     const channel = await store.createChannel({
       name: normalized,
       description: description ?? null,
@@ -152,6 +170,7 @@ router.post(
       type: channelType,
       visibility: "PRIVATE",
       createdById: ctx.userId,
+      avatarUrl: resolvedAvatar,
     });
 
     await store.addChannelMember(channel.id, ctx.userId, "owner");
@@ -261,17 +280,23 @@ router.patch(
       if (avatarUrl === null || avatarUrl === "") {
         patch.avatarUrl = null;
       } else if (typeof avatarUrl === "string" && avatarUrl.length <= 2048) {
-        try {
-          const u = new URL(avatarUrl);
-          if (u.protocol === "http:" || u.protocol === "https:") {
-            patch.avatarUrl = avatarUrl;
-          } else {
-            res.status(400).json({ error: "Avatar URL must be http or https" });
+        if (avatarUrl.startsWith("icon:")) {
+          patch.avatarUrl = avatarUrl;
+        } else if (avatarUrl.startsWith("data:")) {
+          patch.avatarUrl = avatarUrl;
+        } else {
+          try {
+            const u = new URL(avatarUrl);
+            if (u.protocol === "http:" || u.protocol === "https:") {
+              patch.avatarUrl = avatarUrl;
+            } else {
+              res.status(400).json({ error: "Avatar URL must be http or https" });
+              return;
+            }
+          } catch {
+            res.status(400).json({ error: "Invalid avatar URL" });
             return;
           }
-        } catch {
-          res.status(400).json({ error: "Invalid avatar URL" });
-          return;
         }
       } else {
         res.status(400).json({ error: "Invalid avatar URL" });

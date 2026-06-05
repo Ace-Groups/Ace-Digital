@@ -69,7 +69,6 @@ export default function ChannelsPage() {
   );
   const channelIds = useMemo(() => channels?.map((c) => c.id), [channels]);
   usePrefetchChannelMessages(channelIds, selectedChannelId);
-  const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -146,7 +145,7 @@ export default function ChannelsPage() {
       }),
   );
 
-  const threadActive = Boolean(selectedChannelId && (!isMobile || mobileThreadOpen));
+  const threadActive = Boolean(selectedChannelId);
 
   const [firebaseLive, setFirebaseLive] = useState(false);
 
@@ -319,7 +318,6 @@ export default function ChannelsPage() {
     if (fromUrl && channels.some((c) => c.id === fromUrl)) {
       if (selectedChannelId !== fromUrl) {
         setSelectedChannelId(fromUrl);
-        if (isMobile) setMobileThreadOpen(true);
       }
       return;
     }
@@ -474,14 +472,17 @@ export default function ChannelsPage() {
   function selectChannel(id: number) {
     setSelectedChannelId(id);
     setChannelIdInSearch(id);
-    if (isMobile) setMobileThreadOpen(true);
+    if (isMobile && typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(15);
+    }
   }
 
   function backToList() {
-    setMobileThreadOpen(false);
+    setSelectedChannelId(null);
+    setChannelIdInSearch(null);
+    setThreadRoot(null);
+    setHeaderTab("messages");
   }
-
-  const showList = !isMobile || !mobileThreadOpen;
   const canCreate = can("channels:write");
 
   const channelLabel =
@@ -619,20 +620,13 @@ export default function ChannelsPage() {
         main={threadContent}
         threadPanel={threadPanel}
         selectedChannelId={selectedChannelId}
-        onClearSelection={() => {
-          setSelectedChannelId(null);
-          setChannelIdInSearch(null);
-          setMobileThreadOpen(false);
-        }}
+        onClearSelection={backToList}
       />
 
       <CreateChannelDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={(id) => {
-          setSelectedChannelId(id);
-          if (isMobile) setMobileThreadOpen(true);
-        }}
+        onCreated={(id) => selectChannel(id)}
       />
 
       <ChannelSettingsSheet
@@ -640,8 +634,7 @@ export default function ChannelsPage() {
         onClose={() => setSettingsOpen(false)}
         channel={selectedChannel ?? null}
         onArchived={() => {
-          setSelectedChannelId(null);
-          setMobileThreadOpen(false);
+          backToList();
         }}
       />
 

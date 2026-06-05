@@ -3,6 +3,7 @@ import { store } from "@workspace/db";
 import type { Client } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { requirePermission } from "../lib/rbac-middleware";
+import { sanitizeCustomFields } from "../lib/client-fields";
 
 const router = Router();
 
@@ -10,6 +11,7 @@ async function clientWithRelations(c: Client) {
   const team = c.assignedTeamId ? await store.findTeamById(c.assignedTeamId) : null;
   return {
     id: c.id,
+    salutation: c.salutation ?? null,
     contactName: c.contactName,
     companyName: c.companyName,
     email: c.email,
@@ -19,6 +21,8 @@ async function clientWithRelations(c: Client) {
     status: c.status,
     contractValue: c.contractValue ? Number(c.contractValue) : null,
     nextMeetingAt: c.nextMeetingAt?.toISOString() ?? null,
+    notes: c.notes ?? null,
+    customFields: c.customFields ?? null,
     createdAt: c.createdAt.toISOString(),
   };
 }
@@ -29,13 +33,17 @@ router.get("/v1/clients", requireAuth, requirePermission("clients:read"), async 
 });
 
 router.post("/v1/clients", requireAuth, requirePermission("clients:write"), async (req, res): Promise<void> => {
-  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
-    req.body;
+  const {
+    salutation, contactName, companyName, email, phone, assignedTeamId,
+    status, contractValue, nextMeetingAt, notes, customFields,
+  } = req.body;
   if (!contactName || !companyName || !email) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
+  const fields = sanitizeCustomFields(customFields);
   const client = await store.createClient({
+    salutation: salutation ?? null,
     contactName,
     companyName,
     email,
@@ -44,6 +52,8 @@ router.post("/v1/clients", requireAuth, requirePermission("clients:write"), asyn
     status: status ?? "ACTIVE",
     contractValue: contractValue ? String(contractValue) : null,
     nextMeetingAt: nextMeetingAt ? new Date(nextMeetingAt) : null,
+    notes: notes ?? null,
+    customFields: fields ?? null,
   });
   res.status(201).json(await clientWithRelations(client));
 });
@@ -60,17 +70,23 @@ router.get("/v1/clients/:id", requireAuth, requirePermission("clients:read"), as
 
 router.patch("/v1/clients/:id", requireAuth, requirePermission("clients:write"), async (req, res): Promise<void> => {
   const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const { contactName, companyName, email, phone, assignedTeamId, status, contractValue, nextMeetingAt } =
-    req.body;
+  const {
+    salutation, contactName, companyName, email, phone, assignedTeamId,
+    status, contractValue, nextMeetingAt, notes, customFields,
+  } = req.body;
+  const fields = sanitizeCustomFields(customFields);
   const client = await store.updateClient(id, {
+    ...(salutation !== undefined && { salutation }),
     ...(contactName !== undefined && { contactName }),
     ...(companyName !== undefined && { companyName }),
     ...(email !== undefined && { email }),
     ...(phone !== undefined && { phone }),
     ...(assignedTeamId !== undefined && { assignedTeamId }),
     ...(status !== undefined && { status }),
-    ...(contractValue !== undefined && { contractValue: String(contractValue) }),
-    ...(nextMeetingAt !== undefined && { nextMeetingAt: new Date(nextMeetingAt) }),
+    ...(contractValue !== undefined && { contractValue: contractValue != null ? String(contractValue) : null }),
+    ...(nextMeetingAt !== undefined && { nextMeetingAt: nextMeetingAt ? new Date(nextMeetingAt) : null }),
+    ...(notes !== undefined && { notes }),
+    ...(fields !== undefined && { customFields: fields }),
   });
   if (!client) {
     res.status(404).json({ error: "Client not found" });

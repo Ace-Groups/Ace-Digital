@@ -62,7 +62,7 @@ interface MobileShellProps {
 
 export function MobileShell({ children, title, fillViewport }: MobileShellProps) {
   const [location, setLocation] = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { data: notifications } = useListNotifications({
     query: {
       queryKey: getListNotificationsQueryKey(),
@@ -227,19 +227,6 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
               >
                 <Settings size={20} className="text-primary" aria-hidden />
                 Settings
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  void logout();
-                }}
-                className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-destructive active:bg-destructive/10"
-              >
-                <UserCircle size={20} aria-hidden />
-                Sign out
               </button>
             </li>
           </ul>
