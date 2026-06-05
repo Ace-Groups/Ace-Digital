@@ -11,8 +11,8 @@
     "./chat": "./src/chat/index.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push": "node ../../scripts/ensure-database-url.mjs --require-postgres && drizzle-kit push --config ./drizzle.config.ts",
+    "push-force": "node ../../scripts/ensure-database-url.mjs --require-postgres && drizzle-kit push --force --config ./drizzle.config.ts"
   },
   "dependencies": {
     "@workspace/rbac": "workspace:*",

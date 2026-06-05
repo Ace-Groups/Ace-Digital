@@ -15,7 +15,9 @@
     "clear:prod": "USE_FIRESTORE=true npx tsx scripts/src/clear-db-for-prod.ts",
     "deploy:firebase": "pnpm run build:web && pnpm run build:api && npx firebase-tools@latest deploy --project ace-digital-os",
     "build:render": "bash scripts/render-build.sh",
-    "deploy:render:docs": "echo 'Connect repo at https://dashboard.render.com — see docs/DEPLOY_RENDER.md'"
+    "deploy:render:docs": "echo 'Connect repo at https://dashboard.render.com — see docs/DEPLOY_RENDER.md'",
+    "db:setup": "node scripts/ensure-database-url.mjs --init && node scripts/setup-local-postgres.mjs",
+    "db:push": "pnpm --filter @workspace/db push"
   },
   "packageManager": "pnpm@10.33.2",
   "private": true,

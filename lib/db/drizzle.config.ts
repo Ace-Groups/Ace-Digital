@@ -27,12 +27,27 @@ function loadEnvFile(filePath: string): void {
 }
 
 const repoRoot = path.resolve(__dirname, "../..");
-loadEnvFile(path.join(repoRoot, ".env"));
-loadEnvFile(path.join(repoRoot, ".env.local"));
+for (const file of [
+  path.join(repoRoot, ".env"),
+  path.join(repoRoot, ".env.local"),
+  path.join(__dirname, ".env"),
+]) {
+  loadEnvFile(file);
+}
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL?.trim()) {
   throw new Error(
-    "DATABASE_URL is not set. Add it to the repo root .env (see lib/db/.env.example) or export it in your shell.",
+    [
+      "DATABASE_URL is not set.",
+      "",
+      "Quick fix:",
+      "  pnpm db:setup",
+      "  docker compose up -d",
+      "  pnpm db:push",
+      "",
+      "Or copy .env.example to .env and set DATABASE_URL.",
+      "Production (Firestore on Render) does not require drizzle push.",
+    ].join("\n"),
   );
 }
 

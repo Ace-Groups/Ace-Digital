@@ -1,0 +1,25 @@
+# Local development Postgres for drizzle-kit push and API without Firestore.
+# Start: docker compose up -d
+# Stop:  docker compose down
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ace-digital-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ace
+      POSTGRES_PASSWORD: ace_dev_password
+      POSTGRES_DB: ace_digital
+    volumes:
+      - ace_digital_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ace -d ace_digital"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ace_digital_pgdata:
