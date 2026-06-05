@@ -37,7 +37,16 @@ import { SlackComposer } from "@/components/channels/SlackComposer";
 import { ChatWorkspace } from "@/components/channels/ChatWorkspace";
 import { ThreadSidePanel } from "@/components/channels/ThreadSidePanel";
 import { ChannelFilesPanel } from "@/components/channels/ChannelFilesPanel";
-import { useStarChannel, useUnstarChannel } from "@workspace/api-client-react";
+import { ChannelPinsPanel } from "@/components/channels/ChannelPinsPanel";
+import { OpenDmDialog } from "@/components/channels/OpenDmDialog";
+import {
+  useStarChannel,
+  useUnstarChannel,
+  useListChannelPins,
+  getListChannelPinsQueryKey,
+  usePinMessage,
+  useUnpinMessage,
+} from "@workspace/api-client-react";
 import { canEditMessage } from "@workspace/rbac";
 import { cn } from "@/lib/utils";
 import { isFirebaseRealtimeEnabled, ensureFirebaseAuth } from "@/lib/firebase-client";
@@ -69,11 +78,26 @@ export default function ChannelsPage() {
   const replyToRef = useRef<ReplyTarget | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [roomSearch, setRoomSearch] = useState("");
-  const [headerTab, setHeaderTab] = useState<"messages" | "files">("messages");
+  const [headerTab, setHeaderTab] = useState<"messages" | "files" | "pins">("messages");
   const [threadRoot, setThreadRoot] = useState<Message | null>(null);
+  const [openDmOpen, setOpenDmOpen] = useState(false);
   const { markRead } = useMarkChannelRead();
   const starChannel = useStarChannel();
   const unstarChannel = useUnstarChannel();
+  const pinMessage = usePinMessage();
+  const unpinMessage = useUnpinMessage();
+
+  const { data: channelPins } = useListChannelPins(selectedChannelId ?? 0, {
+    query: {
+      enabled: !!selectedChannelId,
+      queryKey: getListChannelPinsQueryKey(selectedChannelId ?? 0),
+    },
+  });
+
+  const pinnedMessageIds = useMemo(
+    () => new Set((channelPins ?? []).map((p) => p.messageId)),
+    [channelPins],
+  );
 
   const setActiveReply = useCallback((target: ReplyTarget | null) => {
     replyToRef.current = target;
@@ -203,14 +227,60 @@ export default function ChannelsPage() {
     [ctx],
   );
 
-  const handleEditMessage = useCallback(
-    (msg: Message) => {
-      const next = window.prompt("Edit message", msg.body);
-      if (next != null && next.trim() && next.trim() !== msg.body) {
-        editMessageInstant(msg, next.trim());
+  const handleSaveEditMessage = useCallback(
+    (msg: Message, body: string) => {
+      if (body.trim() && body.trim() !== msg.body) {
+        editMessageInstant(msg, body.trim());
       }
     },
     [editMessageInstant],
+  );
+
+  const canPinForMessage = useCallback(
+    (msg: Message) => {
+      if (!ctx || !user) return false;
+      return (
+        msg.senderId === user.id ||
+        canManageChannel(ctx, membership, {
+          createdById: selectedChannel?.createdById ?? null,
+        })
+      );
+    },
+    [ctx, user, membership, selectedChannel],
+  );
+
+  const handlePinMessage = useCallback(
+    (msg: Message) => {
+      if (!selectedChannelId) return;
+      void pinMessage
+        .mutateAsync({ id: selectedChannelId, messageId: msg.id })
+        .then(() => {
+          void queryClient.invalidateQueries({
+            queryKey: getListChannelPinsQueryKey(selectedChannelId),
+          });
+        })
+        .catch(() => {
+          toast({ title: "Could not pin message", variant: "destructive" });
+        });
+    },
+    [selectedChannelId, pinMessage, queryClient, toast],
+  );
+
+  const handleUnpinMessage = useCallback(
+    (msg: Message) => {
+      if (!selectedChannelId) return;
+      void unpinMessage
+        .mutateAsync({ id: selectedChannelId, messageId: msg.id })
+        .then(() => {
+          void queryClient.invalidateQueries({
+            queryKey: getListChannelPinsQueryKey(selectedChannelId),
+          });
+        })
+        .catch(() => {
+          toast({ title: "Could not unpin message", variant: "destructive" });
+        });
+    },
+    [selectedChannelId, unpinMessage, queryClient, toast],
   );
 
   const handleToggleStar = useCallback(() => {
@@ -439,6 +509,14 @@ export default function ChannelsPage() {
 
       {selectedChannelId && headerTab === "files" ? (
         <ChannelFilesPanel channelId={selectedChannelId} />
+      ) : selectedChannelId && headerTab === "pins" ? (
+        <ChannelPinsPanel
+          channelId={selectedChannelId}
+          onJumpToMessage={(messageId) => {
+            setHeaderTab("messages");
+            handleScrollToMessage(messageId);
+          }}
+        />
       ) : selectedChannelId ? (
         <ChannelMessageList
           channelId={selectedChannelId}
@@ -472,8 +550,12 @@ export default function ChannelsPage() {
               : undefined
           }
           onOpenThread={(msg) => setThreadRoot(msg)}
-          onEditMessage={handleEditMessage}
+          onSaveEditMessage={handleSaveEditMessage}
           canEditMessage={canEditForMessage}
+          canPinMessage={canPinForMessage}
+          pinnedMessageIds={pinnedMessageIds}
+          onPinMessage={handlePinMessage}
+          onUnpinMessage={handleUnpinMessage}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -529,6 +611,7 @@ export default function ChannelsPage() {
             selectedChannelId={selectedChannelId}
             onSelect={selectChannel}
             onCreateClick={() => setCreateOpen(true)}
+            onOpenDmClick={() => setOpenDmOpen(true)}
             canCreate={canCreate}
             isMobile={isMobile}
           />
@@ -559,6 +642,14 @@ export default function ChannelsPage() {
         onArchived={() => {
           setSelectedChannelId(null);
           setMobileThreadOpen(false);
+        }}
+      />
+
+      <OpenDmDialog
+        open={openDmOpen}
+        onClose={() => setOpenDmOpen(false)}
+        onOpened={(id) => {
+          selectChannel(id);
         }}
       />
     </AppLayout>

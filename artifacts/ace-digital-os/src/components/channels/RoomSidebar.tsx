@@ -46,6 +46,7 @@ interface RoomSidebarProps {
   selectedChannelId: number | null;
   onSelect: (id: number) => void;
   onCreateClick: () => void;
+  onOpenDmClick?: () => void;
   canCreate: boolean;
   isMobile?: boolean;
 }
@@ -180,6 +181,7 @@ export function RoomSidebar({
   selectedChannelId,
   onSelect,
   onCreateClick,
+  onOpenDmClick,
   canCreate,
   isMobile,
 }: RoomSidebarProps) {
@@ -286,6 +288,18 @@ export function RoomSidebar({
               selectedChannelId={selectedChannelId}
               onSelect={onSelect}
               showHash={false}
+              footer={
+                onOpenDmClick ? (
+                  <button
+                    type="button"
+                    className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    onClick={onOpenDmClick}
+                  >
+                    <Plus size={14} />
+                    Message someone
+                  </button>
+                ) : null
+              }
             />
           </>
         )}

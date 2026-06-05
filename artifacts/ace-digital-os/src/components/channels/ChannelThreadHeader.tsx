@@ -25,8 +25,8 @@ interface ChannelThreadHeaderProps {
   onOpenSettings?: () => void;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
-  activeTab?: "messages" | "files";
-  onTabChange?: (tab: "messages" | "files") => void;
+  activeTab?: "messages" | "files" | "pins";
+  onTabChange?: (tab: "messages" | "files" | "pins") => void;
   starred?: boolean;
   onToggleStar?: () => void;
 }
@@ -159,7 +159,7 @@ export function ChannelThreadHeader({
       </div>
       {onTabChange && (
         <div className="flex gap-3 border-t border-border/60 px-3 sm:gap-4 sm:px-4">
-          {(["messages", "files"] as const).map((tab) => (
+          {(["messages", "files", "pins"] as const).map((tab) => (
             <button
               key={tab}
               type="button"

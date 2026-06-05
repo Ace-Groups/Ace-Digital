@@ -8,7 +8,10 @@ import {
   Reply,
   Copy,
   Trash2,
+  Pin,
+  PinOff,
 } from "lucide-react";
+import { MessageEditInline } from "@/components/channels/MessageEditInline";
 import { MessageActionsMenu } from "@/components/channels/MessageActionsMenu";
 import { VoiceMessagePlayer } from "@/components/channels/VoiceMessagePlayer";
 import { MediaAlbum } from "@/components/channels/MediaAlbum";
@@ -68,6 +71,13 @@ interface MessageBubbleProps {
   onOpenThread?: (msg: Message) => void;
   onEdit?: (msg: Message) => void;
   canEdit?: boolean;
+  isEditing?: boolean;
+  onSaveEdit?: (body: string) => void;
+  onCancelEdit?: () => void;
+  canPin?: boolean;
+  isPinned?: boolean;
+  onPin?: () => void;
+  onUnpin?: () => void;
 }
 
 function isPending(msg: Message | PendingMessage): msg is PendingMessage {
@@ -94,6 +104,13 @@ export function MessageBubble({
   onOpenThread,
   onEdit,
   canEdit = false,
+  isEditing = false,
+  onSaveEdit,
+  onCancelEdit,
+  canPin = false,
+  isPinned = false,
+  onPin,
+  onUnpin,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -165,9 +182,21 @@ export function MessageBubble({
           Reply
         </DropdownMenuItem>
       )}
-      {canEdit && onEdit && (
+      {canEdit && onEdit && !isEditing && (
         <DropdownMenuItem className="min-h-11 sm:min-h-9" onClick={() => onEdit(msg as Message)}>
           Edit message
+        </DropdownMenuItem>
+      )}
+      {canPin && !isPinned && onPin && (
+        <DropdownMenuItem className="min-h-11 sm:min-h-9" onClick={() => onPin()}>
+          <Pin size={14} className="mr-2" />
+          Pin to channel
+        </DropdownMenuItem>
+      )}
+      {canPin && isPinned && onUnpin && (
+        <DropdownMenuItem className="min-h-11 sm:min-h-9" onClick={() => onUnpin()}>
+          <PinOff size={14} className="mr-2" />
+          Unpin
         </DropdownMenuItem>
       )}
       {msg.body?.trim() && (
@@ -231,7 +260,13 @@ export function MessageBubble({
           {otherAttachments.map((att, i) => (
             <AttachmentPreview key={`${msg.id}-att-${i}`} attachment={att} isMe={false} />
           ))}
-          {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
+          {isEditing && onSaveEdit && onCancelEdit ? (
+            <MessageEditInline
+              initialBody={msg.body ?? ""}
+              onSave={onSaveEdit}
+              onCancel={onCancelEdit}
+            />
+          ) : displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
             <MessageBody body={msg.body ?? ""} />
           ) : null}
 

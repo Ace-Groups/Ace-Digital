@@ -42,8 +42,12 @@ interface ChannelMessageListProps {
   onVotePoll?: (message: Message, optionId: string) => void;
   onRsvpEvent?: (message: Message, status: "going" | "maybe" | "no") => void;
   onOpenThread?: (message: Message) => void;
-  onEditMessage?: (message: Message) => void;
+  onSaveEditMessage?: (message: Message, body: string) => void;
   canEditMessage?: (message: Message) => boolean;
+  canPinMessage?: (message: Message) => boolean;
+  pinnedMessageIds?: ReadonlySet<number>;
+  onPinMessage?: (message: Message) => void;
+  onUnpinMessage?: (message: Message) => void;
 }
 
 export function ChannelMessageList({
@@ -68,12 +72,17 @@ export function ChannelMessageList({
   onVotePoll,
   onRsvpEvent,
   onOpenThread,
-  onEditMessage,
+  onSaveEditMessage,
   canEditMessage,
+  canPinMessage,
+  pinnedMessageIds,
+  onPinMessage,
+  onUnpinMessage,
 }: ChannelMessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [pendingNewCount, setPendingNewCount] = useState(0);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const prevLenRef = useRef(0);
   const jumpedUnreadRef = useRef(false);
   const loadOlderLockRef = useRef(false);
@@ -110,6 +119,7 @@ export function ChannelMessageList({
     jumpedUnreadRef.current = false;
     prevLenRef.current = 0;
     setPendingNewCount(0);
+    setEditingMessageId(null);
   }, [channelId]);
 
   useEffect(() => {
@@ -313,8 +323,38 @@ export function ChannelMessageList({
                     ? () => onOpenThread(msg as Message)
                     : undefined
                 }
-                onEdit={onEditMessage}
+                onEdit={
+                  onSaveEditMessage
+                    ? () => setEditingMessageId((msg as Message).id)
+                    : undefined
+                }
                 canEdit={canEditMessage?.(msg as Message) ?? false}
+                isEditing={editingMessageId === (msg as Message).id}
+                onSaveEdit={
+                  onSaveEditMessage && editingMessageId === (msg as Message).id
+                    ? (body) => {
+                        onSaveEditMessage(msg as Message, body);
+                        setEditingMessageId(null);
+                      }
+                    : undefined
+                }
+                onCancelEdit={
+                  editingMessageId === (msg as Message).id
+                    ? () => setEditingMessageId(null)
+                    : undefined
+                }
+                canPin={canPinMessage?.(msg as Message) ?? false}
+                isPinned={pinnedMessageIds?.has((msg as Message).id) ?? false}
+                onPin={
+                  onPinMessage && !isPendingMessage(msg)
+                    ? () => onPinMessage(msg as Message)
+                    : undefined
+                }
+                onUnpin={
+                  onUnpinMessage && !isPendingMessage(msg)
+                    ? () => onUnpinMessage(msg as Message)
+                    : undefined
+                }
               />
             </div>
           );
@@ -323,7 +363,11 @@ export function ChannelMessageList({
       <div ref={endRef} className="h-px shrink-0" />
       </div>
       {pendingNewCount > 0 && !shouldAutoScroll && (
-        <div className="pointer-events-none sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex justify-center pb-2">
+        <div
+          className="pointer-events-none sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex justify-center pb-2"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <Button
             type="button"
             size="sm"
