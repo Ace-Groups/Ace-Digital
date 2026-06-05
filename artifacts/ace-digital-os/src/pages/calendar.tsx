@@ -24,8 +24,7 @@ import { CalendarWeekView, startOfWeek } from "@/components/calendar/CalendarWee
 import { CalendarEventSheet } from "@/components/calendar/CalendarEventSheet";
 import type { CalendarEvent, CalendarFeedItem } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
-import { patchList, prependListItem, removeListItem, setList, snapshotList } from "@/lib/optimistic";
-import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+
 
 type ViewMode = "month" | "week" | "agenda";
 

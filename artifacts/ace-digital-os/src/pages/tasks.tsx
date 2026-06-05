@@ -38,15 +38,7 @@ import { AssigneeMultiSelect } from "@/components/tasks/AssigneeMultiSelect";
 import { TaskAssigneesDisplay } from "@/components/tasks/TaskAssigneesDisplay";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
-import {
-  patchListItem,
-  prependListItem,
-  removeListItem,
-  replaceListItem,
-  setList,
-  snapshotList,
-} from "@/lib/optimistic";
-import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+
 
 const createSchema = z.object({
   title: z.string().min(1, "Title required"),
