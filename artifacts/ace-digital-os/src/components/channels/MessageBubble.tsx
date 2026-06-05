@@ -258,15 +258,9 @@ export function MessageBubble({
         }
         footer={
           <>
-            {pending && isMe && (
+            {pending && isMe && msg.status === "failed" && (
               <span className="mt-1 inline-flex text-muted-foreground">
-                {msg.status === "sending" ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : msg.status === "failed" ? (
-                  <AlertCircle size={12} className="text-destructive" />
-                ) : (
-                  <Check size={12} />
-                )}
+                <AlertCircle size={12} className="text-destructive" />
               </span>
             )}
             {!pending && onToggleReaction && (
