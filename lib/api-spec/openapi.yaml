@@ -82,6 +82,23 @@ paths:
         "200":
           description: Logged out
 
+  /v1/auth/refresh:
+    post:
+      operationId: refreshAuth
+      tags: [auth]
+      summary: Refresh session token
+      responses:
+        "200":
+          description: New token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Account is not active
+
   /v1/auth/me:
     get:
       operationId: getMe

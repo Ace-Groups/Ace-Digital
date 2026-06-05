@@ -46,6 +46,30 @@ export const LoginResponse = zod.object({
 
 
 /**
+ * @summary Refresh session token
+ */
+export const RefreshAuthResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "fullName": zod.string(),
+  "role": zod.string(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "mustChangePassword": zod.boolean().optional(),
+  "phone": zod.string().nullish(),
+  "employeeCode": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+})
+
+
+/**
  * @summary Get current user
  */
 export const GetMeResponse = zod.object({

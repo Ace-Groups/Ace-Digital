@@ -36,12 +36,14 @@ const NotificationsPage = lazyWithReload(() => import("@/pages/notifications"));
 
 const AUTH_ONLY_PATHS = new Set(["/change-password", "/settings"]);
 
+const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 60 * 24, // 24 hours
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      staleTime: SIXTY_DAYS_MS,
+      gcTime: SIXTY_DAYS_MS,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
@@ -157,6 +159,7 @@ function App() {
         client={queryClient}
         persistOptions={{
           persister: idbPersister,
+          maxAge: SIXTY_DAYS_MS,
           dehydrateOptions: {
             shouldDehydrateMutation: () => true,
           },

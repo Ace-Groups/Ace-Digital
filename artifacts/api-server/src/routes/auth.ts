@@ -9,7 +9,8 @@ import { userToJson } from "../lib/user-json";
 const router = Router();
 
 router.post("/v1/auth/login", async (req, res): Promise<void> => {
-  const { email, password } = req.body;
+  const { email: rawEmail, password } = req.body;
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
   if (!email || !password) {
     res.status(400).json({ error: "Email and password are required" });
     return;
@@ -43,6 +44,27 @@ router.post("/v1/auth/login", async (req, res): Promise<void> => {
 
 router.post("/v1/auth/logout", (_req, res): void => {
   res.json({ message: "Logged out" });
+});
+
+router.post("/v1/auth/refresh", requireAuth, async (req, res): Promise<void> => {
+  const user = await store.findUserById(req.user!.userId);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (user.status && user.status !== "active") {
+    res.status(403).json({ error: "Account is not active" });
+    return;
+  }
+
+  const token = signToken({ userId: user.id, role: user.role, teamId: user.teamId });
+  const team = user.teamId ? await store.findTeamById(user.teamId) : null;
+
+  res.json({
+    token,
+    user: userToJson(user, team),
+  });
 });
 
 router.get("/v1/auth/me", requireAuth, async (req, res): Promise<void> => {

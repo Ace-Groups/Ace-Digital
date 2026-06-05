@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ApiError } from "@workspace/api-client-react";
 import { MobileLoginScreen } from "@/components/login/MobileLoginScreen";
 import { consumeLoginNotice } from "@/lib/login-notice";
 import type { LoginFormValues } from "@/pages/login-desktop";
@@ -56,15 +57,33 @@ export default function LoginPage() {
     });
   }
 
+  function loginErrorMessage(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.status === 403) {
+        return "Your account is not active. Contact your administrator.";
+      }
+      if (err.status === 401) {
+        return "Invalid email or password";
+      }
+      if (err.status >= 500 || err.status === 503) {
+        return "Could not reach the server. Try again in a moment.";
+      }
+    }
+    if (err instanceof TypeError) {
+      return "Could not reach the server. Try again in a moment.";
+    }
+    return "Invalid email or password";
+  }
+
   async function onSubmit(data: LoginFormValues) {
     setLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.email.trim(), data.password);
       setLocation("/");
-    } catch {
+    } catch (err) {
       toast({
         title: "Login failed",
-        description: "Invalid email or password",
+        description: loginErrorMessage(err),
         variant: "destructive",
       });
     } finally {

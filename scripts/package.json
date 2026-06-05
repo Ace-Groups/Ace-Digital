@@ -8,6 +8,8 @@
     "seed": "tsx ./src/seed.ts",
     "seed:firestore": "tsx ./src/seed-firestore.ts",
     "upsert:kavin": "tsx ./src/upsert-kavin-admin.ts",
+    "upsert:kavin-mybexo": "tsx ./src/upsert-kavin-mybexo-admin.ts",
+    "upsert:nesa": "tsx ./src/upsert-nesa-manager.ts",
     "reset:production": "tsx ./src/reset-firestore-production.ts",
     "clear:prod": "tsx ./src/clear-db-for-prod.ts",
     "seed:rbac-dev": "tsx ./src/seed-rbac-dev.ts",

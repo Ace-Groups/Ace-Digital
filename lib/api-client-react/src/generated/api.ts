@@ -340,6 +340,76 @@ export const useLogout = <TError = ErrorType<unknown>,
       return useMutation(getLogoutMutationOptions(options));
     }
 
+export const getRefreshAuthUrl = () => {
+
+
+
+
+  return `/api/v1/auth/refresh`
+}
+
+/**
+ * @summary Refresh session token
+ */
+export const refreshAuth = async ( options?: RequestInit): Promise<AuthResponse> => {
+
+  return customFetch<AuthResponse>(getRefreshAuthUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRefreshAuthMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshAuth>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshAuth>>, TError,void, TContext> => {
+
+const mutationKey = ['refreshAuth'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshAuth>>, void> = () => {
+
+
+          return  refreshAuth(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshAuthMutationResult = NonNullable<Awaited<ReturnType<typeof refreshAuth>>>
+
+    export type RefreshAuthMutationError = ErrorType<void>
+
+    /**
+ * @summary Refresh session token
+ */
+export const useRefreshAuth = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshAuth>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof refreshAuth>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRefreshAuthMutationOptions(options));
+    }
+
 export const getGetMeUrl = () => {
 
 

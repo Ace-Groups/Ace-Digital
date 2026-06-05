@@ -1,11 +1,13 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
+import { useGetMe, useLogin, useLogout, useRefreshAuth, ApiError } from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
 import { ensureFirebaseAuth, signOutFirebase, resetFirebaseAuthState } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
+import { useSessionActivity } from "@/hooks/useSessionActivity";
+import { clearLastActivity, setLastActivity } from "@/lib/session";
 
 interface AuthUser {
   id: number;
@@ -27,6 +29,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -35,12 +38,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(getAuthToken());
   const queryClient = useQueryClient();
+  const refreshAttemptedRef = useRef(false);
 
   useEffect(() => {
     setAuthTokenGetter(() => getAuthToken());
   }, []);
 
-  const { data: rawUser, isLoading, isError } = useGetMe({
+  const { data: rawUser, isLoading, isError, error, refetch } = useGetMe({
     query: {
       enabled: !!token,
       retry: false,
@@ -64,15 +68,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : null;
 
-  useEffect(() => {
-    if (token && !isLoading && isError) {
-      clearAuthToken();
-      setToken(null);
-    }
-  }, [token, isLoading, isError]);
-
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
+  const refreshMutation = useRefreshAuth();
+
+  const refreshSession = useCallback(async () => {
+    const result = await refreshMutation.mutateAsync();
+    setAuthToken(result.token);
+    setToken(result.token);
+    setLastActivity();
+    await queryClient.invalidateQueries({ queryKey: ["getMe"] });
+  }, [refreshMutation, queryClient]);
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch {
+      // ignore
+    }
+    await signOutFirebase();
+    clearAuthToken();
+    clearLastActivity();
+    setToken(null);
+    queryClient.clear();
+  }, [logoutMutation, queryClient]);
+
+  useEffect(() => {
+    if (!token || isLoading) return;
+
+    if (!isError) {
+      refreshAttemptedRef.current = false;
+      if (user) setLastActivity();
+      return;
+    }
+
+    const status = error instanceof ApiError ? error.status : null;
+    if (status === 401 && !refreshAttemptedRef.current) {
+      refreshAttemptedRef.current = true;
+      void refreshSession()
+        .then(() => refetch())
+        .catch(() => {
+          clearAuthToken();
+          clearLastActivity();
+          setToken(null);
+        });
+      return;
+    }
+
+    if (status === 401) {
+      clearAuthToken();
+      clearLastActivity();
+      setToken(null);
+    }
+  }, [token, isLoading, isError, error, user, refetch, refreshSession]);
 
   useEffect(() => {
     if (!token || !user || !isFirebaseChatEnabled()) return;
@@ -84,27 +132,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await loginMutation.mutateAsync({ data: { email, password } });
       setAuthToken(result.token);
       setToken(result.token);
+      setLastActivity();
       resetFirebaseAuthState();
       void ensureFirebaseAuth();
     },
     [loginMutation],
   );
 
-  const logout = useCallback(async () => {
-    try {
-      await logoutMutation.mutateAsync();
-    } catch {
-      // ignore
-    }
-    await signOutFirebase();
-    clearAuthToken();
-    setToken(null);
-    queryClient.clear();
-  }, [logoutMutation, queryClient]);
-
   const refreshUser = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["getMe"] });
   }, [queryClient]);
+
+  useSessionActivity({
+    isAuthenticated: !!user,
+    logout,
+    refreshSession,
+  });
 
   return (
     <AuthContext.Provider
@@ -114,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         refreshUser,
+        refreshSession,
         isAuthenticated: !!user,
       }}
     >
