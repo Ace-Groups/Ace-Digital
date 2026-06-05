@@ -12,7 +12,10 @@ export function getPgDb() {
     throw new Error("DATABASE_URL must be set for PostgreSQL mode.");
   }
   if (!dbInstance) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 50,
+    });
     dbInstance = drizzle(pool, { schema });
   }
   return { db: dbInstance, pool };

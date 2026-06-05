@@ -1,5 +1,8 @@
+import { warmupFirestoreChatMirror } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
+
+warmupFirestoreChatMirror();
 
 const rawPort = process.env["PORT"];
 

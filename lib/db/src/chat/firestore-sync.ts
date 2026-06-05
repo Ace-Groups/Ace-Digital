@@ -46,6 +46,11 @@ export function isFirestoreChatMirrorEnabled(): boolean {
   return ensureFirestore() !== null;
 }
 
+/** Eagerly init Firebase Admin + Firestore for PG mirror mode. No-op when mirroring disabled. */
+export function warmupFirestoreChatMirror(): void {
+  ensureFirestore();
+}
+
 export async function mirrorMessageToFirestore(payload: MirrorMessagePayload): Promise<void> {
   const db = ensureFirestore();
   if (!db) return;

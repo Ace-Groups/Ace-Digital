@@ -11,5 +11,6 @@ export {
   mirrorMessagePatchToFirestore,
   mirrorChannelActivityToFirestore,
   isFirestoreChatMirrorEnabled,
+  warmupFirestoreChatMirror,
   type MirrorMessagePayload,
 } from "./firestore-sync";

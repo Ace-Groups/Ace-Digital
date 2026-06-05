@@ -711,43 +711,42 @@ router.post(
         senderAvatar: sender?.avatarUrl ?? null,
       });
 
-      if (payload.body && payload.body.includes("@AceBot")) {
-        triggerAceBot(id, message.id, payload.body, ctx.userId).catch((err) => {
-          console.error("[AceBot] Background trigger failed:", err);
-        });
-      }
-
-      const members = await store.listChannelMembers(id);
-      const mentioned = extractMentionedUserIds(payload.body, members);
-      const preview = messagePreview(message.body, message.attachments, message.messageKind);
-
-      if (mentioned.length > 0) {
-        void notifyChannelMembers(
-          id,
-          ctx.userId,
-          access.channel.name,
-          `${sender?.fullName ?? "Someone"} mentioned you: ${preview}`,
-          mentioned,
-        ).catch((err) => console.error("[chat-notify-mention]", err));
-      } else {
-        void notifyChannelMembers(
-          id,
-          ctx.userId,
-          access.channel.name,
-          preview,
-        ).catch((err) => console.error("[chat-notify]", err));
-      }
-
-      void store.markChannelRead(id, ctx.userId).catch((e) =>
-        console.error("[channels/mark-read]", e),
-      );
-
       const createdJson = messageToJson(
         message,
         sender?.fullName ?? "Unknown",
         sender?.avatarUrl ?? null,
       );
       res.status(201).json(createdJson);
+
+      setImmediate(() => {
+        void (async () => {
+          try {
+            if (payload.body && payload.body.includes("@AceBot")) {
+              await triggerAceBot(id, message.id, payload.body, ctx.userId);
+            }
+
+            const members = await store.listChannelMembers(id);
+            const mentioned = extractMentionedUserIds(payload.body, members);
+            const preview = messagePreview(message.body, message.attachments, message.messageKind);
+
+            if (mentioned.length > 0) {
+              await notifyChannelMembers(
+                id,
+                ctx.userId,
+                access.channel.name,
+                `${sender?.fullName ?? "Someone"} mentioned you: ${preview}`,
+                mentioned,
+              );
+            } else {
+              await notifyChannelMembers(id, ctx.userId, access.channel.name, preview);
+            }
+
+            await store.markChannelRead(id, ctx.userId);
+          } catch (err) {
+            console.error("[channels/messages/background]", err);
+          }
+        })();
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to send message";
       console.error("[channels/messages]", message);

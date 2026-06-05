@@ -1234,25 +1234,27 @@ export function createPostgresStore() {
           messageCount: channelsTable.messageCount,
         });
 
-      void mirrorMessageToFirestore({
-        id: m!.id,
-        channelId: m!.channelId,
-        senderId: m!.senderId,
-        body: m!.body,
-        attachments: m!.attachments,
-        messageKind: m!.messageKind,
-        metadata: m!.metadata as Record<string, unknown> | null,
-        parentMessageId: m!.parentMessageId,
-        createdAt: m!.createdAt,
-        senderName: senderName ?? null,
-        senderAvatar: senderAvatar ?? null,
-      }).catch((err) => console.error("[firestore-mirror]", err));
+      setImmediate(() => {
+        void mirrorMessageToFirestore({
+          id: m!.id,
+          channelId: m!.channelId,
+          senderId: m!.senderId,
+          body: m!.body,
+          attachments: m!.attachments,
+          messageKind: m!.messageKind,
+          metadata: m!.metadata as Record<string, unknown> | null,
+          parentMessageId: m!.parentMessageId,
+          createdAt: m!.createdAt,
+          senderName: senderName ?? null,
+          senderAvatar: senderAvatar ?? null,
+        }).catch((err) => console.error("[firestore-mirror]", err));
 
-      void mirrorChannelActivityToFirestore(
-        insertData.channelId,
-        m!.createdAt,
-        Number(channel?.messageCount ?? 0),
-      ).catch((err) => console.error("[firestore-mirror-channel]", err));
+        void mirrorChannelActivityToFirestore(
+          insertData.channelId,
+          m!.createdAt,
+          Number(channel?.messageCount ?? 0),
+        ).catch((err) => console.error("[firestore-mirror-channel]", err));
+      });
 
       return m!;
     },
