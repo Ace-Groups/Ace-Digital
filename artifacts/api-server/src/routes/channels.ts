@@ -16,6 +16,7 @@ import { messageToJson, messagePreview, validateMessagePayload } from "../lib/me
 import { notifyChannelMembers } from "../lib/chat-notify";
 import { extractMentionedUserIds } from "../lib/chat-mentions";
 import { sortChannelsForSidebar } from "@workspace/db";
+import { triggerAceBot } from "../lib/acebot";
 
 const router = Router();
 
@@ -684,6 +685,12 @@ router.post(
         senderName: sender?.fullName ?? null,
         senderAvatar: sender?.avatarUrl ?? null,
       });
+
+      if (payload.body && payload.body.includes("@AceBot")) {
+        triggerAceBot(id, message.id, payload.body, ctx.userId).catch((err) => {
+          console.error("[AceBot] Background trigger failed:", err);
+        });
+      }
 
       const members = await store.listChannelMembers(id);
       const mentioned = extractMentionedUserIds(payload.body, members);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StaggerList } from "@/components/design";
 import { FinanceKpiGrid } from "@/components/finance/FinanceKpiGrid";
@@ -118,6 +118,15 @@ export default function FinancePage() {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [salaryOpen, setSalaryOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
+
+  // Dual pulse taptic feedback when a validation/allocation layer is popped
+  useEffect(() => {
+    if (expenseOpen || salaryOpen || payrollOpen) {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([20, 30, 20]);
+      }
+    }
+  }, [expenseOpen, salaryOpen, payrollOpen]);
 
   const defaultTab = useMemo(() => {
     if (canSalaries) return "salaries";

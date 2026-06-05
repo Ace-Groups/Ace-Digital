@@ -2,16 +2,97 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/design";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Check, AlertCircle } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { QueryErrorBanner } from "./QueryErrorBanner";
 import type { PayrollRun } from "@workspace/api-client-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 interface FinancePayrollTabProps {
   payrollRuns?: PayrollRun[];
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
+}
+
+function PayrollSwipableCard({
+  run,
+}: {
+  run: PayrollRun;
+}) {
+  const x = useMotionValue(0);
+
+  // Smooth opacity transformations based on drag direction & position
+  const rightOpacity = useTransform(x, [0, 80], [0, 1]);
+  const leftOpacity = useTransform(x, [-80, 0], [1, 0]);
+
+  const handleDragEnd = (_event: any, info: any) => {
+    if (Math.abs(info.offset.x) > 100) {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([40]);
+      }
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border bg-muted/10">
+      {/* Background action fields (underlays) */}
+      <div className="absolute inset-0 z-0 pointer-events-none rounded-xl">
+        {/* Right drag underlay (Review - Neon Cyan gradient) */}
+        <motion.div
+          style={{ opacity: rightOpacity }}
+          className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-cyan-500/5 to-transparent flex items-center justify-start pl-6"
+        >
+          <div className="flex items-center gap-2 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+            <Check className="h-5 w-5 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Review</span>
+          </div>
+        </motion.div>
+        {/* Left drag underlay (Inspect - Neon Rose gradient) */}
+        <motion.div
+          style={{ opacity: leftOpacity }}
+          className="absolute inset-0 bg-gradient-to-l from-rose-500/20 via-rose-500/5 to-transparent flex items-center justify-end pr-6"
+        >
+          <div className="flex items-center gap-2 text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">
+            <span className="text-xs font-semibold uppercase tracking-wider">Inspect</span>
+            <AlertCircle className="h-5 w-5 animate-pulse" />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Foreground card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -150, right: 150 }}
+        dragElastic={0.2}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="relative z-10 bg-card rounded-xl border border-transparent shadow-sm select-none cursor-grab active:cursor-grabbing"
+      >
+        <Card>
+          <CardContent className="p-4 flex items-center justify-between gap-3" data-testid={`payroll-card-${run.id}`}>
+            <div>
+              <p className="font-medium">
+                {new Date(run.year, run.month - 1).toLocaleDateString("en-IN", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {run.createdAt ? new Date(run.createdAt).toLocaleDateString("en-IN") : "—"}
+              </p>
+            </div>
+            <div className="text-right space-y-1">
+              <p className="font-semibold tabular-nums">{formatCurrency(run.totalAmount ?? 0)}</p>
+              <Badge variant="outline" className={cn("text-xs", statusColor(run.status ?? ""))}>
+                {run.status}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
 }
 
 export function FinancePayrollTab({ payrollRuns, isLoading, isError, onRetry }: FinancePayrollTabProps) {
@@ -43,27 +124,7 @@ export function FinancePayrollTab({ payrollRuns, isLoading, isError, onRetry }: 
     <>
       <div className="space-y-3 md:hidden">
         {payrollRuns.map((r) => (
-          <Card key={r.id} data-testid={`payroll-card-${r.id}`}>
-            <CardContent className="p-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="font-medium">
-                  {new Date(r.year, r.month - 1).toLocaleDateString("en-IN", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "—"}
-                </p>
-              </div>
-              <div className="text-right space-y-1">
-                <p className="font-semibold tabular-nums">{formatCurrency(r.totalAmount ?? 0)}</p>
-                <Badge variant="outline" className={cn("text-xs", statusColor(r.status ?? ""))}>
-                  {r.status}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+          <PayrollSwipableCard key={r.id} run={r} />
         ))}
       </div>
 

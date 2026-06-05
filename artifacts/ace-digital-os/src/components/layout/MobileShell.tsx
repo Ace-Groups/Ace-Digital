@@ -18,7 +18,7 @@ import {
   Activity,
   CalendarDays,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getListNotificationsQueryKey, useListNotifications } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,15 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // Dual pulse taptic feedback when layout sheet/drawer or profile dialog pops into focus
+  useEffect(() => {
+    if (moreOpen || profileOpen) {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([20, 30, 20]);
+      }
+    }
+  }, [moreOpen, profileOpen]);
 
   const { primary, overflow } = getMobileNavItems(user?.role ?? "");
   const { hideBottomNav, immersivePage } = useMobileChrome();

@@ -42,6 +42,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface MessageBubbleProps {
   msg: Message | PendingMessage;
@@ -226,6 +234,65 @@ export function MessageBubble({
           {displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
             <MessageBody body={msg.body ?? ""} />
           ) : null}
+
+          {/* Cyberpunk Table Info Block */}
+          {(!pending && !deleted && (msg as Message).metadata?.layout === "table") && (() => {
+            const tableData = (msg as Message).metadata?.tableData as {
+              columns: string[];
+              rows: Record<string, any>[];
+            } | undefined;
+            if (!tableData || !tableData.columns || !tableData.rows) return null;
+            return (
+              <div className="mt-2 overflow-hidden rounded-md border border-cyan-500/30 bg-background/50 font-mono text-xs backdrop-blur-sm">
+                <div className="border-b border-cyan-500/30 bg-cyan-950/20 px-3 py-1.5 text-cyan-400 font-semibold uppercase tracking-wider flex justify-between items-center">
+                  <span>System Data Feed</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                </div>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[400px]">
+                    <TableHeader className="border-b border-cyan-500/20 bg-muted/30">
+                      <TableRow className="hover:bg-transparent">
+                        {tableData.columns.map((col, idx) => (
+                          <TableHead key={idx} className="h-8 text-[10px] text-cyan-400/70 font-bold uppercase py-1 px-3">
+                            {col}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tableData.rows.map((row, rowIdx) => (
+                        <TableRow key={rowIdx} className="border-b border-cyan-500/10 hover:bg-cyan-500/5">
+                          {tableData.columns.map((col, colIdx) => (
+                            <TableCell key={colIdx} className="py-2 px-3 text-foreground/90 font-mono">
+                              {row[col] ?? ""}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* System Permission Alert Card */}
+          {(!pending && !deleted && (msg as Message).metadata?.layout === "permission_denied") && (
+            <div className="mt-2 overflow-hidden rounded-md border border-rose-500/50 bg-rose-950/10 backdrop-blur-sm p-3 font-mono text-xs">
+              <div className="flex items-center gap-2 text-rose-400 font-bold uppercase tracking-wider mb-2">
+                <AlertCircle size={16} className="text-rose-500 animate-pulse" />
+                <span>Security Alert: Access Denied</span>
+              </div>
+              <div className="border border-rose-500/20 bg-rose-950/20 rounded p-2 text-rose-300">
+                <p className="font-semibold text-rose-400 mb-1">RBAC POLICY VIOLATION</p>
+                <p>{msg.body || "Insufficient clearance to view financial records."}</p>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[9px] text-rose-500/70 uppercase">
+                <span>Code: SEC-403-RBAC</span>
+                <span>Auth: System Admin</span>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

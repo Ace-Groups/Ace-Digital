@@ -2,10 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/design";
-import { Users } from "lucide-react";
+import { Users, Check, AlertCircle } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { QueryErrorBanner } from "./QueryErrorBanner";
 import type { SalaryRecord, SalaryPostingRecord } from "@workspace/api-client-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 interface FinanceSalariesTabProps {
   salaries?: SalaryRecord[];
@@ -13,6 +14,164 @@ interface FinanceSalariesTabProps {
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
+}
+
+function SalaryProfileSwipableCard({
+  salary,
+}: {
+  salary: SalaryRecord;
+}) {
+  const x = useMotionValue(0);
+  const rightOpacity = useTransform(x, [0, 80], [0, 1]);
+  const leftOpacity = useTransform(x, [-80, 0], [1, 0]);
+
+  const handleDragEnd = (_event: any, info: any) => {
+    if (Math.abs(info.offset.x) > 100) {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([40]);
+      }
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border bg-muted/10">
+      {/* Background action fields (underlays) */}
+      <div className="absolute inset-0 z-0 pointer-events-none rounded-xl">
+        <motion.div
+          style={{ opacity: rightOpacity }}
+          className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-cyan-500/5 to-transparent flex items-center justify-start pl-6"
+        >
+          <div className="flex items-center gap-2 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+            <Check className="h-5 w-5 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Review</span>
+          </div>
+        </motion.div>
+        <motion.div
+          style={{ opacity: leftOpacity }}
+          className="absolute inset-0 bg-gradient-to-l from-rose-500/20 via-rose-500/5 to-transparent flex items-center justify-end pr-6"
+        >
+          <div className="flex items-center gap-2 text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">
+            <span className="text-xs font-semibold uppercase tracking-wider">Inspect</span>
+            <AlertCircle className="h-5 w-5 animate-pulse" />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Foreground card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -150, right: 150 }}
+        dragElastic={0.2}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="relative z-10 bg-card rounded-xl border border-transparent shadow-sm select-none cursor-grab active:cursor-grabbing"
+      >
+        <Card>
+          <CardContent className="p-4 space-y-2" data-testid={`salary-card-${salary.userId}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium">{salary.fullName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {salary.jobTitle ?? "—"} · {salary.teamName ?? "—"}
+                </p>
+              </div>
+              <Badge variant="outline" className={cn("text-xs shrink-0", statusColor(salary.payrollStatus ?? ""))}>
+                {salary.payrollStatus}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Base</p>
+                <p className="font-medium">{formatCurrency(salary.baseSalary ?? 0)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Bonus</p>
+                <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(salary.bonus ?? 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total</p>
+                <p className="font-semibold">{formatCurrency(salary.totalPay ?? 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
+
+function SalaryPostingSwipableCard({
+  posting,
+}: {
+  posting: SalaryPostingRecord;
+}) {
+  const x = useMotionValue(0);
+  const rightOpacity = useTransform(x, [0, 80], [0, 1]);
+  const leftOpacity = useTransform(x, [-80, 0], [1, 0]);
+
+  const handleDragEnd = (_event: any, info: any) => {
+    if (Math.abs(info.offset.x) > 100) {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([40]);
+      }
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border bg-muted/10">
+      {/* Background action fields (underlays) */}
+      <div className="absolute inset-0 z-0 pointer-events-none rounded-xl">
+        <motion.div
+          style={{ opacity: rightOpacity }}
+          className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-cyan-500/5 to-transparent flex items-center justify-start pl-6"
+        >
+          <div className="flex items-center gap-2 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+            <Check className="h-5 w-5 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Review</span>
+          </div>
+        </motion.div>
+        <motion.div
+          style={{ opacity: leftOpacity }}
+          className="absolute inset-0 bg-gradient-to-l from-rose-500/20 via-rose-500/5 to-transparent flex items-center justify-end pr-6"
+        >
+          <div className="flex items-center gap-2 text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">
+            <span className="text-xs font-semibold uppercase tracking-wider">Inspect</span>
+            <AlertCircle className="h-5 w-5 animate-pulse" />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Foreground card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -150, right: 150 }}
+        dragElastic={0.2}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="relative z-10 bg-card rounded-xl border border-transparent shadow-sm select-none cursor-grab active:cursor-grabbing"
+      >
+        <Card>
+          <CardContent className="p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" data-testid={`salary-posting-${posting.id}`}>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">{posting.fullName}</p>
+                <Badge variant="secondary" className="text-xs">
+                  {posting.allocationType === "MONTHLY" ? "Monthly" : "Project"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {periodLabel(posting.month, posting.year)}
+                {posting.projectName ? ` · ${posting.projectName}` : ""}
+              </p>
+            </div>
+            <p className="text-base font-semibold tabular-nums">{formatCurrency(posting.totalPay)}</p>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
 }
 
 function periodLabel(month: number, year: number) {
@@ -60,37 +219,7 @@ export function FinanceSalariesTab({
           <h3 className="text-label text-muted-foreground px-1">Employee profiles</h3>
           <div className="space-y-3 md:hidden">
             {salaries?.map((s) => (
-              <Card key={s.userId} data-testid={`salary-card-${s.userId}`}>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{s.fullName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {s.jobTitle ?? "—"} · {s.teamName ?? "—"}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className={cn("text-xs shrink-0", statusColor(s.payrollStatus ?? ""))}>
-                      {s.payrollStatus}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Base</p>
-                      <p className="font-medium">{formatCurrency(s.baseSalary ?? 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Bonus</p>
-                      <p className="font-medium text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(s.bonus ?? 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Total</p>
-                      <p className="font-semibold">{formatCurrency(s.totalPay ?? 0)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <SalaryProfileSwipableCard key={s.userId} salary={s} />
             ))}
           </div>
           <Card className="hidden md:block">
@@ -139,23 +268,7 @@ export function FinanceSalariesTab({
           <h3 className="text-label text-muted-foreground px-1">Recent postings</h3>
           <div className="space-y-3">
             {postings?.map((p) => (
-              <Card key={p.id} data-testid={`salary-posting-${p.id}`}>
-                <CardContent className="p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{p.fullName}</p>
-                      <Badge variant="secondary" className="text-xs">
-                        {p.allocationType === "MONTHLY" ? "Monthly" : "Project"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {periodLabel(p.month, p.year)}
-                      {p.projectName ? ` · ${p.projectName}` : ""}
-                    </p>
-                  </div>
-                  <p className="text-base font-semibold tabular-nums">{formatCurrency(p.totalPay)}</p>
-                </CardContent>
-              </Card>
+              <SalaryPostingSwipableCard key={p.id} posting={p} />
             ))}
           </div>
         </section>
