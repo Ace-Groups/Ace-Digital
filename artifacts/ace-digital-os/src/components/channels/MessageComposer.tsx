@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type RefObject } from "react";
+import { motion } from "framer-motion";
 import { Bold, Code, Italic, Link2, List, Mic, Paperclip, Send, Strikethrough, Trash2, Type, X } from "lucide-react";
 import {
   insertMarkdownPrefix,
@@ -510,15 +511,16 @@ export function MessageComposer({
               </span>
               <span className="truncate text-xs text-muted-foreground">Tap send when done</span>
             </div>
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.94 }}
               disabled={sending || disabled}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
               onClick={() => void handleVoiceSend()}
               aria-label="Send voice message"
             >
               <Send size={20} />
-            </button>
+            </motion.button>
           </div>
         ) : (
           <div className="flex items-end gap-1.5">
@@ -601,19 +603,20 @@ export function MessageComposer({
             </div>
 
             {showSend && (
-              <button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.94 }}
                 data-testid="btn-send-message"
                 onClick={() => void handleSend()}
                 disabled={!canSend}
                 className={cn(
-                  "flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50",
                   isMobile ? "size-11" : "size-10",
                 )}
                 aria-label="Send message"
               >
                 <Send size={18} className="shrink-0" />
-              </button>
+              </motion.button>
             )}
 
             {showMic && (

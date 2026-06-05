@@ -109,12 +109,185 @@ export default function TasksPage() {
   const { data: tasks, isLoading } = useListTasks(taskParams);
   const { data: employees } = useListEmployees({});
   const { data: teams } = useListTeams();
-  const toggleTask = useToggleTask();
-  const updateTask = useUpdateTask();
-  const deleteTask = useDeleteTask();
-  const createTask = useCreateTask();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const createTask = useCreateTask({
+    mutation: {
+      onMutate: async (variables) => {
+        const queryKey = getListTasksQueryKey(taskParams);
+        await queryClient.cancelQueries({ queryKey });
+        const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+
+        const tempId = -Date.now();
+        const assigneeIds = variables.data.assigneeIds ?? [];
+        const optimistic: Task = {
+          id: tempId,
+          title: variables.data.title,
+          projectId: variables.data.projectId ?? null,
+          assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+          assignees: assigneeIds.map((uid) => ({
+            userId: uid,
+            fullName: employees?.find((e) => e.id === uid)?.fullName ?? "Assignee",
+            completed: false,
+          })),
+          teamId: variables.data.teamId ?? null,
+          priority: variables.data.priority ?? "MEDIUM",
+          dueDate: variables.data.dueDate ?? null,
+          status: variables.data.status ?? "PENDING",
+          progress: 0,
+          createdById: user?.id ?? null,
+          createdByName: user?.fullName ?? null,
+          createdAt: new Date().toISOString(),
+        };
+
+        queryClient.setQueryData<Task[]>(queryKey, (old) => [optimistic, ...(old ?? [])]);
+
+        return { previousTasks, queryKey, tempId };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousTasks) {
+          queryClient.setQueryData(context.queryKey, context.previousTasks);
+        }
+        toast({ title: "Couldn't create task", variant: "destructive" });
+      },
+      onSuccess: (data, variables, context) => {
+        if (context) {
+          queryClient.setQueryData<Task[]>(context.queryKey, (old) =>
+            old?.map((t) => (t.id === context.tempId ? data : t))
+          );
+        }
+        toast({
+          title: "Task created",
+          description:
+            variables.data.assigneeIds && variables.data.assigneeIds.length > 1
+              ? `One shared task for ${variables.data.assigneeIds.length} people.`
+              : variables.data.assigneeIds?.length === 1
+                ? "Task assigned."
+                : "Common task created.",
+        });
+      },
+      onSettled: (data, err, variables, context) => {
+        if (context?.queryKey) {
+          void queryClient.invalidateQueries({ queryKey: context.queryKey });
+        }
+      },
+    },
+  });
+
+  const toggleTask = useToggleTask({
+    mutation: {
+      onMutate: async ({ id }) => {
+        const queryKey = getListTasksQueryKey(taskParams);
+        await queryClient.cancelQueries({ queryKey });
+        const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+
+        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+          old?.map((t) => {
+            if (t.id !== id || !user) return t;
+            const currentChecked = t.assignees?.find((a) => a.userId === user.id)?.completed ?? (t.status === "DONE");
+            const newChecked = !currentChecked;
+            const assignees = (t.assignees ?? []).map((a) =>
+              a.userId === user.id ? { ...a, completed: newChecked } : a,
+            );
+            const done = assignees.filter((a) => a.completed).length;
+            const total = assignees.length || 1;
+            const progress = assignees.length ? Math.round((done / total) * 100) : newChecked ? 100 : 0;
+            return {
+              ...t,
+              assignees,
+              progress,
+              status: progress >= 100 ? "DONE" : progress > 0 ? "IN_PROGRESS" : "PENDING",
+            };
+          })
+        );
+
+        return { previousTasks, queryKey };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousTasks) {
+          queryClient.setQueryData(context.queryKey, context.previousTasks);
+        }
+        toast({ title: "Couldn't update task", variant: "destructive" });
+      },
+      onSettled: (data, err, variables, context) => {
+        if (context?.queryKey) {
+          void queryClient.invalidateQueries({ queryKey: context.queryKey });
+        }
+      },
+    },
+  });
+
+  const updateTask = useUpdateTask({
+    mutation: {
+      onMutate: async ({ id, data }) => {
+        const queryKey = getListTasksQueryKey(taskParams);
+        await queryClient.cancelQueries({ queryKey });
+        const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+
+        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+          old?.map((t) => {
+            if (t.id !== id) return t;
+            return {
+              ...t,
+              title: data.title ?? t.title,
+              projectId: data.projectId !== undefined ? data.projectId : t.projectId,
+              assigneeIds: data.assigneeIds !== undefined ? data.assigneeIds : t.assigneeIds,
+              priority: data.priority ?? t.priority,
+              dueDate: data.dueDate !== undefined ? (data.dueDate || null) : t.dueDate,
+              status: data.status ?? t.status,
+            };
+          })
+        );
+
+        return { previousTasks, queryKey };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousTasks) {
+          queryClient.setQueryData(context.queryKey, context.previousTasks);
+        }
+        toast({ title: "Couldn't save task", variant: "destructive" });
+      },
+      onSuccess: () => {
+        toast({ title: "Task updated" });
+      },
+      onSettled: (data, err, variables, context) => {
+        if (context?.queryKey) {
+          void queryClient.invalidateQueries({ queryKey: context.queryKey });
+        }
+      },
+    },
+  });
+
+  const deleteTask = useDeleteTask({
+    mutation: {
+      onMutate: async ({ id }) => {
+        const queryKey = getListTasksQueryKey(taskParams);
+        await queryClient.cancelQueries({ queryKey });
+        const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+
+        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+          old?.filter((t) => t.id !== id)
+        );
+
+        return { previousTasks, queryKey };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousTasks) {
+          queryClient.setQueryData(context.queryKey, context.previousTasks);
+        }
+        toast({ title: "Couldn't delete task", variant: "destructive" });
+      },
+      onSuccess: () => {
+        toast({ title: "Task deleted" });
+      },
+      onSettled: (data, err, variables, context) => {
+        if (context?.queryKey) {
+          void queryClient.invalidateQueries({ queryKey: context.queryKey });
+        }
+      },
+    },
+  });
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -243,63 +416,19 @@ export default function TasksPage() {
     const teamId = data.teamId && data.teamId !== ALL_TEAMS_VALUE ? Number(data.teamId) : undefined;
     const assigneeIds = selectedAssigneeIds;
     const projectId = resolveProjectId(data.projectId);
-    const queryKey = getListTasksQueryKey(taskParams);
-    const tempId = -Date.now();
-    const optimistic: Task = {
-      id: tempId,
-      title: data.title,
-      projectId: projectId ?? null,
-      assigneeIds: assigneeIds.length ? assigneeIds : undefined,
-      assignees: assigneeIds.map((uid) => ({
-        userId: uid,
-        fullName: employees?.find((e) => e.id === uid)?.fullName ?? "Assignee",
-        completed: false,
-      })),
-      teamId: teamId ?? null,
-      priority: data.priority,
-      dueDate: data.dueDate || null,
-      status: data.status,
-      progress: 0,
-      createdById: user?.id ?? null,
-      createdByName: user?.fullName ?? null,
-      createdAt: new Date().toISOString(),
-    };
     setOpen(false);
     resetCreateForm();
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<Task>(queryClient, queryKey);
-          prependListItem(queryClient, queryKey, optimistic);
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, queryKey, prev),
-        commit: () =>
-          createTask.mutateAsync({
-            data: {
-              title: data.title,
-              projectId,
-              assigneeIds: assigneeIds.length ? assigneeIds : undefined,
-              teamId,
-              priority: data.priority,
-              dueDate: data.dueDate || undefined,
-              status: data.status,
-            },
-          }),
-        reconcile: (created) => replaceListItem(queryClient, queryKey, tempId, created),
-      });
-      toast({
-        title: "Task created",
-        description:
-          assigneeIds.length > 1
-            ? `One shared task for ${assigneeIds.length} people.`
-            : assigneeIds.length === 1
-              ? "Task assigned."
-              : "Common task created.",
-      });
-    } catch {
-      toast({ title: "Couldn't create task", variant: "destructive" });
-    }
+    createTask.mutate({
+      data: {
+        title: data.title,
+        projectId,
+        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+        teamId,
+        priority: data.priority,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+      },
+    });
   }
 
   async function handleToggle(task: Task, checked: boolean) {
@@ -307,32 +436,7 @@ export default function TasksPage() {
       toast({ title: "Only assignees can mark their part done", variant: "destructive" });
       return;
     }
-    const queryKey = getListTasksQueryKey(taskParams);
-    const previous = queryClient.getQueryData<Task[]>(queryKey);
-    queryClient.setQueryData<Task[]>(queryKey, (old) =>
-      old?.map((t) => {
-        if (t.id !== task.id || !user) return t;
-        const assignees = (t.assignees ?? []).map((a) =>
-          a.userId === user.id ? { ...a, completed: checked } : a,
-        );
-        const done = assignees.filter((a) => a.completed).length;
-        const total = assignees.length || 1;
-        const progress = assignees.length ? Math.round((done / total) * 100) : checked ? 100 : 0;
-        return {
-          ...t,
-          assignees,
-          progress,
-          status: progress >= 100 ? "DONE" : progress > 0 ? "IN_PROGRESS" : "PENDING",
-        };
-      }),
-    );
-    try {
-      await toggleTask.mutateAsync({ id: task.id });
-      await queryClient.invalidateQueries({ queryKey });
-    } catch {
-      queryClient.setQueryData(queryKey, previous);
-      toast({ title: "Couldn't update task", variant: "destructive" });
-    }
+    toggleTask.mutate({ id: task.id });
   }
 
   function requestDeleteTask(task: Task) {
@@ -343,22 +447,8 @@ export default function TasksPage() {
   async function confirmDeleteTask() {
     if (!taskToDelete) return;
     const id = taskToDelete.id;
-    const queryKey = getListTasksQueryKey(taskParams);
     setTaskToDelete(null);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<Task>(queryClient, queryKey);
-          removeListItem(queryClient, queryKey, id);
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, queryKey, prev),
-        commit: () => deleteTask.mutateAsync({ id }),
-      });
-      toast({ title: "Task deleted" });
-    } catch {
-      toast({ title: "Couldn't delete task", variant: "destructive" });
-    }
+    deleteTask.mutate({ id });
   }
 
   function openEditTask(task: Task) {
@@ -383,69 +473,29 @@ export default function TasksPage() {
   async function onEditSubmit(data: EditForm) {
     if (!editingTask) return;
     const assigneeIds = editSelectedAssigneeIds;
-    const queryKey = getListTasksQueryKey(taskParams);
     const taskId = editingTask.id;
     setEditOpen(false);
     setEditingTask(null);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<Task>(queryClient, queryKey);
-          patchListItem(queryClient, queryKey, taskId, (t) => ({
-            ...t,
-            title: data.title,
-            projectId: resolveProjectId(data.projectId),
-            assigneeIds,
-            priority: data.priority,
-            dueDate: data.dueDate || null,
-            status: data.status,
-          }));
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, queryKey, prev),
-        commit: () =>
-          updateTask.mutateAsync({
-            id: taskId,
-            data: {
-              title: data.title,
-              projectId: resolveProjectId(data.projectId),
-              assigneeIds,
-              priority: data.priority,
-              dueDate: data.dueDate || undefined,
-              status: data.status,
-            },
-          }),
-        reconcile: (updated) => patchListItem(queryClient, queryKey, taskId, () => updated),
-      });
-      toast({ title: "Task updated" });
-    } catch {
-      toast({ title: "Couldn't save task", variant: "destructive" });
-    }
+    updateTask.mutate({
+      id: taskId,
+      data: {
+        title: data.title,
+        projectId: resolveProjectId(data.projectId),
+        assigneeIds,
+        priority: data.priority,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+      },
+    });
   }
 
   async function handleProjectTask(task: Task, projectIdValue: string) {
     if (!canManageTask(task)) return;
-    const queryKey = getListTasksQueryKey(taskParams);
     const projectId = projectIdValue === NO_PROJECT_VALUE ? null : Number(projectIdValue);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<Task>(queryClient, queryKey);
-          patchListItem(queryClient, queryKey, task.id, (t) => ({ ...t, projectId }));
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, queryKey, prev),
-        commit: () =>
-          updateTask.mutateAsync({
-            id: task.id,
-            data: { projectId } as never,
-          }),
-        reconcile: (updated) => patchListItem(queryClient, queryKey, task.id, () => updated),
-      });
-      toast({ title: "Task project updated" });
-    } catch {
-      toast({ title: "Couldn't update task", variant: "destructive" });
-    }
+    updateTask.mutate({
+      id: task.id,
+      data: { projectId } as never,
+    });
   }
 
   const visibleTasks = useMemo(() => {

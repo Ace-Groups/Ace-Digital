@@ -1,7 +1,7 @@
 import { Suspense, useEffect, type ComponentType } from "react";
 import { lazyWithReload } from "@/lib/lazy-with-reload";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, onlineManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider, type Persister, type PersistedClient } from "@tanstack/react-query-persist-client";
 import { get, set, del } from "idb-keyval";
 import { Toaster } from "@/components/ui/toaster";
@@ -45,6 +45,10 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+    },
+    mutations: {
+      networkMode: "online",
+      retry: 3,
     },
   },
 });
@@ -151,7 +155,12 @@ function App() {
     <ThemeProvider>
       <PersistQueryClientProvider
         client={queryClient}
-        persistOptions={{ persister: idbPersister }}
+        persistOptions={{
+          persister: idbPersister,
+          dehydrateOptions: {
+            shouldDehydrateMutation: () => true,
+          },
+        }}
       >
         <TooltipProvider>
           <AuthProvider>

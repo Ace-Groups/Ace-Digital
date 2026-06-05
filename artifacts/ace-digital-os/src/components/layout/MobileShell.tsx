@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
+import { SyncStatusIndicator } from "./SyncStatusIndicator";
 import { getMobileNavItems } from "@/lib/mobile-nav";
 import type { NavRoute } from "@workspace/rbac";
 import {
@@ -97,6 +98,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
             <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
           )}
         </div>
+        <SyncStatusIndicator />
         <ThemeToggle className="h-11 w-11" />
         <HeaderRefreshButton variant="mobile" />
         <button

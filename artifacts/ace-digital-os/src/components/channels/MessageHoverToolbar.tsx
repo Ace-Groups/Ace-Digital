@@ -28,8 +28,8 @@ export function MessageHoverToolbar({
       className={cn(
         "z-10 flex items-center gap-0.5",
         isMobile
-          ? "relative shrink-0 self-start rounded-lg border border-border bg-[var(--chat-toolbar-bg)] p-0.5 shadow-brand-sm"
-          : "absolute right-2 top-0 translate-y-1 rounded-lg border border-border bg-[var(--chat-toolbar-bg)] p-0.5 opacity-0 shadow-brand-md transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 sm:right-4",
+          ? "relative shrink-0 self-start rounded-lg border border-border dark:border-white/10 bg-background/80 dark:bg-background/60 backdrop-blur-md p-0.5 shadow-brand-sm"
+          : "absolute right-2 top-0 translate-y-1 rounded-lg border border-border dark:border-white/10 bg-background/80 dark:bg-background/60 backdrop-blur-md p-0.5 opacity-0 shadow-brand-md transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 sm:right-4",
         className,
       )}
       onClick={(e) => e.stopPropagation()}

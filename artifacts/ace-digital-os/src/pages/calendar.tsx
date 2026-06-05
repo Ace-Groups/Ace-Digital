@@ -82,9 +82,145 @@ export default function CalendarPage() {
     [employees],
   );
 
-  const createEvent = useCreateCalendarEvent();
-  const updateEvent = useUpdateCalendarEvent();
-  const deleteEvent = useDeleteCalendarEvent();
+  const feedKey = getGetCalendarFeedQueryKey({
+    from: range.from,
+    to: range.to,
+    userId: viewUserId,
+  });
+
+  const createEvent = useCreateCalendarEvent({
+    mutation: {
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: feedKey });
+        const previousFeed = queryClient.getQueryData<CalendarFeedItem[]>(feedKey);
+
+        const tempId = `temp-${Date.now()}`;
+        const startAt = new Date(variables.data.startAt).toISOString();
+        const endAt = variables.data.endAt ? new Date(variables.data.endAt).toISOString() : null;
+
+        const newItem: CalendarFeedItem = {
+          id: tempId,
+          kind: "event",
+          title: variables.data.title,
+          description: variables.data.description || null,
+          eventType: variables.data.eventType,
+          startAt,
+          endAt,
+          location: variables.data.location || null,
+          readOnly: false,
+          ownerId: Number(variables.data.ownerId),
+        };
+
+        queryClient.setQueryData<CalendarFeedItem[]>(feedKey, (old) => {
+          return [newItem, ...(old ?? [])];
+        });
+
+        return { previousFeed, tempId };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousFeed) {
+          queryClient.setQueryData(feedKey, context.previousFeed);
+        }
+        toast({ title: "Failed to create event", variant: "destructive" });
+      },
+      onSuccess: (data, variables, context) => {
+        if (context) {
+          queryClient.setQueryData<CalendarFeedItem[]>(feedKey, (old) =>
+            old?.map((item) =>
+              item.id === context.tempId
+                ? {
+                    id: `event-${data.id}`,
+                    kind: "event",
+                    title: data.title,
+                    description: data.description ?? null,
+                    eventType: data.eventType,
+                    startAt: data.startAt,
+                    endAt: data.endAt ?? null,
+                    location: data.location ?? null,
+                    readOnly: false,
+                    ownerId: data.ownerId,
+                    eventId: data.id,
+                  }
+                : item,
+            ),
+          );
+        }
+        toast({ title: "Event created" });
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: feedKey });
+      },
+    },
+  });
+
+  const updateEvent = useUpdateCalendarEvent({
+    mutation: {
+      onMutate: async ({ id, data }) => {
+        await queryClient.cancelQueries({ queryKey: feedKey });
+        const previousFeed = queryClient.getQueryData<CalendarFeedItem[]>(feedKey);
+
+        const startAt = data.startAt ? new Date(data.startAt).toISOString() : undefined;
+        const endAt = data.endAt !== undefined ? (data.endAt ? new Date(data.endAt).toISOString() : null) : undefined;
+
+        queryClient.setQueryData<CalendarFeedItem[]>(feedKey, (old) =>
+          old?.map((item) =>
+            item.eventId === id
+              ? {
+                  ...item,
+                  title: data.title ?? item.title,
+                  description: data.description !== undefined ? (data.description || null) : item.description,
+                  eventType: data.eventType ?? item.eventType,
+                  startAt: startAt ?? item.startAt,
+                  endAt: endAt !== undefined ? endAt : item.endAt,
+                  location: data.location !== undefined ? (data.location || null) : item.location,
+                }
+              : item,
+          ),
+        );
+
+        return { previousFeed };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousFeed) {
+          queryClient.setQueryData(feedKey, context.previousFeed);
+        }
+        toast({ title: "Failed to update event", variant: "destructive" });
+      },
+      onSuccess: () => {
+        toast({ title: "Event updated" });
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: feedKey });
+      },
+    },
+  });
+
+  const deleteEvent = useDeleteCalendarEvent({
+    mutation: {
+      onMutate: async ({ id }) => {
+        await queryClient.cancelQueries({ queryKey: feedKey });
+        const previousFeed = queryClient.getQueryData<CalendarFeedItem[]>(feedKey);
+
+        queryClient.setQueryData<CalendarFeedItem[]>(feedKey, (old) =>
+          old?.filter((item) => item.eventId !== id),
+        );
+
+        return { previousFeed };
+      },
+      onError: (err, variables, context) => {
+        if (context?.previousFeed) {
+          queryClient.setQueryData(feedKey, context.previousFeed);
+        }
+        toast({ title: "Failed to delete", variant: "destructive" });
+      },
+      onSuccess: () => {
+        toast({ title: "Event deleted" });
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: feedKey });
+      },
+    },
+  });
 
   const monthLabel = cursor.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
@@ -104,12 +240,6 @@ export default function CalendarPage() {
     setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
   }
 
-  const feedKey = getGetCalendarFeedQueryKey({
-    from: range.from,
-    to: range.to,
-    userId: viewUserId,
-  });
-
   async function handleCreate(values: {
     title: string;
     description: string;
@@ -121,69 +251,22 @@ export default function CalendarPage() {
     attendeeIds: number[];
     visibility: string;
   }) {
-    const tempId = `temp-${Date.now()}`;
     const startAt = new Date(values.startAt).toISOString();
     const endAt = values.endAt ? new Date(values.endAt).toISOString() : null;
     setSheetOpen(false);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
-          prependListItem(queryClient, feedKey, {
-            id: tempId,
-            kind: "event",
-            title: values.title,
-            description: values.description || null,
-            eventType: values.eventType,
-            startAt,
-            endAt,
-            location: values.location || null,
-            readOnly: false,
-            ownerId: Number(values.ownerId),
-          });
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, feedKey, prev),
-        commit: () =>
-          createEvent.mutateAsync({
-            data: {
-              title: values.title,
-              description: values.description || undefined,
-              eventType: values.eventType as CalendarEventInputEventType,
-              startAt,
-              endAt: endAt ?? undefined,
-              location: values.location || undefined,
-              ownerId: Number(values.ownerId),
-              attendeeIds: values.attendeeIds,
-              visibility: values.visibility as CalendarEventInputVisibility,
-            },
-          }),
-        reconcile: (created) => {
-          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
-            list.map((item) =>
-              item.id === tempId
-                ? {
-                    id: `event-${created.id}`,
-                    kind: "event",
-                    title: created.title,
-                    description: created.description ?? null,
-                    eventType: created.eventType,
-                    startAt: created.startAt,
-                    endAt: created.endAt ?? null,
-                    location: created.location ?? null,
-                    readOnly: false,
-                    ownerId: created.ownerId,
-                    eventId: created.id,
-                  }
-                : item,
-            ),
-          );
-        },
-      });
-      toast({ title: "Event created" });
-    } catch {
-      toast({ title: "Failed to create event", variant: "destructive" });
-    }
+    createEvent.mutate({
+      data: {
+        title: values.title,
+        description: values.description || undefined,
+        eventType: values.eventType as CalendarEventInputEventType,
+        startAt,
+        endAt: endAt ?? undefined,
+        location: values.location || undefined,
+        ownerId: Number(values.ownerId),
+        attendeeIds: values.attendeeIds,
+        visibility: values.visibility as CalendarEventInputVisibility,
+      },
+    });
   }
 
   async function handleUpdate(values: {
@@ -201,72 +284,26 @@ export default function CalendarPage() {
     const startAt = new Date(values.startAt).toISOString();
     const endAt = values.endAt ? new Date(values.endAt).toISOString() : null;
     setSheetOpen(false);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
-          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
-            list.map((item) =>
-              item.eventId === eventId
-                ? {
-                    ...item,
-                    title: values.title,
-                    description: values.description || null,
-                    eventType: values.eventType,
-                    startAt,
-                    endAt,
-                    location: values.location || null,
-                  }
-                : item,
-            ),
-          );
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, feedKey, prev),
-        commit: () =>
-          updateEvent.mutateAsync({
-            id: eventId,
-            data: {
-              title: values.title,
-              description: values.description || undefined,
-              eventType: values.eventType as CalendarEventInputEventType,
-              startAt,
-              endAt: endAt ?? undefined,
-              location: values.location || undefined,
-              attendeeIds: values.attendeeIds,
-              visibility: values.visibility as CalendarEventInputVisibility,
-            },
-          }),
-        reconcile: () => {
-          void queryClient.invalidateQueries({ queryKey: feedKey });
-        },
-      });
-      toast({ title: "Event updated" });
-    } catch {
-      toast({ title: "Failed to update event", variant: "destructive" });
-    }
+    updateEvent.mutate({
+      id: eventId,
+      data: {
+        title: values.title,
+        description: values.description || undefined,
+        eventType: values.eventType as CalendarEventInputEventType,
+        startAt,
+        endAt: endAt ?? undefined,
+        location: values.location || undefined,
+        attendeeIds: values.attendeeIds,
+        visibility: values.visibility as CalendarEventInputVisibility,
+      },
+    });
   }
 
   async function handleDelete() {
     if (!editing) return;
     const eventId = editing.id;
     setSheetOpen(false);
-    try {
-      await runOptimistic({
-        apply: () => {
-          const prev = snapshotList<CalendarFeedItem>(queryClient, feedKey);
-          patchList<CalendarFeedItem>(queryClient, feedKey, (list) =>
-            list.filter((item) => item.eventId !== eventId),
-          );
-          return prev;
-        },
-        rollback: (prev) => setList(queryClient, feedKey, prev),
-        commit: () => deleteEvent.mutateAsync({ id: eventId }),
-      });
-      toast({ title: "Event deleted" });
-    } catch {
-      toast({ title: "Failed to delete", variant: "destructive" });
-    }
+    deleteEvent.mutate({ id: eventId });
   }
 
   function openNew() {

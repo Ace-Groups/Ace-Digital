@@ -34,7 +34,7 @@ export function ChatWorkspace({
         ) : (
           <div className="flex h-full w-full flex-col overflow-hidden">
             {/* Mobile sticky header with Back button */}
-            <div className="sticky top-0 z-50 flex h-12 shrink-0 items-center border-b border-border bg-[var(--chat-bg)] px-3 pt-[env(safe-area-inset-top)]">
+            <div className="sticky top-0 z-50 flex h-12 shrink-0 items-center border-b border-border dark:border-white/10 bg-background/80 dark:bg-background/60 backdrop-blur-md px-3 pt-[env(safe-area-inset-top)]">
               <button
                 type="button"
                 onClick={onClearSelection}

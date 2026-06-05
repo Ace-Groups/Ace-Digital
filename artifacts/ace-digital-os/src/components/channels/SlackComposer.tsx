@@ -23,7 +23,8 @@ export function SlackComposer(props: MessageComposerProps) {
     >
       <div
         className={cn(
-          "overflow-hidden rounded-lg border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] shadow-sm dark:shadow-none",
+          "overflow-hidden rounded-lg border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] shadow-sm dark:shadow-none transition-all duration-200",
+          "focus-within:ring-2 focus-within:ring-cyan-500/50 focus-within:border-cyan-500/50",
           isMobile && "rounded-xl",
         )}
       >

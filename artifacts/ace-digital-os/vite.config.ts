@@ -57,6 +57,18 @@ export default defineConfig({
               expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
+          {
+            urlPattern: /\/api\/.*/,
+            handler: "NetworkOnly",
+            options: {
+              backgroundSync: {
+                name: "ace-offline-mutations",
+                options: {
+                  maxRetentionTime: 2880, // 48 hours in minutes
+                },
+              },
+            },
+          },
         ],
       },
     }),

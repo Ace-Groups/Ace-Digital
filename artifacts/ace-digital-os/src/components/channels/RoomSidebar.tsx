@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Plus, Search, ChevronDown, ChevronRight, Hash } from "lucide-react";
 import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,12 +64,13 @@ function RoomRow({
   const unread = ch.unreadCount ?? 0;
   const label = channelDisplayName(ch);
   return (
-    <button
+    <motion.button
       type="button"
+      whileTap={{ scale: 0.98 }}
       data-testid={`channel-item-${ch.id}`}
       onClick={() => onSelect(ch.id)}
       className={cn(
-        "mb-0.5 flex w-full min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors active:scale-[0.99]",
+        "mb-0.5 flex w-full min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
         isSelected
           ? "bg-primary/10 font-semibold text-foreground ring-1 ring-inset ring-primary/20 dark:bg-sidebar-accent dark:font-medium dark:text-sidebar-accent-foreground dark:ring-0"
           : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
@@ -105,7 +107,7 @@ function RoomRow({
           {formatUnreadBadge(unread)}
         </span>
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -216,10 +218,10 @@ export function RoomSidebar({
   return (
     <div
       className={cn(
-        "flex flex-col bg-sidebar text-sidebar-foreground",
+        "flex flex-col bg-sidebar text-sidebar-foreground dark:bg-background/60 dark:backdrop-blur-md",
         isMobile
           ? "min-h-0 w-full flex-1 pt-[env(safe-area-inset-top)]"
-          : "w-64 shrink-0 border-r border-sidebar-border",
+          : "w-64 shrink-0 border-r border-sidebar-border dark:border-white/10",
       )}
     >
       <div className="flex min-h-11 items-center justify-between gap-2 border-b border-sidebar-border px-3 py-2">

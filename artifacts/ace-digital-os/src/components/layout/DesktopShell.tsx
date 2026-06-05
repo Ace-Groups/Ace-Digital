@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/design";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
+import { SyncStatusIndicator } from "./SyncStatusIndicator";
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -49,6 +50,7 @@ export function DesktopShell({ children, title, fillViewport }: DesktopShellProp
               className="h-9 w-56 border-border/80 bg-muted/40 pl-9 text-sm focus-visible:ring-primary/30 lg:w-72"
             />
           </div>
+          <SyncStatusIndicator />
           <ThemeToggle />
           <HeaderRefreshButton variant="desktop" />
           <button
