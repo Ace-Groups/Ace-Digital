@@ -21,9 +21,12 @@ export default defineConfig({
       // Avoid disruptive app refresh while users are actively editing.
       registerType: "autoUpdate",
       includeAssets: [
+        "app-icon-source.png",
         "favicon-16.png",
         "favicon-32.png",
         "ace-logo.png",
+        "icons/icon-48.png",
+        "icons/icon-180.png",
         "icons/icon-192.png",
         "icons/icon-512.png",
         "icons/icon-512-maskable.png",
@@ -31,7 +34,7 @@ export default defineConfig({
       ],
       manifest: false,
       workbox: {
-        cacheId: "ace-digital-os-v40",
+        cacheId: "ace-digital-os-v41",
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

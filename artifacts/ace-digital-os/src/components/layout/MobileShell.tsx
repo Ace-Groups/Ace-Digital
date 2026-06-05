@@ -143,7 +143,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           "min-h-0 flex-1 overscroll-contain",
           fillViewport || immersivePage
             ? "flex flex-col overflow-hidden p-0"
-            : "overflow-y-auto px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]",
+            : "overflow-y-auto px-4 py-4",
         )}
       >
         {fillViewport || immersivePage ? children : <PageTransition>{children}</PageTransition>}
@@ -151,8 +151,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
 
       {!hideBottomNav && (
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card/95 backdrop-blur-lg"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="z-50 shrink-0 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
         aria-label="Main navigation"
       >
         <div className="flex h-16 items-stretch justify-around px-1">

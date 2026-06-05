@@ -4,10 +4,22 @@
   "description": "Projects, teams, clients, and finance in one place.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f4f9fc",
+  "background_color": "#052659",
   "theme_color": "#052659",
   "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "/icons/icon-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",

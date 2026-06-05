@@ -210,7 +210,9 @@ body {
 
 @media (max-width: 767px) {
   html,
-  body {
+  body,
+  #root {
+    height: 100%;
     overscroll-behavior-y: none;
   }
 }
