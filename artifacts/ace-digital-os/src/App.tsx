@@ -1,7 +1,9 @@
 import { Suspense, useEffect, type ComponentType } from "react";
 import { lazyWithReload } from "@/lib/lazy-with-reload";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider, type Persister, type PersistedClient } from "@tanstack/react-query-persist-client";
+import { get, set, del } from "idb-keyval";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -38,13 +40,26 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 120_000,
+      staleTime: 1000 * 60 * 60 * 24, // 24 hours
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
     },
   },
 });
+
+const idbPersister: Persister = {
+  persistClient: async (client: PersistedClient) => {
+    await set("reactQuery", client);
+  },
+  restoreClient: async () => {
+    return await get<PersistedClient>("reactQuery");
+  },
+  removeClient: async () => {
+    await del("reactQuery");
+  },
+};
 
 function PageFallback() {
   return <LoadingScreen />;
@@ -134,7 +149,10 @@ function AppRouter() {
 function App() {
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: idbPersister }}
+      >
         <TooltipProvider>
           <AuthProvider>
             <PrefetchBoot />
@@ -148,7 +166,7 @@ function App() {
             </MobileChromeProvider>
           </AuthProvider>
         </TooltipProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ThemeProvider>
   );
 }

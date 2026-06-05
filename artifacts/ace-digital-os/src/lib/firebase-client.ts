@@ -6,7 +6,8 @@ import {
   type Auth,
 } from "firebase/auth";
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
   collection,
   doc,
   query,
@@ -56,7 +57,11 @@ export function getFirebaseDb(): Firestore {
   if (!isFirebaseChatEnabled()) {
     throw new Error("Firebase chat disabled");
   }
-  if (!db) db = getFirestore(ensureApp());
+  if (!db) {
+    db = initializeFirestore(ensureApp(), {
+      localCache: persistentLocalCache(),
+    });
+  }
   return db;
 }
 

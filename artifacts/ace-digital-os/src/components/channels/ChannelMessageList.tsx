@@ -184,6 +184,42 @@ export function ChannelMessageList({
     onShouldAutoScrollChange,
   ]);
 
+  // Smooth scroll to bottom on keyboard focus & visual viewport resizing
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) {
+        requestAnimationFrame(() => {
+          endRef.current?.scrollIntoView({ behavior: "smooth" });
+        });
+        setTimeout(() => {
+          endRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+      }
+    };
+
+    const vv = window.visualViewport;
+    const handleViewportResize = () => {
+      if (vv && vv.height < window.innerHeight - 150) {
+        requestAnimationFrame(() => {
+          endRef.current?.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    if (vv) {
+      vv.addEventListener("resize", handleViewportResize);
+    }
+
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      if (vv) {
+        vv.removeEventListener("resize", handleViewportResize);
+      }
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div className="w-full space-y-2 px-5 py-2">

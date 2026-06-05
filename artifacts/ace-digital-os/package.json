@@ -80,8 +80,11 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@tanstack/query-sync-storage-persister": "^5.90.21",
+    "@tanstack/react-query-persist-client": "^5.90.21",
     "@tanstack/react-virtual": "^3.14.1",
     "firebase": "^12.14.0",
+    "idb-keyval": "^6.2.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   }

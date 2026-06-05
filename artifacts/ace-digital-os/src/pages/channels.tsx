@@ -506,19 +506,6 @@ export default function ChannelsPage() {
     </div>
   );
 
-  const mobileThreadPortal =
-    isMobile &&
-    mobileThreadOpen &&
-    selectedChannelId &&
-    typeof document !== "undefined"
-      ? createPortal(
-          <div className="fixed inset-0 z-[100] flex h-[100dvh] max-h-[100dvh] flex-col bg-background supports-[height:100dvh]:h-[100dvh]">
-            {threadContent}
-          </div>,
-          document.body,
-        )
-      : null;
-
   const threadPanel =
     threadRoot && selectedChannel && selectedChannelId ? (
       <ThreadSidePanel
@@ -532,45 +519,29 @@ export default function ChannelsPage() {
       />
     ) : null;
 
-  const mobileThreadPanelPortal =
-    isMobile && threadRoot && typeof document !== "undefined"
-      ? createPortal(threadPanel, document.body)
-      : null;
-
   return (
     <AppLayout title="" fillViewport>
-      {isMobile ? (
-        <>
-          {showList && (
-            <RoomSidebar
-              channels={channels}
-              isLoading={channelsLoading && !channels}
-              selectedChannelId={selectedChannelId}
-              onSelect={selectChannel}
-              onCreateClick={() => setCreateOpen(true)}
-              canCreate={canCreate}
-              isMobile
-            />
-          )}
-          {mobileThreadPortal}
-          {mobileThreadPanelPortal}
-        </>
-      ) : (
-        <ChatWorkspace
-          sidebar={
-            <RoomSidebar
-              channels={channels}
-              isLoading={channelsLoading && !channels}
-              selectedChannelId={selectedChannelId}
-              onSelect={selectChannel}
-              onCreateClick={() => setCreateOpen(true)}
-              canCreate={canCreate}
-            />
-          }
-          main={threadContent}
-          threadPanel={threadPanel}
-        />
-      )}
+      <ChatWorkspace
+        sidebar={
+          <RoomSidebar
+            channels={channels}
+            isLoading={channelsLoading && !channels}
+            selectedChannelId={selectedChannelId}
+            onSelect={selectChannel}
+            onCreateClick={() => setCreateOpen(true)}
+            canCreate={canCreate}
+            isMobile={isMobile}
+          />
+        }
+        main={threadContent}
+        threadPanel={threadPanel}
+        selectedChannelId={selectedChannelId}
+        onClearSelection={() => {
+          setSelectedChannelId(null);
+          setChannelIdInSearch(null);
+          setMobileThreadOpen(false);
+        }}
+      />
 
       <CreateChannelDialog
         open={createOpen}
