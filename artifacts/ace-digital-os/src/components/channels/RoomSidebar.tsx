@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, ChevronDown, ChevronRight, Hash } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronRight, Hash, Loader2 } from "lucide-react";
 import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,18 @@ import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import { formatUnreadBadge, formatChannelListTime } from "@/lib/chat-display";
-import { useListDms, getListDmsQueryKey } from "@workspace/api-client-react";
+import {
+  useListDms,
+  getListDmsQueryKey,
+  useListEmployees,
+  getListEmployeesQueryKey,
+  useOpenDm,
+  getListChannelsQueryKey,
+} from "@workspace/api-client-react";
 import type { Channel } from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const SECTION_KEY = "ace-chat-sidebar-sections";
 
@@ -175,6 +185,231 @@ function Section({
   );
 }
 
+interface DirectMessagesSectionProps {
+  dms: Channel[];
+  selectedChannelId: number | null;
+  onSelect: (id: number) => void;
+  onOpenDmClick?: () => void;
+}
+
+function DirectMessagesSection({
+  dms,
+  selectedChannelId,
+  onSelect,
+  onOpenDmClick,
+}: DirectMessagesSectionProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const openDm = useOpenDm();
+
+  const [dmSearchQuery, setDmSearchQuery] = useState("");
+  const [collapsed, setCollapsed] = useState(
+    () => loadSectionCollapsed("dms") ?? false
+  );
+  const [loadingUserId, setLoadingUserId] = useState<number | null>(null);
+
+  const { data: employees, isLoading: employeesLoading } = useListEmployees(undefined, {
+    query: {
+      queryKey: getListEmployeesQueryKey(),
+      staleTime: 60_000,
+    },
+  });
+
+  const activeDmPeerUserIds = useMemo(() => {
+    return new Set(
+      (dms ?? []).map((d) => d.dmPeerUserId).filter(Boolean) as number[]
+    );
+  }, [dms]);
+
+  const searchedTeammates = useMemo(() => {
+    const q = dmSearchQuery.trim().toLowerCase();
+    if (!q || !employees) return [];
+    return employees
+      .filter((e) => e.id !== user?.id)
+      .filter(
+        (e) =>
+          e.fullName.toLowerCase().includes(q) ||
+          e.email.toLowerCase().includes(q)
+      );
+  }, [employees, dmSearchQuery, user?.id]);
+
+  const suggestedMembers = useMemo(() => {
+    if (!employees) return [];
+    return employees
+      .filter((e) => e.id !== user?.id)
+      .filter((e) => !activeDmPeerUserIds.has(e.id))
+      .slice(0, 5);
+  }, [employees, activeDmPeerUserIds, user?.id]);
+
+  async function handleSelectEmployee(employeeId: number) {
+    setLoadingUserId(employeeId);
+    try {
+      const channel = await openDm.mutateAsync({ data: { userId: employeeId } });
+      await queryClient.invalidateQueries({ queryKey: getListDmsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
+      onSelect(channel.id);
+      setDmSearchQuery("");
+    } catch {
+      toast({ title: "Could not open direct message", variant: "destructive" });
+    } finally {
+      setLoadingUserId(null);
+    }
+  }
+
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        className="mb-1 flex w-full items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/55 hover:text-sidebar-foreground"
+        onClick={() => {
+          const next = !collapsed;
+          setCollapsed(next);
+          saveSectionCollapsed("dms", next);
+        }}
+      >
+        {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        Direct messages
+        <span className="ml-auto tabular-nums">{dms.length}</span>
+      </button>
+
+      {!collapsed && (
+        <div className="space-y-1">
+          {/* DM Search input */}
+          <div className="relative mx-1.5 mb-2">
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sidebar-foreground/40"
+            />
+            <Input
+              value={dmSearchQuery}
+              onChange={(e) => setDmSearchQuery(e.target.value)}
+              placeholder="Find or message teammate..."
+              className="h-8 border-sidebar-border bg-background/50 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 dark:bg-sidebar-accent/20 dark:text-sidebar-foreground dark:placeholder:text-sidebar-foreground/30 focus-visible:ring-1 focus-visible:ring-primary/30"
+            />
+            {dmSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setDmSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-sidebar-foreground/45 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <Plus size={10} className="rotate-45" />
+              </button>
+            )}
+          </div>
+
+          {/* Searched / filtered view */}
+          {dmSearchQuery ? (
+            <div className="space-y-0.5 px-1.5">
+              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">
+                Teammate Search Results
+              </div>
+              {employeesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="size-4 animate-spin text-sidebar-foreground/40" />
+                </div>
+              ) : searchedTeammates.length === 0 ? (
+                <p className="px-2 py-2 text-xs text-sidebar-foreground/40">No teammate found</p>
+              ) : (
+                searchedTeammates.map((emp) => {
+                  const isPending = loadingUserId === emp.id;
+                  return (
+                    <button
+                      key={emp.id}
+                      type="button"
+                      disabled={isPending || openDm.isPending}
+                      onClick={() => void handleSelectEmployee(emp.id)}
+                      className={cn(
+                        "flex w-full min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
+                        (isPending || openDm.isPending) && "opacity-60"
+                      )}
+                    >
+                      <UserAvatar
+                        fullName={emp.fullName}
+                        avatarUrl={emp.avatarUrl}
+                        className="size-5 shrink-0 rounded-md"
+                        iconSize={10}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{emp.fullName}</span>
+                      {isPending && <Loader2 className="size-3 animate-spin text-sidebar-foreground/40 shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Active DM list */}
+              {dms.length === 0 ? (
+                <p className="px-3 py-1 text-xs text-sidebar-foreground/40">None yet</p>
+              ) : (
+                dms.map((ch) => (
+                  <RoomRow
+                    key={ch.id}
+                    ch={ch}
+                    isSelected={selectedChannelId === ch.id}
+                    onSelect={onSelect}
+                    showHash={false}
+                  />
+                ))
+              )}
+
+              {/* Suggestions list */}
+              {suggestedMembers.length > 0 && (
+                <div className="mt-3 space-y-0.5 pt-2 border-t border-sidebar-border/30 px-1.5">
+                  <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">
+                    Suggested to chat
+                  </div>
+                  {suggestedMembers.map((emp) => {
+                    const isPending = loadingUserId === emp.id;
+                    return (
+                      <button
+                        key={emp.id}
+                        type="button"
+                        disabled={isPending || openDm.isPending}
+                        onClick={() => void handleSelectEmployee(emp.id)}
+                        className={cn(
+                          "group flex w-full min-h-8 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
+                          (isPending || openDm.isPending) && "opacity-60"
+                        )}
+                      >
+                        <UserAvatar
+                          fullName={emp.fullName}
+                          avatarUrl={emp.avatarUrl}
+                          className="size-5 shrink-0 rounded-md opacity-85"
+                          iconSize={10}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-xs">{emp.fullName}</span>
+                        {isPending ? (
+                          <Loader2 className="size-3 animate-spin text-sidebar-foreground/40 shrink-0" />
+                        ) : (
+                          <Plus size={12} className="text-sidebar-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity hover:text-sidebar-foreground shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Plus message button at footer */}
+          {onOpenDmClick && (
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              onClick={onOpenDmClick}
+            >
+              <Plus size={14} />
+              Message someone
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RoomSidebar({
   channels,
   isLoading,
@@ -281,25 +516,11 @@ export function RoomSidebar({
                 ) : null
               }
             />
-            <Section
-              title="Direct messages"
-              sectionKey="dms"
-              channels={dmList}
+            <DirectMessagesSection
+              dms={dmList}
               selectedChannelId={selectedChannelId}
               onSelect={onSelect}
-              showHash={false}
-              footer={
-                onOpenDmClick ? (
-                  <button
-                    type="button"
-                    className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    onClick={onOpenDmClick}
-                  >
-                    <Plus size={14} />
-                    Message someone
-                  </button>
-                ) : null
-              }
+              onOpenDmClick={onOpenDmClick}
             />
           </>
         )}
