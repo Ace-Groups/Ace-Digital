@@ -1,5 +1,7 @@
 /** Rocket.Chat RecordList-inspired ordered list with prepend/append/patch. */
 
+import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
+
 export type RecordListStatus = "loading" | "ready" | "updating";
 
 export type RecordListState<T extends { id: number }> = {
@@ -125,28 +127,37 @@ export class RecordList<T extends { id: number }> {
   }
 
   replaceByClientId(clientId: string, msg: T): void {
-    const items = [...this.state.items];
-    const idx = items.findIndex(
-      (m) =>
-        "clientId" in m &&
-        typeof (m as T & { clientId?: string }).clientId === "string" &&
-        (m as T & { clientId?: string }).clientId === clientId,
-    );
-    if (idx >= 0) {
-      items[idx] = msg;
-    } else {
-      const idIdx = items.findIndex((m) => m.id === msg.id);
-      if (idIdx >= 0) items[idIdx] = msg;
-      else items.push(msg);
-    }
+    const tempId = tempMessageIdFromClientId(clientId);
+    const kept = this.state.items.filter((m) => {
+      if (messageClientId(m) === clientId) return false;
+      if (m.id === tempId) return false;
+      if (m.id === msg.id) return false;
+      return true;
+    });
     this.commit({
       ...this.state,
-      items: sortByCreatedAt(dedupeById(items)),
+      items: sortByCreatedAt(dedupeById([...kept, msg])),
       status: "ready",
     });
   }
 
   upsertOne(incoming: T): void {
+    const clientId = messageClientId(incoming);
+    if (clientId) {
+      const tempId = tempMessageIdFromClientId(clientId);
+      const kept = this.state.items.filter((m) => {
+        if (messageClientId(m) === clientId) return false;
+        if (m.id === tempId) return false;
+        if (m.id === incoming.id) return false;
+        return true;
+      });
+      this.commit({
+        ...this.state,
+        items: sortByCreatedAt(dedupeById([...kept, incoming])),
+        status: "ready",
+      });
+      return;
+    }
     this.mergeRealtime([incoming]);
   }
 

@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnsureChannelJoined, useSocket, useSocketEmit } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 export type PendingMessage = Message & {
   clientId: string;
@@ -30,7 +31,7 @@ function makePendingMessage(
   clientId: string,
 ): PendingMessage {
   return {
-    id: -Math.abs(clientId.split("").reduce((a, c) => a + c.charCodeAt(0), 0)),
+    id: tempMessageIdFromClientId(clientId),
     clientId,
     channelId,
     senderId: user.id,

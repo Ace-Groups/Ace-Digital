@@ -9,6 +9,7 @@ import {
 import { useEnsureChannelJoined, useSocket } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { messagePreviewText } from "@/lib/chat-reply";
+import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 type WsMessage = Message & { clientId?: string };
 
@@ -19,8 +20,9 @@ function messageKey(channelId: number) {
 function hasMessage(list: Message[], incoming: WsMessage): boolean {
   if (list.some((m) => m.id === incoming.id)) return true;
   if (incoming.clientId) {
+    const tempId = tempMessageIdFromClientId(incoming.clientId);
     return list.some(
-      (m) => "clientId" in m && (m as WsMessage).clientId === incoming.clientId,
+      (m) => messageClientId(m) === incoming.clientId || m.id === tempId,
     );
   }
   return false;
@@ -28,26 +30,31 @@ function hasMessage(list: Message[], incoming: WsMessage): boolean {
 
 function upsertMessage(list: Message[], incoming: WsMessage): Message[] {
   if (incoming.clientId) {
-    const idx = list.findIndex(
-      (m) => "clientId" in m && (m as WsMessage).clientId === incoming.clientId,
+    const tempId = tempMessageIdFromClientId(incoming.clientId);
+    const kept = list.filter(
+      (m) =>
+        messageClientId(m) !== incoming.clientId &&
+        m.id !== tempId &&
+        m.id !== incoming.id,
     );
-    if (idx >= 0) {
-      const next = [...list];
-      next[idx] = { ...incoming, clientId: undefined } as Message;
-      return next;
-    }
+    return [...kept, incoming as Message];
   }
   if (list.some((m) => m.id === incoming.id)) {
-    return list.map((m) =>
-      m.id === incoming.id ? ({ ...incoming, clientId: undefined } as Message) : m,
-    );
+    return list.map((m) => (m.id === incoming.id ? (incoming as Message) : m));
   }
   return [...list, incoming as Message];
 }
 
-function stripClientId(msg: WsMessage): Message {
-  const { clientId: _c, ...rest } = msg;
-  return rest as Message;
+function replacePersistedMessage(
+  list: Message[],
+  clientId: string,
+  message: Message,
+): Message[] {
+  const tempId = tempMessageIdFromClientId(clientId);
+  const kept = list.filter(
+    (m) => messageClientId(m) !== clientId && m.id !== tempId && m.id !== message.id,
+  );
+  return [...kept, message];
 }
 
 export type ChannelMessagesRealtimeHandlers = {
@@ -100,7 +107,7 @@ export function useChannelMessagesRealtime(
             : channel,
         ),
       );
-      handlersRef.current?.onUpsert?.(stripClientId(incoming));
+      handlersRef.current?.onUpsert?.(incoming as Message);
     };
 
     const onPersisted = ({
@@ -112,20 +119,9 @@ export function useChannelMessagesRealtime(
     }) => {
       if (message.channelId !== channelId) return;
       const key = messageKey(channelId);
-      queryClient.setQueryData<Message[]>(key, (old) => {
-        const list = old ?? [];
-        const idx = list.findIndex(
-          (m) =>
-            ("clientId" in m && (m as WsMessage).clientId === clientId) || m.id === message.id,
-        );
-        if (idx >= 0) {
-          const next = [...list];
-          next[idx] = message;
-          return next;
-        }
-        if (list.some((m) => m.id === message.id)) return list;
-        return [...list, message];
-      });
+      queryClient.setQueryData<Message[]>(key, (old) =>
+        replacePersistedMessage(old ?? [], clientId, message),
+      );
       handlersRef.current?.onPersisted?.(clientId, message);
     };
 
