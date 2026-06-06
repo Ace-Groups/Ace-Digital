@@ -14,7 +14,44 @@ export function ensureFirebaseAdminApp(): App {
     process.env.GOOGLE_CLOUD_PROJECT;
 
   if (json) {
-    const serviceAccount = JSON.parse(json) as ServiceAccount;
+    let serviceAccount: ServiceAccount;
+    try {
+      serviceAccount = JSON.parse(json) as ServiceAccount;
+    } catch (err) {
+      try {
+        // If dotenv or the environment expanded "\n" to raw newlines,
+        // sanitize raw LFs/CRs inside double-quoted strings.
+        let insideQuotes = false;
+        let escaped = false;
+        let sanitized = "";
+        for (let i = 0; i < json.length; i++) {
+          const char = json[i];
+          if (char === '"' && !escaped) {
+            insideQuotes = !insideQuotes;
+            sanitized += char;
+          } else if (char === '\\' && !escaped) {
+            escaped = true;
+            sanitized += char;
+          } else {
+            if (escaped) {
+              escaped = false;
+            }
+            if (char === '\n' && insideQuotes) {
+              sanitized += "\\n";
+            } else if (char === '\r' && insideQuotes) {
+              sanitized += "\\r";
+            } else {
+              sanitized += char;
+            }
+          }
+        }
+        serviceAccount = JSON.parse(sanitized) as ServiceAccount;
+      } catch (innerErr) {
+        throw new Error(
+          `Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: ${(err as Error).message}`,
+        );
+      }
+    }
     return initializeApp({
       credential: cert(serviceAccount),
       projectId: projectId ?? serviceAccount.projectId,
