@@ -34,5 +34,11 @@ services:
         value: https://ace-digital-os.web.app,https://ace-digital-os.firebaseapp.com
       - key: REDIS_URL
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: APP_LOGIN_URL
+        value: https://ace-digital-os.web.app/login
       - key: SKIP_INSTALL_DEPS
         value: "true"

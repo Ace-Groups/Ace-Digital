@@ -4,8 +4,13 @@ import { Resend } from "resend";
 
 const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://ace-digital-os.web.app/login";
 const DEFAULT_FROM =
-  process.env.EMAIL_FROM ?? "Ace-Digital <onboarding@acedigital.com>";
+  process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.com>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";
+
+const log = (msg: string, ...args: unknown[]) =>
+  console.log(`[email] ${msg}`, ...args);
+const warn = (msg: string, ...args: unknown[]) =>
+  console.warn(`[email] ${msg}`, ...args);
 
 export type CredentialsEmailParams = {
   to: string;
@@ -72,11 +77,15 @@ async function sendViaResend(
   html: string,
 ): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return false;
+  if (!apiKey) {
+    warn("RESEND_API_KEY not set — cannot send email via Resend");
+    return false;
+  }
 
   try {
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
+    log(`Sending "${subject}" to ${to} via Resend (from: ${DEFAULT_FROM})`);
+    const { error, data } = await resend.emails.send({
       from: DEFAULT_FROM,
       to,
       subject,
@@ -84,12 +93,13 @@ async function sendViaResend(
       html,
     });
     if (error) {
-      console.error("[email] Resend error:", error.message);
+      warn("Resend API returned an error:", error.message);
       return false;
     }
+    log(`Resend email sent — id: ${data?.id ?? "unknown"}`);
     return true;
   } catch (err) {
-    console.error("[email] Resend send failed:", err);
+    warn("Resend send threw exception:", err);
     return false;
   }
 }
@@ -102,20 +112,22 @@ async function queueFirebaseMail(
   html: string,
 ): Promise<boolean> {
   if (process.env.USE_FIRESTORE !== "true") {
+    warn("USE_FIRESTORE is not true — skipping Firestore mail queue fallback");
     return false;
   }
 
   try {
     ensureFirebaseAdminApp();
     const db = getFirestore();
-    await db.collection(MAIL_COLLECTION).add({
+    const ref = await db.collection(MAIL_COLLECTION).add({
       to: [to],
       from: DEFAULT_FROM,
       message: { subject, text, html },
     });
+    log(`Queued Firestore mail doc ${ref.id} for ${to} (subject: "${subject}")`);
     return true;
   } catch (err) {
-    console.error("[email] Failed to queue Firebase mail:", err);
+    warn("Failed to queue Firebase mail:", err);
     return false;
   }
 }
@@ -128,14 +140,19 @@ export async function sendCredentialsEmail(params: CredentialsEmailParams): Prom
   }
 
   if (process.env.RESEND_API_KEY?.trim()) {
-    console.warn("[email] Resend failed; not falling back to Firebase mail");
+    warn(
+      "Resend had an API key but failed — refusing to fall back to Firestore queue. " +
+        "Check the Resend error above, or verify your domain in the Resend dashboard.",
+    );
     return false;
   }
 
+  log("Resend not configured, attempting Firestore mail queue fallback...");
   const queued = await queueFirebaseMail(params.to, subject, text, html);
   if (!queued) {
-    console.warn(
-      "[email] No RESEND_API_KEY and Firebase mail queue failed — set RESEND_API_KEY (recommended) or install firestore-send-email extension",
+    warn(
+      "No RESEND_API_KEY and Firestore mail queue also failed. " +
+        "Set RESEND_API_KEY (recommended) in Render env vars, or install the firestore-send-email extension on Firebase.",
     );
   }
   return queued;
