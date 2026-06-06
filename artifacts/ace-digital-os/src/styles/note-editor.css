@@ -11,14 +11,20 @@
 /* Toolbar */
 .note-editor-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 4px;
   padding: 8px 12px;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--card));
   position: sticky;
   top: 0;
   z-index: 10;
+  scrollbar-width: none;
+}
+.note-editor-toolbar::-webkit-scrollbar {
+  display: none;
 }
 
 .note-editor-toolbar-group {
@@ -115,11 +121,14 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .note-editor-content .tiptap {
   padding: 24px 28px;
-  min-height: 300px;
+  flex: 1;
+  min-height: 100%;
   outline: none;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;

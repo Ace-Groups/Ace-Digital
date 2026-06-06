@@ -288,14 +288,13 @@ export default function NotesPage() {
   const isEditorActive = selectedNote != null || creating;
 
   return (
-    <AppLayout>
-      <div className="flex h-full min-h-0">
+    <AppLayout title="Notes" fillViewport>
+      <div className="flex h-full min-h-0 bg-background/50">
         {/* ── Left Sidebar ── */}
         <div
-          className={`flex flex-col border-r bg-card/50 ${
+          className={`flex flex-col border-r bg-card/50 w-full md:w-[320px] md:min-w-[280px] md:max-w-[360px] shrink-0 ${
             isEditorActive ? "hidden md:flex" : "flex"
           }`}
-          style={{ width: 320, minWidth: 280, maxWidth: 360 }}
         >
           <div className="p-4 border-b space-y-3">
             <div className="flex items-center justify-between">
@@ -445,7 +444,11 @@ export default function NotesPage() {
         </div>
 
         {/* ── Right Panel (Editor) ── */}
-        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        <div
+          className={`flex-1 flex flex-col min-h-0 min-w-0 ${
+            isEditorActive ? "flex" : "hidden md:flex"
+          }`}
+        >
           {isEditorActive ? (
             <>
               {/* Editor header */}
@@ -472,16 +475,17 @@ export default function NotesPage() {
                 />
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 ml-auto">
+                <div className="flex items-center gap-1.5 ml-auto">
                   {selectedNote &&
                     selectedNote.createdById === user?.id && (
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-9 px-2 sm:px-3"
                         onClick={() => setShareDialogOpen(true)}
                         title="Share with employees"
                       >
-                        <Share2 className="h-4 w-4 mr-1" />
+                        <Share2 className="h-4 w-4 sm:mr-1.5" />
                         <span className="hidden sm:inline">Share</span>
                       </Button>
                     )}
@@ -489,10 +493,11 @@ export default function NotesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-9 px-2 sm:px-3"
                       onClick={() => setChatDialogOpen(true)}
                       title="Share to chat"
                     >
-                      <MessageSquare className="h-4 w-4 mr-1" />
+                      <MessageSquare className="h-4 w-4 sm:mr-1.5" />
                       <span className="hidden sm:inline">Chat</span>
                     </Button>
                   )}
@@ -500,8 +505,8 @@ export default function NotesPage() {
                     selectedNote.createdById === user?.id && (
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
+                        size="icon"
+                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={handleDelete}
                         title="Delete note"
                       >
@@ -543,20 +548,20 @@ export default function NotesPage() {
           ) : (
             /* Empty state */
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-4 max-w-sm px-6">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
                   <FileText className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold text-foreground">
                     Select a note or create a new one
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Use the sidebar to browse your notes, or click{" "}
-                    <strong>New</strong> to get started.
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Choose an existing note from the sidebar, or click{" "}
+                    <strong className="text-primary font-medium">New Note</strong> to start writing down your ideas and sharing them.
                   </p>
                 </div>
-                <Button onClick={handleNewNote}>
+                <Button onClick={handleNewNote} className="shadow-lg hover:shadow-primary/25">
                   <Plus className="mr-2 h-4 w-4" />
                   New Note
                 </Button>
