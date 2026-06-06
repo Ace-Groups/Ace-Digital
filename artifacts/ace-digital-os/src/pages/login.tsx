@@ -50,6 +50,32 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-fill password from email link (?pw=...) and copy to clipboard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pw = params.get("pw");
+    if (!pw) return;
+
+    form.setValue("password", pw);
+
+    // Copy password to clipboard so user can paste it on the change-password screen
+    navigator.clipboard?.writeText(pw).catch(() => {
+      /* clipboard may be unavailable — silent fail */
+    });
+
+    // Clean URL without reload
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pw");
+    window.history.replaceState({}, "", url.pathname);
+
+    toast({
+      title: "🔑 Password copied!",
+      description:
+        "Your temporary password has been pasted into the form and copied to your clipboard. Just enter your email to log in.",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function onForgotPassword() {
     toast({
       title: "Password reset",

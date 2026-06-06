@@ -64,13 +64,14 @@ function buildCredentialsContent(params: CredentialsEmailParams): {
   html: string;
 } {
   const isWelcome = params.kind === "welcome";
-  const subject = isWelcome ? "Welcome to Ace-Digital" : "Ace-Digital password reset";
+  const subject = isWelcome ? "Welcome to Ace Digital" : "Ace-Digital password reset";
   const intro = isWelcome
-    ? "Your Ace-Digital account has been created."
+    ? "Your Ace-Digital account has been created and is ready to use."
     : "Your Ace-Digital password was reset by an administrator.";
+  const greeting = isWelcome ? "Welcome aboard" : "Hi";
 
   const text = [
-    `Hi ${params.fullName},`,
+    `${greeting}, ${params.fullName}!`,
     "",
     intro,
     "",
@@ -80,22 +81,142 @@ function buildCredentialsContent(params: CredentialsEmailParams): {
     "",
     "You will be asked to set a new password on your next sign-in.",
     "",
-    "— Ace-Digital",
+    "— The Ace Digital Team",
   ].join("\n");
 
-  const html = `
-    <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#0f172a">
-      <h2 style="color:#052659">${isWelcome ? "Welcome to Ace-Digital" : "Password reset"}</h2>
-      <p>Hi ${escapeHtml(params.fullName)},</p>
-      <p>${escapeHtml(intro)}</p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0">
-        <tr><td style="padding:8px 0;color:#64748b">Login URL</td><td><a href="${LOGIN_URL}">${LOGIN_URL}</a></td></tr>
-        <tr><td style="padding:8px 0;color:#64748b">Email</td><td><strong>${escapeHtml(params.email)}</strong></td></tr>
-        <tr><td style="padding:8px 0;color:#64748b">Password</td><td><strong>${escapeHtml(params.password)}</strong></td></tr>
-      </table>
-      <p style="color:#64748b;font-size:14px">You must change your password after signing in.</p>
-    </div>
-  `;
+  // Build a login URL that includes the password as a query param so
+  // the login page can auto-fill it (the login page reads ?pw= and
+  // puts it on the clipboard).
+  const loginWithPw = `${LOGIN_URL}?pw=${encodeURIComponent(params.password)}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0e1a;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <!-- Outer wrapper -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0e1a;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Main card -->
+        <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;border-radius:20px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+
+          <!-- Header gradient banner -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#052659 0%,#5483B3 50%,#7B61FF 100%);padding:44px 36px 36px;text-align:center;">
+              <!-- Logo / Brand mark -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+                <tr>
+                  <td style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:14px;text-align:center;vertical-align:middle;font-size:24px;font-weight:800;color:#ffffff;letter-spacing:-1px;">
+                    AD
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin:0 0 6px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
+                ${isWelcome ? "Welcome to Ace Digital" : "Password Reset"}
+              </h1>
+              <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.7);font-weight:400;">
+                ${isWelcome ? "Your workspace is ready" : "Your credentials have been updated"}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#111827;padding:36px;">
+              <!-- Greeting -->
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#f1f5f9;">
+                ${escapeHtml(greeting)}, ${escapeHtml(params.fullName)}! ${isWelcome ? "👋" : "🔐"}
+              </p>
+              <p style="margin:0 0 28px;font-size:15px;color:#94a3b8;line-height:1.6;">
+                ${escapeHtml(intro)}
+              </p>
+
+              <!-- Credentials card -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(84,131,179,0.25);border-radius:14px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 16px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#5483B3;">
+                      Your Login Credentials
+                    </p>
+
+                    <!-- Email row -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="padding:12px 16px;background-color:rgba(255,255,255,0.04);border-radius:10px;">
+                          <p style="margin:0 0 4px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Email</p>
+                          <p style="margin:0;font-size:15px;font-weight:600;color:#e2e8f0;">${escapeHtml(params.email)}</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Password row -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:12px 16px;background-color:rgba(123,97,255,0.08);border:1px dashed rgba(123,97,255,0.3);border-radius:10px;">
+                          <p style="margin:0 0 4px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#7B61FF;">Temporary Password</p>
+                          <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:1px;font-family:'Courier New',monospace;">${escapeHtml(params.password)}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+                <tr>
+                  <td style="padding:12px 16px;background-color:rgba(245,158,11,0.08);border-left:3px solid #F59E0B;border-radius:0 8px 8px 0;">
+                    <p style="margin:0;font-size:13px;color:#fbbf24;line-height:1.5;">
+                      ⚠️ You'll be asked to change your password after your first login. The button below copies it for you automatically.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${loginWithPw}" target="_blank" style="display:inline-block;padding:16px 48px;background:linear-gradient(135deg,#5483B3 0%,#7B61FF 100%);color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;border-radius:12px;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(84,131,179,0.35);">
+                      Login to Ace Digital →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Alternate link -->
+              <p style="margin:24px 0 0;text-align:center;font-size:12px;color:#475569;line-height:1.5;">
+                Or copy this link:
+                <a href="${LOGIN_URL}" style="color:#5483B3;text-decoration:underline;word-break:break-all;">${LOGIN_URL}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#0d1117;padding:24px 36px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+              <p style="margin:0 0 4px;font-size:13px;color:#475569;">
+                Sent by <strong style="color:#94a3b8;">Ace Digital</strong>
+              </p>
+              <p style="margin:0;font-size:11px;color:#334155;">
+                This is an automated message. Please do not reply directly.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   return { subject, text, html };
 }
