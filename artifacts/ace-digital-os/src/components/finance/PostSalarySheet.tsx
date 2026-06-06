@@ -39,9 +39,10 @@ interface PostSalarySheetProps {
   onOpenChange: (open: boolean) => void;
   saving?: boolean;
   onSubmit: (values: PostSalaryFormValues) => Promise<void>;
+  defaultUserId?: number;
 }
 
-export function PostSalarySheet({ open, onOpenChange, saving, onSubmit }: PostSalarySheetProps) {
+export function PostSalarySheet({ open, onOpenChange, saving, onSubmit, defaultUserId }: PostSalarySheetProps) {
   const { data: employees } = useListEmployees();
   const { data: projects } = useListProjects();
   const [mode, setMode] = useState<"MONTHLY" | "PROJECT">("MONTHLY");
@@ -65,14 +66,14 @@ export function PostSalarySheet({ open, onOpenChange, saving, onSubmit }: PostSa
       setMode("MONTHLY");
       form.reset({
         allocationType: "MONTHLY",
-        userId: "",
+        userId: defaultUserId ? String(defaultUserId) : "",
         period,
         baseSalary: "",
         bonus: "0",
         projectId: "",
       });
     }
-  }, [open, form]);
+  }, [open, form, defaultUserId]);
 
   function setAllocationType(next: "MONTHLY" | "PROJECT") {
     setMode(next);

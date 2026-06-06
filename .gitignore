@@ -15,3 +15,6 @@ firebase/functions/api-app.mjs
 firebase/functions/api-app.mjs.map
 firebase/functions/lib/
 firebase/functions/node_modules/
+dump.rdb
+.commandcode/
+Mascot/

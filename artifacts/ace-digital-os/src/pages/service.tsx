@@ -182,7 +182,7 @@ export default function ServiceDeskPage() {
         ) : (
           <ul className="space-y-2 sm:space-y-3">
             {tickets.map((t) => (
-              <li key={t.id}>
+              <li key={t.id} className="contain-region">
                 <Link href={`/service/${t.id}`}>
                   <Card className="transition-colors hover:border-primary/40 hover:bg-muted/30 active:bg-muted/50">
                     <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">

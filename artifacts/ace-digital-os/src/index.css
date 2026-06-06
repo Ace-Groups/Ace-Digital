@@ -387,3 +387,14 @@ body {
   --chat-composer-border: hsl(var(--border));
   --chat-composer-bg: hsl(var(--card));
 }
+
+.contain-region {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px auto 600px;
+}
+
+@supports not (content-visibility: auto) {
+  .contain-region {
+    contain: layout style paint;
+  }
+}

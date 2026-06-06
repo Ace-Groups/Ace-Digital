@@ -25,6 +25,8 @@ import {
   getListSalariesQueryKey,
   getListSalaryPostingsQueryKey,
   getListExpensesQueryKey,
+  type SalaryRecord,
+  type SalaryPostingRecord,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,6 +120,7 @@ export default function FinancePage() {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [salaryOpen, setSalaryOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
+  const [preselectedUserId, setPreselectedUserId] = useState<number | undefined>(undefined);
 
   // Dual pulse taptic feedback when a validation/allocation layer is popped
   useEffect(() => {
@@ -344,6 +347,32 @@ export default function FinancePage() {
     </>
   );
 
+  const handleReviewProfile = (salary: SalaryRecord) => {
+    setPreselectedUserId(salary.userId);
+    setSalaryOpen(true);
+  };
+
+  const handleInspectProfile = (salary: SalaryRecord) => {
+    toast({
+      title: `Salary Breakdown: ${salary.fullName}`,
+      description: `Base: ${formatCurrency(salary.baseSalary ?? 0)} | Bonus: ${formatCurrency(salary.bonus ?? 0)} | Total: ${formatCurrency(salary.totalPay ?? 0)} (${salary.payrollStatus})`,
+    });
+  };
+
+  const handleReviewPosting = (posting: SalaryPostingRecord) => {
+    toast({
+      title: `Recent Posting: ${posting.fullName}`,
+      description: `Allocated to: ${posting.projectName ?? "Monthly salary"} | Amount: ${formatCurrency(posting.totalPay)}`,
+    });
+  };
+
+  const handleInspectPosting = (posting: SalaryPostingRecord) => {
+    toast({
+      title: `Posting Detail: ${posting.fullName}`,
+      description: `Month: ${posting.month}/${posting.year} | Amount: ${formatCurrency(posting.totalPay)} (${posting.allocationType})`,
+    });
+  };
+
   return (
     <AppLayout title="Finance & Payroll">
       <StaggerList className="page-stack pb-24 sm:pb-8">
@@ -382,6 +411,10 @@ export default function FinancePage() {
                   void refetchSalaries();
                   void refetchPostings();
                 }}
+                onSwipeReviewProfile={handleReviewProfile}
+                onSwipeInspectProfile={handleInspectProfile}
+                onSwipeReviewPosting={handleReviewPosting}
+                onSwipeInspectPosting={handleInspectPosting}
               />
             </TabsContent>
           )}
@@ -460,9 +493,15 @@ export default function FinancePage() {
 
       <PostSalarySheet
         open={salaryOpen}
-        onOpenChange={setSalaryOpen}
+        onOpenChange={(open) => {
+          setSalaryOpen(open);
+          if (!open) {
+            setPreselectedUserId(undefined);
+          }
+        }}
         saving={createSalaryPosting.isPending}
         onSubmit={onSalarySubmit}
+        defaultUserId={preselectedUserId}
       />
 
       <RunPayrollSheet

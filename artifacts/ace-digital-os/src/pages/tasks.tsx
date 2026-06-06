@@ -817,7 +817,7 @@ export default function TasksPage() {
                 <div
                   key={task.id}
                   data-testid={`task-row-${task.id}`}
-                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
+                  className="contain-region flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
                 >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
