@@ -7,8 +7,16 @@ import {
   wrapMarkdownSelection,
 } from "@/lib/chat-markdown";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useMentionAutocomplete } from "@/hooks/use-mention-autocomplete";
-import { insertMentionToken } from "@/lib/chat-mentions";
+import { ChannelIcon } from "@/components/channels/ChannelIcon";
+import { useComposerAutocomplete, type ComposerCandidate } from "@/hooks/use-composer-autocomplete";
+import { insertChannelToken, insertMentionToken } from "@/lib/chat-mentions";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  getListChannelMembersQueryKey,
+  getListChannelsQueryKey,
+  useListChannelMembers,
+  useListChannels,
+} from "@workspace/api-client-react";
 import type { ReplyTarget } from "@/components/channels/ChannelThreadHeader";
 import type { MessageAttachment, MessageInput } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -83,6 +91,7 @@ export function MessageComposer({
   slackStyle = false,
 }: MessageComposerProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
   const keyboardOffset = useKeyboardOffset();
   const [message, setMessage] = useState("");
@@ -104,7 +113,24 @@ export function MessageComposer({
     [composerRef],
   );
 
-  const mention = useMentionAutocomplete(channelId, message, cursor);
+  const { data: channelMembers } = useListChannelMembers(channelId, {
+    query: {
+      enabled: channelId > 0,
+      queryKey: getListChannelMembersQueryKey(channelId),
+      staleTime: 60_000,
+    },
+  });
+  const { data: allChannels } = useListChannels({
+    query: { queryKey: getListChannelsQueryKey(), staleTime: 60_000 },
+  });
+
+  const autocomplete = useComposerAutocomplete({
+    body: message,
+    cursor,
+    members: channelMembers,
+    channels: allChannels,
+    currentUserId: user?.id,
+  });
 
   const voice = useVoiceRecorder();
   const isRecording = voice.state === "recording";
@@ -297,36 +323,45 @@ export function MessageComposer({
     }
   }
 
-  function pickMention(userId: number, fullName: string) {
+  function applyInsertedText(next: string) {
     const el = textareaRef.current;
-    const pos = el?.selectionStart ?? cursor;
-    const next = insertMentionToken(message, pos, userId, fullName);
     setMessage(next);
     requestAnimationFrame(() => {
       el?.focus();
       const c = next.length;
       el?.setSelectionRange(c, c);
       setCursor(c);
+      autoResize();
     });
   }
 
+  function pickCandidate(candidate: ComposerCandidate) {
+    const el = textareaRef.current;
+    const pos = el?.selectionStart ?? cursor;
+    if (candidate.kind === "user") {
+      applyInsertedText(insertMentionToken(message, pos, candidate.userId, candidate.label));
+      return;
+    }
+    applyInsertedText(insertChannelToken(message, pos, candidate.channelId, candidate.label));
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (mention.open && mention.candidates.length > 0) {
+    if (autocomplete.open && autocomplete.candidates.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        mention.moveActive(1);
+        autocomplete.moveActive(1);
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        mention.moveActive(-1);
+        autocomplete.moveActive(-1);
         return;
       }
       if (e.key === "Tab" || e.key === "Enter") {
-        const c = mention.candidates[mention.activeIndex];
+        const c = autocomplete.candidates[autocomplete.activeIndex];
         if (c) {
           e.preventDefault();
-          pickMention(c.userId, c.fullName);
+          pickCandidate(c);
           return;
         }
       }
@@ -540,37 +575,61 @@ export function MessageComposer({
             </button>
 
             <div className="relative min-w-0 flex-1">
-              {mention.open && mention.candidates.length > 0 && (
-                <ul
-                  className="absolute bottom-full left-0 z-20 mb-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md"
+              {autocomplete.open && autocomplete.candidates.length > 0 && (
+                <div
+                  className="absolute bottom-full left-0 z-20 mb-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md"
                   role="listbox"
                 >
-                  {mention.candidates.map((c, i) => (
-                    <li key={c.userId}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={i === mention.activeIndex}
-                        className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted",
-                          i === mention.activeIndex && "bg-muted",
-                        )}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          pickMention(c.userId, c.fullName);
-                        }}
+                  <div className="border-b border-border/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {autocomplete.kind === "channel" ? "Link a channel" : "Mention someone"}
+                  </div>
+                  <ul className="max-h-48 overflow-y-auto py-1">
+                    {autocomplete.candidates.map((c, i) => (
+                      <li
+                        key={c.kind === "user" ? `user-${c.userId}` : `channel-${c.channelId}`}
                       >
-                        <UserAvatar
-                          avatarUrl={c.avatarUrl}
-                          fullName={c.fullName}
-                          className="h-7 w-7"
-                          iconSize={12}
-                        />
-                        <span className="truncate">{c.fullName}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={i === autocomplete.activeIndex}
+                          className={cn(
+                            "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted",
+                            i === autocomplete.activeIndex && "bg-muted",
+                          )}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            pickCandidate(c);
+                          }}
+                        >
+                          {c.kind === "user" ? (
+                            <>
+                              <UserAvatar
+                                avatarUrl={c.avatarUrl}
+                                fullName={c.label}
+                                className="h-7 w-7"
+                                iconSize={12}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate">{c.label}</span>
+                                <span className="text-[10px] text-muted-foreground">Member</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <ChannelIcon channel={c.channel} size={16} className="text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate">#{c.label}</span>
+                                {c.subtitle ? (
+                                  <span className="text-[10px] text-muted-foreground">{c.subtitle}</span>
+                                ) : null}
+                              </div>
+                            </>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               <div
                 className={cn(

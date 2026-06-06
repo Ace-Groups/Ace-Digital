@@ -26,7 +26,7 @@ import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import type { ReplyTarget } from "@/components/channels/ChannelMessageList";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
-import { displayMessageBody } from "@/lib/chat-mentions";
+import { displayMessageBody, type MessageBodyNameMaps } from "@/lib/chat-mentions";
 import {
   replyQuoteFromMetadata,
   replyTargetFromMessage,
@@ -78,6 +78,7 @@ interface MessageBubbleProps {
   isPinned?: boolean;
   onPin?: () => void;
   onUnpin?: () => void;
+  mentionNameMaps?: MessageBodyNameMaps;
 }
 
 function isPending(msg: Message | PendingMessage): msg is PendingMessage {
@@ -111,6 +112,7 @@ export function MessageBubble({
   isPinned = false,
   onPin,
   onUnpin,
+  mentionNameMaps,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -127,7 +129,7 @@ export function MessageBubble({
   const quote = quoteSnapshot
     ? resolveReplyQuoteDisplay(quoteSnapshot, liveMessagesById ?? new Map())
     : null;
-  const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "");
+  const displayBody = deleted ? "" : displayMessageBody(msg.body ?? "", mentionNameMaps);
   const showActions = !pending && !deleted && (onToggleReaction || onReply || canDelete);
 
   const clearLongPress = useCallback(() => {
@@ -267,7 +269,7 @@ export function MessageBubble({
               onCancel={onCancelEdit}
             />
           ) : displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
-            <MessageBody body={msg.body ?? ""} />
+            <MessageBody body={msg.body ?? ""} nameMaps={mentionNameMaps} />
           ) : null}
 
           {/* Cyberpunk Table Info Block */}

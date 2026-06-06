@@ -57,6 +57,7 @@ import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
 import { useChannelMessageOptimistic } from "@/hooks/use-channel-message-optimistic";
 import { usePrefetchChannelMessages } from "@/hooks/use-prefetch-channel-messages";
 import { replyMetadataFromTarget } from "@/lib/chat-reply";
+import { channelDisplayLabel } from "@/lib/chat-mentions";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -124,6 +125,15 @@ export default function ChannelsPage() {
   });
 
   const myRoleFromMembers = channelMembers?.find((m) => m.userId === user?.id)?.role;
+  const mentionNameMaps = useMemo(
+    () => ({
+      userNames: new Map((channelMembers ?? []).map((m) => [m.userId, m.fullName] as const)),
+      channelNames: new Map(
+        (channels ?? []).map((c) => [c.id, channelDisplayLabel(c)] as const),
+      ),
+    }),
+    [channelMembers, channels],
+  );
   const membership =
     selectedChannel?.myRole || myRoleFromMembers
       ? { role: selectedChannel?.myRole ?? myRoleFromMembers ?? "member" }
@@ -562,6 +572,7 @@ export default function ChannelsPage() {
           pinnedMessageIds={pinnedMessageIds}
           onPinMessage={handlePinMessage}
           onUnpinMessage={handleUnpinMessage}
+          mentionNameMaps={mentionNameMaps}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">

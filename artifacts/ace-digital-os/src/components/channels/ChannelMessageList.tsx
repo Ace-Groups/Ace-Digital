@@ -9,6 +9,7 @@ import { messageDayKey } from "@/lib/chat-display";
 import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
 import { cn } from "@/lib/utils";
+import type { MessageBodyNameMaps } from "@/lib/chat-mentions";
 
 function isPendingMessage(msg: Message | PendingMessage): msg is PendingMessage {
   return "status" in msg && (msg.status === "sending" || msg.status === "failed");
@@ -48,6 +49,7 @@ interface ChannelMessageListProps {
   pinnedMessageIds?: ReadonlySet<number>;
   onPinMessage?: (message: Message) => void;
   onUnpinMessage?: (message: Message) => void;
+  mentionNameMaps?: MessageBodyNameMaps;
 }
 
 export function ChannelMessageList({
@@ -78,6 +80,7 @@ export function ChannelMessageList({
   pinnedMessageIds,
   onPinMessage,
   onUnpinMessage,
+  mentionNameMaps,
 }: ChannelMessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -355,6 +358,7 @@ export function ChannelMessageList({
                     ? () => onUnpinMessage(msg as Message)
                     : undefined
                 }
+                mentionNameMaps={mentionNameMaps}
               />
             </div>
           );

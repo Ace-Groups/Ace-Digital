@@ -1,15 +1,16 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { displayMessageBody } from "@/lib/chat-mentions";
+import { displayMessageBody, type MessageBodyNameMaps } from "@/lib/chat-mentions";
 import { cn } from "@/lib/utils";
 
 interface MessageBodyProps {
   body: string;
   className?: string;
+  nameMaps?: MessageBodyNameMaps;
 }
 
-export function MessageBody({ body, className }: MessageBodyProps) {
-  const text = displayMessageBody(body);
+export function MessageBody({ body, className, nameMaps }: MessageBodyProps) {
+  const text = displayMessageBody(body, nameMaps);
   if (!text.trim()) return null;
 
   return (
