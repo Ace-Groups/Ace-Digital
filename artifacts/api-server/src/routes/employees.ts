@@ -6,7 +6,7 @@ import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { employeeWithProfile } from "../lib/employee-serializer";
 import { generateTemporaryPassword } from "../lib/password";
-import { sendCredentialsEmail } from "../lib/email";
+import { sendCredentialsEmail, sendOnboardingSequence } from "../lib/email";
 import {
   allocateEmployeeCode,
   peekNextEmployeeCode,
@@ -162,13 +162,13 @@ router.post(
 
     let emailSent = false;
     if (shouldSendEmail !== false) {
-      emailSent = await sendCredentialsEmail({
+      const result = await sendOnboardingSequence({
         to: email.toLowerCase(),
         fullName,
         email: email.toLowerCase(),
         password: plainPassword,
-        kind: "welcome",
       });
+      emailSent = result.welcomeSent && result.guideSent && result.credentialsSent;
     }
 
     const refreshed = (await store.findUserById(user.id))!;
