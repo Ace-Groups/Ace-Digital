@@ -1,5 +1,4 @@
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { CalendarClock } from "lucide-react";
 import {
   cn,
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DatePickerCalendarPanel } from "@/components/ui/date-picker-calendar-panel";
 import { DatePickerTimePanel } from "@/components/ui/date-picker-time-panel";
+import { MobilePickerSheet } from "@/components/ui/mobile-picker-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface DateTimePickerProps {
@@ -23,69 +23,13 @@ export interface DateTimePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  sheetTitle?: string;
   "data-testid"?: string;
   id?: string;
 }
 
 function defaultTimeParts(): TimeParts {
   return { hour12: 10, minute: 0, meridiem: "AM" };
-}
-
-function MobileDateTimeSheet({
-  open,
-  onClose,
-  selectedLabel,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  selectedLabel: string;
-  children: React.ReactNode;
-}) {
-  React.useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[250] flex flex-col justify-end"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Choose date and time"
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/75 backdrop-blur-[2px]"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative flex max-h-[min(94dvh,780px)] w-full flex-col rounded-t-3xl border-t border-border/80 bg-card shadow-brand-md animate-in slide-in-from-bottom duration-200">
-        <div className="mx-auto mt-3 h-1.5 w-14 shrink-0 rounded-full bg-muted-foreground/30" />
-        <div className="border-b border-border/60 px-5 pb-4 pt-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Date & time
-          </p>
-          <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
-            {selectedLabel}
-          </p>
-        </div>
-        <div className="touch-scroll min-h-0 flex-1 overflow-y-auto">{children}</div>
-        <div className="shrink-0 border-t border-border/60 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <Button type="button" className="h-12 w-full text-base" onClick={onClose}>
-            Done
-          </Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
 }
 
 export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePickerProps>(
@@ -97,6 +41,7 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
       placeholder = "Pick date & time",
       disabled,
       className,
+      sheetTitle = "Date & time",
       "data-testid": dataTestId,
       id,
     },
@@ -130,7 +75,11 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
         onChange?.("");
         return;
       }
-      onChange?.(toDateTimeInputValue(applyTimeParts(date, parts.hour12, parts.minute, parts.meridiem)));
+      onChange?.(
+        toDateTimeInputValue(
+          applyTimeParts(date, parts.hour12, parts.minute, parts.meridiem),
+        ),
+      );
     };
 
     const handleDateSelect = (date: Date | undefined) => {
@@ -166,7 +115,17 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
       commit(today, timeParts);
     };
 
-    const selectedLabel = parsed ? formatDateTimeLabel(value) : placeholder;
+    const draftValue =
+      draftDate != null
+        ? toDateTimeInputValue(
+            applyTimeParts(draftDate, timeParts.hour12, timeParts.minute, timeParts.meridiem),
+          )
+        : "";
+    const selectedLabel = draftValue
+      ? formatDateTimeLabel(draftValue)
+      : parsed
+        ? formatDateTimeLabel(value)
+        : placeholder;
 
     const calendarPanel = (
       <DatePickerCalendarPanel
@@ -185,12 +144,12 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
         parts={timeParts}
         onChange={handleTimeChange}
         size={calendarSize}
-        className={isMobile ? "border-t" : undefined}
+        className={isMobile ? "border-t border-border/80" : undefined}
       />
     );
 
     const panel = isMobile ? (
-      <div className="flex flex-col">
+      <div className="flex flex-col pb-2">
         {calendarPanel}
         {timePanel}
       </div>
@@ -215,8 +174,8 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
           if (!disabled) setOpen(true);
         }}
         className={cn(
-          "h-11 w-full justify-between gap-3 px-3 text-base font-normal shadow-xs md:h-10 md:text-sm",
-          !parsed && "text-muted-foreground",
+          "h-11 w-full touch-manipulation justify-between gap-3 px-3 text-base font-normal shadow-xs md:h-10 md:text-sm",
+          !parsed && !draftDate && "text-muted-foreground",
           open && "border-primary/50 ring-1 ring-primary/30",
           className,
         )}
@@ -230,9 +189,15 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
       return (
         <>
           {trigger}
-          <MobileDateTimeSheet open={open} onClose={close} selectedLabel={selectedLabel}>
+          <MobilePickerSheet
+            open={open}
+            onClose={close}
+            title={sheetTitle}
+            selectedLabel={selectedLabel}
+            zIndex={350}
+          >
             {panel}
-          </MobileDateTimeSheet>
+          </MobilePickerSheet>
         </>
       );
     }

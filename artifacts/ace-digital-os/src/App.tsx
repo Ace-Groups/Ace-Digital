@@ -7,6 +7,7 @@ import { get, set, del } from "idb-keyval";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SocketProvider } from "@/contexts/SocketContext";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -171,6 +172,7 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
+            <SocketProvider>
             <PrefetchBoot />
             <MobileChromeProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -180,6 +182,7 @@ function App() {
               <Toaster />
               <FormEnterNavigation />
             </MobileChromeProvider>
+            </SocketProvider>
           </AuthProvider>
         </TooltipProvider>
       </PersistQueryClientProvider>

@@ -91,7 +91,7 @@ export function PollCard({ msg, channelId, isMe, onVote }: PollCardProps) {
         {meta.allowMultiple ? " · multiple choice" : ""}
         {meta.closesAt ? ` · closes ${formatRelativeTime(meta.closesAt)}` : ""}
       </p>
-      {(meta.closesAt || true) && (
+      {meta.closesAt ? (
         <button
           type="button"
           disabled={linkChat.isPending || linkStatus?.linked}
@@ -114,7 +114,7 @@ export function PollCard({ msg, channelId, isMe, onVote }: PollCardProps) {
           <CalendarPlus size={14} />
           {linkStatus?.linked ? "On your calendar" : "Add deadline to calendar"}
         </button>
-      )}
+      ) : null}
       {linkStatus?.linked && linkStatus.eventId ? (
         <Link href={`/calendar?event=${linkStatus.eventId}`} className="block text-center text-[11px] text-primary">
           View in calendar

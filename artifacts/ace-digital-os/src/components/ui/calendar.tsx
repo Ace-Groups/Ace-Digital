@@ -48,17 +48,17 @@ function Calendar({
         ),
         month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
         nav: cn(
-          "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
+          "absolute inset-x-0 top-0 z-10 flex w-full items-center justify-between gap-1",
           defaultClassNames.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "h-[--cell-size] w-[--cell-size] select-none rounded-lg p-0 aria-disabled:opacity-50 hover:bg-muted",
+          "h-[--cell-size] w-[--cell-size] touch-manipulation select-none rounded-lg p-0 aria-disabled:opacity-50 hover:bg-muted",
           defaultClassNames.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "h-[--cell-size] w-[--cell-size] select-none rounded-lg p-0 aria-disabled:opacity-50 hover:bg-muted",
+          "h-[--cell-size] w-[--cell-size] touch-manipulation select-none rounded-lg p-0 aria-disabled:opacity-50 hover:bg-muted",
           defaultClassNames.button_next
         ),
         month_caption: cn(
@@ -109,16 +109,13 @@ function Calendar({
         ),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("bg-accent rounded-r-md", defaultClassNames.range_end),
-        today: cn(
-          "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
-          defaultClassNames.today
-        ),
+        today: cn("rounded-md", defaultClassNames.today),
         outside: cn(
-          "text-muted-foreground aria-selected:text-muted-foreground",
+          "text-muted-foreground/40 aria-selected:text-muted-foreground",
           defaultClassNames.outside
         ),
         disabled: cn(
-          "text-muted-foreground opacity-50",
+          "text-muted-foreground opacity-40",
           defaultClassNames.disabled
         ),
         hidden: cn("invisible", defaultClassNames.hidden),
@@ -179,6 +176,14 @@ function CalendarDayButton({
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames()
+  const isSelected =
+    modifiers.selected &&
+    !modifiers.range_start &&
+    !modifiers.range_end &&
+    !modifiers.range_middle
+  const isToday = modifiers.today
+  const isPast = modifiers.past && !isToday
+  const isFuture = modifiers.future && !isToday
 
   const ref = React.useRef<HTMLButtonElement>(null)
   React.useEffect(() => {
@@ -191,17 +196,33 @@ function CalendarDayButton({
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}
-      data-selected-single={
-        modifiers.selected &&
-        !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
-      }
+      data-selected-single={isSelected}
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
+      data-day-kind={isSelected ? "selected" : isToday ? "today" : isPast ? "past" : isFuture ? "future" : "default"}
       className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 flex aspect-square h-auto w-full min-w-[--cell-size] flex-col gap-1 rounded-lg text-sm font-medium leading-none active:scale-[0.97] data-[range-end=true]:rounded-lg data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-lg group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] group-data-[size=large]/calendar:text-base [&>span]:text-xs [&>span]:opacity-70",
+        "touch-manipulation flex aspect-square h-auto w-full min-w-[--cell-size] flex-col gap-1 rounded-lg text-sm font-medium leading-none active:scale-[0.96]",
+        "data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground",
+        "data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground",
+        "data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground",
+        "group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px]",
+        isSelected &&
+          "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/40 hover:bg-primary hover:text-primary-foreground",
+        !isSelected &&
+          isToday &&
+          "bg-primary/12 font-bold text-primary ring-2 ring-primary/60 hover:bg-primary/18",
+        !isSelected &&
+          isPast &&
+          "text-muted-foreground/45 hover:bg-muted/50 hover:text-muted-foreground/70",
+        !isSelected &&
+          isFuture &&
+          "text-foreground hover:bg-muted/70",
+        !isSelected &&
+          !isToday &&
+          !isPast &&
+          !isFuture &&
+          "text-foreground hover:bg-muted/60",
         defaultClassNames.day,
         className
       )}

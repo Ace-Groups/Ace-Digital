@@ -1,5 +1,6 @@
 import { Link } from "wouter";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatScheduleLabel } from "@/lib/calendar-core";
 import type { CalendarFeedItem } from "@workspace/api-client-react";
 import { KIND_COLORS } from "@/components/calendar/CalendarMonthView";
 import { CheckSquare, MessageSquare } from "lucide-react";
@@ -32,7 +33,7 @@ export function CalendarAgendaView({ items, selectedDate, onSelectItem }: Calend
           <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", KIND_COLORS[it.kind] ?? "bg-primary")} />
           <div className="min-w-0 flex-1">
             <p className="font-medium">{it.title}</p>
-            <p className="text-xs text-muted-foreground">{formatRelativeTime(it.startAt)}</p>
+            <p className="text-xs text-muted-foreground">{formatScheduleLabel(it.startAt)}</p>
             {it.location ? <p className="text-xs text-muted-foreground">{it.location}</p> : null}
           </div>
           {it.readOnly && it.kind === "task" && it.taskId ? (

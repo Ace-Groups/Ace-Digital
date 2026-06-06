@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -335,6 +335,21 @@ export default function CalendarPage() {
     }
     setSheetOpen(true);
   }
+
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandled.current || isLoading) return;
+    const params = new URLSearchParams(window.location.search);
+    const eventId = Number(params.get("event"));
+    if (!Number.isFinite(eventId) || eventId <= 0) return;
+    const item = feed?.find((i) => i.eventId === eventId);
+    if (!item) return;
+    deepLinkHandled.current = true;
+    void openItem(item);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("event");
+    window.history.replaceState({}, "", url.pathname + url.search);
+  }, [feed, isLoading]);
 
   return (
     <AppLayout title="Calendar">

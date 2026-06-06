@@ -18,8 +18,21 @@ export function formatCurrency(amount: number | string): string {
 export function formatRelativeTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
+
+  if (diffMs < 0) {
+    const futureMins = Math.abs(Math.floor(diffMs / 60000));
+    const futureHours = Math.abs(Math.floor(diffMs / 3600000));
+    const futureDays = Math.abs(Math.floor(diffMs / 86400000));
+    if (futureMins < 60) return `in ${futureMins}m`;
+    if (futureHours < 24) return `in ${futureHours}h`;
+    if (futureDays < 7) return `in ${futureDays}d`;
+    return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  }
+
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);

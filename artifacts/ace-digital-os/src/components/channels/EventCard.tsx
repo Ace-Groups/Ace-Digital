@@ -1,6 +1,7 @@
 import { useLinkChatToCalendar, useCheckCalendarChatLink, getCheckCalendarChatLinkQueryKey } from "@workspace/api-client-react";
 import type { Message } from "@workspace/api-client-react";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatScheduleLabel } from "@/lib/calendar-core";
 import { useAuth } from "@/contexts/AuthContext";
 import { CalendarDays, MapPin, CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -60,8 +61,8 @@ export function EventCard({ msg, channelId, isMe, onRsvp }: EventCardProps) {
         <div className="min-w-0">
           <p className="font-semibold">{meta.title}</p>
           <p className="text-xs text-muted-foreground">
-            {formatRelativeTime(meta.startAt)}
-            {meta.endAt ? ` – ${formatRelativeTime(meta.endAt)}` : ""}
+            {formatScheduleLabel(meta.startAt)}
+            {meta.endAt ? ` – ${formatScheduleLabel(meta.endAt)}` : ""}
           </p>
           {meta.location ? (
             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">

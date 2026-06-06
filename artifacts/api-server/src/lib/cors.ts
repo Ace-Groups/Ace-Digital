@@ -10,9 +10,13 @@ const DEFAULT_ORIGINS = [
   "http://127.0.0.1:21973",
 ];
 
-export function getCorsOptions(): cors.CorsOptions {
+export function getAllowedOrigins(): string[] {
   const extra = process.env.CORS_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? [];
-  const allowed = new Set([...DEFAULT_ORIGINS, ...extra]);
+  return [...new Set([...DEFAULT_ORIGINS, ...extra])];
+}
+
+export function getCorsOptions(): cors.CorsOptions {
+  const allowed = new Set(getAllowedOrigins());
 
   return {
     origin(origin, callback) {

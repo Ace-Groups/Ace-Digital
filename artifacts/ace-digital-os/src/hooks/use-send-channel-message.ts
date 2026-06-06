@@ -7,12 +7,17 @@ import {
   type MessageInput,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSocket, useSocketEmit } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 
 export type PendingMessage = Message & {
   clientId: string;
-  status: "sending" | "failed";
+  status: "sending" | "failed" | "delivered";
 };
+
+type SendAck =
+  | { status: "success"; clientId: string; message: Message & { clientId?: string } }
+  | { status: "error"; error: string; clientId?: string };
 
 function messageQueryKey(channelId: number) {
   return getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS);
@@ -48,6 +53,8 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const sendMessage = useSendMessage();
+  const { connected } = useSocket();
+  const socketEmit = useSocketEmit();
   const pendingRef = useRef<Map<string, PendingMessage>>(new Map());
   const onAppend = options?.onAppend;
 
@@ -112,21 +119,50 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
     [channelId, user, appendPending],
   );
 
+  const flushPendingHttp = useCallback(
+    async (clientId: string, payload: MessageInput) => {
+      if (!channelId || !user) throw new Error("Not ready");
+      const result = await sendMessage.mutateAsync({ id: channelId, data: payload });
+      replacePending(clientId, result);
+      return result;
+    },
+    [channelId, user, replacePending, sendMessage],
+  );
+
   const flushPending = useCallback(
     async (
       clientId: string,
       payload: MessageInput,
-      previewAttachments?: MessageInput["attachments"],
+      _previewAttachments?: MessageInput["attachments"],
     ) => {
       if (!channelId || !user) throw new Error("Not ready");
 
+      if (connected) {
+        try {
+          const ack = (await socketEmit("message:send", {
+            channelId,
+            clientId,
+            body: payload.body,
+            attachments: payload.attachments,
+            messageKind: payload.messageKind,
+            metadata: payload.metadata,
+            parentMessageId: payload.parentMessageId,
+          })) as SendAck;
+          if (ack.status === "success" && ack.message) {
+            const { clientId: _c, ...msg } = ack.message;
+            replacePending(clientId, msg as Message);
+            return msg as Message;
+          }
+          throw new Error(ack.status === "error" ? ack.error : "Send failed");
+        } catch (err) {
+          if (import.meta.env.DEV) {
+            console.warn("[chat-send] socket failed, falling back to HTTP", err);
+          }
+        }
+      }
+
       try {
-        const result = await sendMessage.mutateAsync({
-          id: channelId,
-          data: payload,
-        });
-        replacePending(clientId, result);
-        return result;
+        return await flushPendingHttp(clientId, payload);
       } catch (err) {
         markFailed(clientId);
         const message =
@@ -138,7 +174,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
         throw new Error(message);
       }
     },
-    [channelId, user, replacePending, markFailed, sendMessage],
+    [channelId, user, connected, socketEmit, replacePending, markFailed, flushPendingHttp],
   );
 
   const send = useCallback(

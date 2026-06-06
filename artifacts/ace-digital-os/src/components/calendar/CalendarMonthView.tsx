@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { getDayKind, isSameDay } from "@/lib/calendar-core";
 import type { CalendarFeedItem } from "@workspace/api-client-react";
 
 const KIND_COLORS: Record<string, string> = {
@@ -61,25 +62,35 @@ export function CalendarMonthView({
       <div className="grid grid-cols-7 gap-1">
         {weeks.flat().map((day) => {
           const inMonth = day.getMonth() === month.getMonth();
-          const isSelected = day.toDateString() === selectedDate.toDateString();
+          const isSelected = isSameDay(day, selectedDate);
+          const dayKind = getDayKind(day);
           const dayItems = itemsOnDay(day);
           return (
             <button
               key={day.toISOString()}
               type="button"
               onClick={() => onSelectDate(day)}
+              data-day-kind={isSelected ? "selected" : dayKind}
               className={cn(
-                "flex min-h-[3.25rem] flex-col items-center rounded-xl border p-1 text-sm transition-colors sm:min-h-[4.5rem]",
-                inMonth ? "border-border/60 bg-card/40" : "border-transparent bg-muted/20 text-muted-foreground",
-                isSelected && "border-primary ring-1 ring-primary/30",
+                "touch-manipulation flex min-h-[3.25rem] flex-col items-center rounded-xl border p-1 text-sm transition-colors sm:min-h-[4.5rem]",
+                inMonth ? "border-border/50" : "border-transparent opacity-50",
+                !isSelected && dayKind === "past" && inMonth && "bg-muted/20 text-muted-foreground/50",
+                !isSelected && dayKind === "today" && "border-primary/50 bg-primary/10 font-bold text-primary ring-2 ring-primary/40",
+                !isSelected && dayKind === "future" && inMonth && "bg-card/60 text-foreground hover:bg-muted/40",
+                isSelected && "border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30",
               )}
             >
-              <span className={cn("font-medium", isSelected && "text-primary")}>{day.getDate()}</span>
+              <span className={cn("font-medium", isSelected && "text-primary-foreground")}>
+                {day.getDate()}
+              </span>
               <div className="mt-1 flex flex-wrap justify-center gap-0.5">
                 {dayItems.slice(0, 3).map((it) => (
                   <span
                     key={it.id}
-                    className={cn("h-1.5 w-1.5 rounded-full", KIND_COLORS[it.kind] ?? "bg-muted-foreground")}
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      isSelected ? "bg-primary-foreground/80" : (KIND_COLORS[it.kind] ?? "bg-muted-foreground"),
+                    )}
                   />
                 ))}
               </div>

@@ -12,6 +12,7 @@ Render hosts the Express REST API. Firebase Hosting serves the SPA, and Firestor
 | `USE_FIRESTORE` | `true` |
 | `GCLOUD_PROJECT` | `ace-digital-os` |
 | `JWT_SECRET` | Same secret as production auth |
+| `REDIS_URL` | Render Redis internal URL (BullMQ message queue) |
 | `SKIP_INSTALL_DEPS` | `true` |
 
 ## Render service

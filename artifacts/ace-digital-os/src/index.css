@@ -335,6 +335,14 @@ body {
     min-height: 3.25rem;
   }
 
+  .calendar-panel [data-day-kind="past"]:not([data-selected-single="true"]) {
+    opacity: 1;
+  }
+
+  .calendar-panel-large [data-day-kind="today"]:not([data-selected-single="true"]) {
+    font-size: 1.0625rem;
+  }
+
   .mobile-form {
     @apply space-y-4;
   }

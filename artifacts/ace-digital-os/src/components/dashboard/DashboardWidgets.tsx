@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Users, TrendingUp } from "lucide-react";
 import { formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
+import { formatScheduleLabel } from "@/lib/calendar-core";
 import type { DashboardData } from "@workspace/api-client-react";
 
 interface DashboardWidgetsProps {
@@ -107,7 +108,7 @@ export function UpcomingCalendarWidget({ dash, isLoading }: { dash?: DashboardDa
                 <a key={item.id} href={href} className="surface-muted flex min-h-[44px] items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/60">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{formatRelativeTime(item.startAt)}</p>
+                    <p className="text-xs text-muted-foreground">{formatScheduleLabel(item.startAt)}</p>
                   </div>
                   <Badge variant="outline" className="shrink-0 capitalize">{item.kind.replace("_", " ")}</Badge>
                 </a>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { parseDateTimeInput } from "@/lib/utils";
 
 interface CreateEventSheetProps {
   open: boolean;
@@ -17,25 +18,43 @@ interface CreateEventSheetProps {
   }) => void;
 }
 
+function toIsoFromLocalInput(value: string): string {
+  const parsed = parseDateTimeInput(value);
+  if (!parsed) return new Date(value).toISOString();
+  return parsed.toISOString();
+}
+
 export function CreateEventSheet({ open, onOpenChange, onCreate }: CreateEventSheetProps) {
   const [title, setTitle] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
   const [location, setLocation] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setTitle("");
     setStartAt("");
     setEndAt("");
     setLocation("");
+    setError(null);
   }
+
+  const startDate = parseDateTimeInput(startAt);
+  const endDate = parseDateTimeInput(endAt);
+  const endBeforeStart =
+    startDate && endDate ? endDate.getTime() < startDate.getTime() : false;
 
   function handleSubmit() {
     if (!title.trim() || !startAt) return;
+    if (endBeforeStart) {
+      setError("End time must be after start time.");
+      return;
+    }
+    setError(null);
     onCreate({
       title: title.trim(),
-      startAt: new Date(startAt).toISOString(),
-      endAt: endAt ? new Date(endAt).toISOString() : null,
+      startAt: toIsoFromLocalInput(startAt),
+      endAt: endAt ? toIsoFromLocalInput(endAt) : null,
       location: location.trim() || null,
       rsvps: { going: [], maybe: [], no: [] },
     });
@@ -60,8 +79,12 @@ export function CreateEventSheet({ open, onOpenChange, onCreate }: CreateEventSh
           <DateTimePicker
             id="event-start"
             value={startAt}
-            onChange={setStartAt}
+            onChange={(v) => {
+              setStartAt(v);
+              setError(null);
+            }}
             placeholder="Start date & time"
+            sheetTitle="Event start"
           />
         </div>
         <div className="space-y-2">
@@ -69,9 +92,16 @@ export function CreateEventSheet({ open, onOpenChange, onCreate }: CreateEventSh
           <DateTimePicker
             id="event-end"
             value={endAt}
-            onChange={setEndAt}
+            onChange={(v) => {
+              setEndAt(v);
+              setError(null);
+            }}
             placeholder="End date & time"
+            sheetTitle="Event end"
           />
+          {endBeforeStart ? (
+            <p className="text-xs text-destructive">End must be after start.</p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="event-location">Location (optional)</Label>
@@ -82,7 +112,12 @@ export function CreateEventSheet({ open, onOpenChange, onCreate }: CreateEventSh
             placeholder="Office / Zoom link"
           />
         </div>
-        <Button className="w-full" onClick={handleSubmit} disabled={!title.trim() || !startAt}>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Button
+          className="w-full"
+          onClick={handleSubmit}
+          disabled={!title.trim() || !startAt || endBeforeStart}
+        >
           Send event
         </Button>
         <p className="text-center text-[11px] text-muted-foreground">

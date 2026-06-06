@@ -32,5 +32,7 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: https://ace-digital-os.web.app,https://ace-digital-os.firebaseapp.com
+      - key: REDIS_URL
+        sync: false
       - key: SKIP_INSTALL_DEPS
         value: "true"
