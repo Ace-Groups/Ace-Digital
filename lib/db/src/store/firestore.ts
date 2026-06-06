@@ -19,6 +19,7 @@ import type {
   CalendarEvent,
   ServiceTicket,
   ServiceRecord,
+  Note,
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { normalizeMessageAttachments, sanitizeMessageAttachments } from "../message-attachments";
@@ -39,6 +40,8 @@ import type {
   UpdateChannelInput,
   ChannelMemberWithUser,
   ChannelMemberRole,
+  CreateNoteInput,
+  UpdateNoteInput,
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
 import {
@@ -83,6 +86,7 @@ const COL = {
   salaryPostings: "salary_postings",
   serviceTickets: "service_tickets",
   serviceRecords: "service_records",
+  notes: "notes",
 } as const;
 
 const EMPLOYEE_CODE_SEQ_KEY = "employeeCodeSeq";
@@ -1647,6 +1651,61 @@ export function createFirestoreStore() {
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
+    async listNotes(userId: number, filters?: { teamId?: number }): Promise<Note[]> {
+      const user = await this.findUserById(userId);
+      const userTeamId = user?.teamId;
+
+      const snap = await db.collection(COL.notes).get();
+      let notes = snap.docs.map(d => mapNote(d.data(), d.id));
+
+      notes = notes.filter(n => {
+        if (n.createdById === userId) return true;
+        if (userTeamId && n.teamId === userTeamId) return true;
+        if (n.sharedUserIds.includes(userId)) return true;
+        return false;
+      });
+
+      if (filters?.teamId != null) {
+        notes = notes.filter(n => n.teamId === filters.teamId);
+      }
+
+      return notes.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    },
+
+    async findNoteById(id: number): Promise<Note | null> {
+      const snap = await db.collection(COL.notes).doc(docId(id)).get();
+      if (!snap.exists) return null;
+      return mapNote(snap.data()!, snap.id);
+    },
+
+    async createNote(data: CreateNoteInput): Promise<Note> {
+      const id = await nextId(COL.notes);
+      const now = new Date().toISOString();
+      const row = {
+        title: data.title,
+        content: data.content,
+        createdById: data.createdById,
+        teamId: data.teamId ?? null,
+        sharedUserIds: data.sharedUserIds ?? [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.collection(COL.notes).doc(docId(id)).set(row);
+      return mapNote(row, String(id));
+    },
+
+    async updateNote(id: number, patch: UpdateNoteInput): Promise<Note | null> {
+      const ref = db.collection(COL.notes).doc(docId(id));
+      if (!(await ref.get()).exists) return null;
+      await ref.set({ ...serializeNote(patch as Partial<Note>), updatedAt: new Date().toISOString() }, { merge: true });
+      const snap = await ref.get();
+      return mapNote(snap.data()!, snap.id);
+    },
+
+    async deleteNote(id: number): Promise<void> {
+      await db.collection(COL.notes).doc(docId(id)).delete();
+    },
+
     async getDashboardSnapshot(ctx: AccessContext): Promise<DashboardSnapshot> {
       const self = this;
       return buildDashboardSnapshot(ctx, {
@@ -2042,6 +2101,27 @@ function serializeServiceRecord(p: Partial<ServiceRecord>): Record<string, unkno
   }
   delete out.id;
   delete out.createdAt;
+  return out;
+}
+
+function mapNote(data: FirebaseFirestore.DocumentData, id: string): Note {
+  return {
+    id: Number(id),
+    title: data.title as string,
+    content: (data.content as string) ?? "",
+    createdById: data.createdById as number,
+    teamId: (data.teamId as number) ?? null,
+    sharedUserIds: Array.isArray(data.sharedUserIds) ? (data.sharedUserIds as number[]) : [],
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+function serializeNote(p: Partial<Note>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...p };
+  delete out.id;
+  delete out.createdAt;
+  delete out.updatedAt;
   return out;
 }
 

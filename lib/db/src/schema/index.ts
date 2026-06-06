@@ -17,3 +17,4 @@ export * from "./activity";
 export * from "./calendar";
 export * from "./service_tickets";
 export * from "./service_records";
+export * from "./notes";

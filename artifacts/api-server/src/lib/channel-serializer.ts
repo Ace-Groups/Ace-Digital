@@ -17,6 +17,19 @@ export async function channelToJson(
   let lastMessagePreview = options?.lastMessagePreview ?? null;
   let lastReadMessageId = options?.lastReadMessageId ?? null;
 
+  let dmPeerUserId: number | null = null;
+  let dmPeerName: string | null = null;
+  let dmPeerAvatar: string | null = null;
+
+  if (channel.type === "DM" && options?.userId != null) {
+    const peer = members.find((m) => m.userId !== options.userId);
+    if (peer) {
+      dmPeerUserId = peer.userId;
+      dmPeerName = peer.fullName;
+      dmPeerAvatar = peer.avatarUrl ?? null;
+    }
+  }
+
   if (options?.userId != null && options.unreadCount === undefined) {
     const meta = await store.listChannelListMeta([channel.id], options.userId);
     unreadCount = meta.unreadCounts.get(channel.id) ?? 0;
@@ -40,6 +53,9 @@ export async function channelToJson(
     lastPostAt: channel.lastPostAt?.toISOString() ?? null,
     lastMessagePreview,
     lastReadMessageId,
+    dmPeerUserId,
+    dmPeerName,
+    dmPeerAvatar,
     createdById: channel.createdById ?? null,
     createdAt: channel.createdAt.toISOString(),
   };

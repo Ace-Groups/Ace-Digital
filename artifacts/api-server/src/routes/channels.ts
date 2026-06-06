@@ -214,7 +214,7 @@ router.post(
       }
     }
 
-    res.status(201).json(await channelToJson(channel, { myRole: "owner" }));
+    res.status(201).json(await channelToJson(channel, { myRole: "owner", userId: ctx.userId }));
   },
 );
 
@@ -237,7 +237,7 @@ router.get(
     const myRole =
       access.membership?.role ??
       (hasPermission(ctx, "channels:all") ? "owner" : null);
-    res.json(await channelToJson(access.channel, { myRole }));
+    res.json(await channelToJson(access.channel, { myRole, userId: ctx.userId }));
   },
 );
 
@@ -319,6 +319,7 @@ router.patch(
     res.json(
       await channelToJson(updated, {
         myRole: access.membership?.role ?? "owner",
+        userId: ctx.userId,
       }),
     );
   },
@@ -734,7 +735,33 @@ router.post(
 
             const members = await store.listChannelMembers(id);
             const mentioned = extractMentionedUserIds(payload.body, members);
-            const preview = messagePreview(message.body, message.attachments, message.messageKind);
+            let preview = messagePreview(message.body, message.attachments, message.messageKind);
+
+            const MENTION_TOKEN = /@\[(\d+)\]/g;
+            const CHANNEL_TOKEN = /#\[(\d+)\]/g;
+            const userIds = new Set<number>();
+            const channelIds = new Set<number>();
+            for (const match of preview.matchAll(MENTION_TOKEN)) userIds.add(Number(match[1]));
+            for (const match of preview.matchAll(CHANNEL_TOKEN)) channelIds.add(Number(match[1]));
+            
+            const userNames = new Map<number, string>();
+            const channelNames = new Map<number, string>();
+            
+            if (userIds.size > 0) {
+              const users = await store.listUsers();
+              for (const u of users) userNames.set(u.id, u.fullName);
+            }
+            if (channelIds.size > 0) {
+              const channels = await store.listChannels();
+              for (const c of channels) channelNames.set(c.id, c.name);
+            }
+            
+            preview = preview.replace(MENTION_TOKEN, (_, uid) => {
+              return `@${userNames.get(Number(uid)) ?? "user"}`;
+            });
+            preview = preview.replace(CHANNEL_TOKEN, (_, cid) => {
+              return `#${channelNames.get(Number(cid)) ?? "channel"}`;
+            });
 
             if (mentioned.length > 0) {
               await notifyChannelMembers(

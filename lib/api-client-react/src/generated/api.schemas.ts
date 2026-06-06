@@ -1138,6 +1138,34 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface Note {
+  id: number;
+  title: string;
+  content: string;
+  createdById: number;
+  /** @nullable */
+  teamId?: number | null;
+  sharedUserIds: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NoteInput {
+  title: string;
+  content: string;
+  /** @nullable */
+  teamId?: number | null;
+  sharedUserIds?: number[];
+}
+
+export interface NoteUpdate {
+  title?: string;
+  content?: string;
+  /** @nullable */
+  teamId?: number | null;
+  sharedUserIds?: number[];
+}
+
 export type ListProjectsParams = {
 status?: string;
 teamId?: number;
@@ -1168,6 +1196,10 @@ export type CheckCalendarChatLinkParams = {
 channelId: number;
 messageId: number;
 ownerId?: number;
+};
+
+export type ListNotesParams = {
+teamId?: number;
 };
 
 export type ListEmployeesParams = {

@@ -3,7 +3,7 @@ import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
   Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity, CalendarDays,
-  LogOut, ChevronLeft, ChevronRight, UserCircle, Settings,
+  LogOut, ChevronLeft, ChevronRight, UserCircle, Settings, StickyNote
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +26,7 @@ const NAV_ICONS = {
   channels: MessageSquare,
   calendar: CalendarDays,
   activity: Activity,
+  notes: StickyNote,
 } as const;
 
 export function Sidebar() {

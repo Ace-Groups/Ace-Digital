@@ -14,6 +14,7 @@ const ROUTE_PERMISSIONS: Record<NavRoute, string> = {
   reports: "reports:read",
   channels: "channels:read",
   activity: "activity:read",
+  notes: "notes:read",
 };
 
 /** Nav href paths */
@@ -30,6 +31,7 @@ export const NAV_ROUTES: { route: NavRoute; href: string; label: string }[] = [
   { route: "reports", href: "/reports", label: "Reports" },
   { route: "channels", href: "/channels", label: "Chat" },
   { route: "activity", href: "/activity", label: "Activity" },
+  { route: "notes", href: "/notes", label: "Notes" },
 ];
 
 export function getNavRoutesForRole(role: string): NavRoute[] {

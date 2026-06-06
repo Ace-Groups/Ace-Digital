@@ -34,6 +34,7 @@ const ServiceDetailPage = lazyWithReload(() => import("@/pages/service-detail"))
 const ChangePasswordPage = lazyWithReload(() => import("@/pages/change-password"));
 const SettingsPage = lazyWithReload(() => import("@/pages/settings"));
 const NotificationsPage = lazyWithReload(() => import("@/pages/notifications"));
+const NotesPage = lazyWithReload(() => import("@/pages/notes"));
 
 const AUTH_ONLY_PATHS = new Set(["/change-password", "/settings"]);
 
@@ -151,6 +152,7 @@ function AppRouter() {
         <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
         <Route path="/channels" component={() => <ProtectedRoute component={ChannelsPage} />} />
         <Route path="/activity" component={() => <ProtectedRoute component={ActivityPage} />} />
+        <Route path="/notes" component={() => <ProtectedRoute component={NotesPage} />} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

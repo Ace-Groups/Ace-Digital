@@ -864,6 +864,90 @@ export const GetTeamMembersResponse = zod.array(GetTeamMembersResponseItem)
 
 
 /**
+ * @summary List notes accessible to user
+ */
+export const ListNotesQueryParams = zod.object({
+  "teamId": zod.coerce.number().optional()
+})
+
+export const ListNotesResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "createdById": zod.number(),
+  "teamId": zod.number().nullish(),
+  "sharedUserIds": zod.array(zod.number()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListNotesResponse = zod.array(ListNotesResponseItem)
+
+
+/**
+ * @summary Create a note
+ */
+export const CreateNoteBody = zod.object({
+  "title": zod.string(),
+  "content": zod.string(),
+  "teamId": zod.number().nullish(),
+  "sharedUserIds": zod.array(zod.number()).optional()
+})
+
+
+/**
+ * @summary Get note by ID
+ */
+export const GetNoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNoteResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "createdById": zod.number(),
+  "teamId": zod.number().nullish(),
+  "sharedUserIds": zod.array(zod.number()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update note
+ */
+export const UpdateNoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateNoteBody = zod.object({
+  "title": zod.string().optional(),
+  "content": zod.string().optional(),
+  "teamId": zod.number().nullish(),
+  "sharedUserIds": zod.array(zod.number()).optional()
+})
+
+export const UpdateNoteResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "createdById": zod.number(),
+  "teamId": zod.number().nullish(),
+  "sharedUserIds": zod.array(zod.number()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete note
+ */
+export const DeleteNoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List employees
  */
 export const ListEmployeesQueryParams = zod.object({

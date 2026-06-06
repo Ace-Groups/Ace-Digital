@@ -17,6 +17,8 @@ import {
   MessageSquare,
   Activity,
   CalendarDays,
+  Menu,
+  StickyNote,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +54,7 @@ const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   channels: MessageSquare,
   calendar: CalendarDays,
   activity: Activity,
+  notes: StickyNote,
 };
 
 interface MobileShellProps {

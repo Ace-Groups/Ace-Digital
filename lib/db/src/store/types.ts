@@ -17,6 +17,7 @@ import type {
   SalaryPosting,
   ServiceTicket,
   ServiceRecord,
+  Note,
 } from "../schema";
 
 export type {
@@ -38,6 +39,7 @@ export type {
   SalaryPosting,
   ServiceTicket,
   ServiceRecord,
+  Note,
 };
 
 export type SalaryPostingRow = {
@@ -184,3 +186,19 @@ export type CreateTeamInput = {
 export type CreateJobTitleInput = {
   name: string;
 };
+
+export type CreateNoteInput = {
+  title: string;
+  content: string;
+  createdById: number;
+  teamId?: number | null;
+  sharedUserIds?: number[];
+};
+
+export type UpdateNoteInput = Partial<{
+  title: string;
+  content: string;
+  teamId: number | null;
+  sharedUserIds: number[];
+}>;
+

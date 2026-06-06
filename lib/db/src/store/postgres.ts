@@ -1,4 +1,4 @@
-import { eq, and, sql, count, inArray, desc, lt, gt, isNull } from "drizzle-orm";
+import { eq, and, sql, count, inArray, desc, lt, gt, isNull, or } from "drizzle-orm";
 import { getPgDb } from "../pg";
 import {
   usersTable,
@@ -24,6 +24,7 @@ import {
   salaryPostingsTable,
   serviceTicketsTable,
   serviceRecordsTable,
+  notesTable,
 } from "../schema";
 import type {
   User,
@@ -44,6 +45,7 @@ import type {
   CalendarEvent,
   ServiceTicket,
   ServiceRecord,
+  Note,
 } from "../schema";
 import { sourceRefKey, type CalendarSourceRef } from "../schema/calendar";
 import { calendarEventInRange } from "./calendar-scoping";
@@ -70,6 +72,8 @@ import type {
   UpdateChannelInput,
   ChannelMemberWithUser,
   ChannelMemberRole,
+  CreateNoteInput,
+  UpdateNoteInput,
 } from "./types";
 import { buildDashboardSnapshot } from "./build-dashboard";
 import {
@@ -1529,6 +1533,68 @@ export function createPostgresStore() {
         };
       });
     },
+    listNotes: async (userId: number, filters?: { teamId?: number }): Promise<Note[]> => {
+      const [user] = await db.select({ teamId: usersTable.teamId }).from(usersTable).where(eq(usersTable.id, userId));
+      const userTeamId = user?.teamId;
+
+      const conditions = [];
+
+      const accessCondition = or(
+        eq(notesTable.createdById, userId),
+        userTeamId ? eq(notesTable.teamId, userTeamId) : undefined,
+        sql`shared_user_ids @> ${JSON.stringify([userId])}::jsonb`
+      );
+
+      if (accessCondition) {
+        conditions.push(accessCondition);
+      }
+
+      if (filters?.teamId != null) {
+        conditions.push(eq(notesTable.teamId, filters.teamId));
+      }
+
+      return db
+        .select()
+        .from(notesTable)
+        .where(and(...conditions.filter(Boolean)))
+        .orderBy(desc(notesTable.updatedAt));
+    },
+
+    findNoteById: async (id: number): Promise<Note | null> => {
+      const [note] = await db.select().from(notesTable).where(eq(notesTable.id, id));
+      return note ?? null;
+    },
+
+    createNote: async (data: CreateNoteInput): Promise<Note> => {
+      const [note] = await db
+        .insert(notesTable)
+        .values({
+          title: data.title,
+          content: data.content,
+          createdById: data.createdById,
+          teamId: data.teamId ?? null,
+          sharedUserIds: data.sharedUserIds ?? [],
+        })
+        .returning();
+      return note;
+    },
+
+    updateNote: async (id: number, patch: UpdateNoteInput): Promise<Note | null> => {
+      const [note] = await db
+        .update(notesTable)
+        .set({
+          ...patch,
+          updatedAt: new Date(),
+        })
+        .where(eq(notesTable.id, id))
+        .returning();
+      return note ?? null;
+    },
+
+    deleteNote: async (id: number): Promise<void> => {
+      await db.delete(notesTable).where(eq(notesTable.id, id));
+    },
+
     getDashboardSnapshot: async (ctx: AccessContext): Promise<DashboardSnapshot> => {
       const snapshotStore = createPostgresStore();
       return buildDashboardSnapshot(ctx, {

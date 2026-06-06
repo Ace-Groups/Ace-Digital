@@ -35,7 +35,8 @@ export type NavRoute =
   | "approvals"
   | "reports"
   | "channels"
-  | "activity";
+  | "activity"
+  | "notes";
 
 export type DashboardWidget =
   | "activeProjects"

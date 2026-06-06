@@ -752,6 +752,99 @@ paths:
                 items:
                   $ref: "#/components/schemas/Employee"
 
+  # NOTES
+  /v1/notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List notes accessible to user
+      parameters:
+        - name: teamId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteInput"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /v1/notes/{id}:
+    get:
+      operationId: getNote
+      tags: [notes]
+      summary: Get note by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteUpdate"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   # EMPLOYEES
   /v1/employees:
     get:
@@ -3671,3 +3764,55 @@ components:
           type: ["string", "null"]
         createdAt:
           type: string
+
+    Note:
+      type: object
+      required: [id, title, content, createdById, sharedUserIds, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        createdById:
+          type: integer
+        teamId:
+          type: ["integer", "null"]
+        sharedUserIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    NoteInput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        sharedUserIds:
+          type: array
+          items:
+            type: integer
+
+    NoteUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        sharedUserIds:
+          type: array
+          items:
+            type: integer

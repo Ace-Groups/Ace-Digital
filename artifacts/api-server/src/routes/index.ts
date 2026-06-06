@@ -16,6 +16,7 @@ import reportsRouter from "./reports";
 import channelsRouter from "./channels";
 import calendarRouter from "./calendar";
 import activityRouter from "./activity";
+import notesRouter from "./notes";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(reportsRouter);
 router.use(channelsRouter);
 router.use(calendarRouter);
 router.use(activityRouter);
+router.use(notesRouter);
 
 export default router;
