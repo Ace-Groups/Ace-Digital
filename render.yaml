@@ -1,12 +1,12 @@
 # Ace Digital OS — single Render REST API service
 # Connect repo in Render Dashboard → New Blueprint or link render.yaml
 #
-# Required secrets (Dashboard → Environment):
-#   JWT_SECRET              — 32+ random chars (match Firebase if sharing tokens)
-#   FIREBASE_SERVICE_ACCOUNT_JSON — full Firebase Admin JSON (one line)
-# Optional:
-#   CORS_ORIGINS            — e.g. https://ace-digital-os.web.app
-#   RESEND_API_KEY, EMAIL_FROM — transactional email
+# Required secrets (Render Dashboard → Environment):
+#   JWT_SECRET                     — 32+ random chars (match Firebase if sharing tokens)
+#   FIREBASE_SERVICE_ACCOUNT_JSON  — full Firebase Admin JSON (one line)
+#   RESEND_API_KEY                 — Resend API key (re_...) from https://resend.com/api-keys
+#   EMAIL_FROM                     — sender address with domain verified in Resend
+#                                      Example: "Ace-Digital <no-reply@acedigital.com>"
 
 services:
   - type: web

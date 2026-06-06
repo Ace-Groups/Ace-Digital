@@ -12,6 +12,36 @@ const log = (msg: string, ...args: unknown[]) =>
 const warn = (msg: string, ...args: unknown[]) =>
   console.warn(`[email] ${msg}`, ...args);
 
+function extractDomain(fromAddress: string): string {
+  const match = fromAddress.match(/<(.+?)>/);
+  if (!match) return fromAddress;
+  return match[1].split("@")[1] ?? "";
+}
+
+export function validateEmailConfig(): void {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM;
+  const domain = extractDomain(DEFAULT_FROM);
+
+  if (!apiKey) {
+    warn("RESEND_API_KEY is not set — emails will not be sent. Set it in Render Dashboard env vars.");
+  } else {
+    log(`RESEND_API_KEY configured (${apiKey.slice(0, 6)}...)`);
+  }
+
+  if (from) {
+    log(`EMAIL_FROM = ${from}`);
+  } else {
+    log(`EMAIL_FROM not set, using default: ${DEFAULT_FROM}`);
+  }
+
+  if (!domain) {
+    warn("Could not extract domain from from-address — verify EMAIL_FROM format is 'Name <email@domain.com>'");
+  }
+}
+
+validateEmailConfig();
+
 export type CredentialsEmailParams = {
   to: string;
   fullName: string;
@@ -94,6 +124,12 @@ async function sendViaResend(
     });
     if (error) {
       warn("Resend API returned an error:", error.message);
+      if (error.message.toLowerCase().includes("domain")) {
+        warn(
+          `The domain "${extractDomain(DEFAULT_FROM)}" may not be verified in Resend. ` +
+            "Go to https://resend.com/domains to verify it.",
+        );
+      }
       return false;
     }
     log(`Resend email sent — id: ${data?.id ?? "unknown"}`);
