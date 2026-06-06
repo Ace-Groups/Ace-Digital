@@ -24,25 +24,50 @@ export function channelDisplayLabel(channel: {
 export function insertMentionToken(
   body: string,
   cursor: number,
-  userId: number,
-  _label: string,
+  _userId: number,
+  label: string,
 ): string {
   const before = body.slice(0, cursor).replace(/@([A-Za-z0-9_.\- ]*)$/, "");
   const after = body.slice(cursor);
-  const token = `@[${userId}] `;
+  const token = `@${label} `;
   return `${before}${token}${after}`;
 }
 
 export function insertChannelToken(
   body: string,
   cursor: number,
-  channelId: number,
-  _label: string,
+  _channelId: number,
+  label: string,
 ): string {
   const before = body.slice(0, cursor).replace(/#([A-Za-z0-9_.\- ]*)$/, "");
   const after = body.slice(cursor);
-  const token = `#[${channelId}] `;
+  const token = `#${label} `;
   return `${before}${token}${after}`;
+}
+
+export function encodeMentions(
+  body: string,
+  members?: { userId: number; fullName: string }[] | null,
+  channels?: { id: number; name: string }[] | null,
+): string {
+  let result = body;
+  if (members) {
+    const sortedMembers = [...members].sort((a, b) => b.fullName.length - a.fullName.length);
+    for (const m of sortedMembers) {
+      const escapedName = m.fullName.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const regex = new RegExp(`@${escapedName}\\b`, "g");
+      result = result.replace(regex, `@[${m.userId}]`);
+    }
+  }
+  if (channels) {
+    const sortedChannels = [...channels].sort((a, b) => b.name.length - a.name.length);
+    for (const c of sortedChannels) {
+      const escapedName = c.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const regex = new RegExp(`#${escapedName}\\b`, "g");
+      result = result.replace(regex, `#[${c.id}]`);
+    }
+  }
+  return result;
 }
 
 export function triggerQueryAtCursor(body: string, cursor: number): ComposerTrigger | null {

@@ -4,6 +4,7 @@ import { useListChannels } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChannelIcon } from "@/components/channels/ChannelIcon";
+import { UserAvatar } from "@/components/UserAvatar";
 import { formatUnreadBadge } from "@/lib/chat-display";
 import { cn } from "@/lib/utils";
 
@@ -39,30 +40,45 @@ export function ChatWidget() {
           <p className="py-4 text-center text-sm text-muted-foreground">No channels yet</p>
         ) : (
           <ul className="space-y-1">
-            {top.map((ch) => (
-              <li key={ch.id}>
-                <Link
-                  href={`/channels?channel=${ch.id}`}
-                  className={cn(
-                    "flex min-h-[44px] items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/80",
-                    (ch.unreadCount ?? 0) > 0 && "font-medium",
-                  )}
-                >
-                  <ChannelIcon channel={ch} size={16} className="text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{ch.name}</span>
-                  {(ch.unreadCount ?? 0) > 0 && (
-                    <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">
-                      {formatUnreadBadge(ch.unreadCount ?? 0)}
+            {top.map((ch) => {
+              const displayName = ch.type === "DM" ? (ch.dmPeerName ?? ch.name) : ch.name;
+              return (
+                <li key={ch.id}>
+                  <Link
+                    href={`/channels?channel=${ch.id}`}
+                    className={cn(
+                      "flex min-h-[44px] items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/80",
+                      (ch.unreadCount ?? 0) > 0 && "font-medium",
+                    )}
+                  >
+                    {ch.type === "DM" ? (
+                      <UserAvatar
+                        fullName={displayName}
+                        avatarUrl={ch.dmPeerAvatar}
+                        className="size-5 shrink-0 rounded-md"
+                        iconSize={10}
+                      />
+                    ) : (
+                      <ChannelIcon channel={ch} size={16} className="text-muted-foreground" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">
+                      {ch.type !== "DM" && "# "}
+                      {displayName}
                     </span>
-                  )}
-                </Link>
-                {ch.lastMessagePreview ? (
-                  <p className="truncate pl-9 pr-2 text-xs text-muted-foreground">
-                    {ch.lastMessagePreview}
-                  </p>
-                ) : null}
-              </li>
-            ))}
+                    {(ch.unreadCount ?? 0) > 0 && (
+                      <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">
+                        {formatUnreadBadge(ch.unreadCount ?? 0)}
+                      </span>
+                    )}
+                  </Link>
+                  {ch.lastMessagePreview ? (
+                    <p className="truncate pl-9 pr-2 text-xs text-muted-foreground">
+                      {ch.lastMessagePreview}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
         <Link

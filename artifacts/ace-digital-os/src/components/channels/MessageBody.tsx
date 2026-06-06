@@ -1,6 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { displayMessageBody, type MessageBodyNameMaps } from "@/lib/chat-mentions";
+import { useListEmployees, useListChannels } from "@workspace/api-client-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface MessageBodyProps {
@@ -10,7 +12,19 @@ interface MessageBodyProps {
 }
 
 export function MessageBody({ body, className, nameMaps }: MessageBodyProps) {
-  const text = displayMessageBody(body, nameMaps);
+  const { data: employees } = useListEmployees();
+  const { data: channels } = useListChannels();
+
+  const resolvedNameMaps = useMemo(() => {
+    if (nameMaps) return nameMaps;
+    const maps: MessageBodyNameMaps = {
+      userNames: new Map((employees ?? []).map((e) => [e.id, e.fullName])),
+      channelNames: new Map((channels ?? []).map((c) => [c.id, c.name])),
+    };
+    return maps;
+  }, [nameMaps, employees, channels]);
+
+  const text = displayMessageBody(body, resolvedNameMaps);
   if (!text.trim()) return null;
 
   return (

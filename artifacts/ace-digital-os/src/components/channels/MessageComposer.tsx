@@ -9,7 +9,7 @@ import {
 import { UserAvatar } from "@/components/UserAvatar";
 import { ChannelIcon } from "@/components/channels/ChannelIcon";
 import { useComposerAutocomplete, type ComposerCandidate } from "@/hooks/use-composer-autocomplete";
-import { insertChannelToken, insertMentionToken } from "@/lib/chat-mentions";
+import { insertChannelToken, insertMentionToken, encodeMentions } from "@/lib/chat-mentions";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getListChannelMembersQueryKey,
@@ -238,7 +238,11 @@ export function MessageComposer({
 
   async function sendPayload(payload: MessageInput, preview?: MessageAttachment[]) {
     try {
-      await onSend(payload, preview);
+      const encodedPayload = {
+        ...payload,
+        body: encodeMentions(payload.body ?? "", channelMembers, allChannels),
+      };
+      await onSend(encodedPayload, preview);
     } catch {
       /* parent shows toast */
     }
@@ -246,7 +250,8 @@ export function MessageComposer({
 
   async function handleSend() {
     if (!canSend) return;
-    const caption = message.trim();
+    const rawCaption = message.trim();
+    const caption = encodeMentions(rawCaption, channelMembers, allChannels);
     const filesSnapshot = [...pendingFiles];
     clearComposerUI();
 
@@ -270,7 +275,7 @@ export function MessageComposer({
         await sendAttachmentBatches(caption, attachments, queuedIds);
       } catch (err) {
         for (const id of queuedIds) onMarkPendingFailed(id);
-        setMessage(caption);
+        setMessage(rawCaption);
         setPendingFiles(filesSnapshot);
         toast({
           title: "Failed to send",
@@ -284,7 +289,7 @@ export function MessageComposer({
     try {
       await onSend({ body: caption });
     } catch (err) {
-      setMessage(caption);
+      setMessage(rawCaption);
       toast({
         title: "Failed to send",
         description: err instanceof Error ? err.message : "Send failed",
