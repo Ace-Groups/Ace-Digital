@@ -15,6 +15,7 @@ import {
   getListEmployeesQueryKey,
   useOpenDm,
   getListChannelsQueryKey,
+  ApiError,
 } from "@workspace/api-client-react";
 import type { Channel } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -250,8 +251,14 @@ function DirectMessagesSection({
       await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
       onSelect(channel.id);
       setDmSearchQuery("");
-    } catch {
-      toast({ title: "Could not open direct message", variant: "destructive" });
+    } catch (err) {
+      const detail =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not open direct message";
+      toast({ title: detail, variant: "destructive" });
     } finally {
       setLoadingUserId(null);
     }

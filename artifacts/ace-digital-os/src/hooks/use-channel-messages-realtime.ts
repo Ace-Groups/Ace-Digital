@@ -6,7 +6,7 @@ import {
   type Channel,
   type Message,
 } from "@workspace/api-client-react";
-import { useSocket } from "@/contexts/SocketContext";
+import { useEnsureChannelJoined, useSocket } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { messagePreviewText } from "@/lib/chat-reply";
 
@@ -38,28 +38,41 @@ function upsertMessage(list: Message[], incoming: WsMessage): Message[] {
     }
   }
   if (list.some((m) => m.id === incoming.id)) {
-    return list.map((m) => (m.id === incoming.id ? ({ ...incoming, clientId: undefined } as Message) : m));
+    return list.map((m) =>
+      m.id === incoming.id ? ({ ...incoming, clientId: undefined } as Message) : m,
+    );
   }
   return [...list, incoming as Message];
 }
 
+function stripClientId(msg: WsMessage): Message {
+  const { clientId: _c, ...rest } = msg;
+  return rest as Message;
+}
+
+export type ChannelMessagesRealtimeHandlers = {
+  onUpsert?: (msg: Message) => void;
+  onPersisted?: (clientId: string, msg: Message) => void;
+};
+
 export function useChannelMessagesRealtime(
   channelId: number | null,
   enabled: boolean,
-  onMessages?: (messages: Message[]) => void,
+  handlers?: ChannelMessagesRealtimeHandlers,
 ) {
   const queryClient = useQueryClient();
   const { socket, connected } = useSocket();
-  const onMessagesRef = useRef(onMessages);
-  onMessagesRef.current = onMessages;
+  const ensureJoined = useEnsureChannelJoined();
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   useEffect(() => {
     if (!enabled || !channelId || !socket) return;
 
     const join = () => {
-      socket.emit("join_channel", channelId, (res: { ok?: boolean; error?: string }) => {
-        if (res?.error && import.meta.env.DEV) {
-          console.warn("[chat-realtime] join_channel", res.error);
+      void ensureJoined(channelId).catch((err) => {
+        if (import.meta.env.DEV) {
+          console.warn("[chat-realtime] join_channel", err);
         }
       });
     };
@@ -71,7 +84,7 @@ export function useChannelMessagesRealtime(
       if (incoming.channelId !== channelId) return;
       const key = messageKey(channelId);
       const prev = queryClient.getQueryData<Message[]>(key) ?? [];
-      if (hasMessage(prev, incoming) && !incoming.clientId) return;
+      if (hasMessage(prev, incoming)) return;
       const next = upsertMessage(prev, incoming);
       queryClient.setQueryData<Message[]>(key, next);
 
@@ -87,7 +100,7 @@ export function useChannelMessagesRealtime(
             : channel,
         ),
       );
-      onMessagesRef.current?.(next);
+      handlersRef.current?.onUpsert?.(stripClientId(incoming));
     };
 
     const onPersisted = ({
@@ -113,6 +126,7 @@ export function useChannelMessagesRealtime(
         if (list.some((m) => m.id === message.id)) return list;
         return [...list, message];
       });
+      handlersRef.current?.onPersisted?.(clientId, message);
     };
 
     socket.on("message:new", onNew);
@@ -124,5 +138,5 @@ export function useChannelMessagesRealtime(
       socket.off("message:persisted", onPersisted);
       socket.emit("leave_channel", channelId);
     };
-  }, [channelId, enabled, socket, connected, queryClient]);
+  }, [channelId, enabled, socket, connected, queryClient, ensureJoined]);
 }

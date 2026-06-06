@@ -149,6 +149,20 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     [list],
   );
 
+  const replaceMessageByClientId = useCallback(
+    (clientId: string, msg: Message) => {
+      list?.replaceByClientId(clientId, msg);
+    },
+    [list],
+  );
+
+  const upsertMessage = useCallback(
+    (msg: Message) => {
+      list?.upsertOne(msg);
+    },
+    [list],
+  );
+
   const messages = useMemo(() => state.items, [state.items]);
 
   return {
@@ -160,6 +174,8 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
     applyRealtime,
     appendMessage,
     patchMessage,
+    replaceMessageByClientId,
+    upsertMessage,
     isLoading: state.status === "loading" && state.items.length === 0,
   };
 }

@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
 import { useChannelActivityRealtime } from "@/hooks/use-channel-activity-realtime";
+import { useSocket } from "@/contexts/SocketContext";
 import { useRoomMessageList, useMessageListSyncKey } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canDeleteMessage, canManageChannel, canPostInChannel } from "@workspace/rbac";
@@ -157,6 +158,8 @@ export default function ChannelsPage() {
     void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
   }, []);
 
+  const { connected: socketConnected } = useSocket();
+
   const { data: latestMessages, isPending: messagesPending } = useGetChannelMessages(
     selectedChannelId ?? 0,
     CHANNEL_MESSAGE_PARAMS,
@@ -177,16 +180,19 @@ export default function ChannelsPage() {
     },
   );
 
-  const realtimeReady = threadActive && !!selectedChannelId && isFirebaseChatEnabled();
+  const realtimeReady = threadActive && !!selectedChannelId && socketConnected;
+  const activityRealtimeReady =
+    threadActive && !!selectedChannelId && isFirebaseChatEnabled() && firebaseLive;
 
   const {
     messages: roomMessages,
     hasMoreBefore,
     loadOlder,
     syncFromQuery,
-    applyRealtime,
     appendMessage,
     patchMessage,
+    replaceMessageByClientId,
+    upsertMessage,
     isLoading: roomLoading,
   } = useRoomMessageList(selectedChannelId, !!selectedChannelId);
 
@@ -203,16 +209,15 @@ export default function ChannelsPage() {
     if (msgs !== undefined) syncFromQuery(msgs);
   }, [messageSyncKey, syncFromQuery]);
 
-  useChannelMessagesRealtime(
-    selectedChannelId,
-    realtimeReady,
-    applyRealtime,
-  );
-  useChannelActivityRealtime(selectedChannelId, realtimeReady);
+  useChannelMessagesRealtime(selectedChannelId, realtimeReady, {
+    onUpsert: upsertMessage,
+    onPersisted: replaceMessageByClientId,
+  });
+  useChannelActivityRealtime(selectedChannelId, activityRealtimeReady);
 
   const { queuePending, flushPending, markPendingFailed } = useSendChannelMessage(
     selectedChannelId,
-    { onAppend: appendMessage },
+    { onAppend: appendMessage, onReplace: replaceMessageByClientId },
   );
 
   const { toggleReactionInstant, deleteMessage, editMessageInstant, votePollInstant, rsvpInstant } =

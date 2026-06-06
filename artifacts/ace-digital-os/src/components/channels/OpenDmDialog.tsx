@@ -14,6 +14,7 @@ import {
   getListEmployeesQueryKey,
   useListEmployees,
   useOpenDm,
+  ApiError,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,8 +64,14 @@ export function OpenDmDialog({ open, onClose, onOpened }: OpenDmDialogProps) {
       onOpened?.(channel.id);
       setQuery("");
       onClose();
-    } catch {
-      toast({ title: "Could not open direct message", variant: "destructive" });
+    } catch (err) {
+      const detail =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not open direct message";
+      toast({ title: detail, variant: "destructive" });
     }
   }
 

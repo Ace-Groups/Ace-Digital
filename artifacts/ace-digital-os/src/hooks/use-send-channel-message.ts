@@ -7,7 +7,7 @@ import {
   type MessageInput,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSocket, useSocketEmit } from "@/contexts/SocketContext";
+import { useEnsureChannelJoined, useSocket, useSocketEmit } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 
 export type PendingMessage = Message & {
@@ -47,6 +47,7 @@ function makePendingMessage(
 
 type SendOptions = {
   onAppend?: (msg: Message | PendingMessage) => void;
+  onReplace?: (clientId: string, msg: Message) => void;
 };
 
 export function useSendChannelMessage(channelId: number | null, options?: SendOptions) {
@@ -54,9 +55,11 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
   const queryClient = useQueryClient();
   const sendMessage = useSendMessage();
   const { connected } = useSocket();
+  const ensureJoined = useEnsureChannelJoined();
   const socketEmit = useSocketEmit();
   const pendingRef = useRef<Map<string, PendingMessage>>(new Map());
   const onAppend = options?.onAppend;
+  const onReplace = options?.onReplace;
 
   const appendPending = useCallback(
     (pending: PendingMessage) => {
@@ -80,9 +83,9 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
           "clientId" in m && (m as PendingMessage).clientId === clientId ? serverMsg : m,
         ),
       );
-      onAppend?.(serverMsg);
+      onReplace?.(clientId, serverMsg);
     },
-    [channelId, queryClient, onAppend],
+    [channelId, queryClient, onReplace],
   );
 
   const markFailed = useCallback(
@@ -139,6 +142,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
 
       if (connected) {
         try {
+          await ensureJoined(channelId);
           const ack = (await socketEmit("message:send", {
             channelId,
             clientId,
@@ -174,7 +178,16 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
         throw new Error(message);
       }
     },
-    [channelId, user, connected, socketEmit, replacePending, markFailed, flushPendingHttp],
+    [
+      channelId,
+      user,
+      connected,
+      ensureJoined,
+      socketEmit,
+      replacePending,
+      markFailed,
+      flushPendingHttp,
+    ],
   );
 
   const send = useCallback(

@@ -124,6 +124,32 @@ export class RecordList<T extends { id: number }> {
     this.commit({ ...this.state, items });
   }
 
+  replaceByClientId(clientId: string, msg: T): void {
+    const items = [...this.state.items];
+    const idx = items.findIndex(
+      (m) =>
+        "clientId" in m &&
+        typeof (m as T & { clientId?: string }).clientId === "string" &&
+        (m as T & { clientId?: string }).clientId === clientId,
+    );
+    if (idx >= 0) {
+      items[idx] = msg;
+    } else {
+      const idIdx = items.findIndex((m) => m.id === msg.id);
+      if (idIdx >= 0) items[idIdx] = msg;
+      else items.push(msg);
+    }
+    this.commit({
+      ...this.state,
+      items: sortByCreatedAt(dedupeById(items)),
+      status: "ready",
+    });
+  }
+
+  upsertOne(incoming: T): void {
+    this.mergeRealtime([incoming]);
+  }
+
   setHasMoreBefore(value: boolean): void {
     if (this.state.hasMoreBefore === value) return;
     this.commit({ ...this.state, hasMoreBefore: value });

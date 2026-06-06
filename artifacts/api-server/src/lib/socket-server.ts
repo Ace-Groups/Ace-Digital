@@ -166,7 +166,6 @@ export function initSocketServer(httpServer: HttpServer): Server {
         };
 
         socket.to(`channel_${channelId}`).emit("message:new", optimistic);
-        socket.emit("message:new", optimistic);
         ack?.({ status: "success", clientId, message: optimistic });
 
         void messageQueue.add("persist", {

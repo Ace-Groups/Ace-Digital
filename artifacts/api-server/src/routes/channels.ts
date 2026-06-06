@@ -50,6 +50,13 @@ async function dmPeerForChannel(channelId: number, userId: number) {
   };
 }
 
+function toIso(value: Date | string | null | undefined): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  return null;
+}
+
 function channelListItem(
   c: Awaited<ReturnType<typeof store.findChannelById>> & object,
   meta: Awaited<ReturnType<typeof store.listChannelListMeta>>,
@@ -71,7 +78,7 @@ function channelListItem(
     memberCount: meta.counts.get(c.id) ?? 0,
     myRole: meta.roles.get(c.id) ?? (adminAll ? "owner" : null),
     unreadCount: meta.unreadCounts.get(c.id) ?? 0,
-    lastPostAt: c.lastPostAt?.toISOString() ?? null,
+    lastPostAt: toIso(c.lastPostAt),
     lastMessagePreview: meta.lastMessagePreviews.get(c.id) ?? null,
     lastReadMessageId: meta.lastReadMessageIds.get(c.id) ?? null,
     starred: meta.starred?.get(c.id) ?? false,
@@ -79,7 +86,7 @@ function channelListItem(
     dmPeerName: dmPeer?.dmPeerName ?? null,
     dmPeerAvatar: dmPeer?.dmPeerAvatar ?? null,
     createdById: c.createdById ?? null,
-    createdAt: c.createdAt.toISOString(),
+    createdAt: toIso(c.createdAt) ?? new Date().toISOString(),
   };
 }
 
@@ -1276,53 +1283,64 @@ router.post(
       return;
     }
 
-    const target = await store.findUserById(targetUserId);
-    if (!target || target.status !== "active") {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+    try {
+      const target = await store.findUserById(targetUserId);
+      if (!target || target.status !== "active") {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
 
-    let channel = await store.findDmChannelBetween(ctx.userId, targetUserId);
-    if (!channel) {
-      const peerName = target.fullName;
-      channel = await store.createChannel({
-        name: `dm-${Math.min(ctx.userId, targetUserId)}-${Math.max(ctx.userId, targetUserId)}`,
-        description: null,
-        teamId: null,
-        type: "DM",
-        visibility: "PRIVATE",
-        createdById: ctx.userId,
+      let channel = await store.findDmChannelBetween(ctx.userId, targetUserId);
+      if (!channel) {
+        const peerName = target.fullName;
+        channel = await store.createChannel({
+          name: `dm-${Math.min(ctx.userId, targetUserId)}-${Math.max(ctx.userId, targetUserId)}`,
+          description: null,
+          teamId: null,
+          type: "DM",
+          visibility: "PRIVATE",
+          createdById: ctx.userId,
+        });
+        await store.addChannelMember(channel.id, ctx.userId, "owner");
+        await store.addChannelMember(channel.id, targetUserId, "member");
+        void store
+          .createMessage({
+            channelId: channel.id,
+            senderId: ctx.userId,
+            body: `This is the start of your direct message history with ${peerName}.`,
+            attachments: null,
+            messageKind: "system",
+            metadata: { systemEvent: "dm_opened" },
+            parentMessageId: null,
+            editedAt: null,
+            deletedAt: null,
+            deletedById: null,
+          })
+          .catch((e) => console.error("[dm-system]", e));
+      }
+
+      const meta = await store.listChannelListMeta([channel.id], ctx.userId);
+      const teams = await store.listTeams();
+      const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+      const peer = await dmPeerForChannel(channel.id, ctx.userId);
+      const item = channelListItem(
+        channel,
+        meta,
+        teamMap,
+        hasPermission(ctx, "channels:all"),
+        peer,
+      );
+      if (!item) {
+        res.status(500).json({ error: "Failed to build DM channel response" });
+        return;
+      }
+      res.json(item);
+    } catch (err) {
+      console.error("[dms/open]", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to open direct message",
       });
-      await store.addChannelMember(channel.id, ctx.userId, "owner");
-      await store.addChannelMember(channel.id, targetUserId, "member");
-      void store
-        .createMessage({
-          channelId: channel.id,
-          senderId: ctx.userId,
-          body: `This is the start of your direct message history with ${peerName}.`,
-          attachments: null,
-          messageKind: "system",
-          metadata: { systemEvent: "dm_opened" },
-          parentMessageId: null,
-          editedAt: null,
-          deletedAt: null,
-          deletedById: null,
-        })
-        .catch((e) => console.error("[dm-system]", e));
     }
-
-    const meta = await store.listChannelListMeta([channel.id], ctx.userId);
-    const teams = await store.listTeams();
-    const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
-    const peer = await dmPeerForChannel(channel.id, ctx.userId);
-    const item = channelListItem(
-      channel,
-      meta,
-      teamMap,
-      hasPermission(ctx, "channels:all"),
-      peer,
-    );
-    res.json(item);
   },
 );
 
