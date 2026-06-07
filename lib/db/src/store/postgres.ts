@@ -139,6 +139,9 @@ export function createPostgresStore() {
           startDate: data.startDate ?? null,
           mustChangePassword: data.mustChangePassword ?? true,
           avatarUrl: data.avatarUrl ?? null,
+          dob: data.dob ?? null,
+          address: data.address ?? null,
+          notes: data.notes ?? null,
         })
         .returning();
       return u;

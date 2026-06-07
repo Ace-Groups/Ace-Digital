@@ -24,4 +24,7 @@ export interface EmployeeInput {
   sendWelcomeEmail?: boolean;
   /** Optional mascot or image URL; defaults to role mascot */
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 }

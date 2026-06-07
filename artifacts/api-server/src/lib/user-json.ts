@@ -15,6 +15,9 @@ export function userToJson(user: User, team: Team | null) {
     avatarUrl: user.avatarUrl,
     status: user.status,
     mustChangePassword: user.mustChangePassword ?? false,
+    dob: user.dob ? user.dob.toISOString() : null,
+    address: user.address ?? null,
+    notes: user.notes ?? null,
     createdAt: user.createdAt.toISOString(),
   };
 }

@@ -28,6 +28,9 @@ export async function employeeWithProfile(user: User, ctx: AccessContext) {
     baseSalary: profile?.baseSalary ? Number(profile.baseSalary) : null,
     bonus: profile?.bonus ? Number(profile.bonus) : null,
     payrollStatus: profile?.payrollStatus ?? null,
+    dob: user.dob ? user.dob.toISOString() : null,
+    address: user.address ?? null,
+    notes: user.notes ?? null,
     createdAt: user.createdAt.toISOString(),
   };
   if (canViewSalaries(ctx)) return row;

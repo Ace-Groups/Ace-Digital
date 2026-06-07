@@ -2996,6 +2996,12 @@ components:
           type: ["string", "null"]
         status:
           type: string
+        dob:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
         baseSalary:
           type: ["number", "null"]
         bonus:
@@ -3049,6 +3055,12 @@ components:
         avatarUrl:
           type: string
           description: Optional mascot or image URL; defaults to role mascot
+        dob:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
 
     EmployeeCreateResponse:
       allOf:
@@ -3113,6 +3125,12 @@ components:
         payrollStatus:
           type: string
         avatarUrl:
+          type: string
+        dob:
+          type: string
+        address:
+          type: string
+        notes:
           type: string
 
     # FINANCE

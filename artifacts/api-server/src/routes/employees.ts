@@ -85,6 +85,9 @@ router.post(
       status,
       sendWelcomeEmail: shouldSendEmail = true,
       avatarUrl: bodyAvatarUrl,
+      dob,
+      address,
+      notes,
     } = req.body;
 
     if (!fullName || !email || !role) {
@@ -99,7 +102,7 @@ router.post(
     const mode = passwordMode === "manual" ? "manual" : "auto";
     let plainPassword = typeof password === "string" ? password : "";
     if (mode === "auto") {
-      plainPassword = generateTemporaryPassword();
+      plainPassword = generateTemporaryPassword(fullName, phone);
     } else if (!plainPassword || plainPassword.length < 6) {
       res.status(400).json({ error: "Password must be at least 6 characters" });
       return;
@@ -114,6 +117,12 @@ router.post(
     const parsedStart = parseStartDate(startDate);
     if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
       res.status(400).json({ error: "Invalid start date" });
+      return;
+    }
+
+    const parsedDob = parseStartDate(dob);
+    if (dob !== undefined && dob !== null && dob !== "" && parsedDob === undefined) {
+      res.status(400).json({ error: "Invalid date of birth" });
       return;
     }
 
@@ -147,6 +156,9 @@ router.post(
       startDate: parsedStart ?? null,
       mustChangePassword: true,
       avatarUrl: resolvedAvatar,
+      dob: parsedDob ?? null,
+      address: address ?? null,
+      notes: notes ?? null,
     });
     await store.updateUser(user.id, { status: status ?? "active" });
 
@@ -214,11 +226,20 @@ router.patch(
       status,
       payrollStatus,
       avatarUrl: patchAvatarUrl,
+      dob,
+      address,
+      notes,
     } = req.body;
 
     const parsedStart = parseStartDate(startDate);
     if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
       res.status(400).json({ error: "Invalid start date" });
+      return;
+    }
+
+    const parsedDob = parseStartDate(dob);
+    if (dob !== undefined && dob !== null && dob !== "" && parsedDob === undefined) {
+      res.status(400).json({ error: "Invalid date of birth" });
       return;
     }
 
@@ -278,6 +299,9 @@ router.patch(
         employeeCode: employeeCode ? String(employeeCode).trim().toUpperCase() : null,
       }),
       ...(parsedStart !== undefined && { startDate: parsedStart }),
+      ...(parsedDob !== undefined && { dob: parsedDob }),
+      ...(address !== undefined && { address: address || null }),
+      ...(notes !== undefined && { notes: notes || null }),
       ...(status !== undefined && { status }),
       ...avatarPatch,
     });
@@ -330,7 +354,7 @@ router.post(
       }
       plainPassword = manualPassword;
     } else {
-      plainPassword = generateTemporaryPassword();
+      plainPassword = generateTemporaryPassword(user.fullName, user.phone);
     }
 
     const passwordHash = await hashPassword(plainPassword);

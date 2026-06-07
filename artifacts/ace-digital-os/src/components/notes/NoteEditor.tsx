@@ -75,7 +75,17 @@ export function NoteEditor({
       return;
     }
     if (editor && editor.getHTML() !== content) {
-      editor.commands.setContent(content);
+      const { from, to } = editor.state.selection;
+      editor.commands.setContent(content, { emitUpdate: false });
+      const maxPos = editor.state.doc.content.size;
+      try {
+        editor.commands.setTextSelection({
+          from: Math.min(from, maxPos),
+          to: Math.min(to, maxPos),
+        });
+      } catch (e) {
+        // Ignore selection restore failures
+      }
     }
   }, [content, editor]);
 
@@ -91,6 +101,22 @@ export function NoteEditor({
     },
     [editor]
   );
+
+  const handleTaskListClick = useCallback(() => {
+    if (!editor) return;
+    if (editor.isActive("taskList")) {
+      editor.chain().focus().toggleTaskList().run();
+    } else {
+      const { selection } = editor.state;
+      const { $from } = selection;
+      const currentBlockText = $from.parent.textContent;
+      if (currentBlockText.trim().length > 0) {
+        editor.chain().focus().splitBlock().toggleTaskList().run();
+      } else {
+        editor.chain().focus().toggleTaskList().run();
+      }
+    }
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -194,7 +220,7 @@ export function NoteEditor({
             <button
               type="button"
               className={`note-toolbar-btn ${editor.isActive("taskList") ? "is-active" : ""}`}
-              onClick={() => editor.chain().focus().toggleTaskList().run()}
+              onClick={handleTaskListClick}
               title="Task List"
             >
               <CheckSquare />

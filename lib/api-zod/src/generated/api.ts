@@ -142,6 +142,9 @@ export const GetMyProfileResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -172,6 +175,9 @@ export const UpdateMyProfileResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -851,6 +857,9 @@ export const GetTeamMembersResponseItem = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -965,6 +974,9 @@ export const ListEmployeesResponseItem = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -995,7 +1007,10 @@ export const CreateEmployeeBody = zod.object({
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
   "sendWelcomeEmail": zod.boolean().optional(),
-  "avatarUrl": zod.string().optional().describe('Optional mascot or image URL; defaults to role mascot')
+  "avatarUrl": zod.string().optional().describe('Optional mascot or image URL; defaults to role mascot'),
+  "dob": zod.string().optional(),
+  "address": zod.string().optional(),
+  "notes": zod.string().optional()
 })
 
 
@@ -1030,6 +1045,9 @@ export const GetEmployeeResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -1061,7 +1079,10 @@ export const UpdateEmployeeBody = zod.object({
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
   "payrollStatus": zod.string().optional(),
-  "avatarUrl": zod.string().optional()
+  "avatarUrl": zod.string().optional(),
+  "dob": zod.string().optional(),
+  "address": zod.string().optional(),
+  "notes": zod.string().optional()
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -1074,6 +1095,9 @@ export const UpdateEmployeeResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
@@ -1120,6 +1144,9 @@ export const ResetEmployeePasswordResponse = zod.object({
   "jobTitle": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.string().optional(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),

@@ -208,6 +208,9 @@ export function createFirestoreStore() {
         startDate: data.startDate ? data.startDate.toISOString() : null,
         mustChangePassword: data.mustChangePassword ?? true,
         avatarUrl: data.avatarUrl ?? null,
+        dob: data.dob ? data.dob.toISOString() : null,
+        address: data.address ?? null,
+        notes: data.notes ?? null,
         status: "active",
         createdAt: now.toISOString(),
       };
@@ -1759,6 +1762,9 @@ function mapUser(data: FirebaseFirestore.DocumentData, id: string): User {
     startDate: data.startDate ? toDate(data.startDate) : null,
     mustChangePassword: data.mustChangePassword !== false,
     status: data.status as string,
+    dob: data.dob ? toDate(data.dob) : null,
+    address: (data.address as string) ?? null,
+    notes: (data.notes as string) ?? null,
     createdAt: toDate(data.createdAt),
   };
 }

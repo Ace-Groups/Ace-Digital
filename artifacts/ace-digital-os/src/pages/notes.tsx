@@ -24,6 +24,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSocket } from "@/contexts/SocketContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Note } from "@workspace/api-client-react";
 import { format } from "date-fns";
@@ -59,10 +60,14 @@ function getChecklistStats(html: string): {
 
 export default function NotesPage() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: notes, isLoading } = useListNotes();
+  const [collaborators, setCollaborators] = useState<
+    { userId: number; fullName: string; avatarUrl: string | null }[]
+  >([]);
   const { data: employees } = useListEmployees();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
@@ -193,6 +198,86 @@ export default function NotesPage() {
     [createNote, updateNote, queryClient]
   );
 
+  // Manage socket note rooms and collaborators sync
+  const lastJoinedNoteIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const currentNoteId = selectedNoteId;
+    const lastNoteId = lastJoinedNoteIdRef.current;
+
+    if (lastNoteId && lastNoteId !== currentNoteId) {
+      socket.emit("leave_note", lastNoteId);
+      setCollaborators([]);
+      lastJoinedNoteIdRef.current = null;
+    }
+
+    if (currentNoteId) {
+      socket.emit("join_note", currentNoteId, (res: { ok?: boolean; error?: string }) => {
+        if (res?.error) {
+          console.error("Failed to join note room:", res.error);
+        } else {
+          lastJoinedNoteIdRef.current = currentNoteId;
+        }
+      });
+    }
+
+    return () => {
+      if (lastJoinedNoteIdRef.current) {
+        socket.emit("leave_note", lastJoinedNoteIdRef.current);
+        lastJoinedNoteIdRef.current = null;
+      }
+    };
+  }, [selectedNoteId, socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNoteEdited = (payload: {
+      noteId: number;
+      title: string;
+      content: string;
+      senderId: number;
+    }) => {
+      if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
+        setTitle(payload.title);
+        setContent(payload.content);
+        lastSavedRef.current = { title: payload.title, content: payload.content };
+      }
+    };
+
+    const handleNoteUsers = (payload: {
+      noteId: number;
+      users: { userId: number; fullName: string; avatarUrl: string | null }[];
+    }) => {
+      if (payload.noteId === selectedNoteId) {
+        setCollaborators(payload.users.filter((u) => u.userId !== user?.id));
+      }
+    };
+
+    socket.on("note:edited", handleNoteEdited);
+    socket.on("note:users", handleNoteUsers);
+
+    return () => {
+      socket.off("note:edited", handleNoteEdited);
+      socket.off("note:users", handleNoteUsers);
+    };
+  }, [selectedNoteId, socket, user?.id]);
+
+  const broadcastEdit = useCallback(
+    (newTitle: string, newContent: string) => {
+      if (selectedNoteId && socket) {
+        socket.emit("note:edit", {
+          noteId: selectedNoteId,
+          title: newTitle,
+          content: newContent,
+        });
+      }
+    },
+    [selectedNoteId, socket]
+  );
+
   // Debounced auto-save
   const scheduleAutoSave = useCallback(
     (newTitle: string, newContent: string) => {
@@ -208,18 +293,20 @@ export default function NotesPage() {
   const handleTitleChange = useCallback(
     (val: string) => {
       setTitle(val);
+      broadcastEdit(val, content);
       scheduleAutoSave(val, content);
     },
-    [content, scheduleAutoSave]
+    [content, scheduleAutoSave, broadcastEdit]
   );
 
   // Content change
   const handleContentChange = useCallback(
     (html: string) => {
       setContent(html);
+      broadcastEdit(title, html);
       scheduleAutoSave(title, html);
     },
-    [title, scheduleAutoSave]
+    [title, scheduleAutoSave, broadcastEdit]
   );
 
   // Delete
@@ -289,7 +376,7 @@ export default function NotesPage() {
 
   return (
     <AppLayout title="Notes" fillViewport>
-      <div className="flex h-full min-h-0 bg-background/50">
+      <div className="flex flex-1 min-h-0 bg-background/50">
         {/* ── Left Sidebar ── */}
         <div
           className={`flex flex-col border-r bg-card/50 w-full md:w-[320px] md:min-w-[280px] md:max-w-[360px] shrink-0 ${
@@ -476,6 +563,23 @@ export default function NotesPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 ml-auto">
+                  {/* Active collaborators list */}
+                  {collaborators.length > 0 && (
+                    <div className="flex items-center gap-1.5 mr-2" title="Collaborators active on this note">
+                      <span className="text-xs text-muted-foreground mr-1 hidden sm:inline">Editing:</span>
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {collaborators.map((collab) => (
+                          <div
+                            key={collab.userId}
+                            className="inline-block h-6 w-6 rounded-full ring-2 ring-background bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center"
+                            title={`${collab.fullName} is editing`}
+                          >
+                            {collab.fullName ? getInitials(collab.fullName) : "?"}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {selectedNote &&
                     selectedNote.createdById === user?.id && (
                       <Button

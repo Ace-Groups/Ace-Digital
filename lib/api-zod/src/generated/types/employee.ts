@@ -21,6 +21,12 @@ export interface Employee {
   avatarUrl?: string | null;
   status?: string;
   /** @nullable */
+  dob?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
   baseSalary?: number | null;
   /** @nullable */
   bonus?: number | null;

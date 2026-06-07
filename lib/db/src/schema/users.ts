@@ -17,6 +17,9 @@ export const usersTable = pgTable("users", {
   startDate: timestamp("start_date", { withTimezone: true }),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
   status: text("status").notNull().default("active"),
+  dob: timestamp("dob", { withTimezone: true }),
+  address: text("address"),
+  notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

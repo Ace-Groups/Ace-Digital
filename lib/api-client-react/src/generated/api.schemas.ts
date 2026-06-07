@@ -581,6 +581,12 @@ export interface Employee {
   avatarUrl?: string | null;
   status?: string;
   /** @nullable */
+  dob?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
   baseSalary?: number | null;
   /** @nullable */
   bonus?: number | null;
@@ -621,6 +627,9 @@ export interface EmployeeInput {
   sendWelcomeEmail?: boolean;
   /** Optional mascot or image URL; defaults to role mascot */
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 }
 
 export type EmployeeCreateResponse = Employee & {
@@ -673,6 +682,9 @@ export interface EmployeeUpdate {
   status?: string;
   payrollStatus?: string;
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 }
 
 export interface FinanceSummary {

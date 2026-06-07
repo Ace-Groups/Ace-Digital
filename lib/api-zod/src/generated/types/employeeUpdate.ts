@@ -20,4 +20,7 @@ export interface EmployeeUpdate {
   status?: string;
   payrollStatus?: string;
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 }

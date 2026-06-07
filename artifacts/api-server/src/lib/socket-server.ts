@@ -19,6 +19,7 @@ declare module "socket.io" {
     senderName?: string | null;
     senderAvatar?: string | null;
     postChannelIds?: Set<number>;
+    activeNoteRooms?: Set<number>;
   }
 }
 
@@ -80,6 +81,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
     socket.data.senderName = sender?.fullName ?? null;
     socket.data.senderAvatar = sender?.avatarUrl ?? null;
     socket.data.postChannelIds = new Set();
+    socket.data.activeNoteRooms = new Set();
     logger.info({ userId, socketId: socket.id }, "Socket connected");
 
     socket.on("join_channel", async (rawChannelId: unknown, ack?: (res: unknown) => void) => {
@@ -186,12 +188,93 @@ export function initSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("join_note", async (rawNoteId: unknown, ack?: (res: unknown) => void) => {
+      try {
+        const noteId = Number(rawNoteId);
+        if (!Number.isFinite(noteId) || noteId <= 0) {
+          ack?.({ error: "invalid_note" });
+          return;
+        }
+        const note = await store.findNoteById(noteId);
+        if (!note) {
+          ack?.({ error: "not_found" });
+          return;
+        }
+        const { userId } = socket.data.user;
+        const user = await store.findUserById(userId);
+        const hasAccess =
+          note.createdById === userId ||
+          note.sharedUserIds?.includes(userId) ||
+          (note.teamId != null && user?.teamId === note.teamId);
+
+        if (!hasAccess) {
+          ack?.({ error: "forbidden" });
+          return;
+        }
+
+        await socket.join(`note_${noteId}`);
+        socket.data.activeNoteRooms?.add(noteId);
+        ack?.({ ok: true });
+        await broadcastNoteUsers(noteId);
+      } catch (err) {
+        logger.error({ err, noteId: rawNoteId }, "join_note failed");
+        ack?.({ error: "server_error" });
+      }
+    });
+
+    socket.on("leave_note", async (rawNoteId: unknown) => {
+      const noteId = Number(rawNoteId);
+      if (Number.isFinite(noteId) && noteId > 0) {
+        await socket.leave(`note_${noteId}`);
+        socket.data.activeNoteRooms?.delete(noteId);
+        await broadcastNoteUsers(noteId);
+      }
+    });
+
+    socket.on("note:edit", (payload: { noteId: number; title: string; content: string }) => {
+      const noteId = Number(payload?.noteId);
+      if (!Number.isFinite(noteId) || noteId <= 0) return;
+      if (!socket.rooms.has(`note_${noteId}`)) return;
+
+      socket.to(`note_${noteId}`).emit("note:edited", {
+        noteId,
+        title: payload.title,
+        content: payload.content,
+        senderId: socket.data.user.userId,
+      });
+    });
+
+    socket.on("disconnect", async (reason) => {
       logger.info({ userId, socketId: socket.id, reason }, "Socket disconnected");
+      const rooms = socket.data.activeNoteRooms;
+      if (rooms) {
+        for (const noteId of Array.from(rooms)) {
+          await broadcastNoteUsers(noteId as number);
+        }
+      }
     });
   });
 
   return io;
+}
+
+async function broadcastNoteUsers(noteId: number) {
+  if (!io) return;
+  const roomName = `note_${noteId}`;
+  try {
+    const clients = await io.in(roomName).fetchSockets();
+    const users = clients.map((c) => ({
+      userId: c.data.user.userId,
+      fullName: c.data.senderName ?? "Unknown",
+      avatarUrl: c.data.senderAvatar ?? null,
+    }));
+    const uniqueUsers = Array.from(
+      new Map(users.map((u) => [u.userId, u])).values()
+    );
+    io.to(roomName).emit("note:users", { noteId, users: uniqueUsers });
+  } catch (err) {
+    logger.error({ err, noteId }, "broadcastNoteUsers failed");
+  }
 }
 
 export function getIo(): Server | null {

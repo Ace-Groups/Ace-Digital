@@ -25,6 +25,8 @@ import { MascotPicker } from "@/components/MascotPicker";
 import { defaultMascotForRole } from "@/lib/mascots";
 import { encodeAvatarUrl, parseAvatarUrl } from "@/lib/avatar";
 
+import { Textarea } from "@/components/ui/textarea";
+
 const ROLES = [
   "employee",
   "team_lead",
@@ -53,6 +55,9 @@ const createSchema = z
     password: z.string().optional(),
     sendWelcomeEmail: z.boolean(),
     mascotId: z.string().optional(),
+    dob: z.string().optional(),
+    address: z.string().optional(),
+    notes: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.passwordMode === "manual" && (!data.password || data.password.length < 6)) {
@@ -77,6 +82,9 @@ const editSchema = z.object({
   bonus: z.string().optional(),
   payrollStatus: z.string().optional(),
   mascotId: z.string().optional(),
+  dob: z.string().optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type CreateForm = z.infer<typeof createSchema>;
@@ -98,6 +106,9 @@ export type EmployeeFormSubmitCreate = {
   password?: string;
   sendWelcomeEmail: boolean;
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 };
 
 export type EmployeeFormSubmitEdit = {
@@ -114,6 +125,9 @@ export type EmployeeFormSubmitEdit = {
   bonus?: number;
   payrollStatus?: string;
   avatarUrl?: string;
+  dob?: string;
+  address?: string;
+  notes?: string;
 };
 
 interface EmployeeFormSheetProps {
@@ -151,6 +165,9 @@ export function EmployeeFormSheet({
       passwordMode: "auto",
       sendWelcomeEmail: true,
       payrollStatus: "PENDING",
+      dob: "",
+      address: "",
+      notes: "",
     },
   });
 
@@ -162,6 +179,9 @@ export function EmployeeFormSheet({
       role: "employee",
       status: "active",
       payrollStatus: "PENDING",
+      dob: "",
+      address: "",
+      notes: "",
     },
   });
 
@@ -225,6 +245,9 @@ export function EmployeeFormSheet({
       bonus: employee.bonus != null ? String(employee.bonus) : "",
       payrollStatus: employee.payrollStatus ?? "PENDING",
       mascotId,
+      dob: employee.dob ? employee.dob.slice(0, 10) : "",
+      address: employee.address ?? "",
+      notes: employee.notes ?? "",
     });
   }, [open, mode, employee, editForm]);
 
@@ -240,6 +263,9 @@ export function EmployeeFormSheet({
       sendWelcomeEmail: true,
       payrollStatus: "PENDING",
       mascotId: "7",
+      dob: "",
+      address: "",
+      notes: "",
     });
   }, [open, mode, createForm]);
 
@@ -262,6 +288,9 @@ export function EmployeeFormSheet({
       status: string;
       baseSalary?: string;
       bonus?: string;
+      dob?: string;
+      address?: string;
+      notes?: string;
     },
   >(data: T) {
     return {
@@ -274,6 +303,9 @@ export function EmployeeFormSheet({
       employeeCode: data.employeeCode || undefined,
       startDate: data.startDate || undefined,
       status: data.status,
+      dob: data.dob || undefined,
+      address: data.address || undefined,
+      notes: data.notes || undefined,
       ...(canViewSalaries && {
         baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
         bonus: data.bonus ? Number(data.bonus) : undefined,
@@ -504,6 +536,25 @@ function FormFields({
         />
         <FormField
           control={form.control}
+          name="dob"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date of Birth</FormLabel>
+              <FormControl>
+                <DatePicker
+                  inModal
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select date of birth"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
           name="employeeCode"
           render={({ field }) => (
             <FormItem>
@@ -526,19 +577,47 @@ function FormFields({
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Start date</FormLabel>
+              <FormControl>
+                <DatePicker
+                  inModal
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select start date"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
       </div>
       <FormField
         control={form.control}
-        name="startDate"
+        name="address"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Start date</FormLabel>
+            <FormLabel>Address</FormLabel>
             <FormControl>
-              <DatePicker
-                inModal
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Select start date"
+              <Input className="min-h-11" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="notes"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Notes</FormLabel>
+            <FormControl>
+              <Textarea
+                placeholder="Enter any additional notes..."
+                className="min-h-[100px]"
+                {...field}
               />
             </FormControl>
           </FormItem>

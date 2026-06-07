@@ -118,6 +118,9 @@ export default function EmployeesPage() {
             jobTitle: data.jobTitle ?? null,
             status: data.status,
             avatarUrl: data.avatarUrl ?? null,
+            dob: data.dob ?? null,
+            address: data.address ?? null,
+            notes: data.notes ?? null,
             createdAt: new Date().toISOString(),
           } as Employee);
           return prev;
@@ -141,6 +144,9 @@ export default function EmployeesPage() {
               password: data.password,
               sendWelcomeEmail: data.sendWelcomeEmail,
               avatarUrl: data.avatarUrl,
+              dob: data.dob,
+              address: data.address,
+              notes: data.notes,
             },
           }),
         reconcile: () => {
@@ -175,6 +181,9 @@ export default function EmployeesPage() {
       bonus: data.bonus,
       payrollStatus: data.payrollStatus,
       ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+      dob: data.dob,
+      address: data.address,
+      notes: data.notes,
     };
     const employeesKey = getListEmployeesQueryKey();
     const employeeId = editing.id;
@@ -240,7 +249,7 @@ export default function EmployeesPage() {
           data.mode === "email"
             ? result.emailSent
               ? "Reset email sent"
-              : "Password reset ù email not sent"
+              : "Password reset  email not sent"
             : "Password updated",
         description: result.emailSent
           ? "The employee should receive their new temporary password shortly. Check spam if it does not arrive."
@@ -291,7 +300,7 @@ export default function EmployeesPage() {
           />
           <Input
             data-testid="input-search-employees"
-            placeholder="Search employeesù"
+            placeholder="Search employees"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-11 pl-9"
@@ -438,7 +447,7 @@ function SelfProfileView({
             </div>
           </div>
           <p className="text-sm">
-            {profile.jobTitle ?? "ù"} ù {profile.teamName ?? "No team"}
+            {profile.jobTitle ?? ""}  {profile.teamName ?? "No team"}
           </p>
           {(profile.baseSalary != null || profile.bonus != null) && (
             <div className="border-t pt-3 text-sm">

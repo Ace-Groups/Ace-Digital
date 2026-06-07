@@ -122,6 +122,9 @@ export type CreateUserInput = {
   startDate?: Date | null;
   mustChangePassword?: boolean;
   avatarUrl?: string | null;
+  dob?: Date | null;
+  address?: string | null;
+  notes?: string | null;
 };
 
 export type UpdateUserInput = Partial<{
@@ -137,6 +140,9 @@ export type UpdateUserInput = Partial<{
   status: string;
   avatarUrl: string | null;
   passwordHash: string;
+  dob: Date | null;
+  address: string | null;
+  notes: string | null;
 }>;
 
 export type CreateNotificationInput = {

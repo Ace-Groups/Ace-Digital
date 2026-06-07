@@ -125,6 +125,21 @@ export function EmployeeCard({
               <p className="text-[11px] font-mono">
                 ID: {employee.employeeCode ?? "—"}
               </p>
+              {employee.dob && (
+                <p className="text-[11px]">
+                  DOB: {new Date(employee.dob).toLocaleDateString()}
+                </p>
+              )}
+              {employee.address && (
+                <p className="text-[11px] truncate" title={employee.address}>
+                  Address: {employee.address}
+                </p>
+              )}
+              {employee.notes && (
+                <p className="text-[11px] italic truncate" title={employee.notes}>
+                  Notes: {employee.notes}
+                </p>
+              )}
             </div>
           </div>
         </div>

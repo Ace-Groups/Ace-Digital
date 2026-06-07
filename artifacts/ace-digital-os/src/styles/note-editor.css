@@ -251,14 +251,42 @@
 }
 
 .note-editor-content .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 18px;
   height: 18px;
   border-radius: 4px;
   border: 2px solid hsl(var(--primary));
-  background: transparent;
+  background-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
   cursor: pointer;
-  accent-color: hsl(var(--primary));
-  appearance: auto;
+  position: relative;
+  outline: none;
+}
+
+.note-editor-content .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.note-editor-content .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid hsl(var(--primary-foreground));
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.note-editor-content .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:focus-visible {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25);
 }
 
 .note-editor-content .tiptap ul[data-type="taskList"] li > div {
@@ -343,11 +371,12 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid transparent;
+  border-left: 4px solid transparent;
 }
 
 .note-list-item:hover {
@@ -356,7 +385,10 @@
 
 .note-list-item.is-selected {
   background: hsl(var(--primary) / 0.08);
-  border-color: hsl(var(--primary) / 0.25);
+  border-color: hsl(var(--primary) / 0.15);
+  border-left-color: hsl(var(--primary));
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .note-list-item-title {
