@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 
 const EMAIL = "kavin@mybexo.com";
-const PASSWORD = "WYnEsTn84jSxtHK";
+const PASSWORD = "Kavin2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";
 const ROLE = "super_admin";
@@ -17,7 +17,7 @@ async function main() {
   const now = new Date().toISOString();
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
-  const existing = await store.findUserByEmail(EMAIL);
+  const existing = (await store.findUserByEmail(EMAIL)) || (await store.findUserByEmail("kavin@mebexo.com"));
 
   let userId: number;
   if (existing) {
