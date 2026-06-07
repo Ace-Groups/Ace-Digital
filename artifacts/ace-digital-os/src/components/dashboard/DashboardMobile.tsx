@@ -28,6 +28,7 @@ export function DashboardMobile() {
           isFetching={isFetching}
           hasData={Boolean(dash)}
           compact
+          dash={dash}
         />
       </StaggerItem>
 

@@ -18,6 +18,7 @@ export function DashboardDesktop() {
           roleLabel={roleLabel}
           isFetching={isFetching}
           hasData={Boolean(dash)}
+          dash={dash}
         />
       </StaggerItem>
 
