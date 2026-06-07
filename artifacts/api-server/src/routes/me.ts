@@ -21,6 +21,12 @@ function validateAvatarUrl(value: unknown): string | null | undefined {
     return PRESET_IDS.has(id) ? value : undefined;
   }
 
+  if (value.startsWith("mascot:")) {
+    const id = value.slice("mascot:".length);
+    const idNum = parseInt(id, 10);
+    return idNum >= 1 && idNum <= 15 ? value : undefined;
+  }
+
   if (value.startsWith("data:image/")) {
     return value.length <= MAX_AVATAR_BYTES ? value : undefined;
   }

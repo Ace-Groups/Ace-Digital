@@ -28,9 +28,10 @@ export function UserAvatar({
     const src = getMascotSrc(parsed.value);
     if (src) {
       return (
-        <div className={cn("shrink-0 overflow-hidden rounded-full bg-muted", className)}>
-          <img src={src} alt={fullName} className="h-full w-full object-cover" />
-        </div>
+        <Avatar className={className}>
+          <AvatarImage src={src} alt={fullName} className="object-cover" />
+          <AvatarFallback className={fallbackClassName}>{initials}</AvatarFallback>
+        </Avatar>
       );
     }
   }
