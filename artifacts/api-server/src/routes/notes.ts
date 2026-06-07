@@ -2,6 +2,7 @@ import { Router } from "express";
 import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
+import { getIo } from "../lib/socket-server";
 
 const notesRouter = Router();
 
@@ -24,6 +25,16 @@ notesRouter.post("/v1/notes", requireAuth, async (req, res, next) => {
       ...input,
       createdById: ctx.userId,
     });
+
+    const io = getIo();
+    if (io) {
+      io.emit("notes:refresh", {
+        noteId: note.id,
+        type: "create",
+        senderId: ctx.userId,
+      });
+    }
+
     res.status(201).json(note);
   } catch (error) {
     next(error);
@@ -72,6 +83,23 @@ notesRouter.patch("/v1/notes/:id", requireAuth, async (req, res, next) => {
     }
     const patch = req.body;
     const updated = await store.updateNote(note.id, patch);
+
+    if (updated) {
+      const io = getIo();
+      if (io) {
+        io.to(`note_${note.id}`).emit("note:saved", {
+          noteId: note.id,
+          note: updated,
+          senderId: ctx.userId,
+        });
+        io.emit("notes:refresh", {
+          noteId: note.id,
+          type: "update",
+          senderId: ctx.userId,
+        });
+      }
+    }
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -91,6 +119,16 @@ notesRouter.delete("/v1/notes/:id", requireAuth, async (req, res, next) => {
       return;
     }
     await store.deleteNote(note.id);
+
+    const io = getIo();
+    if (io) {
+      io.emit("notes:refresh", {
+        noteId: note.id,
+        type: "delete",
+        senderId: ctx.userId,
+      });
+    }
+
     res.status(204).end();
   } catch (error) {
     next(error);

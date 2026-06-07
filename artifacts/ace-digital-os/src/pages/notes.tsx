@@ -256,14 +256,50 @@ export default function NotesPage() {
       }
     };
 
+    const handleNoteSaved = (payload: {
+      noteId: number;
+      note: Note;
+      senderId: number;
+    }) => {
+      if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
+        setTitle(payload.note.title);
+        setContent(payload.note.content);
+        lastSavedRef.current = { title: payload.note.title, content: payload.note.content };
+      }
+    };
+
+    const handleNotesRefresh = (payload: {
+      noteId: number;
+      type: "create" | "update" | "delete";
+      senderId: number;
+    }) => {
+      void queryClient.invalidateQueries({
+        queryKey: getListNotesQueryKey(),
+      });
+
+      if (
+        payload.type === "delete" &&
+        payload.noteId === selectedNoteId &&
+        payload.senderId !== user?.id
+      ) {
+        setSelectedNoteId(null);
+        setCreating(false);
+        toast({ title: "This note was deleted by the owner" });
+      }
+    };
+
     socket.on("note:edited", handleNoteEdited);
     socket.on("note:users", handleNoteUsers);
+    socket.on("note:saved", handleNoteSaved);
+    socket.on("notes:refresh", handleNotesRefresh);
 
     return () => {
       socket.off("note:edited", handleNoteEdited);
       socket.off("note:users", handleNoteUsers);
+      socket.off("note:saved", handleNoteSaved);
+      socket.off("notes:refresh", handleNotesRefresh);
     };
-  }, [selectedNoteId, socket, user?.id]);
+  }, [selectedNoteId, socket, user?.id, queryClient, toast]);
 
   const broadcastEdit = useCallback(
     (newTitle: string, newContent: string) => {

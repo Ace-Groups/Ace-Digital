@@ -83,6 +83,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
     socket.data.postChannelIds = new Set();
     socket.data.activeNoteRooms = new Set();
     logger.info({ userId, socketId: socket.id }, "Socket connected");
+    await socket.join(`user_${userId}`);
 
     socket.on("join_channel", async (rawChannelId: unknown, ack?: (res: unknown) => void) => {
       const channelId = Number(rawChannelId);
