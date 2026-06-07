@@ -291,10 +291,15 @@ body {
   .neon-border-text {
     font-family: var(--font-display), 'Clash Display', sans-serif;
     color: transparent;
-    -webkit-text-stroke: 1.5px #00ffcc;
-    text-shadow: 0 0 8px rgba(0, 255, 204, 0.4), 0 0 20px rgba(0, 255, 204, 0.2);
+    -webkit-text-stroke: 1.5px hsl(var(--primary));
+    text-shadow: 0 0 8px hsl(var(--primary) / 0.15);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .dark .neon-border-text {
+    -webkit-text-stroke: 1.5px #00ffcc;
+    text-shadow: 0 0 8px rgba(0, 255, 204, 0.4), 0 0 20px rgba(0, 255, 204, 0.2);
   }
 
   .tech-glass {

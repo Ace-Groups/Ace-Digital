@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useListEmployees } from "@workspace/api-client-react";
 import { Search, UserPlus, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface ShareNoteDialogProps {
   open: boolean;
@@ -143,17 +144,12 @@ export function ShareNoteDialog({
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                    {emp.avatarUrl ? (
-                      <img
-                        src={emp.avatarUrl}
-                        alt={emp.fullName}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      getInitials(emp.fullName)
-                    )}
-                  </div>
+                  <UserAvatar
+                    avatarUrl={emp.avatarUrl}
+                    fullName={emp.fullName}
+                    className="w-8 h-8 flex-shrink-0"
+                    fallbackClassName="bg-primary/15 text-primary text-xs font-bold"
+                  />
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
