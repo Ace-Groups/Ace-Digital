@@ -21,7 +21,14 @@ export function DashboardMobile() {
   return (
     <StaggerList className="page-stack">
       <StaggerItem>
-        <DashboardHeroCard />
+        <DashboardHeroCard
+          firstName={firstName}
+          dashboardDate={dashboardDate}
+          roleLabel={roleLabel}
+          isFetching={isFetching}
+          hasData={Boolean(dash)}
+          compact
+        />
       </StaggerItem>
 
       <StaggerItem>
