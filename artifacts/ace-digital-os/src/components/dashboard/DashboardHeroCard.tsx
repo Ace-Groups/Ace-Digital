@@ -1,4 +1,4 @@
-import { Zap, Activity, Cpu, Clock } from "lucide-react";
+import { Activity, Cpu, Clock, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DashboardHeroCardProps {
@@ -19,17 +19,14 @@ export function DashboardHeroCard({
   compact,
 }: DashboardHeroCardProps) {
   return (
-    <div className={cn(
-      "w-full rounded-2xl border border-white/5 bg-[#0a0a0b]/60 shadow-2xl relative overflow-hidden backdrop-blur-xl",
-      compact ? "p-4 sm:p-5" : "p-6 md:p-8"
-    )}>
-      {/* Subtle background neon glow */}
-      <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-[#00ffcc]/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -left-12 -bottom-12 w-[200px] h-[200px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="w-full rounded-2xl border border-white/5 bg-[#0a0a0b]/60 p-6 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+      {/* Subtle background neon glows */}
+      <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-[#00ffcc]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -left-12 -bottom-12 w-[180px] h-[180px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-        {/* Left Column: Greeting and Actions */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        {/* Left Column: Greeting and Status */}
+        <div className="lg:col-span-7 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] tracking-widest font-mono text-[#9CA3AF] uppercase">
               {dashboardDate}
@@ -52,61 +49,55 @@ export function DashboardHeroCard({
               WELCOME
             </h1>
             <h2 className={cn(
-              "font-display font-medium text-[#E5E7EB] mt-1",
+              "font-display font-medium text-[#E5E7EB] mt-1.5",
               compact ? "text-lg" : "text-xl md:text-2xl"
             )}>
               {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
             </h2>
-            {!compact && (
-              <p className="text-sm text-[#9CA3AF] font-sans mt-2 max-w-md leading-relaxed">
-                Your workspace is running at peak capacity. Initialize session to view live telemetry and coordinate client deliverables.
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 mt-1">
-            <button
-              type="button"
-              className="px-5 py-2.5 bg-[#00FFCC] hover:bg-[#00e6b8] text-[#0A0A0B] font-bold font-sans rounded-lg tracking-wider text-[11px] uppercase transition-all duration-300 shadow-[0_0_15px_rgba(0,255,204,0.2)] hover:shadow-[0_0_25px_rgba(0,255,204,0.5)] cursor-pointer flex items-center gap-2"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              Initialize Core
-            </button>
-            <span className="text-[10px] font-mono text-[#9CA3AF]/70 uppercase tracking-wider hidden sm:inline-block">
-              {isFetching && !hasData ? "Syncing Workspace..." : "System Nominal"}
-            </span>
+            <p className="text-sm text-[#9CA3AF] font-sans mt-2 max-w-md leading-relaxed">
+              All systems are fully synchronized. Your digital workspace is secured and running at nominal performance.
+            </p>
           </div>
         </div>
 
-        {/* Right Column: Glassmorphism Stats Panel */}
+        {/* Right Column: Refined HUD telemetry (simplified) */}
         <div className="lg:col-span-5 w-full">
           <div className="tech-glass-neon p-5 rounded-xl flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            {/* System Status */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
               <span className="text-[10px] font-semibold text-[#9CA3AF] uppercase font-sans tracking-widest flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-[#00FFCC]" />
-                Active Nodes
+                <CheckCircle className="w-3.5 h-3.5 text-[#00FFCC]" />
+                System Status
               </span>
-              <span className="text-sm font-semibold text-[#E5E7EB] font-sans">
-                1,842 <span className="text-[9px] text-[#00FFCC] font-mono animate-pulse ml-1">● LIVE</span>
+              <span className="text-xs font-semibold text-[#00FFCC] font-mono uppercase tracking-wider flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00FFCC] animate-pulse" />
+                Operational
               </span>
             </div>
 
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            {/* CPU Load */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
               <span className="text-[10px] font-semibold text-[#9CA3AF] uppercase font-sans tracking-widest flex items-center gap-1.5">
                 <Cpu className="w-3.5 h-3.5 text-[#00FFCC]" />
-                Quantum Load
+                System Load
               </span>
-              <span className="text-sm font-semibold text-[#E5E7EB] font-sans">
-                34.8%
-              </span>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5 hidden sm:block">
+                  <div className="h-full bg-[#00FFCC] rounded-full shadow-[0_0_8px_#00FFCC]" style={{ width: "34.8%" }} />
+                </div>
+                <span className="text-xs font-semibold text-[#E5E7EB] font-mono">
+                  34.8%
+                </span>
+              </div>
             </div>
 
+            {/* Network Latency */}
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold text-[#9CA3AF] uppercase font-sans tracking-widest flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-[#00FFCC]" />
-                Response Rate
+                API Latency
               </span>
-              <span className="text-sm font-semibold text-[#E5E7EB] font-sans">
+              <span className="text-xs font-semibold text-[#E5E7EB] font-mono">
                 12ms
               </span>
             </div>
