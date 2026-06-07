@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { StaggerItem, StaggerList } from "@/components/design";
 import { CheckSquare, MessageSquare, CalendarDays } from "lucide-react";
-import { DashboardHero } from "./DashboardHero";
+import { DashboardHeroCard } from "./DashboardHeroCard";
 import { DashboardStatCards } from "./DashboardStatCards";
 import { DashboardSecondaryWidgets } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
@@ -21,14 +21,7 @@ export function DashboardMobile() {
   return (
     <StaggerList className="page-stack">
       <StaggerItem>
-        <DashboardHero
-          firstName={firstName}
-          dashboardDate={dashboardDate}
-          roleLabel={roleLabel}
-          isFetching={isFetching}
-          hasData={Boolean(dash)}
-          compact
-        />
+        <DashboardHeroCard />
       </StaggerItem>
 
       <StaggerItem>

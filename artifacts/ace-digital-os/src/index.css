@@ -59,6 +59,7 @@
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
+  --font-display: var(--app-font-display);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -79,16 +80,16 @@
   /* Ace Digital Brand Palette */
   /* ace-800: #052659, ace-600: #5483B3, ace-100: #C1E8FF */
 
-  --background: 210 60% 98%;
+  --background: 210 40% 98%;
   --foreground: 215 50% 12%;
 
   --card: 0 0% 100%;
   --card-foreground: 215 50% 12%;
-  --card-border: 210 30% 90%;
+  --card-border: 210 25% 91%;
 
   --popover: 0 0% 100%;
   --popover-foreground: 215 50% 12%;
-  --popover-border: 210 30% 88%;
+  --popover-border: 210 25% 89%;
 
   /* Primary = ace-600 blue */
   --primary: 211 38% 52%;
@@ -112,11 +113,11 @@
   --destructive-foreground: 0 0% 100%;
   --destructive-border: hsl(0 74% 52%);
 
-  --border: 210 25% 88%;
-  --input: 210 25% 92%;
+  --border: 210 22% 88%;
+  --input: 210 22% 92%;
   --ring: 211 38% 52%;
 
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
   --chart-1: 211 38% 52%;
   --chart-2: 142 70% 45%;
@@ -136,7 +137,8 @@
   --sidebar-accent-border: hsl(210 25% 86%);
   --sidebar-ring: 211 38% 52%;
 
-  --app-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --app-font-display: 'Clash Display', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
@@ -148,54 +150,67 @@
 
 /* DARK MODE */
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 210 30% 92%;
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
 
-  --card: 240 10% 6%;
-  --card-foreground: 210 30% 92%;
-  --card-border: 240 6% 12%;
+  --card: 222 47% 7.5%;
+  --card-foreground: 210 40% 98%;
+  --card-border: 222 30% 13%;
 
-  --popover: 240 10% 6%;
-  --popover-foreground: 210 30% 92%;
-  --popover-border: 240 6% 12%;
+  --popover: 222 47% 7.5%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 222 30% 13%;
 
   --primary: 184 100% 50%;
-  --primary-foreground: 240 10% 3.9%;
+  --primary-foreground: 222 47% 4%;
   --primary-border: hsl(184 100% 40%);
 
-  --secondary: 240 10% 10%;
+  --secondary: 222 30% 11%;
   --secondary-foreground: 184 100% 50%;
-  --secondary-border: hsl(240 6% 15%);
+  --secondary-border: hsl(222 25% 16%);
 
-  --muted: 240 10% 10%;
-  --muted-foreground: 240 6% 60%;
-  --muted-border: hsl(240 6% 15%);
+  --muted: 222 30% 11%;
+  --muted-foreground: 217.9 10.6% 64.9%;
+  --muted-border: hsl(222 25% 16%);
 
-  --accent: 240 10% 10%;
+  --accent: 222 30% 11%;
   --accent-foreground: 184 100% 50%;
-  --accent-border: hsl(240 6% 15%);
+  --accent-border: hsl(222 25% 16%);
 
   --destructive: 346 84% 50%;
   --destructive-foreground: 0 0% 100%;
   --destructive-border: hsl(346 84% 40%);
 
-  --border: 240 6% 15%;
-  --input: 240 6% 15%;
+  --border: 222 25% 14%;
+  --input: 222 25% 14%;
   --ring: 184 100% 50%;
 
-  --sidebar: 240 10% 2%;
-  --sidebar-foreground: 0 0% 92%;
-  --sidebar-border: 240 6% 12%;
+  --sidebar: 222 47% 2.5%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-border: 222 30% 11%;
   --sidebar-primary: 184 100% 50%;
-  --sidebar-primary-foreground: 240 10% 3.9%;
-  --sidebar-accent: 240 10% 8%;
+  --sidebar-primary-foreground: 222 47% 4%;
+  --sidebar-accent: 222 30% 9%;
   --sidebar-accent-foreground: 184 100% 50%;
   --sidebar-ring: 184 100% 50%;
+
+  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --app-font-display: 'Clash Display', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --shadow-brand: 222 47% 2%;
 }
 
 * {
   border-color: hsl(var(--border));
   outline-color: hsl(var(--ring));
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, hsl(var(--border)) 70%, transparent) transparent;
+}
+
+::selection {
+  background-color: color-mix(in oklab, hsl(var(--primary)) 25%, transparent);
+  color: inherit;
 }
 
 body {
@@ -224,7 +239,7 @@ body {
 
   .brand-gradient {
     background: linear-gradient(
-      135deg,
+      135deg in oklch,
       hsl(var(--ace-navy)) 0%,
       hsl(var(--ace-blue)) 100%
     );
@@ -232,26 +247,95 @@ body {
 
   .dark .brand-gradient {
     background: linear-gradient(
-      135deg,
-      hsl(271 100% 15%) 0%,
+      135deg in oklch,
+      hsl(271 100% 12%) 0%,
       hsl(184 100% 50%) 100%
     );
   }
 
   .brand-gradient-subtle {
     background: linear-gradient(
-      180deg,
-      hsl(var(--ace-sky) / 0.35) 0%,
-      hsl(var(--background)) 42%
+      180deg in oklch,
+      hsl(var(--ace-sky) / 0.25) 0%,
+      hsl(var(--background)) 45%
     );
   }
 
   .dark .brand-gradient-subtle {
     background: linear-gradient(
-      180deg,
-      hsl(271 100% 50% / 0.1) 0%,
-      hsl(var(--background)) 48%
+      180deg in oklch,
+      hsl(271 100% 40% / 0.06) 0%,
+      hsl(var(--background)) 50%
     );
+  }
+
+  .glass-panel {
+    background: color-mix(in oklab, hsl(var(--card)) 75%, transparent);
+    backdrop-filter: blur(16px);
+    border: 1px solid color-mix(in oklab, hsl(var(--border)) 35%, transparent);
+  }
+
+  .glass-card {
+    background: color-mix(in oklab, hsl(var(--card)) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in oklab, hsl(var(--border)) 50%, transparent);
+    box-shadow: var(--shadow-brand-sm);
+  }
+
+  .glass-header {
+    background: color-mix(in oklab, hsl(var(--background)) 75%, transparent);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid color-mix(in oklab, hsl(var(--border)) 45%, transparent);
+  }
+
+  .neon-border-text {
+    font-family: var(--font-display), 'Clash Display', sans-serif;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #00ffcc;
+    text-shadow: 0 0 8px rgba(0, 255, 204, 0.4), 0 0 20px rgba(0, 255, 204, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tech-glass {
+    background: rgba(10, 10, 11, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .tech-glass-neon {
+    background: rgba(10, 10, 11, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 255, 204, 0.15);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.05);
+  }
+
+  .animate-hover-card {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+  }
+
+  .animate-hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-brand-md);
+    border-color: color-mix(in oklab, hsl(var(--primary)) 30%, hsl(var(--border)));
+  }
+
+  .animate-hover-item {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .animate-hover-item:hover {
+    transform: translateX(2px);
+  }
+
+  .animate-press {
+    transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-press:active {
+    transform: scale(0.97);
   }
 
   .surface-muted {
@@ -263,13 +347,15 @@ body {
   }
 
   .shadow-brand-sm {
-    box-shadow: 0 1px 2px hsl(var(--shadow-brand) / 0.08),
-      0 4px 12px hsl(var(--shadow-brand) / 0.06);
+    box-shadow: 0 1px 2px hsl(var(--shadow-brand) / 0.04),
+      0 3px 8px hsl(var(--shadow-brand) / 0.03),
+      0 6px 16px hsl(var(--shadow-brand) / 0.02);
   }
 
   .shadow-brand-md {
-    box-shadow: 0 2px 4px hsl(var(--shadow-brand) / 0.06),
-      0 8px 24px hsl(var(--shadow-brand) / 0.1);
+    box-shadow: 0 2px 4px hsl(var(--shadow-brand) / 0.05),
+      0 6px 16px hsl(var(--shadow-brand) / 0.05),
+      0 16px 36px hsl(var(--shadow-brand) / 0.06);
   }
 
   .text-display-sm {
