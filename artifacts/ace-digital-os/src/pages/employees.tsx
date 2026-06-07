@@ -442,7 +442,7 @@ function SelfProfileView({
               <p className="text-lg font-semibold">{profile.fullName}</p>
               <p className="text-sm text-muted-foreground">{profile.email}</p>
               <p className="text-sm capitalize text-muted-foreground">
-                {profile.role.replace(/_/g, " ")}
+                {profile.role?.replace(/_/g, " ") ?? ""}
               </p>
             </div>
           </div>

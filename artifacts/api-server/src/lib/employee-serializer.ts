@@ -33,6 +33,11 @@ export async function employeeWithProfile(user: User, ctx: AccessContext) {
     notes: user.notes ?? null,
     createdAt: user.createdAt.toISOString(),
   };
+
+  if (user.id === ctx.userId) {
+    return canViewSalaries(ctx) ? row : stripSalaryFields(row);
+  }
+
   if (canViewSalaries(ctx)) return row;
   if (
     canBrowseEmployeeDirectory(ctx) &&
