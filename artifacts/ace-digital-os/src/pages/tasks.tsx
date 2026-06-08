@@ -36,6 +36,7 @@ import { priorityColor, statusColor, cn, formatRelativeTime } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast";
 import { AssigneeMultiSelect } from "@/components/tasks/AssigneeMultiSelect";
 import { TaskAssigneesDisplay } from "@/components/tasks/TaskAssigneesDisplay";
+import { SwipeableTaskRow } from "@/components/tasks/SwipeableTaskRow";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -814,11 +815,19 @@ export default function TasksPage() {
           ) : (
             <div className="divide-y divide-border">
               {visibleTasks.map((task) => (
-                <div
+                <SwipeableTaskRow
                   key={task.id}
-                  data-testid={`task-row-${task.id}`}
-                  className="contain-region flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
+                  task={task}
+                  canDelete={canRemoveTask(task)}
+                  canComplete={canCompleteTask(task)}
+                  isDone={isMyPartDone(task)}
+                  onDelete={() => requestDeleteTask(task)}
+                  onComplete={() => void handleToggle(task, !isMyPartDone(task))}
                 >
+                  <div
+                    data-testid={`task-row-${task.id}`}
+                    className="contain-region flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
+                  >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
                     checked={isMyPartDone(task)}
@@ -911,26 +920,13 @@ export default function TasksPage() {
                     </Badge>
                   </div>
                 </div>
+                </SwipeableTaskRow>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
       </StaggerItem>
-
-      {isMobile && (
-      <StaggerItem>
-        <Button
-          data-testid="btn-create-task-fab"
-          size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
-          onClick={() => setOpen(true)}
-          aria-label="New task"
-        >
-          <Plus size={22} />
-        </Button>
-      </StaggerItem>
-      )}
       </StaggerList>
 
       <ConfirmDialog

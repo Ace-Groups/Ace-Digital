@@ -20,6 +20,7 @@ import {
   Menu,
   StickyNote,
   Search,
+  Users2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,11 +42,14 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useMobileChrome } from "@/contexts/MobileChromeContext";
 import aceLogo from "@/assets/ace-logo.png";
+import { hapticLight } from "@/lib/haptics";
+import { MobileSpeedDial } from "./MobileSpeedDial";
 
 const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   projects: FolderKanban,
   tasks: CheckSquare,
+  teams: Users2,
   employees: Users,
   finance: DollarSign,
   clients: Building2,
@@ -162,46 +166,51 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
       </main>
 
       {!hideBottomNav && (
-      <nav
-        className="z-50 shrink-0 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
-        aria-label="Main navigation"
-      >
-        <div className="flex h-16 items-stretch justify-around px-1">
-          {primary.map((item) => {
-            const Icon = ICONS[item.route];
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-50 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[env(safe-area-inset-bottom)]"
+          aria-label="Main navigation"
+        >
+          <div className="flex h-16 w-full max-w-sm items-stretch justify-around rounded-3xl border border-white/20 bg-background/60 shadow-brand-xl backdrop-blur-xl dark:bg-black/60 px-1">
+            {primary.map((item) => {
+              const Icon = ICONS[item.route];
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => hapticLight()}
+                  className={cn(
+                    "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-all touch-manipulation",
+                    active ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  )}
+                >
+                  <Icon size={24} strokeWidth={active ? 2.5 : 1.75} aria-hidden />
+                  {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-primary" />}
+                </Link>
+              );
+            })}
+            {overflow.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  hapticLight();
+                  setMoreOpen(true);
+                }}
                 className={cn(
-                  "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-medium transition-colors sm:text-[10px]",
-                  active ? "text-primary" : "text-muted-foreground",
+                  "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-all touch-manipulation",
+                  overflow.some((o) => isActive(o.href))
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
-                <Icon size={22} strokeWidth={active ? 2.25 : 1.75} aria-hidden />
-                <span className="max-w-[3.25rem] truncate sm:max-w-[4.5rem]">{item.label}</span>
-              </Link>
-            );
-          })}
-          {overflow.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setMoreOpen(true)}
-              className={cn(
-                "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] font-medium",
-                overflow.some((o) => isActive(o.href))
-                  ? "text-primary"
-                  : "text-muted-foreground",
-              )}
-            >
-              <MoreHorizontal size={22} strokeWidth={1.75} aria-hidden />
-              <span>More</span>
-            </button>
-          )}
-        </div>
-      </nav>
+                <MoreHorizontal size={24} strokeWidth={1.75} aria-hidden />
+              </button>
+            )}
+          </div>
+        </nav>
       )}
+
+      {!hideBottomNav && <MobileSpeedDial />}
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-[env(safe-area-inset-bottom)]">

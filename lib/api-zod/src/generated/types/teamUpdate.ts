@@ -6,11 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Team {
-  id: number;
-  name: string;
+export interface TeamUpdate {
+  name?: string;
   /** @nullable */
   color?: string | null;
-  memberCount?: number;
-  projectCount?: number;
 }

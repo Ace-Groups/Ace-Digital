@@ -70,24 +70,36 @@ export function EmployeePasswordResetSheet({
           onValueChange={(v) => setMode(v as "email" | "manual")}
           className="space-y-3"
         >
-          <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
-            <RadioGroupItem value="email" className="mt-1" />
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setMode("email")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setMode("email"); }}
+            className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border p-3 touch-manipulation active:bg-muted/50"
+          >
+            <RadioGroupItem value="email" className="mt-1 pointer-events-none" />
             <div>
               <p className="text-sm font-medium">Send reset email</p>
               <p className="text-xs text-muted-foreground">
                 Generates a temporary password and emails it to the employee (forgot-password flow).
               </p>
             </div>
-          </label>
-          <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
-            <RadioGroupItem value="manual" className="mt-1" />
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setMode("manual")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setMode("manual"); }}
+            className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border p-3 touch-manipulation active:bg-muted/50"
+          >
+            <RadioGroupItem value="manual" className="mt-1 pointer-events-none" />
             <div className="flex-1">
               <p className="text-sm font-medium">Set password manually</p>
               <p className="text-xs text-muted-foreground">
                 Choose a temporary password yourself (share securely with the employee).
               </p>
             </div>
-          </label>
+          </div>
         </RadioGroup>
 
         {mode === "manual" && (
@@ -106,13 +118,19 @@ export function EmployeePasswordResetSheet({
               />
               <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
             </div>
-            <label className="flex min-h-11 cursor-pointer items-center gap-3">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setSendEmailOnManual((v) => !v)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSendEmailOnManual((v) => !v); }}
+              className="flex min-h-11 cursor-pointer items-center gap-3 touch-manipulation"
+            >
               <Checkbox
                 checked={sendEmailOnManual}
-                onCheckedChange={(v) => setSendEmailOnManual(v === true)}
+                className="pointer-events-none"
               />
               <span className="text-sm">Also email credentials to the employee</span>
-            </label>
+            </div>
           </>
         )}
 

@@ -699,6 +699,128 @@ paths:
               schema:
                 $ref: "#/components/schemas/Team"
 
+  /v1/teams/{id}:
+    patch:
+      operationId: updateTeam
+      tags: [teams]
+      summary: Update team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamUpdate"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+    delete:
+      operationId: deleteTeam
+      tags: [teams]
+      summary: Delete team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/teams/{id}/assign-project:
+    post:
+      operationId: assignTeamProject
+      tags: [teams]
+      summary: Assign project to team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectId:
+                  type: integer
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /v1/teams/{id}/unassign-project/{projectId}:
+    delete:
+      operationId: unassignTeamProject
+      tags: [teams]
+      summary: Unassign project from team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Unassigned
+
+  /v1/teams/{id}/members/bulk:
+    patch:
+      operationId: bulkAssignTeamMembers
+      tags: [teams]
+      summary: Assign multiple users to team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
   /v1/job-titles:
     get:
       operationId: listJobTitles
@@ -2959,6 +3081,8 @@ components:
           type: ["string", "null"]
         memberCount:
           type: integer
+        projectCount:
+          type: integer
 
     TeamInput:
       type: object
@@ -2968,6 +3092,14 @@ components:
           type: string
         color:
           type: string
+
+    TeamUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: ["string", "null"]
 
     JobTitleInput:
       type: object

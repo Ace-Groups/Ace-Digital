@@ -813,7 +813,8 @@ export const ListTeamsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "color": zod.string().nullish(),
-  "memberCount": zod.number().optional()
+  "memberCount": zod.number().optional(),
+  "projectCount": zod.number().optional()
 })
 export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
 
@@ -824,6 +825,76 @@ export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
 export const CreateTeamBody = zod.object({
   "name": zod.string(),
   "color": zod.string().optional()
+})
+
+
+/**
+ * @summary Update team
+ */
+export const UpdateTeamParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTeamBody = zod.object({
+  "name": zod.string().optional(),
+  "color": zod.string().nullish()
+})
+
+export const UpdateTeamResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "color": zod.string().nullish(),
+  "memberCount": zod.number().optional(),
+  "projectCount": zod.number().optional()
+})
+
+
+/**
+ * @summary Delete team
+ */
+export const DeleteTeamParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Assign project to team
+ */
+export const AssignTeamProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AssignTeamProjectBody = zod.object({
+  "projectId": zod.number().optional()
+})
+
+export const AssignTeamProjectResponse = zod.object({
+  "success": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Unassign project from team
+ */
+export const UnassignTeamProjectParams = zod.object({
+  "id": zod.coerce.number(),
+  "projectId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Assign multiple users to team
+ */
+export const BulkAssignTeamMembersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BulkAssignTeamMembersBody = zod.object({
+  "userIds": zod.array(zod.number()).optional()
+})
+
+export const BulkAssignTeamMembersResponse = zod.object({
+  "success": zod.boolean().optional()
 })
 
 

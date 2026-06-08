@@ -44,6 +44,9 @@ export const PERMISSIONS = [
   "calendar:write_others",
   "calendar:read_team",
   "calendar:read_org",
+  "teams:read",
+  "teams:write",
+  "teams:delete",
   "users:register",
 ] as const;
 
@@ -55,6 +58,9 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "dashboard:view",
     "projects:read",
     "projects:write",
+    "teams:read",
+    "teams:write",
+    "teams:delete",
     "projects:delete",
     "tasks:read",
     "tasks:write",
@@ -95,6 +101,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   finance: [
     "dashboard:view",
     "projects:read",
+    "teams:read",
     "tasks:read",
     "employees:read",
     "employees:write",
@@ -124,6 +131,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   hr: [
     "dashboard:view",
     "projects:read",
+    "teams:read",
+    "teams:write",
     "tasks:read",
     "employees:read",
     "employees:write",
@@ -149,6 +158,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   client_manager: [
     "dashboard:view",
     "projects:read",
+    "teams:read",
     "clients:read",
     "clients:write",
     "clients:delete",
@@ -169,6 +179,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   team_lead: [
     "dashboard:view",
     "projects:read",
+    "teams:read",
     "projects:write",
     "tasks:read",
     "tasks:write",
@@ -193,6 +204,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   employee: [
     "dashboard:view",
     "projects:read",
+    "teams:read",
     "tasks:read",
     "tasks:write",
     "service_tickets:read",

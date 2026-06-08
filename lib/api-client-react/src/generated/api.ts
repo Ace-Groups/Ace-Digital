@@ -24,8 +24,12 @@ import type {
   Approval,
   ApprovalInput,
   ApprovalReviewInput,
+  AssignTeamProject200,
+  AssignTeamProjectBody,
   AuthPermissions,
   AuthResponse,
+  BulkAssignTeamMembers200,
+  BulkAssignTeamMembersBody,
   CalendarEvent,
   CalendarEventInput,
   CalendarEventUpdate,
@@ -111,6 +115,7 @@ import type {
   TaskUpdate,
   Team,
   TeamInput,
+  TeamUpdate,
   User
 } from './api.schemas';
 
@@ -2579,6 +2584,364 @@ export const useCreateTeam = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateTeamMutationOptions(options));
+    }
+
+export const getUpdateTeamUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/teams/${id}`
+}
+
+/**
+ * @summary Update team
+ */
+export const updateTeam = async (id: number,
+    teamUpdate: TeamUpdate, options?: RequestInit): Promise<Team> => {
+
+  return customFetch<Team>(getUpdateTeamUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      teamUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateTeamMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,{id: number;data: BodyType<TeamUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,{id: number;data: BodyType<TeamUpdate>}, TContext> => {
+
+const mutationKey = ['updateTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTeam>>, {id: number;data: BodyType<TeamUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTeam(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateTeam>>>
+    export type UpdateTeamMutationBody = BodyType<TeamUpdate>
+    export type UpdateTeamMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update team
+ */
+export const useUpdateTeam = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,{id: number;data: BodyType<TeamUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTeam>>,
+        TError,
+        {id: number;data: BodyType<TeamUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateTeamMutationOptions(options));
+    }
+
+export const getDeleteTeamUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/teams/${id}`
+}
+
+/**
+ * @summary Delete team
+ */
+export const deleteTeam = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteTeamUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteTeamMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTeam>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteTeam(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTeam>>>
+
+    export type DeleteTeamMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete team
+ */
+export const useDeleteTeam = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTeam>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTeamMutationOptions(options));
+    }
+
+export const getAssignTeamProjectUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/teams/${id}/assign-project`
+}
+
+/**
+ * @summary Assign project to team
+ */
+export const assignTeamProject = async (id: number,
+    assignTeamProjectBody: AssignTeamProjectBody, options?: RequestInit): Promise<AssignTeamProject200> => {
+
+  return customFetch<AssignTeamProject200>(getAssignTeamProjectUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assignTeamProjectBody,)
+  }
+);}
+
+
+
+
+export const getAssignTeamProjectMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignTeamProject>>, TError,{id: number;data: BodyType<AssignTeamProjectBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignTeamProject>>, TError,{id: number;data: BodyType<AssignTeamProjectBody>}, TContext> => {
+
+const mutationKey = ['assignTeamProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignTeamProject>>, {id: number;data: BodyType<AssignTeamProjectBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignTeamProject(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignTeamProjectMutationResult = NonNullable<Awaited<ReturnType<typeof assignTeamProject>>>
+    export type AssignTeamProjectMutationBody = BodyType<AssignTeamProjectBody>
+    export type AssignTeamProjectMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Assign project to team
+ */
+export const useAssignTeamProject = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignTeamProject>>, TError,{id: number;data: BodyType<AssignTeamProjectBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignTeamProject>>,
+        TError,
+        {id: number;data: BodyType<AssignTeamProjectBody>},
+        TContext
+      > => {
+      return useMutation(getAssignTeamProjectMutationOptions(options));
+    }
+
+export const getUnassignTeamProjectUrl = (id: number,
+    projectId: number,) => {
+
+
+
+
+  return `/api/v1/teams/${id}/unassign-project/${projectId}`
+}
+
+/**
+ * @summary Unassign project from team
+ */
+export const unassignTeamProject = async (id: number,
+    projectId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnassignTeamProjectUrl(id,projectId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnassignTeamProjectMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignTeamProject>>, TError,{id: number;projectId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignTeamProject>>, TError,{id: number;projectId: number}, TContext> => {
+
+const mutationKey = ['unassignTeamProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignTeamProject>>, {id: number;projectId: number}> = (props) => {
+          const {id,projectId} = props ?? {};
+
+          return  unassignTeamProject(id,projectId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignTeamProjectMutationResult = NonNullable<Awaited<ReturnType<typeof unassignTeamProject>>>
+
+    export type UnassignTeamProjectMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Unassign project from team
+ */
+export const useUnassignTeamProject = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignTeamProject>>, TError,{id: number;projectId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unassignTeamProject>>,
+        TError,
+        {id: number;projectId: number},
+        TContext
+      > => {
+      return useMutation(getUnassignTeamProjectMutationOptions(options));
+    }
+
+export const getBulkAssignTeamMembersUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/teams/${id}/members/bulk`
+}
+
+/**
+ * @summary Assign multiple users to team
+ */
+export const bulkAssignTeamMembers = async (id: number,
+    bulkAssignTeamMembersBody: BulkAssignTeamMembersBody, options?: RequestInit): Promise<BulkAssignTeamMembers200> => {
+
+  return customFetch<BulkAssignTeamMembers200>(getBulkAssignTeamMembersUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      bulkAssignTeamMembersBody,)
+  }
+);}
+
+
+
+
+export const getBulkAssignTeamMembersMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkAssignTeamMembers>>, TError,{id: number;data: BodyType<BulkAssignTeamMembersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkAssignTeamMembers>>, TError,{id: number;data: BodyType<BulkAssignTeamMembersBody>}, TContext> => {
+
+const mutationKey = ['bulkAssignTeamMembers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkAssignTeamMembers>>, {id: number;data: BodyType<BulkAssignTeamMembersBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bulkAssignTeamMembers(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkAssignTeamMembersMutationResult = NonNullable<Awaited<ReturnType<typeof bulkAssignTeamMembers>>>
+    export type BulkAssignTeamMembersMutationBody = BodyType<BulkAssignTeamMembersBody>
+    export type BulkAssignTeamMembersMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Assign multiple users to team
+ */
+export const useBulkAssignTeamMembers = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkAssignTeamMembers>>, TError,{id: number;data: BodyType<BulkAssignTeamMembersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkAssignTeamMembers>>,
+        TError,
+        {id: number;data: BodyType<BulkAssignTeamMembersBody>},
+        TContext
+      > => {
+      return useMutation(getBulkAssignTeamMembersMutationOptions(options));
     }
 
 export const getListJobTitlesUrl = () => {

@@ -222,6 +222,27 @@ export function createPostgresStore() {
         .returning();
       return t;
     },
+    updateTeam: async (id: number, patch: Partial<{ name: string; color: string | null }>) => {
+      const [t] = await db.update(teamsTable).set(patch).where(eq(teamsTable.id, id)).returning();
+      return t ?? null;
+    },
+    deleteTeam: async (id: number) => {
+      await db.update(usersTable).set({ teamId: null }).where(eq(usersTable.teamId, id));
+      await db.update(projectsTable).set({ teamId: null }).where(eq(projectsTable.teamId, id));
+      await db.update(tasksTable).set({ teamId: null }).where(eq(tasksTable.teamId, id));
+      await db.update(expensesTable).set({ teamId: null }).where(eq(expensesTable.teamId, id));
+      await db.update(approvalsTable).set({ teamId: null }).where(eq(approvalsTable.teamId, id));
+      await db.update(clientsTable).set({ assignedTeamId: null }).where(eq(clientsTable.assignedTeamId, id));
+      await db.update(calendarEventsTable).set({ teamId: null }).where(eq(calendarEventsTable.teamId, id));
+      await db.update(serviceTicketsTable).set({ teamId: null }).where(eq(serviceTicketsTable.teamId, id));
+      await db.update(channelsTable).set({ teamId: null }).where(eq(channelsTable.teamId, id));
+      await db.update(notesTable).set({ teamId: null }).where(eq(notesTable.teamId, id));
+      await db.delete(teamsTable).where(eq(teamsTable.id, id));
+    },
+    bulkUpdateUserTeams: async (userIds: number[], teamId: number | null) => {
+      if (userIds.length === 0) return;
+      await db.update(usersTable).set({ teamId }).where(inArray(usersTable.id, userIds));
+    },
     peekEmployeeCodeSequence: async () => {
       const [row] = await db
         .select()

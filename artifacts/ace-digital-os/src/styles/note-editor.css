@@ -43,15 +43,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .note-toolbar-btn:hover {

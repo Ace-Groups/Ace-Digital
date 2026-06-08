@@ -558,11 +558,18 @@ export interface Team {
   /** @nullable */
   color?: string | null;
   memberCount?: number;
+  projectCount?: number;
 }
 
 export interface TeamInput {
   name: string;
   color?: string;
+}
+
+export interface TeamUpdate {
+  name?: string;
+  /** @nullable */
+  color?: string | null;
 }
 
 export interface JobTitleInput {
@@ -1222,6 +1229,22 @@ export type CheckCalendarChatLinkParams = {
 channelId: number;
 messageId: number;
 ownerId?: number;
+};
+
+export type AssignTeamProjectBody = {
+  projectId?: number;
+};
+
+export type AssignTeamProject200 = {
+  success?: boolean;
+};
+
+export type BulkAssignTeamMembersBody = {
+  userIds?: number[];
+};
+
+export type BulkAssignTeamMembers200 = {
+  success?: boolean;
 };
 
 export type ListNotesParams = {

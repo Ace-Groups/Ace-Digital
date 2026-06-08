@@ -326,6 +326,47 @@ export function createFirestoreStore() {
       return mapTeam(row, String(id));
     },
 
+    async updateTeam(id: number, patch: Partial<{ name: string; color: string | null }>): Promise<Team | null> {
+      const ref = db.collection(COL.teams).doc(docId(id));
+      const snap = await ref.get();
+      if (!snap.exists) return null;
+      await ref.set(patch, { merge: true });
+      const updated = await ref.get();
+      return mapTeam(updated.data()!, updated.id);
+    },
+
+    async deleteTeam(id: number): Promise<void> {
+      const batch = db.batch();
+      
+      const unassign = async (col: string, field: string) => {
+        const snap = await db.collection(col).where(field, "==", id).get();
+        snap.docs.forEach((doc) => batch.update(doc.ref, { [field]: null }));
+      };
+      
+      await unassign(COL.users, "teamId");
+      await unassign(COL.projects, "teamId");
+      await unassign(COL.tasks, "teamId");
+      await unassign(COL.expenses, "teamId");
+      await unassign(COL.approvals, "teamId");
+      await unassign(COL.clients, "assignedTeamId");
+      await unassign(COL.calendarEvents, "teamId");
+      await unassign(COL.serviceTickets, "teamId");
+      await unassign(COL.channels, "teamId");
+      await unassign(COL.notes, "teamId");
+      
+      batch.delete(db.collection(COL.teams).doc(docId(id)));
+      await batch.commit();
+    },
+
+    async bulkUpdateUserTeams(userIds: number[], teamId: number | null): Promise<void> {
+      if (userIds.length === 0) return;
+      const batch = db.batch();
+      for (const uid of userIds) {
+        batch.update(db.collection(COL.users).doc(docId(uid)), { teamId });
+      }
+      await batch.commit();
+    },
+
     async peekEmployeeCodeSequence(): Promise<number> {
       return (await readEmployeeCodeSeq()) + 1;
     },

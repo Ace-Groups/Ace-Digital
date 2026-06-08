@@ -2,6 +2,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { isFutureDay, isPastDay } from "@/lib/calendar-core";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { format, parse, isValid } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 export type DatePickerCalendarSize = "default" | "large";
 
@@ -34,6 +37,32 @@ export function DatePickerCalendarPanel({
   const defaultFrom = new Date().getFullYear() - 100;
   const defaultTo = new Date().getFullYear() + 10;
 
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    if (selected && isValid(selected)) {
+      setInputValue(format(selected, "dd-MM-yyyy"));
+    } else {
+      setInputValue("");
+    }
+  }, [selected]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    
+    if (val.length === 10) {
+      const parsed = parse(val, "dd-MM-yyyy", new Date());
+      if (isValid(parsed)) {
+        // Only select if it's within allowed bounds (roughly)
+        const year = parsed.getFullYear();
+        if (year >= (fromYear ?? defaultFrom) && year <= (toYear ?? defaultTo)) {
+          onSelect(parsed);
+        }
+      }
+    }
+  };
+
   return (
     <div
       data-size={size}
@@ -62,6 +91,15 @@ export function DatePickerCalendarPanel({
             : "[--cell-size:2.75rem] p-2",
         )}
       />
+      <div className={cn("px-4 pb-3", isLarge ? "" : "px-3 pb-2")}>
+        <Input 
+          placeholder="DD-MM-YYYY" 
+          value={inputValue} 
+          onChange={handleInputChange} 
+          className={cn("text-center font-mono", isLarge ? "h-11 text-base" : "h-9 text-sm")}
+          maxLength={10}
+        />
+      </div>
       <div
         className={cn(
           "relative z-10 flex items-center gap-2 border-t border-border/80 bg-muted/30",
