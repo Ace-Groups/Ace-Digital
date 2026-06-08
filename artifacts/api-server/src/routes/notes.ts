@@ -3,12 +3,17 @@ import { store } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { getIo } from "../lib/socket-server";
+import { ensureDefaultNotes } from "../lib/default-notes";
 
 const notesRouter = Router();
 
 notesRouter.get("/v1/notes", requireAuth, async (req, res, next) => {
   try {
     const ctx = getAccessContext(req);
+    
+    // Ensure welcome and guide notes exist
+    await ensureDefaultNotes(ctx.userId);
+
     const teamId = req.query.teamId ? Number(req.query.teamId) : undefined;
     const notes = await store.listNotes(ctx.userId, { teamId });
     res.json(notes);
