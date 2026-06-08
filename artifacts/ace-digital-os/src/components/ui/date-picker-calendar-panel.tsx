@@ -14,6 +14,8 @@ interface DatePickerCalendarPanelProps {
   /** Label + chevrons — better on iOS/Android than native dropdowns inside sheets. */
   useLabelCaption?: boolean;
   className?: string;
+  fromYear?: number;
+  toYear?: number;
 }
 
 export function DatePickerCalendarPanel({
@@ -24,8 +26,13 @@ export function DatePickerCalendarPanel({
   size = "default",
   useLabelCaption = false,
   className,
+  fromYear,
+  toYear,
 }: DatePickerCalendarPanelProps) {
   const isLarge = size === "large";
+
+  const defaultFrom = new Date().getFullYear() - 100;
+  const defaultTo = new Date().getFullYear() + 10;
 
   return (
     <div
@@ -42,8 +49,8 @@ export function DatePickerCalendarPanel({
         onSelect={onSelect}
         defaultMonth={selected ?? new Date()}
         captionLayout={useLabelCaption ? "label" : "dropdown"}
-        fromYear={new Date().getFullYear() - 5}
-        toYear={new Date().getFullYear() + 10}
+        fromYear={fromYear ?? defaultFrom}
+        toYear={toYear ?? defaultTo}
         modifiers={{
           past: (date) => isPastDay(date),
           future: (date) => isFutureDay(date),

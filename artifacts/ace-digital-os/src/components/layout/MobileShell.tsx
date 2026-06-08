@@ -19,6 +19,7 @@ import {
   CalendarDays,
   Menu,
   StickyNote,
+  Search,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -113,6 +114,14 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
         <SyncStatusIndicator />
         <ThemeToggle className="h-11 w-11" />
         <HeaderRefreshButton variant="mobile" />
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
+          aria-label="Search"
+        >
+          <Search size={20} />
+        </button>
         <button
           type="button"
           onClick={() => setLocation("/notifications")}

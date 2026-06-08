@@ -1,7 +1,7 @@
 import { StaggerItem, StaggerList } from "@/components/design";
 import { DashboardHeroCard } from "./DashboardHeroCard";
 import { DashboardStatCards } from "./DashboardStatCards";
-import { UpcomingDeadlinesWidget, TeamLoadWidget, UpcomingCalendarWidget, RecentActivityWidget } from "./DashboardWidgets";
+import { UpcomingDeadlinesWidget, TeamLoadWidget, UpcomingCalendarWidget, RecentActivityWidget, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
 import { useDashboardPage } from "./useDashboardPage";
 
@@ -26,6 +26,10 @@ export function DashboardDesktop() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
           <DashboardStatCards widgets={widgets} dash={dash} isLoading={isLoading} />
         </div>
+      </StaggerItem>
+
+      <StaggerItem>
+        <WorkspaceAnalyticsWidget dash={dash} isLoading={isLoading} />
       </StaggerItem>
 
       <StaggerItem>

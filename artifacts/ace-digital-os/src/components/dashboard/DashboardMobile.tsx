@@ -3,7 +3,7 @@ import { StaggerItem, StaggerList } from "@/components/design";
 import { CheckSquare, MessageSquare, CalendarDays } from "lucide-react";
 import { DashboardHeroCard } from "./DashboardHeroCard";
 import { DashboardStatCards } from "./DashboardStatCards";
-import { DashboardSecondaryWidgets } from "./DashboardWidgets";
+import { DashboardSecondaryWidgets, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
 import { useDashboardPage } from "./useDashboardPage";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,10 @@ export function DashboardMobile() {
       {showChat && (
         <StaggerItem><ChatWidget /></StaggerItem>
       )}
+
+      <StaggerItem>
+        <WorkspaceAnalyticsWidget dash={dash} isLoading={isLoading} />
+      </StaggerItem>
 
       <StaggerItem>
         <div className="space-y-4">

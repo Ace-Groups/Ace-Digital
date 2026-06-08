@@ -26,6 +26,8 @@ export interface DateTimePickerProps {
   sheetTitle?: string;
   "data-testid"?: string;
   id?: string;
+  fromYear?: number;
+  toYear?: number;
 }
 
 function defaultTimeParts(): TimeParts {
@@ -44,6 +46,8 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
       sheetTitle = "Date & time",
       "data-testid": dataTestId,
       id,
+      fromYear,
+      toYear,
     },
     ref,
   ) => {
@@ -136,6 +140,8 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
         size={calendarSize}
         useLabelCaption={isMobile}
         className={isMobile ? undefined : "sm:min-w-[17rem]"}
+        fromYear={fromYear}
+        toYear={toYear}
       />
     );
 
@@ -209,7 +215,7 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
           setOpen(next);
           if (!next) onBlur?.();
         }}
-        modal
+        modal={false}
       >
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent

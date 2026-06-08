@@ -24,6 +24,8 @@ export interface DatePickerProps {
   inModal?: boolean;
   "data-testid"?: string;
   id?: string;
+  fromYear?: number;
+  toYear?: number;
 }
 
 export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
@@ -38,6 +40,8 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       sheetTitle = "Date",
       "data-testid": dataTestId,
       id,
+      fromYear,
+      toYear,
     },
     ref,
   ) => {
@@ -85,6 +89,8 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
         onToday={handleToday}
         size={calendarSize}
         useLabelCaption={isMobile}
+        fromYear={fromYear}
+        toYear={toYear}
       />
     );
 
@@ -136,7 +142,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
           setOpen(next);
           if (!next) onBlur?.();
         }}
-        modal
+        modal={false}
       >
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent

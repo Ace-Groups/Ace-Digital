@@ -2,10 +2,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Clock, Users, TrendingUp } from "lucide-react";
+import { Clock, Users, TrendingUp, BarChart3 } from "lucide-react";
 import { formatRelativeTime, priorityColor, getInitials } from "@/lib/utils";
 import { formatScheduleLabel } from "@/lib/calendar-core";
 import type { DashboardData } from "@workspace/api-client-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  AreaChart,
+  Area,
+  CartesianGrid,
+} from "recharts";
 
 interface DashboardWidgetsProps {
   widgets: Set<string>;
@@ -154,6 +166,156 @@ export function RecentActivityWidget({ dash, isLoading }: { dash?: DashboardData
               </div>
             ))}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+export function WorkspaceAnalyticsWidget({ dash, isLoading }: { dash?: DashboardData; isLoading: boolean }) {
+  // Prep data for charts
+  const teamLoadData = dash?.teamLoad ?? [];
+  const projectProgressData = (dash?.upcomingDeadlines ?? []).map(p => ({
+    name: p.name.length > 15 ? p.name.substring(0, 12) + "..." : p.name,
+    fullName: p.name,
+    Progress: p.progress,
+    Priority: p.priority,
+  }));
+
+  return (
+    <Card className="border-border/70 overflow-hidden bg-card/45 dark:bg-[#0a0a0b]/45 shadow-sm dark:shadow-2xl relative backdrop-blur-xl">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/10">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <BarChart3 size={16} className="text-primary" />
+          Workspace Insights & Analytics
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
+        ) : (
+          <Tabs defaultValue="progress" className="w-full">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+              <TabsList className="bg-muted/50 border border-border/30">
+                <TabsTrigger value="progress" className="text-xs">Project Progress</TabsTrigger>
+                <TabsTrigger value="workload" className="text-xs">Team Workload</TabsTrigger>
+              </TabsList>
+              <div className="text-[10px] text-muted-foreground flex gap-3 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-primary inline-block"></span> Progress (%) / Active Projects
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Members count
+                </span>
+              </div>
+            </div>
+
+            <TabsContent value="progress" className="mt-0">
+              {projectProgressData.length === 0 ? (
+                <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
+                  No active projects available for insights
+                </div>
+              ) : (
+                <div className="h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={projectProgressData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-primary, #6366f1)" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="var(--color-primary, #6366f1)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                      <XAxis 
+                        dataKey="name" 
+                        tickLine={false} 
+                        axisLine={false}
+                        tick={{ fill: "currentColor", className: "text-muted-foreground/80", fontSize: 10 }}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}%`}
+                        tick={{ fill: "currentColor", className: "text-muted-foreground/80", fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="rounded-xl border border-border bg-popover/90 dark:bg-card/95 backdrop-blur-md p-3 shadow-xl text-xs space-y-1">
+                                <p className="font-semibold text-foreground">{data.fullName}</p>
+                                <p className="text-primary font-medium">Progress: {data.Progress}%</p>
+                                <p className="text-muted-foreground uppercase text-[10px] tracking-wider font-bold">Priority: {data.Priority}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="Progress" 
+                        stroke="var(--color-primary, #6366f1)" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorProgress)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="workload" className="mt-0">
+              {teamLoadData.length === 0 ? (
+                <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
+                  No active teams to display workload
+                </div>
+              ) : (
+                <div className="h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={teamLoadData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                      <XAxis 
+                        dataKey="teamName" 
+                        tickLine={false} 
+                        axisLine={false}
+                        tick={{ fill: "currentColor", className: "text-muted-foreground/80", fontSize: 10 }}
+                      />
+                      <YAxis 
+                        tickLine={false} 
+                        axisLine={false}
+                        tick={{ fill: "currentColor", className: "text-muted-foreground/80", fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="rounded-xl border border-border bg-popover/90 dark:bg-card/95 backdrop-blur-md p-3 shadow-xl text-xs space-y-1">
+                                <p className="font-semibold text-foreground">{data.teamName}</p>
+                                <p className="text-primary font-medium">Active Projects: {data.activeProjects}</p>
+                                <p className="text-emerald-500 font-medium">Members: {data.members}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="activeProjects" name="Active Projects" fill="var(--color-primary, #6366f1)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="members" name="Members" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

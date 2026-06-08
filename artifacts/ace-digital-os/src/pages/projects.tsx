@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ProjectTimelineView } from "@/components/projects/ProjectTimelineView";
 import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { ProjectDetailDialog } from "@/components/projects/ProjectDetailDialog";
@@ -97,6 +99,7 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [dragging, setDragging] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"board" | "timeline">("board");
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
@@ -380,16 +383,46 @@ export default function ProjectsPage() {
               {totalProjects} total projects
             </p>
             <p className="mt-1 text-xs text-muted-foreground/90">
-              Drag a card to move status, or tap any card to edit details.
+              {viewMode === "board"
+                ? "Drag a card to move status, or tap any card to edit details."
+                : "Horizontal scheduling timeline and team workload tracking."}
             </p>
           </div>
-          <Button
-            data-testid="btn-create-project"
-            className="hidden shrink-0 gap-2 sm:inline-flex active:scale-[0.98]"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus size={16} /> New Project
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-xl border border-border bg-muted/20 p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode("board")}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
+                  viewMode === "board"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Board View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("timeline")}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
+                  viewMode === "timeline"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Timeline View
+              </button>
+            </div>
+            <Button
+              data-testid="btn-create-project"
+              className="hidden shrink-0 gap-2 sm:inline-flex active:scale-[0.98]"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus size={16} /> New Project
+            </Button>
+          </div>
           <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
             {createForm}
           </ResponsiveSheet>
@@ -417,123 +450,149 @@ export default function ProjectsPage() {
             </Button>
           </div>
         )}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {STATUSES.map((status) => (
-            <section
-              key={status}
-              data-testid={`kanban-col-${status.toLowerCase()}`}
-              className={cn(
-                "relative rounded-2xl border p-3 sm:p-4 transition-colors",
-                STATUS_COLORS[status],
-              )}
-              onDragOver={(e) => {
-                e.preventDefault();
-              }}
-              onDrop={() => {
-                if (dragging !== null) void handleDrop(status, dragging);
-                setDragging(null);
-              }}
+        
+        <AnimatePresence mode="wait">
+          {viewMode === "board" ? (
+            <motion.div
+              key="board-view"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const Icon = STATUS_ICON[status];
-                    return <Icon size={14} className={cn("shrink-0", STATUS_ACCENTS[status])} />;
-                  })()}
-                  <h3 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h3>
-                </div>
-                <Badge variant="secondary" className="text-xs tabular-nums">
-                  {byStatus[status]?.length ?? 0}
-                </Badge>
-              </div>
+              {STATUSES.map((status) => (
+                <section
+                  key={status}
+                  data-testid={`kanban-col-${status.toLowerCase()}`}
+                  className={cn(
+                    "relative rounded-2xl border p-3 sm:p-4 transition-colors",
+                    STATUS_COLORS[status],
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+                  onDrop={() => {
+                    if (dragging !== null) void handleDrop(status, dragging);
+                    setDragging(null);
+                  }}
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const Icon = STATUS_ICON[status];
+                        return <Icon size={14} className={cn("shrink-0", STATUS_ACCENTS[status])} />;
+                      })()}
+                      <h3 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h3>
+                    </div>
+                    <Badge variant="secondary" className="text-xs tabular-nums">
+                      {byStatus[status]?.length ?? 0}
+                    </Badge>
+                  </div>
 
-              <div className="space-y-2 min-h-[10rem]">
-                {isLoading
-                  ? [1, 2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)
-                  : byStatus[status]?.map((project) => (
-                      <article
-                        key={project.id}
-                        data-testid={`project-card-${project.id}`}
-                        className={cn(
-                          "rounded-xl border border-border/80 bg-card/95 shadow-brand-sm transition-all duration-200",
-                          "hover:border-primary/30 hover:shadow-brand-md",
-                          dragging === project.id && "opacity-50 ring-2 ring-primary/30",
-                        )}
-                      >
-                        <div
-                          draggable
-                          onDragStart={() => setDragging(project.id)}
-                          onDragEnd={() => setDragging(null)}
-                          className="flex justify-end px-2 pt-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
-                          title="Drag to move"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <GripVertical size={14} />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => openProject(project)}
-                          className="w-full rounded-b-xl px-3 pb-3 pt-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                        >
-                          <p className="pr-1 text-sm font-medium leading-tight text-foreground">
-                            {project.name}
-                          </p>
-                          <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs text-muted-foreground">
-                            {project.teamName ?? "Unassigned team"}
-                            {project.clientName ? ` · ${project.clientName}` : ""}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
-                              {project.priority}
-                            </Badge>
-                            <span className="text-xs tabular-nums text-muted-foreground">{project.progress}%</span>
-                          </div>
-                          <div className="mt-2">
-                            <div className="h-1.5 overflow-hidden rounded-full bg-muted/80">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all duration-500"
-                                style={{ width: `${project.progress}%` }}
-                              />
+                  <div className="space-y-2 min-h-[10rem]">
+                    {isLoading
+                      ? [1, 2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)
+                      : byStatus[status]?.map((project) => (
+                          <article
+                            key={project.id}
+                            data-testid={`project-card-${project.id}`}
+                            className={cn(
+                              "rounded-xl border border-border/80 bg-card/95 shadow-brand-sm transition-all duration-200",
+                              "hover:border-primary/30 hover:shadow-brand-md",
+                              dragging === project.id && "opacity-50 ring-2 ring-primary/30",
+                            )}
+                          >
+                            <div
+                              draggable
+                              onDragStart={() => setDragging(project.id)}
+                              onDragEnd={() => setDragging(null)}
+                              className="flex justify-end px-2 pt-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+                              title="Drag to move"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <GripVertical size={14} />
                             </div>
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            {project.deadline && (
-                              <span className="flex items-center gap-1">
-                                <Calendar size={10} />
-                                {new Date(project.deadline).toLocaleDateString("en-IN", {
-                                  day: "numeric",
-                                  month: "short",
-                                })}
-                              </span>
-                            )}
-                            {project.budget != null && (
-                              <span className="ml-auto flex items-center gap-1 tabular-nums">
-                                <IndianRupee size={10} />
-                                {formatCurrency(project.budget)}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      </article>
-                    ))}
-                {!isLoading && (byStatus[status]?.length ?? 0) === 0 && (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-background/40 p-4 text-center text-xs text-muted-foreground">
-                    <p>No projects in {STATUS_LABELS[status].toLowerCase()}.</p>
-                    {status === "TODO" && (
-                      <button
-                        type="button"
-                        onClick={() => setCreateOpen(true)}
-                        className="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-primary transition-colors hover:bg-primary/10"
-                      >
-                        <Plus size={12} /> Add project
-                      </button>
+                            <button
+                              type="button"
+                              onClick={() => openProject(project)}
+                              className="w-full rounded-b-xl px-3 pb-3 pt-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                            >
+                              <p className="pr-1 text-sm font-medium leading-tight text-foreground">
+                                {project.name}
+                              </p>
+                              <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs text-muted-foreground">
+                                {project.teamName ?? "Unassigned team"}
+                                {project.clientName ? ` · ${project.clientName}` : ""}
+                              </p>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className={cn("text-xs", priorityColor(project.priority))}>
+                                  {project.priority}
+                                </Badge>
+                                <span className="text-xs tabular-nums text-muted-foreground">{project.progress}%</span>
+                              </div>
+                              <div className="mt-2">
+                                <div className="h-1.5 overflow-hidden rounded-full bg-muted/80">
+                                  <div
+                                    className="h-full rounded-full bg-primary transition-all duration-500"
+                                    style={{ width: `${project.progress}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                {project.deadline && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar size={10} />
+                                    {new Date(project.deadline).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                    })}
+                                  </span>
+                                )}
+                                {project.budget != null && (
+                                  <span className="ml-auto flex items-center gap-1 tabular-nums">
+                                    <IndianRupee size={10} />
+                                    {formatCurrency(project.budget)}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          </article>
+                        ))}
+                    {!isLoading && (byStatus[status]?.length ?? 0) === 0 && (
+                      <div className="rounded-xl border border-dashed border-border/70 bg-background/40 p-4 text-center text-xs text-muted-foreground">
+                        <p>No projects in {STATUS_LABELS[status].toLowerCase()}.</p>
+                        {status === "TODO" && (
+                          <button
+                            type="button"
+                            onClick={() => setCreateOpen(true)}
+                            className="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-primary transition-colors hover:bg-primary/10"
+                          >
+                            <Plus size={12} /> Add project
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
+                </section>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="timeline-view"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <ProjectTimelineView
+                projects={projects ?? []}
+                teams={teams}
+                onSelectProject={openProject}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </StaggerItem>
 
       <StaggerItem>

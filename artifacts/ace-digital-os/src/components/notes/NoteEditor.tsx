@@ -45,6 +45,8 @@ export function NoteEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  const lastSentContentRef = useRef(content);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -63,18 +65,16 @@ export function NoteEditor({
     content,
     editable,
     onUpdate: ({ editor: e }) => {
-      onChangeRef.current(e.getHTML());
+      const html = e.getHTML();
+      lastSentContentRef.current = html;
+      onChangeRef.current(html);
     },
   });
 
-  // Sync content from outside when editing a different note
-  const isFirstRender = useRef(true);
+  // Sync content from outside when editing a different note or receiving remote edits
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (editor && editor.getHTML() !== content) {
+    if (editor && content !== lastSentContentRef.current) {
+      lastSentContentRef.current = content;
       const { from, to } = editor.state.selection;
       editor.commands.setContent(content, { emitUpdate: false });
       const maxPos = editor.state.doc.content.size;

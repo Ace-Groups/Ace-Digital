@@ -239,7 +239,7 @@ body {
 
   .brand-gradient {
     background: linear-gradient(
-      135deg in oklch,
+      135deg,
       hsl(var(--ace-navy)) 0%,
       hsl(var(--ace-blue)) 100%
     );
@@ -247,7 +247,7 @@ body {
 
   .dark .brand-gradient {
     background: linear-gradient(
-      135deg in oklch,
+      135deg,
       hsl(271 100% 12%) 0%,
       hsl(184 100% 50%) 100%
     );
@@ -255,7 +255,7 @@ body {
 
   .brand-gradient-subtle {
     background: linear-gradient(
-      180deg in oklch,
+      180deg,
       hsl(var(--ace-sky) / 0.25) 0%,
       hsl(var(--background)) 45%
     );
@@ -263,29 +263,35 @@ body {
 
   .dark .brand-gradient-subtle {
     background: linear-gradient(
-      180deg in oklch,
+      180deg,
       hsl(271 100% 40% / 0.06) 0%,
       hsl(var(--background)) 50%
     );
   }
 
   .glass-panel {
-    background: color-mix(in oklab, hsl(var(--card)) 75%, transparent);
+    background: hsl(var(--card) / 0.75);
     backdrop-filter: blur(16px);
-    border: 1px solid color-mix(in oklab, hsl(var(--border)) 35%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.35);
+    transform: translateZ(0);
   }
 
   .glass-card {
-    background: color-mix(in oklab, hsl(var(--card)) 85%, transparent);
+    background: hsl(var(--card) / 0.85);
     backdrop-filter: blur(12px);
-    border: 1px solid color-mix(in oklab, hsl(var(--border)) 50%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.50);
     box-shadow: var(--shadow-brand-sm);
+    transform: translateZ(0);
   }
 
   .glass-header {
-    background: color-mix(in oklab, hsl(var(--background)) 75%, transparent);
+    background: hsl(var(--background) / 0.75);
     backdrop-filter: blur(16px);
-    border-bottom: 1px solid color-mix(in oklab, hsl(var(--border)) 45%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid hsl(var(--border) / 0.45);
+    transform: translateZ(0);
   }
 
   .neon-border-text {
@@ -307,6 +313,7 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    transform: translateZ(0);
   }
 
   .tech-glass-neon {
@@ -315,6 +322,7 @@ body {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(0, 255, 204, 0.15);
     box-shadow: 0 0 15px rgba(0, 255, 204, 0.05);
+    transform: translateZ(0);
   }
 
   .animate-hover-card {

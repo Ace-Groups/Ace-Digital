@@ -14,6 +14,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
+import { CommandPalette } from "@/components/CommandPalette";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
 const ForbiddenPage = lazyWithReload(() => import("@/pages/forbidden"));
@@ -180,6 +181,7 @@ function App() {
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                 <AppRouter />
                 <InstallPrompt />
+                <CommandPalette />
               </WouterRouter>
               <Toaster />
               <FormEnterNavigation />
