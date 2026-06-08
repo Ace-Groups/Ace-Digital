@@ -135,6 +135,19 @@ export function EmployeeCard({
                   Address: {employee.address}
                 </p>
               )}
+              {(employee.bloodGroup || employee.nationality) && (
+                <p className="text-[11px]">
+                  {[employee.bloodGroup ? `Blood: ${employee.bloodGroup}` : null, employee.nationality]
+                    .filter(Boolean)
+                    .join(" • ")}
+                </p>
+              )}
+              {employee.emergencyContactName && (
+                <p className="text-[11px] truncate" title={employee.emergencyContactName}>
+                  Emergency: {employee.emergencyContactName}
+                  {employee.emergencyContactPhone ? ` (${employee.emergencyContactPhone})` : ""}
+                </p>
+              )}
               {employee.notes && (
                 <p className="text-[11px] italic truncate" title={employee.notes}>
                   Notes: {employee.notes}

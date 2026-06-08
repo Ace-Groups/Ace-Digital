@@ -19,8 +19,30 @@ const router = Router();
 function parseStartDate(value: unknown): Date | null | undefined {
   if (value === undefined) return undefined;
   if (value === null || value === "") return null;
-  const d = new Date(String(value));
+  const raw = String(value).trim();
+  const local = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (local) {
+    const d = new Date(Number(local[1]), Number(local[2]) - 1, Number(local[3]));
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  const indian = /^(\d{2})[/-](\d{2})[/-](\d{4})$/.exec(raw);
+  if (indian) {
+    const d = new Date(Number(indian[3]), Number(indian[2]) - 1, Number(indian[1]));
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function optionalDocument(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  // Keep database payloads bounded. 1.6 MB covers a compressed Aadhaar photo/PDF data URL.
+  if (value.length > 1_600_000) return null;
+  return value;
 }
 
 router.get(
@@ -88,6 +110,15 @@ router.post(
       avatarUrl: bodyAvatarUrl,
       dob,
       address,
+      gender,
+      maritalStatus,
+      nationality,
+      aadhaarNumber,
+      emergencyContactName,
+      emergencyContactPhone,
+      highestQualification,
+      bloodGroup,
+      aadhaarDocument,
       notes,
     } = req.body;
 
@@ -158,8 +189,17 @@ router.post(
       mustChangePassword: true,
       avatarUrl: resolvedAvatar,
       dob: parsedDob ?? null,
-      address: address ?? null,
-      notes: notes ?? null,
+      address: optionalText(address),
+      gender: optionalText(gender),
+      maritalStatus: optionalText(maritalStatus),
+      nationality: optionalText(nationality),
+      aadhaarNumber: optionalText(aadhaarNumber),
+      emergencyContactName: optionalText(emergencyContactName),
+      emergencyContactPhone: optionalText(emergencyContactPhone),
+      highestQualification: optionalText(highestQualification),
+      bloodGroup: optionalText(bloodGroup),
+      aadhaarDocument: optionalDocument(aadhaarDocument),
+      notes: optionalText(notes),
     });
     await store.updateUser(user.id, { status: status ?? "active" });
 
@@ -231,6 +271,15 @@ router.patch(
       avatarUrl: patchAvatarUrl,
       dob,
       address,
+      gender,
+      maritalStatus,
+      nationality,
+      aadhaarNumber,
+      emergencyContactName,
+      emergencyContactPhone,
+      highestQualification,
+      bloodGroup,
+      aadhaarDocument,
       notes,
     } = req.body;
 
@@ -304,6 +353,21 @@ router.patch(
       ...(parsedStart !== undefined && { startDate: parsedStart }),
       ...(parsedDob !== undefined && { dob: parsedDob }),
       ...(address !== undefined && { address: address || null }),
+      ...(gender !== undefined && { gender: optionalText(gender) }),
+      ...(maritalStatus !== undefined && { maritalStatus: optionalText(maritalStatus) }),
+      ...(nationality !== undefined && { nationality: optionalText(nationality) }),
+      ...(aadhaarNumber !== undefined && { aadhaarNumber: optionalText(aadhaarNumber) }),
+      ...(emergencyContactName !== undefined && {
+        emergencyContactName: optionalText(emergencyContactName),
+      }),
+      ...(emergencyContactPhone !== undefined && {
+        emergencyContactPhone: optionalText(emergencyContactPhone),
+      }),
+      ...(highestQualification !== undefined && {
+        highestQualification: optionalText(highestQualification),
+      }),
+      ...(bloodGroup !== undefined && { bloodGroup: optionalText(bloodGroup) }),
+      ...(aadhaarDocument !== undefined && { aadhaarDocument: optionalDocument(aadhaarDocument) }),
       ...(notes !== undefined && { notes: notes || null }),
       ...(status !== undefined && { status }),
       ...avatarPatch,

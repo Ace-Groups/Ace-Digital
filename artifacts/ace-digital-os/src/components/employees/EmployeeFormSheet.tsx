@@ -37,6 +37,8 @@ const ROLES = [
   "super_admin",
 ] as const;
 
+const MAX_AADHAAR_DOCUMENT_BYTES = 1_000_000;
+
 const createSchema = z
   .object({
     fullName: z.string().min(1, "Name required"),
@@ -58,6 +60,15 @@ const createSchema = z
     mascotId: z.string().optional(),
     dob: z.string().optional(),
     address: z.string().optional(),
+    gender: z.string().optional(),
+    maritalStatus: z.string().optional(),
+    nationality: z.string().optional(),
+    aadhaarNumber: z.string().optional(),
+    emergencyContactName: z.string().optional(),
+    emergencyContactPhone: z.string().optional(),
+    highestQualification: z.string().optional(),
+    bloodGroup: z.string().optional(),
+    aadhaarDocument: z.string().optional(),
     notes: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -86,11 +97,54 @@ const editSchema = z.object({
   mascotId: z.string().optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
+  gender: z.string().optional(),
+  maritalStatus: z.string().optional(),
+  nationality: z.string().optional(),
+  aadhaarNumber: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhone: z.string().optional(),
+  highestQualification: z.string().optional(),
+  bloodGroup: z.string().optional(),
+  aadhaarDocument: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type CreateForm = z.infer<typeof createSchema>;
 type EditForm = z.infer<typeof editSchema>;
+
+function readEmployeeDocument(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_AADHAAR_DOCUMENT_BYTES) {
+      reject(new Error("Use a file under 1 MB"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      resolve(
+        JSON.stringify({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl,
+          uploadedAt: new Date().toISOString(),
+        }),
+      );
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getDocumentName(value?: string | null) {
+  if (!value) return "";
+  try {
+    const parsed = JSON.parse(value) as { name?: string };
+    return parsed.name ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export type EmployeeFormSubmitCreate = {
   fullName: string;
@@ -110,8 +164,17 @@ export type EmployeeFormSubmitCreate = {
   sendWelcomeEmail: boolean;
   avatarUrl?: string;
   dob?: string;
-  address?: string;
-  notes?: string;
+  address?: string | null;
+  gender?: string | null;
+  maritalStatus?: string | null;
+  nationality?: string | null;
+  aadhaarNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  highestQualification?: string | null;
+  bloodGroup?: string | null;
+  aadhaarDocument?: string | null;
+  notes?: string | null;
 };
 
 export type EmployeeFormSubmitEdit = {
@@ -130,8 +193,17 @@ export type EmployeeFormSubmitEdit = {
   payrollStatus?: string;
   avatarUrl?: string;
   dob?: string;
-  address?: string;
-  notes?: string;
+  address?: string | null;
+  gender?: string | null;
+  maritalStatus?: string | null;
+  nationality?: string | null;
+  aadhaarNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  highestQualification?: string | null;
+  bloodGroup?: string | null;
+  aadhaarDocument?: string | null;
+  notes?: string | null;
 };
 
 interface EmployeeFormSheetProps {
@@ -172,6 +244,15 @@ export function EmployeeFormSheet({
       salaryMode: "monthly",
       dob: "",
       address: "",
+      gender: "",
+      maritalStatus: "",
+      nationality: "Indian",
+      aadhaarNumber: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      highestQualification: "",
+      bloodGroup: "",
+      aadhaarDocument: "",
       notes: "",
     },
   });
@@ -187,6 +268,15 @@ export function EmployeeFormSheet({
       salaryMode: "monthly",
       dob: "",
       address: "",
+      gender: "",
+      maritalStatus: "",
+      nationality: "Indian",
+      aadhaarNumber: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      highestQualification: "",
+      bloodGroup: "",
+      aadhaarDocument: "",
       notes: "",
     },
   });
@@ -254,6 +344,15 @@ export function EmployeeFormSheet({
       mascotId,
       dob: employee.dob ? employee.dob.slice(0, 10) : "",
       address: employee.address ?? "",
+      gender: employee.gender ?? "",
+      maritalStatus: employee.maritalStatus ?? "",
+      nationality: employee.nationality ?? "",
+      aadhaarNumber: employee.aadhaarNumber ?? "",
+      emergencyContactName: employee.emergencyContactName ?? "",
+      emergencyContactPhone: employee.emergencyContactPhone ?? "",
+      highestQualification: employee.highestQualification ?? "",
+      bloodGroup: employee.bloodGroup ?? "",
+      aadhaarDocument: employee.aadhaarDocument ?? "",
       notes: employee.notes ?? "",
     });
   }, [open, mode, employee, editForm]);
@@ -273,6 +372,15 @@ export function EmployeeFormSheet({
       mascotId: "7",
       dob: "",
       address: "",
+      gender: "",
+      maritalStatus: "",
+      nationality: "Indian",
+      aadhaarNumber: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      highestQualification: "",
+      bloodGroup: "",
+      aadhaarDocument: "",
       notes: "",
     });
   }, [open, mode, createForm]);
@@ -299,9 +407,22 @@ export function EmployeeFormSheet({
       salaryMode?: string;
       dob?: string;
       address?: string;
+      gender?: string;
+      maritalStatus?: string;
+      nationality?: string;
+      aadhaarNumber?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+      highestQualification?: string;
+      bloodGroup?: string;
+      aadhaarDocument?: string;
       notes?: string;
     },
   >(data: T) {
+    const optional = (value?: string) => {
+      const trimmed = value?.trim();
+      return trimmed ? trimmed : null;
+    };
     return {
       fullName: data.fullName,
       email: data.email,
@@ -313,8 +434,17 @@ export function EmployeeFormSheet({
       startDate: data.startDate || undefined,
       status: data.status,
       dob: data.dob || undefined,
-      address: data.address || undefined,
-      notes: data.notes || undefined,
+      address: optional(data.address),
+      gender: optional(data.gender),
+      maritalStatus: optional(data.maritalStatus),
+      nationality: optional(data.nationality),
+      aadhaarNumber: optional(data.aadhaarNumber),
+      emergencyContactName: optional(data.emergencyContactName),
+      emergencyContactPhone: optional(data.emergencyContactPhone),
+      highestQualification: optional(data.highestQualification),
+      bloodGroup: optional(data.bloodGroup),
+      aadhaarDocument: data.aadhaarDocument || null,
+      notes: optional(data.notes),
       ...(canViewSalaries && {
         baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
         bonus: data.bonus ? Number(data.bonus) : undefined,
@@ -326,7 +456,7 @@ export function EmployeeFormSheet({
   const title = mode === "create" ? "Add employee" : `Edit ${employee?.fullName ?? "employee"}`;
 
   return (
-    <ResponsiveSheet open={open} onOpenChange={onOpenChange} title={title}>
+    <ResponsiveSheet open={open} onOpenChange={onOpenChange} title={title} className="sm:max-w-3xl">
       {mode === "create" ? (
         <Form {...createForm}>
           <form
@@ -610,10 +740,184 @@ function FormFields({
         name="address"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Address</FormLabel>
+            <FormLabel>Residential address</FormLabel>
             <FormControl>
               <Input className="min-h-11" {...field} />
             </FormControl>
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="gender"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gender</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <FormControl>
+                  <SelectTrigger className="min-h-11">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="non_binary">Non-binary</SelectItem>
+                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="maritalStatus"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Marital status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <FormControl>
+                  <SelectTrigger className="min-h-11">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="single">Single</SelectItem>
+                  <SelectItem value="married">Married</SelectItem>
+                  <SelectItem value="divorced">Divorced</SelectItem>
+                  <SelectItem value="widowed">Widowed</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="nationality"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nationality</FormLabel>
+              <FormControl>
+                <Input className="min-h-11" placeholder="Indian" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="aadhaarNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Aadhaar number</FormLabel>
+              <FormControl>
+                <Input
+                  className="min-h-11"
+                  inputMode="numeric"
+                  placeholder="XXXX XXXX XXXX"
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="emergencyContactName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Emergency contact name</FormLabel>
+              <FormControl>
+                <Input className="min-h-11" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="emergencyContactPhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Emergency contact phone</FormLabel>
+              <FormControl>
+                <Input className="min-h-11" inputMode="tel" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="highestQualification"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Highest qualification</FormLabel>
+              <FormControl>
+                <Input className="min-h-11" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="bloodGroup"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Blood group</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <FormControl>
+                  <SelectTrigger className="min-h-11">
+                    <SelectValue placeholder="Select blood group" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="aadhaarDocument"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Aadhaar card copy (optional)</FormLabel>
+            <FormControl>
+              <Input
+                type="file"
+                className="min-h-11 py-2"
+                accept="image/*,.pdf"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) {
+                    field.onChange("");
+                    return;
+                  }
+                  void readEmployeeDocument(file)
+                    .then(field.onChange)
+                    .catch(() => {
+                      field.onChange("");
+                      event.currentTarget.value = "";
+                    });
+                }}
+              />
+            </FormControl>
+            {getDocumentName(field.value) && (
+              <p className="text-xs text-muted-foreground">
+                Stored in database: {getDocumentName(field.value)}
+              </p>
+            )}
           </FormItem>
         )}
       />

@@ -1,14 +1,14 @@
 import * as React from "react";
 import { CalendarIcon } from "lucide-react";
-import { cn, formatDateLabel, parseDateInput, toDateInputValue } from "@/lib/utils";
+import { cn, formatDateLabel, normalizeDateInput, parseDateInput, toDateInputValue } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DatePickerCalendarPanel } from "@/components/ui/date-picker-calendar-panel";
-import { MobilePickerSheet } from "@/components/ui/mobile-picker-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface DatePickerProps {
@@ -121,17 +121,22 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
 
     if (isMobile) {
       return (
-        <>
-          {trigger}
-          <MobilePickerSheet
-            open={open}
-            onClose={close}
-            title={sheetTitle}
-            selectedLabel={selectedLabel}
-          >
-            <div className="px-2 py-2">{panel}</div>
-          </MobilePickerSheet>
-        </>
+        <Input
+          id={id}
+          value={value}
+          disabled={disabled}
+          data-testid={dataTestId}
+          placeholder={placeholder === "Pick a date" ? "DD-MM-YYYY" : placeholder}
+          inputMode="numeric"
+          autoComplete="off"
+          onChange={(event) => onChange?.(event.target.value)}
+          onBlur={() => {
+            const normalized = normalizeDateInput(value);
+            if (normalized) onChange?.(normalized);
+            onBlur?.();
+          }}
+          className={cn("h-11 text-base", className)}
+        />
       );
     }
 

@@ -27,5 +27,15 @@ export interface EmployeeInput {
   avatarUrl?: string;
   dob?: string;
   address?: string;
+  gender?: string;
+  maritalStatus?: string;
+  nationality?: string;
+  aadhaarNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  highestQualification?: string;
+  bloodGroup?: string;
+  /** JSON-encoded file metadata and data URL for optional Aadhaar copy */
+  aadhaarDocument?: string;
   notes?: string;
 }

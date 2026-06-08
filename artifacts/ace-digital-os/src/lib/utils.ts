@@ -47,11 +47,13 @@ export function formatRelativeTime(dateStr: string | null | undefined): string {
 /** Parse `YYYY-MM-DD` as local calendar date (no timezone shift). */
 export function parseDateInput(value: string | undefined | null): Date | undefined {
   if (!value) return undefined;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return undefined;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
+  const trimmed = value.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  const indianMatch = /^(\d{2})[/-](\d{2})[/-](\d{4})$/.exec(trimmed);
+  if (!isoMatch && !indianMatch) return undefined;
+  const year = Number(isoMatch?.[1] ?? indianMatch?.[3]);
+  const month = Number(isoMatch?.[2] ?? indianMatch?.[2]);
+  const day = Number(isoMatch?.[3] ?? indianMatch?.[1]);
   const date = new Date(year, month - 1, day);
   if (
     date.getFullYear() !== year ||
@@ -70,6 +72,10 @@ export function toDateInputValue(date: Date | undefined | null): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+export function normalizeDateInput(value: string | undefined | null): string {
+  return toDateInputValue(parseDateInput(value));
 }
 
 export function formatDateLabel(

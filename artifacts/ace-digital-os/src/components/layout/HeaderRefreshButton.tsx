@@ -21,7 +21,7 @@ export function HeaderRefreshButton({ variant = "desktop" }: HeaderRefreshButton
         "relative shrink-0 text-muted-foreground transition-colors touch-manipulation",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isMobile
-          ? "flex h-11 w-11 items-center justify-center rounded-xl active:bg-muted disabled:opacity-60"
+          ? "flex h-10 w-10 items-center justify-center rounded-xl active:bg-muted disabled:opacity-60"
           : cn(
               "rounded-lg p-2.5",
               "hover:bg-muted hover:text-foreground",

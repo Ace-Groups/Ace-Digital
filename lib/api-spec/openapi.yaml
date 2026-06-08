@@ -3146,6 +3146,24 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        maritalStatus:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        aadhaarNumber:
+          type: ["string", "null"]
+        emergencyContactName:
+          type: ["string", "null"]
+        emergencyContactPhone:
+          type: ["string", "null"]
+        highestQualification:
+          type: ["string", "null"]
+        bloodGroup:
+          type: ["string", "null"]
+        aadhaarDocument:
+          type: ["string", "null"]
         notes:
           type: ["string", "null"]
         baseSalary:
@@ -3209,6 +3227,25 @@ components:
           type: string
         address:
           type: string
+        gender:
+          type: string
+        maritalStatus:
+          type: string
+        nationality:
+          type: string
+        aadhaarNumber:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+        highestQualification:
+          type: string
+        bloodGroup:
+          type: string
+        aadhaarDocument:
+          type: string
+          description: JSON-encoded file metadata and data URL for optional Aadhaar copy
         notes:
           type: string
 
@@ -3281,9 +3318,28 @@ components:
         dob:
           type: string
         address:
-          type: string
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        maritalStatus:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        aadhaarNumber:
+          type: ["string", "null"]
+        emergencyContactName:
+          type: ["string", "null"]
+        emergencyContactPhone:
+          type: ["string", "null"]
+        highestQualification:
+          type: ["string", "null"]
+        bloodGroup:
+          type: ["string", "null"]
+        aadhaarDocument:
+          type: ["string", "null"]
+          description: JSON-encoded file metadata and data URL for optional Aadhaar copy
         notes:
-          type: string
+          type: ["string", "null"]
 
     # FINANCE
     FinanceSummary:

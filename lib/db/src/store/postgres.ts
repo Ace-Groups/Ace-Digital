@@ -141,6 +141,15 @@ export function createPostgresStore() {
           avatarUrl: data.avatarUrl ?? null,
           dob: data.dob ?? null,
           address: data.address ?? null,
+          gender: data.gender ?? null,
+          maritalStatus: data.maritalStatus ?? null,
+          nationality: data.nationality ?? null,
+          aadhaarNumber: data.aadhaarNumber ?? null,
+          emergencyContactName: data.emergencyContactName ?? null,
+          emergencyContactPhone: data.emergencyContactPhone ?? null,
+          highestQualification: data.highestQualification ?? null,
+          bloodGroup: data.bloodGroup ?? null,
+          aadhaarDocument: data.aadhaarDocument ?? null,
           notes: data.notes ?? null,
         })
         .returning();

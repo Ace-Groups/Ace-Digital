@@ -105,8 +105,8 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
       {showAppHeader && (
-      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-card/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-4">
-        <img src={aceLogo} alt="" className="h-8 w-8 bg-transparent object-contain" />
+      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-1.5 border-b border-border/80 bg-card/95 px-2.5 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-4">
+        <img src={aceLogo} alt="" className="h-8 w-8 shrink-0 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             Ace Digital
@@ -116,12 +116,12 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           )}
         </div>
         <SyncStatusIndicator />
-        <ThemeToggle className="h-11 w-11" />
+        <ThemeToggle className="h-10 w-10 shrink-0" />
         <HeaderRefreshButton variant="mobile" />
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
           aria-label="Search"
         >
           <Search size={20} />
@@ -129,7 +129,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
         <button
           type="button"
           onClick={() => setLocation("/notifications")}
-          className="relative flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
           aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
         >
           <Bell size={20} />
@@ -140,7 +140,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
         <button
           type="button"
           onClick={() => setProfileOpen(true)}
-          className="flex h-11 w-11 items-center justify-center rounded-xl active:bg-muted"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl active:bg-muted"
           aria-label="Profile"
         >
           <UserAvatar
@@ -160,7 +160,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           fillViewport || immersivePage
             ? "flex flex-col overflow-hidden p-0"
             : "overflow-y-auto px-4 py-4",
-          !hideBottomNav && !fillViewport && !immersivePage && "pb-[calc(5rem+env(safe-area-inset-bottom))]",
+          !hideBottomNav && !fillViewport && !immersivePage && "pb-[calc(7rem+env(safe-area-inset-bottom))]",
         )}
       >
         {fillViewport || immersivePage ? children : <PageTransition>{children}</PageTransition>}
@@ -168,10 +168,10 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
 
       {!hideBottomNav && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[env(safe-area-inset-bottom)]"
+          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(4.75rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
           aria-label="Main navigation"
         >
-          <div className="flex h-16 w-full max-w-sm items-stretch justify-around rounded-3xl border border-white/20 bg-background/60 shadow-brand-xl backdrop-blur-xl dark:bg-black/60 px-1">
+          <div className="flex h-16 w-full max-w-sm items-stretch justify-around rounded-3xl border border-border/70 bg-background/85 px-1 shadow-brand-xl backdrop-blur-xl dark:bg-black/70">
             {primary.map((item) => {
               const Icon = ICONS[item.route];
               const active = isActive(item.href);

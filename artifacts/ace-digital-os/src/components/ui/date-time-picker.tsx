@@ -10,10 +10,10 @@ import {
   type TimeParts,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DatePickerCalendarPanel } from "@/components/ui/date-picker-calendar-panel";
 import { DatePickerTimePanel } from "@/components/ui/date-picker-time-panel";
-import { MobilePickerSheet } from "@/components/ui/mobile-picker-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface DateTimePickerProps {
@@ -193,18 +193,16 @@ export const DateTimePicker = React.forwardRef<HTMLButtonElement, DateTimePicker
 
     if (isMobile) {
       return (
-        <>
-          {trigger}
-          <MobilePickerSheet
-            open={open}
-            onClose={close}
-            title={sheetTitle}
-            selectedLabel={selectedLabel}
-            zIndex={350}
-          >
-            {panel}
-          </MobilePickerSheet>
-        </>
+        <Input
+          id={id}
+          type="datetime-local"
+          value={value ? toDateTimeInputValue(parseDateTimeInput(value)) : ""}
+          disabled={disabled}
+          data-testid={dataTestId}
+          onChange={(event) => onChange?.(event.target.value)}
+          onBlur={onBlur}
+          className={cn("h-11 text-base", className)}
+        />
       );
     }
 

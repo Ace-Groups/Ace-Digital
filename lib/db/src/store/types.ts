@@ -125,6 +125,15 @@ export type CreateUserInput = {
   avatarUrl?: string | null;
   dob?: Date | null;
   address?: string | null;
+  gender?: string | null;
+  maritalStatus?: string | null;
+  nationality?: string | null;
+  aadhaarNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  highestQualification?: string | null;
+  bloodGroup?: string | null;
+  aadhaarDocument?: string | null;
   notes?: string | null;
 };
 
@@ -143,6 +152,15 @@ export type UpdateUserInput = Partial<{
   passwordHash: string;
   dob: Date | null;
   address: string | null;
+  gender: string | null;
+  maritalStatus: string | null;
+  nationality: string | null;
+  aadhaarNumber: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  highestQualification: string | null;
+  bloodGroup: string | null;
+  aadhaarDocument: string | null;
   notes: string | null;
 }>;
 
@@ -209,4 +227,3 @@ export type UpdateNoteInput = Partial<{
   teamId: number | null;
   sharedUserIds: number[];
 }>;
-

@@ -22,6 +22,29 @@ export interface EmployeeUpdate {
   payrollStatus?: string;
   avatarUrl?: string;
   dob?: string;
-  address?: string;
-  notes?: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  aadhaarNumber?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyContactPhone?: string | null;
+  /** @nullable */
+  highestQualification?: string | null;
+  /** @nullable */
+  bloodGroup?: string | null;
+  /**
+     * JSON-encoded file metadata and data URL for optional Aadhaar copy
+     * @nullable
+     */
+  aadhaarDocument?: string | null;
+  /** @nullable */
+  notes?: string | null;
 }

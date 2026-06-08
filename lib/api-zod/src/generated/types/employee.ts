@@ -25,6 +25,24 @@ export interface Employee {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  aadhaarNumber?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyContactPhone?: string | null;
+  /** @nullable */
+  highestQualification?: string | null;
+  /** @nullable */
+  bloodGroup?: string | null;
+  /** @nullable */
+  aadhaarDocument?: string | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   baseSalary?: number | null;

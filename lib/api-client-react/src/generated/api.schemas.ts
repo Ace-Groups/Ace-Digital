@@ -601,6 +601,24 @@ export interface Employee {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  aadhaarNumber?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyContactPhone?: string | null;
+  /** @nullable */
+  highestQualification?: string | null;
+  /** @nullable */
+  bloodGroup?: string | null;
+  /** @nullable */
+  aadhaarDocument?: string | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   baseSalary?: number | null;
@@ -648,6 +666,16 @@ export interface EmployeeInput {
   avatarUrl?: string;
   dob?: string;
   address?: string;
+  gender?: string;
+  maritalStatus?: string;
+  nationality?: string;
+  aadhaarNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  highestQualification?: string;
+  bloodGroup?: string;
+  /** JSON-encoded file metadata and data URL for optional Aadhaar copy */
+  aadhaarDocument?: string;
   notes?: string;
 }
 
@@ -703,8 +731,31 @@ export interface EmployeeUpdate {
   payrollStatus?: string;
   avatarUrl?: string;
   dob?: string;
-  address?: string;
-  notes?: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  aadhaarNumber?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyContactPhone?: string | null;
+  /** @nullable */
+  highestQualification?: string | null;
+  /** @nullable */
+  bloodGroup?: string | null;
+  /**
+     * JSON-encoded file metadata and data URL for optional Aadhaar copy
+     * @nullable
+     */
+  aadhaarDocument?: string | null;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export interface FinanceSummary {
