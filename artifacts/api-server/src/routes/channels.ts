@@ -119,6 +119,7 @@ router.get(
 
     const result = await Promise.all(
       channels.map(async (c) => {
+        if (c.type === "DM" && !meta.roles.has(c.id)) return null;
         const peer = c.type === "DM" ? await dmPeerForChannel(c.id, ctx.userId) : null;
         return channelListItem(c, meta, teamMap, adminAll, peer);
       }),
