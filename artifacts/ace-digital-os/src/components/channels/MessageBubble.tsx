@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import {
   Download,
   FileText,
@@ -115,6 +116,7 @@ export function MessageBubble({
   mentionNameMaps,
 }: MessageBubbleProps) {
   const isMobile = useIsMobile();
+  const [, setLocation] = useLocation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -228,6 +230,10 @@ export function MessageBubble({
   const replyCount = Number((msg as Message).metadata?.replyCount ?? 0);
   const isSystem = !pending && (msg as Message).messageKind === "system";
 
+  const isNoteShare = msg.metadata?.isNoteShare;
+  const noteShareId = msg.metadata?.noteId;
+  const noteShareTitle = msg.metadata?.noteTitle;
+
   if (!pending && isSystem) {
     return <MessageRow msg={msg as Message} showHeader={false} />;
   }
@@ -267,6 +273,12 @@ export function MessageBubble({
               initialBody={msg.body ?? ""}
               onSave={onSaveEdit}
               onCancel={onCancelEdit}
+            />
+          ) : isNoteShare && noteShareId != null ? (
+            <SharedNoteCard
+              noteId={Number(noteShareId)}
+              noteTitle={String(noteShareTitle || "")}
+              onClick={() => setLocation(`/notes?id=${noteShareId}`)}
             />
           ) : displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
             <MessageBody body={msg.body ?? ""} nameMaps={mentionNameMaps} />
@@ -455,5 +467,51 @@ function AttachmentPreview({
       </div>
       <Download size={18} className="shrink-0 text-muted-foreground" />
     </a>
+  );
+}
+
+interface SharedNoteCardProps {
+  noteId: number;
+  noteTitle: string;
+  onClick: () => void;
+}
+
+function SharedNoteCard({ noteId, noteTitle, onClick }: SharedNoteCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative flex w-full max-w-[320px] flex-col overflow-hidden rounded-xl border border-primary/20 bg-card/40 p-4 text-left transition-all duration-300 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] active:scale-[0.98] cursor-pointer"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      
+      <div className="flex items-start gap-3 relative z-10">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+          <FileText className="h-5 w-5 animate-pulse" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-primary/70">
+            Shared Document
+          </span>
+          <h4 className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors mt-0.5">
+            {noteTitle || "Untitled Note"}
+          </h4>
+          <p className="line-clamp-2 text-xs text-muted-foreground mt-1">
+            Click to view and edit this collaborative note in real-time.
+          </p>
+        </div>
+      </div>
+      
+      <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5 text-[10px] text-muted-foreground relative z-10">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Live Sync Enabled
+        </span>
+        <span className="flex items-center gap-0.5 font-medium text-primary group-hover:underline">
+          Open Note
+          <span className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+        </span>
+      </div>
+    </button>
   );
 }

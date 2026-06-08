@@ -82,6 +82,7 @@ export default function NotesPage() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const hasInitialNoteOpened = useRef(false);
 
   // Auto-save debounce
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -399,6 +400,38 @@ export default function NotesPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // Handle initial opening of note based on query parameters
+  useEffect(() => {
+    if (hasInitialNoteOpened.current || !notes || notes.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const idParam = params.get("id");
+    if (idParam) {
+      const noteId = parseInt(idParam, 10);
+      const note = notes.find((n) => n.id === noteId);
+      if (note) {
+        hasInitialNoteOpened.current = true;
+        if (note.createdById === user?.id) {
+          setTab("mine");
+        } else {
+          setTab("shared");
+        }
+        openNote(note);
+      }
+    }
+  }, [notes, user?.id, openNote]);
+
+  // Sync selected note ID to window location search query parameters
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedNoteId) {
+      url.searchParams.set("id", selectedNoteId.toString());
+      window.history.replaceState(null, "", url.pathname + url.search);
+    } else {
+      url.searchParams.delete("id");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }, [selectedNoteId]);
 
   const getInitials = (name: string) =>
     name
