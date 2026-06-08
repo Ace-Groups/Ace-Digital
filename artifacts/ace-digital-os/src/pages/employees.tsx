@@ -346,7 +346,7 @@ export default function EmployeesPage() {
         <Button
           data-testid="btn-add-employee-fab"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
           onClick={() => setCreateOpen(true)}
           aria-label="Add employee"
         >

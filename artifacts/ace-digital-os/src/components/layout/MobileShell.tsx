@@ -43,7 +43,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { useMobileChrome } from "@/contexts/MobileChromeContext";
 import aceLogo from "@/assets/ace-logo.png";
 import { hapticLight } from "@/lib/haptics";
-import { MobileSpeedDial } from "./MobileSpeedDial";
+
 
 const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
@@ -160,6 +160,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           fillViewport || immersivePage
             ? "flex flex-col overflow-hidden p-0"
             : "overflow-y-auto px-4 py-4",
+          !hideBottomNav && !fillViewport && !immersivePage && "pb-[calc(5rem+env(safe-area-inset-bottom))]",
         )}
       >
         {fillViewport || immersivePage ? children : <PageTransition>{children}</PageTransition>}
@@ -167,7 +168,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
 
       {!hideBottomNav && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-50 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[env(safe-area-inset-bottom)]"
+          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[env(safe-area-inset-bottom)]"
           aria-label="Main navigation"
         >
           <div className="flex h-16 w-full max-w-sm items-stretch justify-around rounded-3xl border border-white/20 bg-background/60 shadow-brand-xl backdrop-blur-xl dark:bg-black/60 px-1">
@@ -209,8 +210,6 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           </div>
         </nav>
       )}
-
-      {!hideBottomNav && <MobileSpeedDial />}
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-[env(safe-area-inset-bottom)]">

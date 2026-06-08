@@ -484,7 +484,7 @@ export default function FinancePage() {
         <Button
           data-testid="btn-post-salary-fab"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
           onClick={() => setSalaryOpen(true)}
           aria-label="Post salary"
         >
@@ -495,7 +495,7 @@ export default function FinancePage() {
         <Button
           data-testid="btn-add-expense-fab"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
           onClick={() => setExpenseOpen(true)}
           aria-label="Record expense"
         >
@@ -506,7 +506,7 @@ export default function FinancePage() {
         <Button
           data-testid="btn-run-payroll-fab"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
           onClick={() => setPayrollOpen(true)}
           aria-label="Run payroll"
         >
