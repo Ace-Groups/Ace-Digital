@@ -6,7 +6,6 @@ const PINNED_ROUTES: NavRoute[] = ["dashboard", "channels"];
 const FILL_ORDER: NavRoute[] = [
   "projects",
   "tasks",
-  "calendar",
   "employees",
   "finance",
   "clients",
@@ -16,7 +15,7 @@ const FILL_ORDER: NavRoute[] = [
   "activity",
 ];
 
-const MOBILE_PRIMARY_MAX = 5;
+const MOBILE_PRIMARY_MAX = 4;
 
 export type MobileNavItem = {
   route: NavRoute;

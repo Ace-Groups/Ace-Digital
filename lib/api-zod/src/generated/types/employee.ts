@@ -25,6 +25,16 @@ export interface Employee {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  addressLine2?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  zipCode?: string | null;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
   gender?: string | null;
   /** @nullable */
   maritalStatus?: string | null;

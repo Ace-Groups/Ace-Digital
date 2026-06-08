@@ -3146,6 +3146,16 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        addressLine2:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        zipCode:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
         gender:
           type: ["string", "null"]
         maritalStatus:
@@ -3226,6 +3236,16 @@ components:
         dob:
           type: string
         address:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
           type: string
         gender:
           type: string
@@ -3318,6 +3338,16 @@ components:
         dob:
           type: string
         address:
+          type: ["string", "null"]
+        addressLine2:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        zipCode:
+          type: ["string", "null"]
+        country:
           type: ["string", "null"]
         gender:
           type: ["string", "null"]

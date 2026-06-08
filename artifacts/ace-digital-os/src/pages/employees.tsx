@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -22,8 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Plus, Search } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { Briefcase, IdCard, Mail, Plus, Search, ShieldCheck } from "lucide-react";
+import { cn, formatCurrency, statusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -46,6 +46,14 @@ import {
   type PasswordResetSubmit,
 } from "@/components/employees/EmployeePasswordResetSheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function EmployeesPage() {
   const { user } = useAuth();
@@ -60,6 +68,7 @@ export default function EmployeesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [viewing, setViewing] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [resetTarget, setResetTarget] = useState<Employee | null>(null);
 
@@ -120,6 +129,11 @@ export default function EmployeesPage() {
             avatarUrl: data.avatarUrl ?? null,
             dob: data.dob ?? null,
             address: data.address ?? null,
+            addressLine2: data.addressLine2 ?? null,
+            city: data.city ?? null,
+            state: data.state ?? null,
+            zipCode: data.zipCode ?? null,
+            country: data.country ?? null,
             gender: data.gender ?? null,
             maritalStatus: data.maritalStatus ?? null,
             nationality: data.nationality ?? null,
@@ -156,6 +170,11 @@ export default function EmployeesPage() {
               avatarUrl: data.avatarUrl,
               dob: data.dob,
               address: data.address ?? undefined,
+              addressLine2: data.addressLine2 ?? undefined,
+              city: data.city ?? undefined,
+              state: data.state ?? undefined,
+              zipCode: data.zipCode ?? undefined,
+              country: data.country ?? undefined,
               gender: data.gender ?? undefined,
               maritalStatus: data.maritalStatus ?? undefined,
               nationality: data.nationality ?? undefined,
@@ -203,6 +222,11 @@ export default function EmployeesPage() {
       ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
       dob: data.dob,
       address: data.address,
+      addressLine2: data.addressLine2,
+      city: data.city,
+      state: data.state,
+      zipCode: data.zipCode,
+      country: data.country,
       gender: data.gender,
       maritalStatus: data.maritalStatus,
       nationality: data.nationality,
@@ -359,6 +383,7 @@ export default function EmployeesPage() {
                 canDelete={canRemove && emp.id !== user?.id}
                 canResetPassword={canResetPassword && emp.id !== user?.id}
                 canViewSalaries={canViewSalaries}
+                onView={() => setViewing(emp)}
                 onEdit={() => {
                   setEditing(emp);
                   setEditOpen(true);
@@ -409,6 +434,18 @@ export default function EmployeesPage() {
         onEditSubmit={handleEdit}
       />
 
+      <EmployeeDetailDialog
+        employee={viewing}
+        canEdit={canWrite}
+        canViewSalaries={canViewSalaries}
+        onClose={() => setViewing(null)}
+        onEdit={(employee) => {
+          setViewing(null);
+          setEditing(employee);
+          setEditOpen(true);
+        }}
+      />
+
       <EmployeePasswordResetSheet
         employee={resetTarget}
         open={resetTarget !== null}
@@ -435,6 +472,174 @@ export default function EmployeesPage() {
         onConfirm={confirmDelete}
       />
     </AppLayout>
+  );
+}
+
+function formatResidentialAddress(employee: Employee) {
+  return [
+    employee.address,
+    employee.addressLine2,
+    employee.city,
+    employee.state,
+    employee.zipCode,
+    employee.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
+
+function formatOptionLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getDocumentName(value?: string | null) {
+  if (!value) return "";
+  try {
+    const parsed = JSON.parse(value) as { name?: string };
+    return parsed.name ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function DetailSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: typeof Briefcase;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border/70 bg-card/70 p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        <Icon size={16} className="text-primary" />
+        {title}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-1 break-words text-sm text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function EmployeeDetailDialog({
+  employee,
+  canEdit,
+  canViewSalaries,
+  onClose,
+  onEdit,
+}: {
+  employee: Employee | null;
+  canEdit: boolean;
+  canViewSalaries: boolean;
+  onClose: () => void;
+  onEdit: (employee: Employee) => void;
+}) {
+  if (!employee) return null;
+  const residentialAddress = formatResidentialAddress(employee);
+  const aadhaarDocumentName = getDocumentName(employee.aadhaarDocument);
+
+  return (
+    <Dialog open={employee !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-start gap-3 pr-8">
+            <UserAvatar
+              avatarUrl={employee.avatarUrl}
+              fullName={employee.fullName}
+              className="h-12 w-12 shrink-0"
+              fallbackClassName="bg-primary/15 text-primary font-semibold"
+              iconSize={20}
+            />
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="truncate text-xl">{employee.fullName}</DialogTitle>
+              <DialogDescription>
+                {employee.jobTitle ?? "Employee"} • {employee.teamName ?? "No team"}
+              </DialogDescription>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn("shrink-0 text-[10px]", statusColor(employee.status ?? "active"))}
+            >
+              {employee.status ?? "active"}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <DetailSection title="Work profile" icon={Briefcase}>
+            <DetailItem label="Employee ID" value={formatValue(employee.employeeCode)} />
+            <DetailItem label="Role" value={formatOptionLabel(employee.role)} />
+            <DetailItem label="Team" value={formatValue(employee.teamName)} />
+            <DetailItem label="Job title" value={formatValue(employee.jobTitle)} />
+            <DetailItem label="Joining date" value={formatDate(employee.startDate)} />
+            {canViewSalaries && (
+              <DetailItem
+                label="Salary"
+                value={employee.baseSalary != null ? formatCurrency(employee.baseSalary) : "—"}
+              />
+            )}
+          </DetailSection>
+
+          <DetailSection title="Contact" icon={Mail}>
+            <DetailItem label="Email" value={formatValue(employee.email)} />
+            <DetailItem label="Phone" value={formatValue(employee.phone)} />
+            <DetailItem label="Residential address" value={formatValue(residentialAddress)} />
+          </DetailSection>
+
+          <DetailSection title="Personal identity" icon={IdCard}>
+            <DetailItem label="Date of birth" value={formatDate(employee.dob)} />
+            <DetailItem label="Gender" value={formatOptionLabel(employee.gender)} />
+            <DetailItem label="Marital status" value={formatOptionLabel(employee.maritalStatus)} />
+            <DetailItem label="Nationality" value={formatValue(employee.nationality)} />
+            <DetailItem label="Aadhaar number" value={formatValue(employee.aadhaarNumber)} />
+            <DetailItem label="Blood group" value={formatValue(employee.bloodGroup)} />
+            <DetailItem label="Highest qualification" value={formatValue(employee.highestQualification)} />
+          </DetailSection>
+
+          <DetailSection title="Emergency and documents" icon={ShieldCheck}>
+            <DetailItem label="Emergency contact" value={formatValue(employee.emergencyContactName)} />
+            <DetailItem label="Emergency phone" value={formatValue(employee.emergencyContactPhone)} />
+            <DetailItem label="Aadhaar copy" value={aadhaarDocumentName || "—"} />
+            <DetailItem label="Notes" value={formatValue(employee.notes)} />
+          </DetailSection>
+        </div>
+
+        <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex justify-end gap-2 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {canEdit && (
+            <Button type="button" onClick={() => onEdit(employee)}>
+              Edit details
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

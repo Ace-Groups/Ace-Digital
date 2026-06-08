@@ -1,5 +1,5 @@
 import type { Employee } from "@workspace/api-client-react";
-import { Mail, Phone, Briefcase, MoreVertical, Pencil, Trash2, KeyRound } from "lucide-react";
+import { Mail, Phone, Briefcase, MoreVertical, Pencil, Trash2, KeyRound, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ interface EmployeeCardProps {
   canDelete: boolean;
   canResetPassword: boolean;
   canViewSalaries: boolean;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onResetPassword: () => void;
@@ -30,6 +31,7 @@ export function EmployeeCard({
   canDelete,
   canResetPassword,
   canViewSalaries,
+  onView,
   onEdit,
   onDelete,
   onResetPassword,
@@ -68,6 +70,16 @@ export function EmployeeCard({
                 >
                   {employee.status}
                 </Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 border-primary/40 text-primary"
+                  onClick={onView}
+                  aria-label={`View ${employee.fullName}`}
+                >
+                  <Eye size={17} />
+                </Button>
                 {showMenu && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -125,34 +137,6 @@ export function EmployeeCard({
               <p className="text-[11px] font-mono">
                 ID: {employee.employeeCode ?? "—"}
               </p>
-              {employee.dob && (
-                <p className="text-[11px]">
-                  DOB: {new Date(employee.dob).toLocaleDateString()}
-                </p>
-              )}
-              {employee.address && (
-                <p className="text-[11px] truncate" title={employee.address}>
-                  Address: {employee.address}
-                </p>
-              )}
-              {(employee.bloodGroup || employee.nationality) && (
-                <p className="text-[11px]">
-                  {[employee.bloodGroup ? `Blood: ${employee.bloodGroup}` : null, employee.nationality]
-                    .filter(Boolean)
-                    .join(" • ")}
-                </p>
-              )}
-              {employee.emergencyContactName && (
-                <p className="text-[11px] truncate" title={employee.emergencyContactName}>
-                  Emergency: {employee.emergencyContactName}
-                  {employee.emergencyContactPhone ? ` (${employee.emergencyContactPhone})` : ""}
-                </p>
-              )}
-              {employee.notes && (
-                <p className="text-[11px] italic truncate" title={employee.notes}>
-                  Notes: {employee.notes}
-                </p>
-              )}
             </div>
           </div>
         </div>

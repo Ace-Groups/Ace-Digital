@@ -601,6 +601,16 @@ export interface Employee {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  addressLine2?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  zipCode?: string | null;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
   gender?: string | null;
   /** @nullable */
   maritalStatus?: string | null;
@@ -666,6 +676,11 @@ export interface EmployeeInput {
   avatarUrl?: string;
   dob?: string;
   address?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
   gender?: string;
   maritalStatus?: string;
   nationality?: string;
@@ -733,6 +748,16 @@ export interface EmployeeUpdate {
   dob?: string;
   /** @nullable */
   address?: string | null;
+  /** @nullable */
+  addressLine2?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  zipCode?: string | null;
+  /** @nullable */
+  country?: string | null;
   /** @nullable */
   gender?: string | null;
   /** @nullable */

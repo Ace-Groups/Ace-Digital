@@ -27,6 +27,11 @@ export interface EmployeeInput {
   avatarUrl?: string;
   dob?: string;
   address?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
   gender?: string;
   maritalStatus?: string;
   nationality?: string;

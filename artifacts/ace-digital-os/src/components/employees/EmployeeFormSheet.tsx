@@ -39,6 +39,44 @@ const ROLES = [
 
 const MAX_AADHAAR_DOCUMENT_BYTES = 1_000_000;
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Tamil Nadu",
+  "Telangana",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+] as const;
+
+const QUALIFICATION_OPTIONS = [
+  "High School",
+  "Higher Secondary",
+  "Diploma",
+  "Bachelor's Degree",
+  "Master's Degree",
+  "Doctorate",
+  "Professional Certification",
+  "Other",
+] as const;
+
 const createSchema = z
   .object({
     fullName: z.string().min(1, "Name required"),
@@ -60,6 +98,11 @@ const createSchema = z
     mascotId: z.string().optional(),
     dob: z.string().optional(),
     address: z.string().optional(),
+    addressLine2: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zipCode: z.string().optional(),
+    country: z.string().optional(),
     gender: z.string().optional(),
     maritalStatus: z.string().optional(),
     nationality: z.string().optional(),
@@ -97,6 +140,11 @@ const editSchema = z.object({
   mascotId: z.string().optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
+  addressLine2: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
   gender: z.string().optional(),
   maritalStatus: z.string().optional(),
   nationality: z.string().optional(),
@@ -165,6 +213,11 @@ export type EmployeeFormSubmitCreate = {
   avatarUrl?: string;
   dob?: string;
   address?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
   gender?: string | null;
   maritalStatus?: string | null;
   nationality?: string | null;
@@ -194,6 +247,11 @@ export type EmployeeFormSubmitEdit = {
   avatarUrl?: string;
   dob?: string;
   address?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
   gender?: string | null;
   maritalStatus?: string | null;
   nationality?: string | null;
@@ -244,6 +302,11 @@ export function EmployeeFormSheet({
       salaryMode: "monthly",
       dob: "",
       address: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "India",
       gender: "",
       maritalStatus: "",
       nationality: "Indian",
@@ -268,6 +331,11 @@ export function EmployeeFormSheet({
       salaryMode: "monthly",
       dob: "",
       address: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "India",
       gender: "",
       maritalStatus: "",
       nationality: "Indian",
@@ -344,6 +412,11 @@ export function EmployeeFormSheet({
       mascotId,
       dob: employee.dob ? employee.dob.slice(0, 10) : "",
       address: employee.address ?? "",
+      addressLine2: employee.addressLine2 ?? "",
+      city: employee.city ?? "",
+      state: employee.state ?? "",
+      zipCode: employee.zipCode ?? "",
+      country: employee.country ?? "",
       gender: employee.gender ?? "",
       maritalStatus: employee.maritalStatus ?? "",
       nationality: employee.nationality ?? "",
@@ -372,6 +445,11 @@ export function EmployeeFormSheet({
       mascotId: "7",
       dob: "",
       address: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "India",
       gender: "",
       maritalStatus: "",
       nationality: "Indian",
@@ -407,6 +485,11 @@ export function EmployeeFormSheet({
       salaryMode?: string;
       dob?: string;
       address?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
       gender?: string;
       maritalStatus?: string;
       nationality?: string;
@@ -435,6 +518,11 @@ export function EmployeeFormSheet({
       status: data.status,
       dob: data.dob || undefined,
       address: optional(data.address),
+      addressLine2: optional(data.addressLine2),
+      city: optional(data.city),
+      state: optional(data.state),
+      zipCode: optional(data.zipCode),
+      country: optional(data.country),
       gender: optional(data.gender),
       maritalStatus: optional(data.maritalStatus),
       nationality: optional(data.nationality),
@@ -735,18 +823,113 @@ function FormFields({
           )}
         />
       </div>
-      <FormField
-        control={form.control}
-        name="address"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Residential address</FormLabel>
-            <FormControl>
-              <Input className="min-h-11" {...field} />
-            </FormControl>
-          </FormItem>
-        )}
-      />
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+        <p className="text-sm font-medium text-foreground">Residential address</p>
+        <div className="mt-4 space-y-4">
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <FormControl>
+                  <Input className="min-h-11" placeholder="House / flat / street" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="addressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address line 2</FormLabel>
+                <FormControl>
+                  <Input className="min-h-11" placeholder="Area / landmark / apartment" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" placeholder="Chennai" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <FormControl>
+                      <SelectTrigger className="min-h-11">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {INDIAN_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="zipCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Zip code</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" inputMode="numeric" placeholder="600001" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" list="employee-country-options" placeholder="India" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      </div>
+      <datalist id="employee-country-options">
+        {["India", "United Arab Emirates", "United States", "United Kingdom", "Singapore", "Canada"].map((country) => (
+          <option key={country} value={country} />
+        ))}
+      </datalist>
+      <datalist id="employee-nationality-options">
+        {["Indian", "Emirati", "American", "British", "Singaporean", "Canadian", "Other"].map((nationality) => (
+          <option key={nationality} value={nationality} />
+        ))}
+      </datalist>
+      <datalist id="employee-qualification-options">
+        {QUALIFICATION_OPTIONS.map((qualification) => (
+          <option key={qualification} value={qualification} />
+        ))}
+      </datalist>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           control={form.control}
@@ -761,9 +944,9 @@ function FormFields({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="non_binary">Non-binary</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                   <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
@@ -801,7 +984,12 @@ function FormFields({
             <FormItem>
               <FormLabel>Nationality</FormLabel>
               <FormControl>
-                <Input className="min-h-11" placeholder="Indian" {...field} />
+                <Input
+                  className="min-h-11"
+                  list="employee-nationality-options"
+                  placeholder="Indian"
+                  {...field}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -858,7 +1046,12 @@ function FormFields({
             <FormItem>
               <FormLabel>Highest qualification</FormLabel>
               <FormControl>
-                <Input className="min-h-11" {...field} />
+                <Input
+                  className="min-h-11"
+                  list="employee-qualification-options"
+                  placeholder="Bachelor's Degree"
+                  {...field}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -876,7 +1069,7 @@ function FormFields({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((group) => (
+                  {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map((group) => (
                     <SelectItem key={group} value={group}>
                       {group}
                     </SelectItem>

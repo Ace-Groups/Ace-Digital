@@ -125,6 +125,11 @@ export type CreateUserInput = {
   avatarUrl?: string | null;
   dob?: Date | null;
   address?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
   gender?: string | null;
   maritalStatus?: string | null;
   nationality?: string | null;
@@ -152,6 +157,11 @@ export type UpdateUserInput = Partial<{
   passwordHash: string;
   dob: Date | null;
   address: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
   gender: string | null;
   maritalStatus: string | null;
   nationality: string | null;
