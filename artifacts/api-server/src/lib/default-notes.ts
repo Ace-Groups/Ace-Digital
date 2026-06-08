@@ -179,6 +179,13 @@ export async function ensureDefaultNotes(userId: number) {
       createdById: userId,
       sharedUserIds: [],
     });
+  } else {
+    const expectedHeader = `Welcome to Ace Digital OS, ${fullName}!`;
+    if (!welcomeNote.content.includes(expectedHeader)) {
+      await store.updateNote(welcomeNote.id, {
+        content: welcomeContent,
+      });
+    }
   }
 
   // 2. Guide Note

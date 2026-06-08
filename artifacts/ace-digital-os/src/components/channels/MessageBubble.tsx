@@ -278,6 +278,7 @@ export function MessageBubble({
             <SharedNoteCard
               noteId={Number(noteShareId)}
               noteTitle={String(noteShareTitle || "")}
+              messageBody={msg.body ?? ""}
               onClick={() => setLocation(`/notes?id=${noteShareId}`)}
             />
           ) : displayBody && msg.messageKind !== "poll" && msg.messageKind !== "event" ? (
@@ -473,10 +474,28 @@ function AttachmentPreview({
 interface SharedNoteCardProps {
   noteId: number;
   noteTitle: string;
+  messageBody: string;
   onClick: () => void;
 }
 
-function SharedNoteCard({ noteId, noteTitle, onClick }: SharedNoteCardProps) {
+function parseNoteShareBody(body: string) {
+  const lines = body.split("\n").map(l => l.trim()).filter(Boolean);
+  let sharedBy = "a team member";
+  let preview = "";
+  
+  for (const line of lines) {
+    if (line.startsWith("— Shared by") || line.startsWith("_— Shared by")) {
+      sharedBy = line.replace(/^[_—\s]+Shared by\s+/, "").replace(/_$/, "");
+    } else if (!line.includes("📝") && !line.startsWith("**")) {
+      preview = line;
+    }
+  }
+  return { preview, sharedBy };
+}
+
+function SharedNoteCard({ noteId, noteTitle, messageBody, onClick }: SharedNoteCardProps) {
+  const { preview, sharedBy } = parseNoteShareBody(messageBody);
+
   return (
     <button
       type="button"
@@ -496,16 +515,22 @@ function SharedNoteCard({ noteId, noteTitle, onClick }: SharedNoteCardProps) {
           <h4 className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors mt-0.5">
             {noteTitle || "Untitled Note"}
           </h4>
-          <p className="line-clamp-2 text-xs text-muted-foreground mt-1">
-            Click to view and edit this collaborative note in real-time.
-          </p>
+          {preview ? (
+            <p className="line-clamp-2 text-xs text-muted-foreground mt-1.5 font-normal bg-background/30 p-2 rounded border border-border/30">
+              {preview}
+            </p>
+          ) : (
+            <p className="line-clamp-2 text-xs text-muted-foreground mt-1">
+              Click to view and edit this collaborative note in real-time.
+            </p>
+          )}
         </div>
       </div>
       
-      <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5 text-[10px] text-muted-foreground relative z-10">
+      <div className="mt-3.5 flex items-center justify-between border-t border-border/40 pt-2.5 text-[10px] text-muted-foreground relative z-10">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Live Sync Enabled
+          Shared by {sharedBy}
         </span>
         <span className="flex items-center gap-0.5 font-medium text-primary group-hover:underline">
           Open Note
