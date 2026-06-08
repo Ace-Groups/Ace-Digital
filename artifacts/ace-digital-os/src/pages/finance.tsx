@@ -295,18 +295,52 @@ export default function FinancePage() {
               <CardHeader>
                 <CardTitle className="text-lg">{myPayslip.fullName}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
                   {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
                 </p>
-                <p>Base salary: {formatCurrency(myPayslip.baseSalary)}</p>
-                <p>Bonus: {formatCurrency(myPayslip.bonus)}</p>
-                <p className="text-base font-semibold pt-2">
-                  Total: {formatCurrency(myPayslip.totalPay)}
-                </p>
-                <Badge variant="outline" className={cn("mt-2", statusColor(myPayslip.payrollStatus))}>
-                  {myPayslip.payrollStatus}
-                </Badge>
+                
+                <div className="flex items-center gap-2 mt-1 mb-3">
+                  <Badge variant="secondary" className="capitalize text-xs">
+                    {myPayslip.salaryMode === "project_based" ? "Project-Based Pay" : "Monthly Salaried"}
+                  </Badge>
+                  <Badge variant="outline" className={cn(statusColor(myPayslip.payrollStatus))}>
+                    {myPayslip.payrollStatus}
+                  </Badge>
+                </div>
+
+                <div className="space-y-2 border-t border-border/60 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Base salary:</span>
+                    <span>{formatCurrency(myPayslip.baseSalary)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Bonus:</span>
+                    <span>{formatCurrency(myPayslip.bonus)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-base font-semibold border-t border-border/60 pt-2">
+                    <span>Total pay:</span>
+                    <span>{formatCurrency(myPayslip.totalPay)}</span>
+                  </div>
+                </div>
+
+                {myPayslip.salaryMode === "project_based" && (
+                  <div className="mt-4 pt-3 border-t border-border/60">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Project Payout Breakdown</p>
+                    {myPayslip.projectBreakdown && myPayslip.projectBreakdown.length > 0 ? (
+                      <div className="space-y-2 rounded-lg bg-muted/40 p-2.5">
+                        {myPayslip.projectBreakdown.map((proj: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground font-medium">{proj.projectName || "Unnamed Project"}</span>
+                            <span className="font-semibold text-foreground">{formatCurrency(proj.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic bg-muted/40 rounded-lg p-2.5 text-center">No project allocations recorded for this month.</p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : null}

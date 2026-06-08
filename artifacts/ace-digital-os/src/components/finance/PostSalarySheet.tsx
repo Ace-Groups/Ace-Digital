@@ -75,7 +75,20 @@ export function PostSalarySheet({ open, onOpenChange, saving, onSubmit, defaultU
     }
   }, [open, form, defaultUserId]);
 
+  const selectedUserId = form.watch("userId");
+  const selectedEmployee = employees?.find((e) => String(e.id) === selectedUserId);
+
+  useEffect(() => {
+    if (selectedEmployee?.salaryMode === "project_based" && mode !== "PROJECT") {
+      setMode("PROJECT");
+      form.setValue("allocationType", "PROJECT");
+    }
+  }, [selectedUserId, selectedEmployee, mode, form]);
+
   function setAllocationType(next: "MONTHLY" | "PROJECT") {
+    if (next === "MONTHLY" && selectedEmployee?.salaryMode === "project_based") {
+      return;
+    }
     setMode(next);
     form.setValue("allocationType", next);
   }
@@ -97,23 +110,34 @@ export function PostSalarySheet({ open, onOpenChange, saving, onSubmit, defaultU
           className="mobile-form space-y-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-0"
         >
           <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-1">
-            {(["MONTHLY", "PROJECT"] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                data-testid={`salary-mode-${type.toLowerCase()}`}
-                className={cn(
-                  "min-h-11 rounded-md text-sm font-medium transition-colors",
-                  mode === type
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => setAllocationType(type)}
-              >
-                {type === "MONTHLY" ? "Monthly" : "Project"}
-              </button>
-            ))}
+            {(["MONTHLY", "PROJECT"] as const).map((type) => {
+              const isDisabled = type === "MONTHLY" && selectedEmployee?.salaryMode === "project_based";
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={isDisabled}
+                  data-testid={`salary-mode-${type.toLowerCase()}`}
+                  className={cn(
+                    "min-h-11 rounded-md text-sm font-medium transition-colors",
+                    isDisabled && "opacity-40 cursor-not-allowed",
+                    mode === type
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => setAllocationType(type)}
+                >
+                  {type === "MONTHLY" ? "Monthly" : "Project"}
+                </button>
+              );
+            })}
           </div>
+
+          {selectedEmployee?.salaryMode === "project_based" && (
+            <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 text-xs text-indigo-600 dark:text-indigo-400">
+              <span className="font-semibold">Project-Based Employee:</span> Only project allocations are allowed for {selectedEmployee.fullName}.
+            </div>
+          )}
 
           <FormField
             control={form.control}

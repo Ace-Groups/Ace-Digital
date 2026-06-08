@@ -83,6 +83,7 @@ export type SalaryRow = {
   baseSalary: number;
   bonus: number;
   payrollStatus: string;
+  salaryMode: string;
 };
 
 export type DashboardSnapshot = {
@@ -152,11 +153,12 @@ export type CreateNotificationInput = {
   link?: string | null;
 };
 
-export type CreateProfileInput = { userId: number; baseSalary?: string; bonus?: string };
+export type CreateProfileInput = { userId: number; baseSalary?: string; bonus?: string; salaryMode?: string };
 export type UpdateProfileInput = Partial<{
   baseSalary: string;
   bonus: string;
   payrollStatus: string;
+  salaryMode: string;
 }>;
 
 export type ChannelMemberRole = "owner" | "member" | "viewer";

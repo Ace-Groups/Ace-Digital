@@ -9,6 +9,7 @@ export const employeeProfilesTable = pgTable("employee_profiles", {
   baseSalary: decimal("base_salary", { precision: 12, scale: 2 }).notNull().default("0"),
   bonus: decimal("bonus", { precision: 12, scale: 2 }).notNull().default("0"),
   payrollStatus: text("payroll_status").notNull().default("PENDING"),
+  salaryMode: text("salary_mode").notNull().default("monthly"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

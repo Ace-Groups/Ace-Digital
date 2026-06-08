@@ -96,6 +96,7 @@ export * from './patchExpenseStatusBodyStatus';
 export * from './payrollRun';
 export * from './payrollRunInput';
 export * from './payslipMe';
+export * from './payslipMeProjectBreakdownItem';
 export * from './pollVoteInput';
 export * from './project';
 export * from './projectInput';

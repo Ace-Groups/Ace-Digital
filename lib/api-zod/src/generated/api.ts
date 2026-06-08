@@ -148,6 +148,7 @@ export const GetMyProfileResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -181,6 +182,7 @@ export const UpdateMyProfileResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -863,6 +865,7 @@ export const GetTeamMembersResponseItem = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -980,6 +983,7 @@ export const ListEmployeesResponseItem = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -1003,6 +1007,7 @@ export const CreateEmployeeBody = zod.object({
   "phone": zod.string().optional(),
   "employeeCode": zod.string().optional(),
   "startDate": zod.string().optional(),
+  "salaryMode": zod.string().optional(),
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
   "status": zod.string().optional(),
@@ -1051,6 +1056,7 @@ export const GetEmployeeResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -1077,6 +1083,7 @@ export const UpdateEmployeeBody = zod.object({
   "startDate": zod.string().optional(),
   "baseSalary": zod.number().optional(),
   "bonus": zod.number().optional(),
+  "salaryMode": zod.string().optional(),
   "status": zod.string().optional(),
   "payrollStatus": zod.string().optional(),
   "avatarUrl": zod.string().optional(),
@@ -1101,6 +1108,7 @@ export const UpdateEmployeeResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -1150,6 +1158,7 @@ export const ResetEmployeePasswordResponse = zod.object({
   "baseSalary": zod.number().nullish(),
   "bonus": zod.number().nullish(),
   "payrollStatus": zod.string().nullish(),
+  "salaryMode": zod.string().nullish(),
   "mustChangePassword": zod.boolean().optional(),
   "phone": zod.string().nullish(),
   "employeeCode": zod.string().nullish(),
@@ -1183,7 +1192,13 @@ export const GetMyPayslipResponse = zod.object({
   "totalPay": zod.number(),
   "payrollStatus": zod.string(),
   "jobTitle": zod.string().nullish(),
-  "teamName": zod.string().nullish()
+  "teamName": zod.string().nullish(),
+  "salaryMode": zod.string().optional(),
+  "projectBreakdown": zod.array(zod.object({
+  "projectId": zod.number().optional(),
+  "projectName": zod.string().nullable(),
+  "amount": zod.number()
+})).optional()
 })
 
 
@@ -1198,7 +1213,8 @@ export const ListSalariesResponseItem = zod.object({
   "baseSalary": zod.number(),
   "bonus": zod.number().optional(),
   "totalPay": zod.number().optional(),
-  "payrollStatus": zod.string().optional()
+  "payrollStatus": zod.string().optional(),
+  "salaryMode": zod.string().optional()
 })
 export const ListSalariesResponse = zod.array(ListSalariesResponseItem)
 

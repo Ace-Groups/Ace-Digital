@@ -32,6 +32,8 @@ export interface Employee {
   bonus?: number | null;
   /** @nullable */
   payrollStatus?: string | null;
+  /** @nullable */
+  salaryMode?: string | null;
   mustChangePassword?: boolean;
   /** @nullable */
   phone?: string | null;

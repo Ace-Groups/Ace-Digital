@@ -5,6 +5,7 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PayslipMeProjectBreakdownItem } from './payslipMeProjectBreakdownItem';
 
 export interface PayslipMe {
   fullName: string;
@@ -16,4 +17,6 @@ export interface PayslipMe {
   jobTitle?: string | null;
   /** @nullable */
   teamName?: string | null;
+  salaryMode?: string;
+  projectBreakdown?: PayslipMeProjectBreakdownItem[];
 }

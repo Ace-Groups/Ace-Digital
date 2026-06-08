@@ -82,6 +82,7 @@ router.post(
       startDate,
       baseSalary,
       bonus,
+      salaryMode,
       status,
       sendWelcomeEmail: shouldSendEmail = true,
       avatarUrl: bodyAvatarUrl,
@@ -167,9 +168,10 @@ router.post(
         userId: user.id,
         baseSalary: baseSalary ? String(baseSalary) : "0",
         bonus: bonus ? String(bonus) : "0",
+        salaryMode: salaryMode ? String(salaryMode) : "monthly",
       });
     } else {
-      await store.createProfile({ userId: user.id });
+      await store.createProfile({ userId: user.id, salaryMode: "monthly" });
     }
 
     let emailSent = false;
@@ -223,6 +225,7 @@ router.patch(
       startDate,
       baseSalary,
       bonus,
+      salaryMode,
       status,
       payrollStatus,
       avatarUrl: patchAvatarUrl,
@@ -311,12 +314,13 @@ router.patch(
     }
     if (
       canViewSalaries(ctx) &&
-      (baseSalary !== undefined || bonus !== undefined || payrollStatus !== undefined)
+      (baseSalary !== undefined || bonus !== undefined || payrollStatus !== undefined || salaryMode !== undefined)
     ) {
       await store.updateProfileByUserId(id, {
         ...(baseSalary !== undefined && { baseSalary: String(baseSalary) }),
         ...(bonus !== undefined && { bonus: String(bonus) }),
         ...(payrollStatus !== undefined && { payrollStatus }),
+        ...(salaryMode !== undefined && { salaryMode: String(salaryMode) }),
       });
     }
     res.json(await employeeWithProfile(user, ctx));

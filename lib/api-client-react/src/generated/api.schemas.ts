@@ -64,6 +64,13 @@ export interface AuthPermissions {
   permissions: string[];
 }
 
+export type PayslipMeProjectBreakdownItem = {
+  projectId?: number;
+  /** @nullable */
+  projectName: string | null;
+  amount: number;
+};
+
 export interface PayslipMe {
   fullName: string;
   baseSalary: number;
@@ -74,6 +81,8 @@ export interface PayslipMe {
   jobTitle?: string | null;
   /** @nullable */
   teamName?: string | null;
+  salaryMode?: string;
+  projectBreakdown?: PayslipMeProjectBreakdownItem[];
 }
 
 /**
@@ -592,6 +601,8 @@ export interface Employee {
   bonus?: number | null;
   /** @nullable */
   payrollStatus?: string | null;
+  /** @nullable */
+  salaryMode?: string | null;
   mustChangePassword?: boolean;
   /** @nullable */
   phone?: string | null;
@@ -621,6 +632,7 @@ export interface EmployeeInput {
   phone?: string;
   employeeCode?: string;
   startDate?: string;
+  salaryMode?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;
@@ -679,6 +691,7 @@ export interface EmployeeUpdate {
   startDate?: string;
   baseSalary?: number;
   bonus?: number;
+  salaryMode?: string;
   status?: string;
   payrollStatus?: string;
   avatarUrl?: string;
@@ -706,6 +719,7 @@ export interface SalaryRecord {
   bonus?: number;
   totalPay?: number;
   payrollStatus?: string;
+  salaryMode?: string;
 }
 
 export interface Expense {

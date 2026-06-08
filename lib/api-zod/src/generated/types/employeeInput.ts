@@ -18,6 +18,7 @@ export interface EmployeeInput {
   phone?: string;
   employeeCode?: string;
   startDate?: string;
+  salaryMode?: string;
   baseSalary?: number;
   bonus?: number;
   status?: string;

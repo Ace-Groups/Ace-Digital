@@ -259,6 +259,7 @@ export function createFirestoreStore() {
         baseSalary: data.baseSalary ?? "0",
         bonus: data.bonus ?? "0",
         payrollStatus: "PENDING",
+        salaryMode: data.salaryMode ?? "monthly",
         createdAt: now,
         updatedAt: now,
       };
@@ -287,6 +288,7 @@ export function createFirestoreStore() {
           baseSalary: p ? Number(p.baseSalary) : 0,
           bonus: p ? Number(p.bonus) : 0,
           payrollStatus: p?.payrollStatus ?? "PENDING",
+          salaryMode: p?.salaryMode ?? "monthly",
         };
       });
     },
@@ -1785,6 +1787,7 @@ function mapProfile(data: FirebaseFirestore.DocumentData, id: string): EmployeeP
     baseSalary: String(data.baseSalary ?? "0"),
     bonus: String(data.bonus ?? "0"),
     payrollStatus: data.payrollStatus as string,
+    salaryMode: (data.salaryMode as string) ?? "monthly",
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };

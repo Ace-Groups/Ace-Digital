@@ -87,7 +87,12 @@ function SalaryProfileSwipableCard({
           <CardContent className="p-4 space-y-2" data-testid={`salary-card-${salary.userId}`}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-medium">{salary.fullName}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-medium">{salary.fullName}</p>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4.5 capitalize shrink-0">
+                    {salary.salaryMode === "project_based" ? "Project" : "Monthly"}
+                  </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {salary.jobTitle ?? "—"} · {salary.teamName ?? "—"}
                 </p>
@@ -279,7 +284,14 @@ export function FinanceSalariesTab({
                   <tbody className="divide-y divide-border">
                     {salaries?.map((s) => (
                       <tr key={s.userId} data-testid={`salary-row-${s.userId}`} className="hover:bg-muted/40 group">
-                        <td className="px-4 py-3 font-medium">{s.fullName}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <span>{s.fullName}</span>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-auto capitalize shrink-0">
+                              {s.salaryMode === "project_based" ? "Project" : "Monthly"}
+                            </Badge>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">{s.teamName ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{s.jobTitle ?? "—"}</td>
                         <td className="px-4 py-3 text-right">{formatCurrency(s.baseSalary ?? 0)}</td>

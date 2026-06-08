@@ -12,13 +12,37 @@ router.get(
   requireAuth,
   requirePermission("finance:summary"),
   async (_req, res): Promise<void> => {
+    const activeMonth = new Date().getMonth() + 1;
+    const activeYear = new Date().getFullYear();
+
+    const postings = await store.listSalaryPostings();
+    const projectPostings = postings.filter(
+      (p) => p.month === activeMonth && p.year === activeYear && p.allocationType === "PROJECT"
+    );
+
     const profiles = await store.listProfiles();
-    const totalPayroll = profiles.reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
     const totalRevenue = await store.sumActiveClientRevenue();
     const totalExpenses = await store.sumApprovedExpenses();
-    const pendingPayroll = profiles
-      .filter((p) => p.payrollStatus === "PENDING")
-      .reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
+
+    let totalPayroll = 0;
+    let pendingPayroll = 0;
+
+    for (const p of profiles) {
+      if (p.salaryMode === "project_based") {
+        const userProjectPostings = projectPostings.filter((post) => post.userId === p.userId);
+        const userPay = userProjectPostings.reduce((s, post) => s + post.baseSalary + post.bonus, 0);
+        totalPayroll += userPay;
+        if (p.payrollStatus === "PENDING") {
+          pendingPayroll += userPay;
+        }
+      } else {
+        const userPay = Number(p.baseSalary) + Number(p.bonus);
+        totalPayroll += userPay;
+        if (p.payrollStatus === "PENDING") {
+          pendingPayroll += userPay;
+        }
+      }
+    }
 
     res.json({
       totalPayroll,
@@ -43,8 +67,28 @@ router.get(
       return;
     }
     const team = user.teamId ? await store.findTeamById(user.teamId) : null;
-    const baseSalary = profile?.baseSalary ? Number(profile.baseSalary) : 0;
-    const bonus = profile?.bonus ? Number(profile.bonus) : 0;
+
+    const activeMonth = new Date().getMonth() + 1;
+    const activeYear = new Date().getFullYear();
+
+    let baseSalary = profile?.baseSalary ? Number(profile.baseSalary) : 0;
+    let bonus = profile?.bonus ? Number(profile.bonus) : 0;
+    let projectBreakdown: any[] = [];
+
+    if (profile?.salaryMode === "project_based") {
+      const postings = await store.listSalaryPostings();
+      const userPostings = postings.filter(
+        (p) => p.userId === ctx.userId && p.month === activeMonth && p.year === activeYear && p.allocationType === "PROJECT"
+      );
+      baseSalary = userPostings.reduce((sum, p) => sum + p.baseSalary, 0);
+      bonus = userPostings.reduce((sum, p) => sum + p.bonus, 0);
+      projectBreakdown = userPostings.map((p) => ({
+        projectId: p.projectId,
+        projectName: p.projectName,
+        amount: p.baseSalary + p.bonus,
+      }));
+    }
+
     res.json({
       userId: user.id,
       fullName: user.fullName,
@@ -54,6 +98,8 @@ router.get(
       bonus,
       totalPay: baseSalary + bonus,
       payrollStatus: profile?.payrollStatus ?? "PENDING",
+      salaryMode: profile?.salaryMode ?? "monthly",
+      projectBreakdown,
     });
   },
 );
@@ -76,6 +122,7 @@ router.get(
         bonus: r.bonus,
         totalPay: r.baseSalary + r.bonus,
         payrollStatus: r.payrollStatus,
+        salaryMode: r.salaryMode,
       })),
     );
   },
@@ -330,11 +377,30 @@ router.post(
       res.status(400).json({ error: "month and year are required" });
       return;
     }
+
+    const targetMonth = Number(month);
+    const targetYear = Number(year);
+
+    const postings = await store.listSalaryPostings();
+    const projectPostings = postings.filter(
+      (p) => p.month === targetMonth && p.year === targetYear && p.allocationType === "PROJECT"
+    );
+
     const profiles = await store.listProfiles();
-    const totalAmount = profiles.reduce((s, p) => s + Number(p.baseSalary) + Number(p.bonus), 0);
+
+    let totalAmount = 0;
+    for (const p of profiles) {
+      if (p.salaryMode === "project_based") {
+        const userProjectPostings = projectPostings.filter((post) => post.userId === p.userId);
+        totalAmount += userProjectPostings.reduce((s, post) => s + post.baseSalary + post.bonus, 0);
+      } else {
+        totalAmount += Number(p.baseSalary) + Number(p.bonus);
+      }
+    }
+
     const run = await store.createPayrollRun({
-      month: Number(month),
-      year: Number(year),
+      month: targetMonth,
+      year: targetYear,
       totalAmount: String(totalAmount),
       status: "PENDING",
       approvedById: null,

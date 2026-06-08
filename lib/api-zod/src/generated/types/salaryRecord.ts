@@ -17,4 +17,5 @@ export interface SalaryRecord {
   bonus?: number;
   totalPay?: number;
   payrollStatus?: string;
+  salaryMode?: string;
 }

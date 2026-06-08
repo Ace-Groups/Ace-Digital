@@ -2325,6 +2325,20 @@ components:
           type: ["string", "null"]
         teamName:
           type: ["string", "null"]
+        salaryMode:
+          type: string
+        projectBreakdown:
+          type: array
+          items:
+            type: object
+            required: [projectName, amount]
+            properties:
+              projectId:
+                type: integer
+              projectName:
+                type: ["string", "null"]
+              amount:
+                type: number
 
     DashboardData:
       type: object
@@ -3008,6 +3022,8 @@ components:
           type: ["number", "null"]
         payrollStatus:
           type: ["string", "null"]
+        salaryMode:
+          type: ["string", "null"]
         mustChangePassword:
           type: boolean
         phone:
@@ -3043,6 +3059,8 @@ components:
         employeeCode:
           type: string
         startDate:
+          type: string
+        salaryMode:
           type: string
         baseSalary:
           type: number
@@ -3120,6 +3138,8 @@ components:
           type: number
         bonus:
           type: number
+        salaryMode:
+          type: string
         status:
           type: string
         payrollStatus:
@@ -3168,6 +3188,8 @@ components:
         totalPay:
           type: number
         payrollStatus:
+          type: string
+        salaryMode:
           type: string
 
     Expense:

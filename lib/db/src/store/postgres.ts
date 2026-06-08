@@ -174,6 +174,7 @@ export function createPostgresStore() {
           userId: data.userId,
           baseSalary: data.baseSalary ?? "0",
           bonus: data.bonus ?? "0",
+          salaryMode: data.salaryMode ?? "monthly",
         })
         .returning();
       return p;
@@ -191,6 +192,7 @@ export function createPostgresStore() {
           baseSalary: employeeProfilesTable.baseSalary,
           bonus: employeeProfilesTable.bonus,
           payrollStatus: employeeProfilesTable.payrollStatus,
+          salaryMode: employeeProfilesTable.salaryMode,
         })
         .from(usersTable)
         .leftJoin(employeeProfilesTable, eq(usersTable.id, employeeProfilesTable.userId));
@@ -202,6 +204,7 @@ export function createPostgresStore() {
         baseSalary: r.baseSalary ? Number(r.baseSalary) : 0,
         bonus: r.bonus ? Number(r.bonus) : 0,
         payrollStatus: r.payrollStatus ?? "PENDING",
+        salaryMode: r.salaryMode ?? "monthly",
       }));
     },
     listTeams: () => db.select().from(teamsTable),

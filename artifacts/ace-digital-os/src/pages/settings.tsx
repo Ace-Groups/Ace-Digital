@@ -22,9 +22,119 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Camera, KeyRound } from "lucide-react";
+import { Camera, KeyRound, ShieldCheck, Check, X } from "lucide-react";
 
 const NOTIF_PREFS_KEY = "ace-digital-notification-prefs";
+
+interface RoleCapability {
+  title: string;
+  description: string;
+  allowed: string[];
+  restricted: string[];
+}
+
+const ROLE_CAPABILITIES: Record<string, RoleCapability> = {
+  super_admin: {
+    title: "Super Admin",
+    description: "Full administrative authority over the entire organization.",
+    allowed: [
+      "Access all system endpoints and configurations",
+      "Manage all employee profiles, roles, and credentials",
+      "Authorize global payroll runs and approve all expenses",
+      "Register new system users and override permission rules"
+    ],
+    restricted: []
+  },
+  management: {
+    title: "Management",
+    description: "High-level oversight of company operations, projects, and finances.",
+    allowed: [
+      "Create and edit all projects and team directories",
+      "Submit and review organizational approvals",
+      "Access financial summaries, payroll structures, and client profiles",
+      "Update employee details and assign roles up to Team Lead"
+    ],
+    restricted: [
+      "Register raw system users (requires Super Admin)",
+      "Delete system audit logs or override system-level config"
+    ]
+  },
+  finance: {
+    title: "Finance",
+    description: "Financial administration, payroll execution, and expense oversight.",
+    allowed: [
+      "View global salary directories and run payroll calculations",
+      "Approve or reject employee expense submissions",
+      "Manage clients and view project lists",
+      "Review general financial statements and reports"
+    ],
+    restricted: [
+      "Create or delete projects and tasks",
+      "Modify employee career records or personal profiles (except salaries)",
+      "Register system users or adjust security parameters"
+    ]
+  },
+  hr: {
+    title: "HR (Human Resources)",
+    description: "Personnel management, employee directory oversight, and onboarding.",
+    allowed: [
+      "Create and update employee profiles",
+      "Reset user passwords and send onboarding invitation sequences",
+      "Review leave requests and submit personnel approvals",
+      "Manage global calendar events and team listings"
+    ],
+    restricted: [
+      "View financial summaries or run payroll",
+      "View and edit client accounts or projects",
+      "Approve or reject commercial expense reports"
+    ]
+  },
+  client_manager: {
+    title: "Client Manager",
+    description: "External relations, client contract maintenance, and service tickets.",
+    allowed: [
+      "Add, update, and manage clients and contract values",
+      "Assign and resolve customer support service tickets",
+      "View associated projects and submit personal leave approvals",
+      "Collaborate in active chat channels and create notes"
+    ],
+    restricted: [
+      "Access employee directory salary details",
+      "Approve team tasks or global payroll",
+      "Reset employee passwords"
+    ]
+  },
+  team_lead: {
+    title: "Team Lead",
+    description: "Team management, task planning, and project coordination.",
+    allowed: [
+      "Create, edit, and assign tasks to team members",
+      "Write and manage team-scoped projects",
+      "Review and approve leave/expense requests for team members",
+      "Organize team calendar events and chat channels"
+    ],
+    restricted: [
+      "View salaries outside of self",
+      "Delete global company projects",
+      "Edit profiles of users outside the assigned team"
+    ]
+  },
+  employee: {
+    title: "Employee",
+    description: "Standard worker workspace permissions.",
+    allowed: [
+      "View assigned projects and update task progress",
+      "Submit personal approvals (e.g. leave requests) and expense claims",
+      "View personal finance payslips and details",
+      "Collaborate in active chat channels and calendar events"
+    ],
+    restricted: [
+      "Modify other employees' files or access records",
+      "View global finance summaries or payroll operations",
+      "Manage company clients or general settings"
+    ]
+  }
+};
 
 type NotificationPrefs = {
   emailTasks: boolean;
@@ -160,6 +270,52 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {user?.role && ROLE_CAPABILITIES[user.role] && (
+          <Card className="border-border/80">
+            <CardHeader>
+              <div className="mb-2 flex size-10 items-center justify-center rounded-lg border border-border/80 bg-primary/10">
+                <ShieldCheck className="size-5 text-primary" aria-hidden />
+              </div>
+              <CardTitle>Role & Privileges</CardTitle>
+              <CardDescription>
+                Your assigned role is <span className="font-semibold text-foreground">{ROLE_CAPABILITIES[user.role].title}</span>.
+                Here is a summary of what you can and cannot do:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground italic">
+                "{ROLE_CAPABILITIES[user.role].description}"
+              </p>
+              
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Allowed Operations</h4>
+                <ul className="space-y-2">
+                  {ROLE_CAPABILITIES[user.role].allowed.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {ROLE_CAPABILITIES[user.role].restricted.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-sm font-semibold text-foreground">Restricted Boundaries</h4>
+                  <ul className="space-y-2">
+                    {ROLE_CAPABILITIES[user.role].restricted.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <X className="mt-0.5 size-4 shrink-0 text-rose-500" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/80">
           <CardHeader>

@@ -50,6 +50,7 @@ const createSchema = z
     status: z.string(),
     baseSalary: z.string().optional(),
     bonus: z.string().optional(),
+    salaryMode: z.string().optional(),
     payrollStatus: z.string().optional(),
     passwordMode: z.enum(["auto", "manual"]),
     password: z.string().optional(),
@@ -80,6 +81,7 @@ const editSchema = z.object({
   status: z.string(),
   baseSalary: z.string().optional(),
   bonus: z.string().optional(),
+  salaryMode: z.string().optional(),
   payrollStatus: z.string().optional(),
   mascotId: z.string().optional(),
   dob: z.string().optional(),
@@ -102,6 +104,7 @@ export type EmployeeFormSubmitCreate = {
   status?: string;
   baseSalary?: number;
   bonus?: number;
+  salaryMode?: string;
   passwordMode: "auto" | "manual";
   password?: string;
   sendWelcomeEmail: boolean;
@@ -123,6 +126,7 @@ export type EmployeeFormSubmitEdit = {
   status?: string;
   baseSalary?: number;
   bonus?: number;
+  salaryMode?: string;
   payrollStatus?: string;
   avatarUrl?: string;
   dob?: string;
@@ -165,6 +169,7 @@ export function EmployeeFormSheet({
       passwordMode: "auto",
       sendWelcomeEmail: true,
       payrollStatus: "PENDING",
+      salaryMode: "monthly",
       dob: "",
       address: "",
       notes: "",
@@ -179,6 +184,7 @@ export function EmployeeFormSheet({
       role: "employee",
       status: "active",
       payrollStatus: "PENDING",
+      salaryMode: "monthly",
       dob: "",
       address: "",
       notes: "",
@@ -244,6 +250,7 @@ export function EmployeeFormSheet({
       baseSalary: employee.baseSalary != null ? String(employee.baseSalary) : "",
       bonus: employee.bonus != null ? String(employee.bonus) : "",
       payrollStatus: employee.payrollStatus ?? "PENDING",
+      salaryMode: employee.salaryMode ?? "monthly",
       mascotId,
       dob: employee.dob ? employee.dob.slice(0, 10) : "",
       address: employee.address ?? "",
@@ -262,6 +269,7 @@ export function EmployeeFormSheet({
       passwordMode: "auto",
       sendWelcomeEmail: true,
       payrollStatus: "PENDING",
+      salaryMode: "monthly",
       mascotId: "7",
       dob: "",
       address: "",
@@ -288,6 +296,7 @@ export function EmployeeFormSheet({
       status: string;
       baseSalary?: string;
       bonus?: string;
+      salaryMode?: string;
       dob?: string;
       address?: string;
       notes?: string;
@@ -309,6 +318,7 @@ export function EmployeeFormSheet({
       ...(canViewSalaries && {
         baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
         bonus: data.bonus ? Number(data.bonus) : undefined,
+        salaryMode: data.salaryMode || "monthly",
       }),
     };
   }
@@ -719,32 +729,63 @@ function FormFields({
         <>
           <Separator />
           <p className="text-sm font-medium text-muted-foreground">Compensation</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mb-4">
             <FormField
               control={form.control}
-              name="baseSalary"
+              name="salaryMode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Base salary (₹)</FormLabel>
-                  <FormControl>
-                    <Input type="number" className="min-h-11" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bonus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bonus (₹)</FormLabel>
-                  <FormControl>
-                    <Input type="number" className="min-h-11" {...field} />
-                  </FormControl>
+                  <FormLabel>Salary Mode</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "monthly"}>
+                    <FormControl>
+                      <SelectTrigger className="min-h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly Base Salary</SelectItem>
+                      <SelectItem value="project_based">Project-Based Payouts</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </FormItem>
               )}
             />
           </div>
+          {form.watch("salaryMode") !== "project_based" ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="baseSalary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Base salary (₹)</FormLabel>
+                    <FormControl>
+                      <Input type="number" className="min-h-11" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bonus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bonus (₹)</FormLabel>
+                    <FormControl>
+                      <Input type="number" className="min-h-11" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border p-4 bg-muted/20">
+              <p className="text-sm font-medium text-foreground">Project-Based Salary Mode Active</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Base salary and bonus are calculated dynamically by aggregating project allocation payouts posted during each payroll month.
+              </p>
+            </div>
+          )}
           {isEdit && (
             <FormField
               control={form.control}

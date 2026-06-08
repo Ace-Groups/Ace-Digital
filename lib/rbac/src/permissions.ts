@@ -253,10 +253,11 @@ export function canViewSalaries(ctx: AccessContext): boolean {
 }
 
 export function stripSalaryFields<T extends Record<string, unknown>>(row: T): T {
-  const { baseSalary, bonus, payrollStatus, ...rest } = row;
+  const { baseSalary, bonus, payrollStatus, salaryMode, ...rest } = row;
   void baseSalary;
   void bonus;
   void payrollStatus;
+  void salaryMode;
   return rest as T;
 }
 

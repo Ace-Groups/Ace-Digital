@@ -17,6 +17,7 @@ export interface EmployeeUpdate {
   startDate?: string;
   baseSalary?: number;
   bonus?: number;
+  salaryMode?: string;
   status?: string;
   payrollStatus?: string;
   avatarUrl?: string;
