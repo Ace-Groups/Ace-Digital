@@ -487,6 +487,15 @@ body {
   --chat-composer-bg: hsl(var(--card));
 }
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
 .contain-region {
   content-visibility: auto;
   contain-intrinsic-size: auto 100px auto 600px;
