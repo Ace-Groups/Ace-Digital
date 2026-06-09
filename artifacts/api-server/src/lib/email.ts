@@ -5,7 +5,7 @@ import { Resend } from "resend";
 const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://ace-digital-os.web.app/login";
 const APP_URL = process.env.APP_URL ?? "https://ace-digital-os.web.app";
 const DEFAULT_FROM =
-  process.env.EMAIL_FROM ?? "Ace-Digital <itdep@mybexo.com>";
+  process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.com>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";
 
 const log = (msg: string, ...args: unknown[]) =>

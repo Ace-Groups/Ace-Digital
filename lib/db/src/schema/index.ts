@@ -3,6 +3,7 @@ export * from "./job_titles";
 export * from "./app_meta";
 export * from "./users";
 export * from "./employee_profiles";
+export * from "./deleted_user_archives";
 export * from "./projects";
 export * from "./tasks";
 export * from "./task-assignees";

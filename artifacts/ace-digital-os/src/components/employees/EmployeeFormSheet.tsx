@@ -23,9 +23,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
 import { MascotPicker } from "@/components/MascotPicker";
 import { defaultMascotForRole } from "@/lib/mascots";
-import { encodeAvatarUrl, parseAvatarUrl } from "@/lib/avatar";
+import {
+  encodeEmployeeIdentityImages,
+  parseEmployeeIdentityImages,
+  resizeImageFile,
+} from "@/lib/avatar";
 
 import { Textarea } from "@/components/ui/textarea";
+import { Camera, ImagePlus, Trash2 } from "lucide-react";
 
 const ROLES = [
   "employee",
@@ -38,6 +43,7 @@ const ROLES = [
 ] as const;
 
 const MAX_AADHAAR_DOCUMENT_BYTES = 1_000_000;
+const MAX_PROFILE_PHOTO_BYTES = 2_500_000;
 
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -96,6 +102,7 @@ const createSchema = z
     password: z.string().optional(),
     sendWelcomeEmail: z.boolean(),
     mascotId: z.string().optional(),
+    profilePhotoUrl: z.string().optional(),
     dob: z.string().optional(),
     address: z.string().optional(),
     addressLine2: z.string().optional(),
@@ -138,6 +145,7 @@ const editSchema = z.object({
   salaryMode: z.string().optional(),
   payrollStatus: z.string().optional(),
   mascotId: z.string().optional(),
+  profilePhotoUrl: z.string().optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
   addressLine2: z.string().optional(),
@@ -317,6 +325,7 @@ export function EmployeeFormSheet({
       bloodGroup: "",
       aadhaarDocument: "",
       notes: "",
+      profilePhotoUrl: "",
     },
   });
 
@@ -346,6 +355,7 @@ export function EmployeeFormSheet({
       bloodGroup: "",
       aadhaarDocument: "",
       notes: "",
+      profilePhotoUrl: "",
     },
   });
 
@@ -391,10 +401,9 @@ export function EmployeeFormSheet({
     if (!open || mode !== "edit" || !employee) return;
     const normalizedRole =
       employee.role && isRole(employee.role) ? employee.role : "employee";
-    const parsed = parseAvatarUrl(employee.avatarUrl);
-    const mascotId = parsed.type === "mascot"
-      ? parsed.value
-      : defaultMascotForRole(normalizedRole).replace("mascot:", "");
+    const parsed = parseEmployeeIdentityImages(employee.avatarUrl);
+    const mascotId =
+      parsed.mascotId ?? defaultMascotForRole(normalizedRole).replace("mascot:", "");
     editForm.reset({
       fullName: employee.fullName,
       email: employee.email,
@@ -427,6 +436,7 @@ export function EmployeeFormSheet({
       bloodGroup: employee.bloodGroup ?? "",
       aadhaarDocument: employee.aadhaarDocument ?? "",
       notes: employee.notes ?? "",
+      profilePhotoUrl: parsed.profilePhotoUrl ?? "",
     });
   }, [open, mode, employee, editForm]);
 
@@ -460,6 +470,7 @@ export function EmployeeFormSheet({
       bloodGroup: "",
       aadhaarDocument: "",
       notes: "",
+      profilePhotoUrl: "",
     });
   }, [open, mode, createForm]);
 
@@ -500,6 +511,7 @@ export function EmployeeFormSheet({
       bloodGroup?: string;
       aadhaarDocument?: string;
       notes?: string;
+      profilePhotoUrl?: string;
     },
   >(data: T) {
     const optional = (value?: string) => {
@@ -554,9 +566,11 @@ export function EmployeeFormSheet({
                 passwordMode: data.passwordMode,
                 password: data.passwordMode === "manual" ? data.password : undefined,
                 sendWelcomeEmail: data.sendWelcomeEmail,
-                avatarUrl: data.mascotId
-                  ? encodeAvatarUrl(null, data.mascotId, "mascot") ?? undefined
-                  : defaultMascotForRole(data.role),
+                avatarUrl:
+                  encodeEmployeeIdentityImages({
+                    profilePhotoUrl: data.profilePhotoUrl || null,
+                    mascotId: data.mascotId ?? defaultMascotForRole(data.role).replace("mascot:", ""),
+                  }) ?? undefined,
               });
             })}
             className="mobile-form space-y-5"
@@ -610,21 +624,11 @@ export function EmployeeFormSheet({
               />
             )}
             <Separator />
-            <p className="text-sm font-medium">Profile mascot</p>
-            <FormField
-              control={createForm.control}
-              name="mascotId"
-              render={({ field }) => (
-                <FormItem>
-                  <MascotPicker
-                    selectedId={field.value ?? null}
-                    onSelect={(id) => {
-                      mascotTouched.current = true;
-                      field.onChange(id);
-                    }}
-                  />
-                </FormItem>
-              )}
+            <IdentityFields
+              form={createForm as never}
+              onMascotSelect={() => {
+                mascotTouched.current = true;
+              }}
             />
             <label className="flex min-h-11 cursor-pointer items-center gap-3">
               <Checkbox
@@ -645,9 +649,11 @@ export function EmployeeFormSheet({
               void onEditSubmit({
                 ...mapCommon(data),
                 payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
-                avatarUrl: data.mascotId
-                  ? encodeAvatarUrl(null, data.mascotId, "mascot") ?? undefined
-                  : undefined,
+                avatarUrl:
+                  encodeEmployeeIdentityImages({
+                    profilePhotoUrl: data.profilePhotoUrl || null,
+                    mascotId: data.mascotId ?? null,
+                  }) ?? undefined,
               });
             })}
             className="mobile-form space-y-5"
@@ -661,19 +667,7 @@ export function EmployeeFormSheet({
               onCreateTeamClick={() => setTeamDialogOpen(true)}
             />
             <Separator />
-            <p className="text-sm font-medium">Profile mascot</p>
-            <FormField
-              control={editForm.control}
-              name="mascotId"
-              render={({ field }) => (
-                <FormItem>
-                  <MascotPicker
-                    selectedId={field.value ?? null}
-                    onSelect={field.onChange}
-                  />
-                </FormItem>
-              )}
-            />
+            <IdentityFields form={editForm as never} />
             <Button type="submit" className="h-11 w-full" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
@@ -693,6 +687,133 @@ export function EmployeeFormSheet({
         }}
       />
     </ResponsiveSheet>
+  );
+}
+
+function IdentityFields({
+  form,
+  onMascotSelect,
+}: {
+  form: ReturnType<typeof useForm<CreateForm>>;
+  onMascotSelect?: () => void;
+}) {
+  const fullName = form.watch("fullName") || "Employee";
+
+  return (
+    <section className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div>
+        <p className="text-sm font-semibold text-foreground">Profile identity</p>
+        <p className="text-xs text-muted-foreground">
+          Upload the employee photo for their profile. The selected bird remains their app avatar.
+        </p>
+      </div>
+      <FormField
+        control={form.control}
+        name="profilePhotoUrl"
+        render={({ field }) => (
+          <FormItem>
+            <div className="grid gap-4 sm:grid-cols-[10rem_1fr] sm:items-center">
+              <div className="relative mx-auto aspect-[4/5] w-36 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-brand-sm sm:mx-0 sm:w-full">
+                {field.value ? (
+                  <img
+                    src={field.value}
+                    alt={`${fullName} profile`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-muted-foreground">
+                    <Camera size={26} />
+                    <span className="text-xs font-medium">No profile photo</span>
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-2 rounded-xl ring-1 ring-background/80" />
+              </div>
+              <div className="space-y-3">
+                <FormLabel>Employee photo</FormLabel>
+                <FormControl>
+                  <Input
+                    type="file"
+                    className="min-h-11 py-2"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+                        field.onChange("");
+                        event.currentTarget.value = "";
+                        return;
+                      }
+                      void resizeImageFile(file, 640)
+                        .then(field.onChange)
+                        .catch(() => {
+                          field.onChange("");
+                          event.currentTarget.value = "";
+                        });
+                    }}
+                  />
+                </FormControl>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-10 gap-2"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = () => {
+                        const file = input.files?.[0];
+                        if (!file || file.size > MAX_PROFILE_PHOTO_BYTES) return;
+                        void resizeImageFile(file, 640).then(field.onChange);
+                      };
+                      input.click();
+                    }}
+                  >
+                    <ImagePlus size={16} />
+                    Choose photo
+                  </Button>
+                  {field.value && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="min-h-10 gap-2 text-destructive hover:text-destructive"
+                      onClick={() => field.onChange("")}
+                    >
+                      <Trash2 size={16} />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Stored compressed in the profile record. Use clear headshot-style photos under 2.5 MB.
+                </p>
+              </div>
+            </div>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="mascotId"
+        render={({ field }) => (
+          <FormItem>
+            <div className="mb-2">
+              <FormLabel>Bird avatar</FormLabel>
+              <p className="text-xs text-muted-foreground">
+                This stays as the small avatar used in navigation, chat, and quick lists.
+              </p>
+            </div>
+            <MascotPicker
+              selectedId={field.value ?? null}
+              onSelect={(id) => {
+                onMascotSelect?.();
+                field.onChange(id);
+              }}
+            />
+          </FormItem>
+        )}
+      />
+    </section>
   );
 }
 

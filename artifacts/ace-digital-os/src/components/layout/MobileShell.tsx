@@ -160,7 +160,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           fillViewport || immersivePage
             ? "flex flex-col overflow-hidden p-0"
             : "overflow-y-auto px-4 py-4",
-          !hideBottomNav && !fillViewport && !immersivePage && "pb-[calc(7rem+env(safe-area-inset-bottom))]",
+          !hideBottomNav && !fillViewport && !immersivePage && "pb-[calc(7.75rem+env(safe-area-inset-bottom))]",
         )}
       >
         {fillViewport || immersivePage ? children : <PageTransition>{children}</PageTransition>}
@@ -168,10 +168,10 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
 
       {!hideBottomNav && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(4.75rem+env(safe-area-inset-bottom))] items-center justify-center px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(5.35rem+env(safe-area-inset-bottom))] items-center justify-center px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))]"
           aria-label="Main navigation"
         >
-          <div className="flex h-16 w-full max-w-sm items-stretch justify-around rounded-3xl border border-border/70 bg-background/85 px-1 shadow-brand-xl backdrop-blur-xl dark:bg-black/70">
+          <div className="flex h-[4.35rem] w-full max-w-md items-stretch justify-around rounded-2xl border border-border/70 bg-background/90 px-1.5 shadow-brand-xl backdrop-blur-xl dark:bg-black/70">
             {primary.map((item) => {
               const Icon = ICONS[item.route];
               const active = isActive(item.href);
@@ -181,12 +181,15 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
                   href={item.href}
                   onClick={() => hapticLight()}
                   className={cn(
-                    "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-all touch-manipulation",
-                    active ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    "relative flex min-w-[3.75rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium transition-all touch-manipulation",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
+                  aria-current={active ? "page" : undefined}
                 >
-                  <Icon size={24} strokeWidth={active ? 2.5 : 1.75} aria-hidden />
-                  {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-primary" />}
+                  <Icon size={21} strokeWidth={active ? 2.4 : 1.8} aria-hidden />
+                  <span className="max-w-full truncate">{item.label}</span>
                 </Link>
               );
             })}
@@ -198,13 +201,15 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
                   setMoreOpen(true);
                 }}
                 className={cn(
-                  "flex min-w-[4rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-all touch-manipulation",
+                  "relative flex min-w-[3.75rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium transition-all touch-manipulation",
                   overflow.some((o) => isActive(o.href))
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
+                aria-label="More navigation"
               >
-                <MoreHorizontal size={24} strokeWidth={1.75} aria-hidden />
+                <MoreHorizontal size={21} strokeWidth={1.8} aria-hidden />
+                <span>More</span>
               </button>
             )}
           </div>

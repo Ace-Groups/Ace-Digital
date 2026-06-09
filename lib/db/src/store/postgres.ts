@@ -5,6 +5,7 @@ import {
   teamsTable,
   jobTitlesTable,
   appMetaTable,
+  deletedUserArchivesTable,
   employeeProfilesTable,
   projectsTable,
   tasksTable,
@@ -104,6 +105,25 @@ async function nextServiceTicketNumberPg(
   return `ST-${year}-${String(seq).padStart(4, "0")}`;
 }
 
+async function ensureDeletedUserArchiveTable(db: ReturnType<typeof getPgDb>["db"]) {
+  await db.execute(sql`
+    create table if not exists deleted_user_archives (
+      id serial primary key,
+      user_id integer not null,
+      email text not null,
+      full_name text not null,
+      role text not null,
+      team_id integer,
+      employee_code text,
+      status text,
+      created_at timestamptz,
+      deleted_at timestamptz not null default now(),
+      retention_until timestamptz not null,
+      snapshot jsonb not null
+    )
+  `);
+}
+
 export function createPostgresStore() {
   const { db } = getPgDb();
 
@@ -165,6 +185,54 @@ export function createPostgresStore() {
       return u ?? null;
     },
     deleteUser: async (id: number) => {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+      if (user) {
+        const retentionUntil = new Date();
+        retentionUntil.setFullYear(retentionUntil.getFullYear() + 7);
+        await ensureDeletedUserArchiveTable(db);
+        await db.insert(deletedUserArchivesTable).values({
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          teamId: user.teamId,
+          employeeCode: user.employeeCode,
+          status: user.status,
+          createdAt: user.createdAt,
+          retentionUntil,
+          snapshot: {
+            userId: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            teamId: user.teamId,
+            employeeCode: user.employeeCode,
+            status: user.status,
+            createdAt: user.createdAt?.toISOString?.() ?? user.createdAt,
+            deletedAt: new Date().toISOString(),
+            retainedFields: [
+              "userId",
+              "fullName",
+              "email",
+              "role",
+              "teamId",
+              "employeeCode",
+              "status",
+              "createdAt",
+              "deletedAt",
+            ],
+            purgedFields: [
+              "passwordHash",
+              "avatarUrl",
+              "profilePhoto",
+              "aadhaarDocument",
+              "address",
+              "salaryProfile",
+              "personalIdentity",
+            ],
+          },
+        });
+      }
       await db.delete(employeeProfilesTable).where(eq(employeeProfilesTable.userId, id));
       await db.delete(usersTable).where(eq(usersTable.id, id));
     },

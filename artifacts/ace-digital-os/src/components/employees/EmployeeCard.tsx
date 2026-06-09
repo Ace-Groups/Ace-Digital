@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
+import { parseEmployeeIdentityImages } from "@/lib/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,21 +38,40 @@ export function EmployeeCard({
   onResetPassword,
 }: EmployeeCardProps) {
   const showMenu = canEdit || canDelete || canResetPassword;
+  const identity = parseEmployeeIdentityImages(employee.avatarUrl);
 
   return (
     <Card
       data-testid={`employee-card-${employee.id}`}
-      className="transition-shadow hover:shadow-md"
+      className="overflow-hidden transition-shadow hover:shadow-md"
     >
-      <CardContent className="p-4 sm:p-5">
+      <CardContent className="p-0">
+        <div className="relative h-36 bg-muted sm:h-40">
+          {identity.profilePhotoUrl ? (
+            <img
+              src={identity.profilePhotoUrl}
+              alt={`${employee.fullName} profile`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-muted/70 text-sm font-medium text-muted-foreground">
+              Profile photo pending
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/85 to-transparent" />
+          <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full border border-border/80 bg-background/90 px-2 py-1 shadow-brand-sm backdrop-blur-sm">
+            <UserAvatar
+              avatarUrl={employee.avatarUrl}
+              fullName={employee.fullName}
+              className="h-8 w-8 shrink-0"
+              fallbackClassName="bg-primary/15 text-primary font-semibold"
+              iconSize={16}
+            />
+            <span className="text-[11px] font-medium text-muted-foreground">Avatar</span>
+          </div>
+        </div>
+        <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <UserAvatar
-            avatarUrl={employee.avatarUrl}
-            fullName={employee.fullName}
-            className="h-12 w-12 shrink-0"
-            fallbackClassName="bg-primary/15 text-primary font-semibold"
-            iconSize={20}
-          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -153,6 +173,7 @@ export function EmployeeCard({
               </p>
             </div>
           )}
+        </div>
         </div>
       </CardContent>
     </Card>

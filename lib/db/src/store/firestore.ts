@@ -64,6 +64,7 @@ const COL = {
   teams: "teams",
   users: "users",
   employeeProfiles: "employee_profiles",
+  deletedUserArchives: "deleted_user_archives",
   clients: "clients",
   projects: "projects",
   tasks: "tasks",
@@ -242,7 +243,47 @@ export function createFirestoreStore() {
     },
 
     async deleteUser(id: number): Promise<void> {
-      await db.collection(COL.users).doc(docId(id)).delete();
+      const userRef = db.collection(COL.users).doc(docId(id));
+      const userSnap = await userRef.get();
+      const user = userSnap.exists ? mapUser(userSnap.data()!, userSnap.id) : null;
+      if (user) {
+        const deletedAt = new Date();
+        const retentionUntil = new Date(deletedAt);
+        retentionUntil.setFullYear(retentionUntil.getFullYear() + 7);
+        await db.collection(COL.deletedUserArchives).add({
+          userId: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+          teamId: user.teamId ?? null,
+          employeeCode: user.employeeCode ?? null,
+          status: user.status ?? null,
+          createdAt: user.createdAt,
+          deletedAt: deletedAt.toISOString(),
+          retentionUntil: retentionUntil.toISOString(),
+          retainedFields: [
+            "userId",
+            "fullName",
+            "email",
+            "role",
+            "teamId",
+            "employeeCode",
+            "status",
+            "createdAt",
+            "deletedAt",
+          ],
+          purgedFields: [
+            "passwordHash",
+            "avatarUrl",
+            "profilePhoto",
+            "aadhaarDocument",
+            "address",
+            "salaryProfile",
+            "personalIdentity",
+          ],
+        });
+      }
+      await userRef.delete();
       await db.collection(COL.employeeProfiles).doc(docId(id)).delete();
     },
 

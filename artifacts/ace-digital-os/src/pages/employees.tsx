@@ -54,6 +54,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { parseEmployeeIdentityImages } from "@/lib/avatar";
 
 export default function EmployeesPage() {
   const { user } = useAuth();
@@ -279,7 +280,10 @@ export default function EmployeesPage() {
         rollback: (prev) => setList(queryClient, employeesKey, prev),
         commit: () => deleteEmployee.mutateAsync({ id }),
       });
-      toast({ title: "Employee removed" });
+      toast({
+        title: "Employee offboarded",
+        description: "Login and profile records were removed. A limited deletion audit snapshot was retained.",
+      });
     } catch {
       toast({ title: "Could not delete employee", variant: "destructive" });
     }
@@ -398,7 +402,7 @@ export default function EmployeesPage() {
         <Button
           data-testid="btn-add-employee-fab"
           size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
+          className="fixed bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md sm:hidden"
           onClick={() => setCreateOpen(true)}
           aria-label="Add employee"
         >
@@ -460,13 +464,24 @@ export default function EmployeesPage() {
         title="Delete employee?"
         description={
           deleteTarget ? (
-            <>
-              This permanently removes <strong>{deleteTarget.fullName}</strong>. This cannot be
-              undone.
-            </>
+            <div className="space-y-3 text-sm">
+              <p>
+                This offboards <strong>{deleteTarget.fullName}</strong> and removes their login,
+                profile photo, contact details, payroll profile, and HR profile from active records.
+              </p>
+              <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-left">
+                <p className="font-medium text-foreground">Old data handling</p>
+                <p className="mt-1 text-muted-foreground">
+                  A limited deletion audit snapshot is retained for compliance: employee id, name,
+                  email, role, team id, status, employee code, creation date, and deletion date.
+                  Uploaded documents, photos, password hashes, address, salary profile, and personal
+                  identity fields are not retained in the active profile.
+                </p>
+              </div>
+            </div>
           ) : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel="Offboard and delete"
         variant="destructive"
         loading={deleteEmployee.isPending}
         onConfirm={confirmDelete}
@@ -561,24 +576,43 @@ function EmployeeDetailDialog({
   if (!employee) return null;
   const residentialAddress = formatResidentialAddress(employee);
   const aadhaarDocumentName = getDocumentName(employee.aadhaarDocument);
+  const identity = parseEmployeeIdentityImages(employee.avatarUrl);
 
   return (
     <Dialog open={employee !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start gap-3 pr-8">
-            <UserAvatar
-              avatarUrl={employee.avatarUrl}
-              fullName={employee.fullName}
-              className="h-12 w-12 shrink-0"
-              fallbackClassName="bg-primary/15 text-primary font-semibold"
-              iconSize={20}
-            />
+          <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start">
+            <div className="relative mx-auto aspect-[4/5] w-32 shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-brand-sm sm:mx-0">
+              {identity.profilePhotoUrl ? (
+                <img
+                  src={identity.profilePhotoUrl}
+                  alt={`${employee.fullName} profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-medium text-muted-foreground">
+                  Profile photo pending
+                </div>
+              )}
+              <div className="absolute bottom-2 right-2 rounded-full border border-background bg-background p-1 shadow-brand-sm">
+                <UserAvatar
+                  avatarUrl={employee.avatarUrl}
+                  fullName={employee.fullName}
+                  className="h-9 w-9 shrink-0"
+                  fallbackClassName="bg-primary/15 text-primary font-semibold"
+                  iconSize={18}
+                />
+              </div>
+            </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-xl">{employee.fullName}</DialogTitle>
               <DialogDescription>
                 {employee.jobTitle ?? "Employee"} • {employee.teamName ?? "No team"}
               </DialogDescription>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Framed photo is the employee profile image. The small badge is their app avatar.
+              </p>
             </div>
             <Badge
               variant="outline"

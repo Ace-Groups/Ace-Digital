@@ -18,6 +18,12 @@ export const PRESET_AVATARS = [
 export type PresetAvatarId = (typeof PRESET_AVATARS)[number]["id"];
 
 const PRESET_PREFIX = "preset:";
+const IDENTITY_PREFIX = "identity:";
+
+export type EmployeeIdentityImages = {
+  profilePhotoUrl: string | null;
+  mascotId: string | null;
+};
 
 export type ParsedAvatar =
   | { type: "image"; value: string }
@@ -27,6 +33,16 @@ export type ParsedAvatar =
 
 export function parseAvatarUrl(avatarUrl: string | null | undefined): ParsedAvatar {
   if (!avatarUrl) return { type: null, value: null };
+  if (avatarUrl.startsWith(IDENTITY_PREFIX)) {
+    const identity = parseEmployeeIdentityImages(avatarUrl);
+    if (identity.mascotId) {
+      return { type: "mascot", value: identity.mascotId };
+    }
+    if (identity.profilePhotoUrl) {
+      return { type: "image", value: identity.profilePhotoUrl };
+    }
+    return { type: null, value: null };
+  }
   if (avatarUrl.startsWith(MASCOT_PREFIX)) {
     return { type: "mascot", value: avatarUrl.slice(MASCOT_PREFIX.length) };
   }
@@ -38,6 +54,47 @@ export function parseAvatarUrl(avatarUrl: string | null | undefined): ParsedAvat
     return { type: null, value: null };
   }
   return { type: "image", value: avatarUrl };
+}
+
+export function parseEmployeeIdentityImages(
+  avatarUrl: string | null | undefined,
+): EmployeeIdentityImages {
+  if (!avatarUrl) return { profilePhotoUrl: null, mascotId: null };
+  if (avatarUrl.startsWith(IDENTITY_PREFIX)) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(avatarUrl.slice(IDENTITY_PREFIX.length))) as {
+        profilePhotoUrl?: unknown;
+        mascotId?: unknown;
+      };
+      return {
+        profilePhotoUrl: typeof parsed.profilePhotoUrl === "string" ? parsed.profilePhotoUrl : null,
+        mascotId: typeof parsed.mascotId === "string" ? parsed.mascotId : null,
+      };
+    } catch {
+      return { profilePhotoUrl: null, mascotId: null };
+    }
+  }
+  if (avatarUrl.startsWith(MASCOT_PREFIX)) {
+    return { profilePhotoUrl: null, mascotId: avatarUrl.slice(MASCOT_PREFIX.length) };
+  }
+  if (avatarUrl.startsWith(PRESET_PREFIX)) {
+    return { profilePhotoUrl: null, mascotId: null };
+  }
+  return { profilePhotoUrl: avatarUrl, mascotId: null };
+}
+
+export function encodeEmployeeIdentityImages({
+  profilePhotoUrl,
+  mascotId,
+}: EmployeeIdentityImages): string | null {
+  if (!profilePhotoUrl && !mascotId) return null;
+  if (!profilePhotoUrl && mascotId) return `${MASCOT_PREFIX}${mascotId}`;
+  return `${IDENTITY_PREFIX}${encodeURIComponent(
+    JSON.stringify({
+      profilePhotoUrl,
+      mascotId,
+    }),
+  )}`;
 }
 
 export function encodeAvatarUrl(
