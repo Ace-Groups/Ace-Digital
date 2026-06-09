@@ -343,25 +343,6 @@ export function createFirestoreStore() {
           await msgBatch.commit();
         }
 
-        // #region agent log
-        fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
-          body: JSON.stringify({
-            sessionId: "c7ba17",
-            location: "firestore.ts:deleteUser",
-            message: "soft-delete snapshots",
-            data: {
-              userId: id,
-              membersUpdated: memberSnap.size,
-              messagesUpdated: msgSnap.size,
-            },
-            hypothesisId: "H1",
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-
         await userRef.set(
           {
             email: `deleted-user-${id}@ace.local`,
@@ -1544,21 +1525,6 @@ export function createFirestoreStore() {
         createdAt: new Date().toISOString(),
       };
       await writeMessagePaths(id, data.channelId, row);
-
-      // #region agent log
-      fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
-        body: JSON.stringify({
-          sessionId: "c7ba17",
-          location: "firestore.ts:createMessage",
-          message: "dual-path message write",
-          data: { messageId: id, channelId: data.channelId },
-          hypothesisId: "H4",
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
 
       if (data.parentMessageId) {
         const rootRef = db.collection(COL.messages).doc(docId(data.parentMessageId));

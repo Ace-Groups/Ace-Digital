@@ -702,20 +702,6 @@ router.post(
     }
 
     const dmBlocked = await rejectIfDmPeerUnavailable(access.channel, id, ctx.userId);
-    // #region agent log
-    fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
-      body: JSON.stringify({
-        sessionId: "c7ba17",
-        location: "channels.ts:POST messages",
-        message: "dm send guard",
-        data: { channelId: id, channelType: access.channel.type, blocked: Boolean(dmBlocked) },
-        hypothesisId: "H3",
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (dmBlocked) {
       res.status(403).json({ error: dmBlocked });
       return;
@@ -768,6 +754,10 @@ router.post(
         sender?.avatarUrl ?? null,
       );
       res.status(201).json(createdJson);
+
+      void import("../lib/chat-socket-broadcast").then(({ broadcastMessageNew }) => {
+        broadcastMessageNew(id, createdJson);
+      });
 
       setImmediate(() => {
         void (async () => {

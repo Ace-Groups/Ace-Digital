@@ -7,7 +7,8 @@ import { get, set, del } from "idb-keyval";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { SocketProvider } from "@/contexts/SocketContext";
+import { SocketProvider, useSocket } from "@/contexts/SocketContext";
+import { useGlobalChatRealtime } from "@/hooks/use-global-chat-realtime";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -115,6 +116,13 @@ function PrefetchBoot() {
   return null;
 }
 
+function GlobalChatBoot() {
+  const { isAuthenticated } = useAuth();
+  const { connected } = useSocket();
+  useGlobalChatRealtime(isAuthenticated && connected);
+  return null;
+}
+
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
@@ -178,6 +186,7 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <SocketProvider>
+            <GlobalChatBoot />
             <PrefetchBoot />
             <MobileChromeProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>

@@ -85,6 +85,25 @@ export function initSocketServer(httpServer: HttpServer): Server {
     logger.info({ userId, socketId: socket.id }, "Socket connected");
     await socket.join(`user_${userId}`);
 
+    void (async () => {
+      try {
+        const ctx = socketAccessContext(socket.data.user);
+        const channelIds = await store.listChannelIdsForUser(userId);
+        await Promise.all(channelIds.map((id) => socket.join(`channel_${id}`)));
+        for (const channelId of channelIds) {
+          const access = await resolveChannelAccess(ctx, channelId);
+          if (
+            !access.error &&
+            canPostInChannel(ctx, access.channel, access.membership)
+          ) {
+            socket.data.postChannelIds?.add(channelId);
+          }
+        }
+      } catch (err) {
+        logger.warn({ err, userId }, "socket auto-join channels failed");
+      }
+    })();
+
     socket.on("join_channel", async (rawChannelId: unknown, ack?: (res: unknown) => void) => {
       const channelId = Number(rawChannelId);
       if (!Number.isFinite(channelId) || channelId <= 0) {
@@ -178,7 +197,8 @@ export function initSocketServer(httpServer: HttpServer): Server {
           createdAt: now,
         };
 
-        socket.to(`channel_${channelId}`).emit("message:new", optimistic);
+        const { broadcastMessageNew } = await import("./chat-socket-broadcast");
+        broadcastMessageNew(channelId, optimistic, { exceptSocketId: socket.id });
         ack?.({ status: "success", clientId, message: optimistic });
 
         void messageQueue.add("persist", {

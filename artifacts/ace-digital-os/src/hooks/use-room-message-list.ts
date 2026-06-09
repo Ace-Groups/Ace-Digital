@@ -180,6 +180,11 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
   };
 }
 
+/** Apply a realtime message to an in-memory channel list (any open thread). */
+export function globalUpsertChannelMessage(channelId: number, msg: Message): void {
+  channelLists.get(channelId)?.upsertOne(msg);
+}
+
 /** Stable key so sync effect does not run when React Query returns a new array ref with same ids. */
 export function useMessageListSyncKey(messages: Message[] | undefined): string {
   return useMemo(

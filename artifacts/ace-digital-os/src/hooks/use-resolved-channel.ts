@@ -17,27 +17,7 @@ export function useResolvedChannel(channelId: number | null): Channel | undefine
     if (channelId == null) return undefined;
     const fromChannels = channels?.find((c) => c.id === channelId);
     const fromDms = dms?.find((c) => c.id === channelId);
-    const resolved = fromChannels ?? fromDms;
-    // #region agent log
-    fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
-      body: JSON.stringify({
-        sessionId: "c7ba17",
-        location: "use-resolved-channel.ts",
-        message: "channel resolved",
-        data: {
-          channelId,
-          source: fromChannels ? "channels" : fromDms ? "dms" : "none",
-          type: resolved?.type,
-          dmPeerUnavailable: resolved?.dmPeerUnavailable,
-        },
-        hypothesisId: "H2",
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    return resolved;
+    return fromChannels ?? fromDms;
   }, [channelId, channels, dms]);
 }
 

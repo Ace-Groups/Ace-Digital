@@ -64,9 +64,11 @@ export function startMessageWorker(): Worker<PersistMessageJob> {
         data.senderAvatar ?? null,
       );
 
-      getIo()
-        ?.to(`channel_${data.channelId}`)
-        .emit("message:persisted", { clientId: data.clientId, message: persisted });
+      const { broadcastMessagePersisted } = await import("./chat-socket-broadcast");
+      broadcastMessagePersisted(data.channelId, {
+        clientId: data.clientId,
+        message: persisted,
+      });
 
       if (data.body.includes("@AceBot")) {
         await triggerAceBot(data.channelId, message.id, data.body, data.senderId);

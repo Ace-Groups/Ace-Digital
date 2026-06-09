@@ -132,7 +132,6 @@ export function useChannelMessagesRealtime(
       socket.off("connect", join);
       socket.off("message:new", onNew);
       socket.off("message:persisted", onPersisted);
-      socket.emit("leave_channel", channelId);
     };
   }, [channelId, enabled, socket, connected, queryClient, ensureJoined]);
 }
