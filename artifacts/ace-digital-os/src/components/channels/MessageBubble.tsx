@@ -250,7 +250,14 @@ export function MessageBubble({
                       className="mb-1 w-full rounded-md border-l-2 border-primary bg-muted/50 px-3 py-2 text-left text-xs hover:bg-muted/80 dark:bg-muted/60"
               onClick={() => onScrollToQuotedMessage?.(quote.id)}
             >
-              <p className="font-medium">{quote.senderName ?? "Message"}</p>
+              <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                <span>{quote.senderName ?? "Message"}</span>
+                {quote.senderUnavailable && (
+                  <span className="rounded-full border border-border bg-muted/60 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Unavailable
+                  </span>
+                )}
+              </p>
               <p className="line-clamp-2 opacity-70">
                 {quote.isDeleted ? "Original message deleted" : quote.preview}
               </p>
@@ -285,7 +292,6 @@ export function MessageBubble({
             <MessageBody body={msg.body ?? ""} nameMaps={mentionNameMaps} />
           ) : null}
 
-          {/* Cyberpunk Table Info Block */}
           {(!pending && !deleted && (msg as Message).metadata?.layout === "table") && (() => {
             const tableData = (msg as Message).metadata?.tableData as {
               columns: string[];
@@ -293,17 +299,17 @@ export function MessageBubble({
             } | undefined;
             if (!tableData || !tableData.columns || !tableData.rows) return null;
             return (
-              <div className="mt-2 overflow-hidden rounded-md border border-cyan-500/30 bg-background/50 font-mono text-xs backdrop-blur-sm">
-                <div className="border-b border-cyan-500/30 bg-cyan-950/20 px-3 py-1.5 text-cyan-400 font-semibold uppercase tracking-wider flex justify-between items-center">
-                  <span>System Data Feed</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <div className="mt-2 overflow-hidden rounded-md border border-border bg-card text-xs">
+                <div className="flex items-center justify-between border-b border-border bg-muted/45 px-3 py-1.5 font-semibold text-muted-foreground">
+                  <span>System data</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 </div>
                 <div className="overflow-x-auto">
                   <Table className="min-w-[400px]">
-                    <TableHeader className="border-b border-cyan-500/20 bg-muted/30">
+                    <TableHeader className="border-b border-border bg-muted/30">
                       <TableRow className="hover:bg-transparent">
                         {tableData.columns.map((col, idx) => (
-                          <TableHead key={idx} className="h-8 text-[10px] text-cyan-400/70 font-bold uppercase py-1 px-3">
+                          <TableHead key={idx} className="h-8 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                             {col}
                           </TableHead>
                         ))}
@@ -311,9 +317,9 @@ export function MessageBubble({
                     </TableHeader>
                     <TableBody>
                       {tableData.rows.map((row, rowIdx) => (
-                        <TableRow key={rowIdx} className="border-b border-cyan-500/10 hover:bg-cyan-500/5">
+                        <TableRow key={rowIdx} className="border-b border-border/60 hover:bg-muted/40">
                           {tableData.columns.map((col, colIdx) => (
-                            <TableCell key={colIdx} className="py-2 px-3 text-foreground/90 font-mono">
+                            <TableCell key={colIdx} className="px-3 py-2 text-foreground/90">
                               {row[col] ?? ""}
                             </TableCell>
                           ))}
@@ -326,20 +332,18 @@ export function MessageBubble({
             );
           })()}
 
-          {/* System Permission Alert Card */}
           {(!pending && !deleted && (msg as Message).metadata?.layout === "permission_denied") && (
-            <div className="mt-2 overflow-hidden rounded-md border border-rose-500/50 bg-rose-950/10 backdrop-blur-sm p-3 font-mono text-xs">
-              <div className="flex items-center gap-2 text-rose-400 font-bold uppercase tracking-wider mb-2">
-                <AlertCircle size={16} className="text-rose-500 animate-pulse" />
-                <span>Security Alert: Access Denied</span>
+            <div className="mt-2 overflow-hidden rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs">
+              <div className="mb-2 flex items-center gap-2 font-semibold text-destructive">
+                <AlertCircle size={16} />
+                <span>Access denied</span>
               </div>
-              <div className="border border-rose-500/20 bg-rose-950/20 rounded p-2 text-rose-300">
-                <p className="font-semibold text-rose-400 mb-1">RBAC POLICY VIOLATION</p>
-                <p>{msg.body || "Insufficient clearance to view financial records."}</p>
+              <div className="rounded border border-destructive/15 bg-background/60 p-2 text-foreground">
+                <p>{msg.body || "You do not have permission to view this record."}</p>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[9px] text-rose-500/70 uppercase">
-                <span>Code: SEC-403-RBAC</span>
-                <span>Auth: System Admin</span>
+              <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span>SEC-403-RBAC</span>
+                <span>System</span>
               </div>
             </div>
           )}
@@ -350,6 +354,7 @@ export function MessageBubble({
 
   return (
     <div
+      className="relative"
       onPointerDown={onBubblePointerDown}
       onPointerUp={clearLongPress}
       onPointerLeave={clearLongPress}
@@ -403,7 +408,7 @@ export function MessageBubble({
       </MessageRow>
 
       {showActions && menuOpen && (
-        <div className="absolute right-4 top-10 z-20">
+        <div className="absolute right-4 top-8 z-20">
           <MessageActionsMenu isMe={isMe} menuOpen={menuOpen} onMenuOpenChange={setMenuOpen}>
             {menuItems}
           </MessageActionsMenu>

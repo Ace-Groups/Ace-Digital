@@ -74,6 +74,7 @@ export type ActivityLogWithActor = ActivityLog & { actorName: string | null };
 export type MessageWithSender = Message & {
   senderName: string | null;
   senderAvatar?: string | null;
+  isDeletedUser?: boolean;
 };
 export type SalaryRow = {
   userId: number;
@@ -211,7 +212,8 @@ export type UpdateChannelInput = Partial<{
 export type ChannelMemberWithUser = ChannelMember & {
   fullName: string;
   avatarUrl: string | null;
-  email: string;
+  email: string | null;
+  isUnavailable?: boolean;
 };
 
 export type CreateTeamInput = {

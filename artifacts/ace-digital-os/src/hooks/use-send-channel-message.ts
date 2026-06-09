@@ -141,6 +141,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
     ) => {
       if (!channelId || !user) throw new Error("Not ready");
 
+      // Socket.io first keeps authorization, persistence, notifications, and Firestore mirroring in one path.
       if (connected) {
         try {
           await ensureJoined(channelId);
@@ -166,6 +167,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
         }
       }
 
+      // HTTP fallback is always available.
       try {
         return await flushPendingHttp(clientId, payload);
       } catch (err) {

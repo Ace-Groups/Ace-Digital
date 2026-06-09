@@ -3759,6 +3759,9 @@ components:
           description: For DM channels, display name of the other participant
         dmPeerAvatar:
           type: ["string", "null"]
+        dmPeerUnavailable:
+          type: boolean
+          description: For DM channels, whether the other participant is no longer available
         createdById:
           type: ["integer", "null"]
         createdAt:
@@ -3809,6 +3812,9 @@ components:
           type: string
         avatarUrl:
           type: ["string", "null"]
+        unavailable:
+          type: boolean
+          description: Member account is deleted or no longer available
         role:
           type: string
         joinedAt:
@@ -3873,6 +3879,9 @@ components:
           type: ["string", "null"]
         deleted:
           type: boolean
+        senderUnavailable:
+          type: boolean
+          description: Sender account is deleted or no longer available
         createdAt:
           type: string
 

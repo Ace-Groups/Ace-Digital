@@ -101,6 +101,7 @@ export function messageToJson(
     editedAt?: Date | null;
     deletedAt?: Date | null;
     createdAt: Date;
+    isDeletedUser?: boolean;
   },
   senderName: string,
   senderAvatar: string | null,
@@ -112,6 +113,7 @@ export function messageToJson(
     senderId: m.senderId,
     senderName,
     senderAvatar,
+    senderUnavailable: m.isDeletedUser || undefined,
     body: deleted ? "" : m.body,
     attachments: deleted ? undefined : m.attachments?.length ? m.attachments : undefined,
     messageKind: m.messageKind ?? "text",

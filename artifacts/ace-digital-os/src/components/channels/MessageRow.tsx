@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import type { Message } from "@workspace/api-client-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { MessageBody } from "@/components/channels/MessageBody";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const GROUP_MS = 5 * 60 * 1000;
 
@@ -42,6 +42,8 @@ export function MessageRow({
       }),
     [msg.createdAt],
   );
+  const senderUnavailable = Boolean(msg.senderUnavailable);
+  const senderName = msg.senderName ?? "Former teammate";
 
   if (msg.messageKind === "system") {
     return (
@@ -58,7 +60,7 @@ export function MessageRow({
     <article
       data-testid={`message-${msg.id}`}
       className={cn(
-        "group relative flex gap-2 rounded-md px-1 py-0.5 transition-colors duration-150 sm:gap-3 sm:px-2 sm:py-1",
+        "group relative flex gap-2 rounded-md px-1 py-1.5 transition-colors duration-150 sm:gap-3 sm:px-2 sm:py-1",
         "hover:bg-[var(--chat-row-hover)] active:bg-[var(--chat-row-hover)]",
         className,
       )}
@@ -66,9 +68,12 @@ export function MessageRow({
       <div className="w-8 shrink-0 sm:w-9">
         {showHeader ? (
           <UserAvatar
-            fullName={msg.senderName ?? "?"}
+            fullName={senderName}
             avatarUrl={msg.senderAvatar}
-            className="size-8 rounded-md sm:size-9"
+            className={cn(
+              "size-8 rounded-md sm:size-9",
+              senderUnavailable && "grayscale opacity-75",
+            )}
           />
         ) : (
           <span className="block pt-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
@@ -78,8 +83,13 @@ export function MessageRow({
       </div>
       <div className="min-w-0 flex-1">
         {showHeader && (
-          <div className="mb-0.5 flex items-baseline gap-2">
-            <span className="text-sm font-semibold text-foreground">{msg.senderName}</span>
+          <div className="mb-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-sm font-semibold text-foreground">{senderName}</span>
+            {senderUnavailable && (
+              <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                No longer available
+              </span>
+            )}
             <time className="text-xs text-muted-foreground" dateTime={msg.createdAt}>
               {timeLabel}
             </time>

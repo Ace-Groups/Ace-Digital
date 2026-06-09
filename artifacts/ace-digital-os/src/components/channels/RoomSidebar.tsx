@@ -51,6 +51,10 @@ function channelDisplayName(ch: Channel): string {
   return ch.name;
 }
 
+function isDmPeerUnavailable(ch: Channel): boolean {
+  return Boolean(ch.dmPeerUnavailable);
+}
+
 interface RoomSidebarProps {
   channels: Channel[] | undefined;
   isLoading: boolean;
@@ -75,6 +79,7 @@ function RoomRow({
 }) {
   const unread = ch.unreadCount ?? 0;
   const label = channelDisplayName(ch);
+  const unavailable = ch.type === "DM" && isDmPeerUnavailable(ch);
   return (
     <motion.button
       type="button"
@@ -92,16 +97,28 @@ function RoomRow({
         <UserAvatar
           fullName={label}
           avatarUrl={ch.dmPeerAvatar}
-          className="size-5 shrink-0 rounded-md"
+          className={cn("size-5 shrink-0 rounded-md", unavailable && "grayscale opacity-70")}
           iconSize={10}
         />
       ) : (
         <ChannelIcon channel={ch} size={16} className="shrink-0 opacity-70" />
       )}
-      <span className="min-w-0 flex-1 truncate">
-        {showHash && ch.type !== "DM" ? "#" : ""}
-        {label}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">
+          {showHash && ch.type !== "DM" ? "#" : ""}
+          {label}
+        </span>
+        {ch.type === "DM" && ch.lastMessagePreview ? (
+          <span className="block truncate text-[11px] text-sidebar-foreground/45">
+            {ch.lastMessagePreview}
+          </span>
+        ) : null}
       </span>
+      {unavailable && (
+        <span className="shrink-0 rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-sidebar-foreground/50">
+          Unavailable
+        </span>
+      )}
       {ch.lastPostAt ? (
         <span className="shrink-0 text-[10px] tabular-nums opacity-50">
           {formatChannelListTime(ch.lastPostAt)}
@@ -228,6 +245,7 @@ function DirectMessagesSection({
     if (!q || !employees) return [];
     return employees
       .filter((e) => e.id !== user?.id)
+      .filter((e) => e.status === "active")
       .filter(
         (e) =>
           e.fullName.toLowerCase().includes(q) ||
@@ -239,6 +257,7 @@ function DirectMessagesSection({
     if (!employees) return [];
     return employees
       .filter((e) => e.id !== user?.id)
+      .filter((e) => e.status === "active")
       .filter((e) => !activeDmPeerUserIds.has(e.id))
       .slice(0, 5);
   }, [employees, activeDmPeerUserIds, user?.id]);

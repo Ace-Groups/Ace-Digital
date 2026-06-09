@@ -18,6 +18,7 @@ export type MirrorMessagePayload = {
   createdAt: Date;
   senderName?: string | null;
   senderAvatar?: string | null;
+  senderUnavailable?: boolean;
 };
 
 function docId(id: number): string {
@@ -65,10 +66,19 @@ export async function mirrorMessageToFirestore(payload: MirrorMessagePayload): P
     parentMessageId: payload.parentMessageId ?? null,
     senderName: payload.senderName ?? null,
     senderAvatar: payload.senderAvatar ?? null,
+    senderUnavailable: payload.senderUnavailable ?? false,
     createdAt: payload.createdAt.toISOString(),
   };
 
-  await db.collection("messages").doc(docId(payload.id)).set(row);
+  await Promise.all([
+    db.collection("messages").doc(docId(payload.id)).set(row),
+    db
+      .collection("channels")
+      .doc(docId(payload.channelId))
+      .collection("messages")
+      .doc(docId(payload.id))
+      .set(row),
+  ]);
 }
 
 export async function mirrorMessagePatchToFirestore(
@@ -95,7 +105,18 @@ export async function mirrorMessagePatchToFirestore(
   if (patch.parentMessageId !== undefined) data.parentMessageId = patch.parentMessageId;
   if (Object.keys(data).length === 0) return;
 
+  const snap = await db.collection("messages").doc(docId(id)).get();
+  const channelId = snap.exists ? Number(snap.data()?.channelId) : null;
+
   await db.collection("messages").doc(docId(id)).set(data, { merge: true });
+  if (channelId) {
+    await db
+      .collection("channels")
+      .doc(docId(channelId))
+      .collection("messages")
+      .doc(docId(id))
+      .set(data, { merge: true });
+  }
 }
 
 export async function mirrorMessageDeleteToFirestore(
@@ -106,16 +127,25 @@ export async function mirrorMessageDeleteToFirestore(
   const db = ensureFirestore();
   if (!db) return;
 
-  await db.collection("messages").doc(docId(id)).set(
-    {
-      body: "",
-      attachments: null,
-      metadata: null,
-      deletedAt: deletedAt.toISOString(),
-      deletedById,
-    },
-    { merge: true },
-  );
+  const snap = await db.collection("messages").doc(docId(id)).get();
+  const channelId = snap.exists ? Number(snap.data()?.channelId) : null;
+  const data = {
+    body: "",
+    attachments: null,
+    metadata: null,
+    deletedAt: deletedAt.toISOString(),
+    deletedById,
+  };
+
+  await db.collection("messages").doc(docId(id)).set(data, { merge: true });
+  if (channelId) {
+    await db
+      .collection("channels")
+      .doc(docId(channelId))
+      .collection("messages")
+      .doc(docId(id))
+      .set(data, { merge: true });
+  }
 }
 
 export async function mirrorChannelActivityToFirestore(

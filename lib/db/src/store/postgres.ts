@@ -105,6 +105,30 @@ async function nextServiceTicketNumberPg(
   return `ST-${year}-${String(seq).padStart(4, "0")}`;
 }
 
+type SenderLookupRow = {
+  persistedSenderName?: string | null;
+  persistedSenderAvatar?: string | null;
+  userName?: string | null;
+  userAvatar?: string | null;
+  userStatus?: string | null;
+};
+
+function resolveSenderName(row: SenderLookupRow): string | null {
+  return row.persistedSenderName ?? row.userName ?? null;
+}
+
+function resolveSenderAvatar(row: SenderLookupRow): string | null {
+  return row.persistedSenderAvatar ?? row.userAvatar ?? null;
+}
+
+function isDeletedSender(row: SenderLookupRow): boolean {
+  return (
+    row.userStatus === "deleted" ||
+    row.userStatus === "inactive" ||
+    (!row.userName && !!row.persistedSenderName)
+  );
+}
+
 async function ensureDeletedUserArchiveTable(db: ReturnType<typeof getPgDb>["db"]) {
   await db.execute(sql`
     create table if not exists deleted_user_archives (
@@ -232,9 +256,55 @@ export function createPostgresStore() {
             ],
           },
         });
+        await db
+          .update(channelMembersTable)
+          .set({
+            displayName: user.fullName,
+            displayAvatar: user.avatarUrl ?? null,
+            unavailableAt: new Date(),
+          })
+          .where(eq(channelMembersTable.userId, id));
+        await db
+          .update(messagesTable)
+          .set({
+            senderName: sql`COALESCE(${messagesTable.senderName}, ${user.fullName})`,
+            senderAvatar: sql`COALESCE(${messagesTable.senderAvatar}, ${user.avatarUrl})`,
+          })
+          .where(eq(messagesTable.senderId, id));
       }
       await db.delete(employeeProfilesTable).where(eq(employeeProfilesTable.userId, id));
-      await db.delete(usersTable).where(eq(usersTable.id, id));
+      if (user) {
+        await db
+          .update(usersTable)
+          .set({
+            email: `deleted-user-${id}@ace.local`,
+            passwordHash: `deleted:${id}:${Date.now()}`,
+            avatarUrl: null,
+            status: "deleted",
+            teamId: null,
+            jobTitle: null,
+            phone: null,
+            employeeCode: null,
+            dob: null,
+            address: null,
+            addressLine2: null,
+            city: null,
+            state: null,
+            zipCode: null,
+            country: null,
+            gender: null,
+            maritalStatus: null,
+            nationality: null,
+            aadhaarNumber: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            highestQualification: null,
+            bloodGroup: null,
+            aadhaarDocument: null,
+            notes: null,
+          })
+          .where(eq(usersTable.id, id));
+      }
     },
     countActiveUsers: async () => {
       const [r] = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.status, "active"));
@@ -910,15 +980,41 @@ export function createPostgresStore() {
           lastReadAt: channelMembersTable.lastReadAt,
           lastReadMessageId: channelMembersTable.lastReadMessageId,
           joinedAt: channelMembersTable.joinedAt,
-          fullName: usersTable.fullName,
-          avatarUrl: usersTable.avatarUrl,
+          displayName: channelMembersTable.displayName,
+          displayAvatar: channelMembersTable.displayAvatar,
+          unavailableAt: channelMembersTable.unavailableAt,
+          userName: usersTable.fullName,
+          userAvatar: usersTable.avatarUrl,
+          userStatus: usersTable.status,
           email: usersTable.email,
         })
         .from(channelMembersTable)
-        .innerJoin(usersTable, eq(channelMembersTable.userId, usersTable.id))
+        .leftJoin(usersTable, eq(channelMembersTable.userId, usersTable.id))
         .where(eq(channelMembersTable.channelId, channelId))
-        .orderBy(channelMembersTable.role, usersTable.fullName);
-      return rows;
+        .orderBy(
+          channelMembersTable.role,
+          sql`COALESCE(${usersTable.fullName}, ${channelMembersTable.displayName})`,
+        );
+      return rows.map((row) => ({
+        id: row.id,
+        channelId: row.channelId,
+        userId: row.userId,
+        role: row.role,
+        displayName: row.displayName,
+        displayAvatar: row.displayAvatar,
+        unavailableAt: row.unavailableAt,
+        starred: row.starred,
+        lastReadAt: row.lastReadAt,
+        lastReadMessageId: row.lastReadMessageId,
+        joinedAt: row.joinedAt,
+        fullName: row.userName ?? row.displayName ?? "Former teammate",
+        avatarUrl: row.userAvatar ?? row.displayAvatar ?? null,
+        email: row.email ?? null,
+        isUnavailable:
+          Boolean(row.unavailableAt) ||
+          row.userStatus === "deleted" ||
+          row.userStatus === "inactive",
+      }));
     },
     listChannelListMeta: async (channelIds: number[], userId: number) => {
       const counts = new Map<number, number>();
@@ -1133,7 +1229,9 @@ export function createPostgresStore() {
           senderId: messagesTable.senderId,
           attachments: messagesTable.attachments,
           createdAt: messagesTable.createdAt,
-          senderName: usersTable.fullName,
+          persistedSenderName: messagesTable.senderName,
+          userName: usersTable.fullName,
+          userStatus: usersTable.status,
         })
         .from(messagesTable)
         .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
@@ -1167,7 +1265,7 @@ export function createPostgresStore() {
             size: att.size,
             thumbUrl: att.thumbUrl,
             uploaderId: row.senderId,
-            uploaderName: row.senderName ?? "Unknown",
+            uploaderName: resolveSenderName(row) ?? "Former teammate",
             createdAt: row.createdAt,
           });
           if (out.length >= limit) return out;
@@ -1219,9 +1317,20 @@ export function createPostgresStore() {
           .returning();
         return updated!;
       }
+      const [user] = await db
+        .select({ fullName: usersTable.fullName, avatarUrl: usersTable.avatarUrl })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
       const [m] = await db
         .insert(channelMembersTable)
-        .values({ channelId, userId, role })
+        .values({
+          channelId,
+          userId,
+          role,
+          displayName: user?.fullName ?? null,
+          displayAvatar: user?.avatarUrl ?? null,
+        })
         .returning();
       return m!;
     },
@@ -1285,8 +1394,11 @@ export function createPostgresStore() {
           deletedAt: messagesTable.deletedAt,
           deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
-          senderName: usersTable.fullName,
-          senderAvatar: usersTable.avatarUrl,
+          persistedSenderName: messagesTable.senderName,
+          persistedSenderAvatar: messagesTable.senderAvatar,
+          userName: usersTable.fullName,
+          userAvatar: usersTable.avatarUrl,
+          userStatus: usersTable.status,
         })
         .from(messagesTable)
         .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
@@ -1307,8 +1419,9 @@ export function createPostgresStore() {
         deletedAt: r.deletedAt,
         deletedById: r.deletedById,
         createdAt: r.createdAt,
-        senderName: r.senderName,
-        senderAvatar: r.senderAvatar ?? null,
+        senderName: resolveSenderName(r),
+        senderAvatar: resolveSenderAvatar(r),
+        isDeletedUser: isDeletedSender(r),
       }));
     },
     createMessage: async (
@@ -1318,7 +1431,14 @@ export function createPostgresStore() {
       },
     ) => {
       const { senderName, senderAvatar, ...insertData } = data;
-      const [m] = await db.insert(messagesTable).values(insertData).returning();
+      const [m] = await db
+        .insert(messagesTable)
+        .values({
+          ...insertData,
+          senderName: senderName ?? null,
+          senderAvatar: senderAvatar ?? null,
+        })
+        .returning();
 
       if (insertData.parentMessageId) {
         const root = await db
@@ -1478,7 +1598,11 @@ export function createPostgresStore() {
           deletedAt: messagesTable.deletedAt,
           deletedById: messagesTable.deletedById,
           createdAt: messagesTable.createdAt,
-          senderName: usersTable.fullName,
+          persistedSenderName: messagesTable.senderName,
+          persistedSenderAvatar: messagesTable.senderAvatar,
+          userName: usersTable.fullName,
+          userAvatar: usersTable.avatarUrl,
+          userStatus: usersTable.status,
         })
         .from(messagesTable)
         .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
@@ -1498,7 +1622,9 @@ export function createPostgresStore() {
         deletedAt: r.deletedAt,
         deletedById: r.deletedById,
         createdAt: r.createdAt,
-        senderName: r.senderName,
+        senderName: resolveSenderName(r),
+        senderAvatar: resolveSenderAvatar(r),
+        isDeletedUser: isDeletedSender(r),
       };
     },
     findCalendarEventById: async (id: number) => {

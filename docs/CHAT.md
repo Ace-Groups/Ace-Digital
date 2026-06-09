@@ -9,7 +9,14 @@ Ace Digital OS channel chat follows a Slack-like UX: flat message rows, sidebar 
 3. The store mirrors message and channel activity documents to Firestore.
 4. Authenticated channel members receive read-only Firestore `onSnapshot` updates in production.
 
-Firestore message documents use `messages/{messageId}` with a numeric `channelId`. Channel activity uses `channels/{channelId}`.
+Firestore mirrors each message to **both** `messages/{messageId}` (legacy) and `channels/{channelId}/messages/{messageId}` (client realtime path). Channel activity uses `channels/{channelId}`.
+
+### Deleted / unavailable users
+
+- User deletion **soft-deletes** the account (PII scrubbed, `status: deleted`); chat history is preserved.
+- `messages.sender_name` / `sender_avatar` and `channel_members.display_name` snapshots keep names visible.
+- API exposes `senderUnavailable` on messages and `dmPeerUnavailable` on DM channels.
+- Unavailable DM threads are **read-only**; composer is replaced with a short notice.
 
 ## Firestore indexes
 

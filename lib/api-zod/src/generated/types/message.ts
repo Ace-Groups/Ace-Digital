@@ -25,5 +25,7 @@ export interface Message {
   /** @nullable */
   editedAt?: string | null;
   deleted?: boolean;
+  /** Sender account is deleted or no longer available */
+  senderUnavailable?: boolean;
   createdAt: string;
 }

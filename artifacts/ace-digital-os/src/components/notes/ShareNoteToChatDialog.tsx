@@ -121,7 +121,7 @@ export function ShareNoteToChatDialog({
           <div className="space-y-0.5 px-2">
             {filteredChannels.map((ch) => {
               const isDm = ch.type === "dm";
-              const displayName = ch.dmPeerName || ch.name || "Unknown";
+              const displayName = ch.dmPeerName || ch.name || "Former teammate";
               return (
                 <button
                   key={ch.id}

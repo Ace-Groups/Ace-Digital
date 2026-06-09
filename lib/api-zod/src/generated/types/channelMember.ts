@@ -12,6 +12,8 @@ export interface ChannelMember {
   email?: string;
   /** @nullable */
   avatarUrl?: string | null;
+  /** Member account is deleted or no longer available */
+  unavailable?: boolean;
   role: string;
   joinedAt?: string;
 }

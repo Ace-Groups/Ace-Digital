@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
+import { useChannelMessagesFirestore } from "@/hooks/use-channel-messages-firestore";
 import { useChannelActivityRealtime } from "@/hooks/use-channel-activity-realtime";
 import { useSocket } from "@/contexts/SocketContext";
 import { useRoomMessageList, useMessageListSyncKey } from "@/hooks/use-room-message-list";
@@ -56,6 +57,11 @@ import { parseChannelIdFromSearch, setChannelIdInSearch } from "@/lib/channel-ur
 import { useMarkChannelRead } from "@/hooks/use-mark-channel-read";
 import { useChannelMessageOptimistic } from "@/hooks/use-channel-message-optimistic";
 import { usePrefetchChannelMessages } from "@/hooks/use-prefetch-channel-messages";
+import {
+  useResolvedChannel,
+  isDmPeerUnavailable,
+} from "@/hooks/use-resolved-channel";
+import { UserX } from "lucide-react";
 import { replyMetadataFromTarget } from "@/lib/chat-reply";
 import { channelDisplayLabel } from "@/lib/chat-mentions";
 
@@ -110,7 +116,8 @@ export default function ChannelsPage() {
     hideBottomNav: isMobile,
   });
 
-  const selectedChannel = channels?.find((c) => c.id === selectedChannelId);
+  const selectedChannel = useResolvedChannel(selectedChannelId);
+  const dmPeerUnavailable = isDmPeerUnavailable(selectedChannel);
 
   const ctx = user
     ? { userId: user.id, role: user.role, teamId: user.teamId }
@@ -223,6 +230,7 @@ export default function ChannelsPage() {
     onUpsert: upsertMessage,
     onPersisted: replaceMessageByClientId,
   });
+  useChannelMessagesFirestore(selectedChannelId, activityRealtimeReady);
   useChannelActivityRealtime(selectedChannelId, activityRealtimeReady);
 
   const { queuePending, flushPending, markPendingFailed } = useSendChannelMessage(
@@ -534,7 +542,14 @@ export default function ChannelsPage() {
           }}
         />
       ) : selectedChannelId ? (
-        <ChannelMessageList
+        <>
+          {dmPeerUnavailable && (
+            <div className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground sm:px-4 sm:text-sm">
+              <UserX size={14} className="shrink-0 opacity-70" />
+              <span>This person is no longer available. You can still read past messages.</span>
+            </div>
+          )}
+          <ChannelMessageList
           channelId={selectedChannelId}
           messages={roomMessages}
           isLoading={showMessageSkeleton}
@@ -574,13 +589,18 @@ export default function ChannelsPage() {
           onUnpinMessage={handleUnpinMessage}
           mentionNameMaps={mentionNameMaps}
         />
+        </>
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
           Select a channel to start chatting
         </div>
       )}
 
-      {selectedChannelId && canPost && selectedChannel && headerTab === "messages" && (
+      {selectedChannelId &&
+        canPost &&
+        selectedChannel &&
+        !dmPeerUnavailable &&
+        headerTab === "messages" && (
         <SlackComposer
           channelId={selectedChannelId}
           channelName={channelLabel}
@@ -595,7 +615,13 @@ export default function ChannelsPage() {
         />
       )}
 
-      {selectedChannelId && !canPost && selectedChannel && (
+      {selectedChannelId && selectedChannel && dmPeerUnavailable && headerTab === "messages" && (
+        <div className="sticky bottom-0 shrink-0 border-t border-border bg-muted/20 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">
+          This person is no longer available. You can still read past messages.
+        </div>
+      )}
+
+      {selectedChannelId && !canPost && selectedChannel && !dmPeerUnavailable && (
         <div className="sticky bottom-0 shrink-0 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">
           {selectedChannel.archived
             ? "This channel is archived."
@@ -612,7 +638,7 @@ export default function ChannelsPage() {
         channelId={selectedChannelId}
         rootMessage={threadRoot}
         currentUserId={user?.id}
-        canPost={Boolean(canPost)}
+        canPost={Boolean(canPost) && !dmPeerUnavailable}
         isMobile={isMobile}
         onClose={() => setThreadRoot(null)}
       />

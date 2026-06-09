@@ -6,6 +6,7 @@ export type ReplyQuoteDisplay = {
   senderName: string | null;
   preview: string;
   isDeleted: boolean;
+  senderUnavailable?: boolean;
 };
 
 /** Short label for reply metadata and composer preview. */
@@ -75,6 +76,7 @@ export function resolveReplyQuoteDisplay(
         senderName: live.senderName ?? snapshot.senderName ?? null,
         preview: "",
         isDeleted: true,
+        senderUnavailable: live.senderUnavailable,
       };
     }
     return {
@@ -82,6 +84,7 @@ export function resolveReplyQuoteDisplay(
       senderName: live.senderName ?? snapshot.senderName ?? null,
       preview: messagePreviewText(live),
       isDeleted: false,
+      senderUnavailable: live.senderUnavailable,
     };
   }
 

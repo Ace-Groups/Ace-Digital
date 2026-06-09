@@ -13,6 +13,7 @@
     "reset:production": "tsx ./src/reset-firestore-production.ts",
     "clear:prod": "tsx ./src/clear-db-for-prod.ts",
     "seed:rbac-dev": "tsx ./src/seed-rbac-dev.ts",
+    "backfill:chat-snapshots": "tsx ./src/backfill-chat-sender-snapshots.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

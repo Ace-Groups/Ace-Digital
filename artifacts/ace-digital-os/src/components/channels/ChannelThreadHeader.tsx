@@ -58,6 +58,7 @@ export function ChannelThreadHeader({
   const title =
     channel.type === "DM" ? (channel.dmPeerName ?? channel.name) : channel.name;
   const titlePrefix = channel.type === "DM" ? "" : "#";
+  const dmUnavailable = Boolean(channel.dmPeerUnavailable);
 
   function closeSearch() {
     setSearchOpen(false);
@@ -90,11 +91,15 @@ export function ChannelThreadHeader({
             {titlePrefix}
             {title}
           </p>
-          {!isMobile && (channel.description || channel.teamName) && (
+          {dmUnavailable ? (
+            <p className="truncate text-[11px] leading-tight text-muted-foreground">
+              This user is no longer available
+            </p>
+          ) : !isMobile && (channel.description || channel.teamName) ? (
             <p className="truncate text-[11px] leading-tight text-muted-foreground">
               {channel.description ?? `${channel.teamName} team`}
             </p>
-          )}
+          ) : null}
         </div>
         {previewMembers.length > 0 && (
           <div className="hidden shrink-0 -space-x-1.5 sm:flex" aria-hidden>

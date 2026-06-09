@@ -2044,6 +2044,7 @@ export const ListChannelsResponseItem = zod.object({
   "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
   "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
   "dmPeerAvatar": zod.string().nullish(),
+  "dmPeerUnavailable": zod.boolean().optional().describe('For DM channels, whether the other participant is no longer available'),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -2090,6 +2091,7 @@ export const GetChannelResponse = zod.object({
   "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
   "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
   "dmPeerAvatar": zod.string().nullish(),
+  "dmPeerUnavailable": zod.boolean().optional().describe('For DM channels, whether the other participant is no longer available'),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -2129,6 +2131,7 @@ export const UpdateChannelResponse = zod.object({
   "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
   "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
   "dmPeerAvatar": zod.string().nullish(),
+  "dmPeerUnavailable": zod.boolean().optional().describe('For DM channels, whether the other participant is no longer available'),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -2154,6 +2157,7 @@ export const ListChannelMembersResponseItem = zod.object({
   "fullName": zod.string(),
   "email": zod.string().optional(),
   "avatarUrl": zod.string().nullish(),
+  "unavailable": zod.boolean().optional().describe('Member account is deleted or no longer available'),
   "role": zod.string(),
   "joinedAt": zod.string().optional()
 })
@@ -2249,6 +2253,7 @@ export const GetChannelMessagesResponseItem = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 export const GetChannelMessagesResponse = zod.array(GetChannelMessagesResponseItem)
@@ -2313,6 +2318,7 @@ export const PatchMessageResponse = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 
@@ -2347,6 +2353,7 @@ export const DeleteMessageResponse = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 
@@ -2389,6 +2396,7 @@ export const ToggleMessageReactionResponse = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 
@@ -2427,6 +2435,7 @@ export const VotePollResponse = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 
@@ -2465,6 +2474,7 @@ export const RsvpEventResponse = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 
@@ -2519,6 +2529,7 @@ export const ListChannelPinsResponseItem = zod.object({
   "parentMessageId": zod.number().nullish(),
   "editedAt": zod.string().nullish(),
   "deleted": zod.boolean().optional(),
+  "senderUnavailable": zod.boolean().optional().describe('Sender account is deleted or no longer available'),
   "createdAt": zod.string()
 })
 })
@@ -2599,6 +2610,7 @@ export const ListDmsResponseItem = zod.object({
   "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
   "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
   "dmPeerAvatar": zod.string().nullish(),
+  "dmPeerUnavailable": zod.boolean().optional().describe('For DM channels, whether the other participant is no longer available'),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
@@ -2632,6 +2644,7 @@ export const OpenDmResponse = zod.object({
   "dmPeerUserId": zod.number().nullish().describe('For DM channels, the other participant user id'),
   "dmPeerName": zod.string().nullish().describe('For DM channels, display name of the other participant'),
   "dmPeerAvatar": zod.string().nullish(),
+  "dmPeerUnavailable": zod.boolean().optional().describe('For DM channels, whether the other participant is no longer available'),
   "createdById": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })

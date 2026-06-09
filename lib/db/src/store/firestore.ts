@@ -120,6 +120,26 @@ function docId(id: number): string {
   return String(id);
 }
 
+async function writeMessagePaths(
+  messageId: number,
+  channelId: number,
+  row: Record<string, unknown>,
+  merge = false,
+): Promise<void> {
+  const db = fs();
+  const topRef = db.collection(COL.messages).doc(docId(messageId));
+  const subRef = db
+    .collection(COL.channels)
+    .doc(docId(channelId))
+    .collection("messages")
+    .doc(docId(messageId));
+  if (merge) {
+    await Promise.all([topRef.set(row, { merge: true }), subRef.set(row, { merge: true })]);
+  } else {
+    await Promise.all([topRef.set(row), subRef.set(row)]);
+  }
+}
+
 async function nextId(collection: string): Promise<number> {
   const ref = fs().collection(COL.meta).doc("counters");
   return fs().runTransaction(async (tx) => {
@@ -248,6 +268,7 @@ export function createFirestoreStore() {
       const user = userSnap.exists ? mapUser(userSnap.data()!, userSnap.id) : null;
       if (user) {
         const deletedAt = new Date();
+        const unavailableAt = deletedAt.toISOString();
         const retentionUntil = new Date(deletedAt);
         retentionUntil.setFullYear(retentionUntil.getFullYear() + 7);
         await db.collection(COL.deletedUserArchives).add({
@@ -259,7 +280,7 @@ export function createFirestoreStore() {
           employeeCode: user.employeeCode ?? null,
           status: user.status ?? null,
           createdAt: user.createdAt,
-          deletedAt: deletedAt.toISOString(),
+          deletedAt: unavailableAt,
           retentionUntil: retentionUntil.toISOString(),
           retainedFields: [
             "userId",
@@ -282,8 +303,80 @@ export function createFirestoreStore() {
             "personalIdentity",
           ],
         });
+
+        const memberSnap = await db
+          .collection(COL.channelMembers)
+          .where("userId", "==", id)
+          .get();
+        if (!memberSnap.empty) {
+          const memberBatch = db.batch();
+          memberSnap.docs.forEach((d) => {
+            memberBatch.set(
+              d.ref,
+              {
+                displayName: user.fullName,
+                displayAvatar: user.avatarUrl ?? null,
+                unavailableAt,
+              },
+              { merge: true },
+            );
+          });
+          await memberBatch.commit();
+        }
+
+        const msgSnap = await db.collection(COL.messages).where("senderId", "==", id).get();
+        if (!msgSnap.empty) {
+          const msgBatch = db.batch();
+          msgSnap.docs.forEach((d) => {
+            const data = d.data();
+            msgBatch.set(
+              d.ref,
+              {
+                senderName: (data.senderName as string | null | undefined) ?? user.fullName,
+                senderAvatar:
+                  (data.senderAvatar as string | null | undefined) ?? user.avatarUrl ?? null,
+                senderUnavailable: true,
+              },
+              { merge: true },
+            );
+          });
+          await msgBatch.commit();
+        }
+
+        // #region agent log
+        fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
+          body: JSON.stringify({
+            sessionId: "c7ba17",
+            location: "firestore.ts:deleteUser",
+            message: "soft-delete snapshots",
+            data: {
+              userId: id,
+              membersUpdated: memberSnap.size,
+              messagesUpdated: msgSnap.size,
+            },
+            hypothesisId: "H1",
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        await userRef.set(
+          {
+            email: `deleted-user-${id}@ace.local`,
+            passwordHash: `deleted:${id}:${Date.now()}`,
+            avatarUrl: null,
+            status: "deleted",
+            teamId: null,
+            jobTitle: null,
+            phone: null,
+            employeeCode: null,
+            fullName: user.fullName,
+          },
+          { merge: true },
+        );
       }
-      await userRef.delete();
       await db.collection(COL.employeeProfiles).doc(docId(id)).delete();
     },
 
@@ -1043,11 +1136,16 @@ export function createFirestoreStore() {
         .map((d) => {
           const m = mapChannelMember(d.data(), d.id);
           const u = userMap.get(m.userId);
+          const isUnavailable =
+            Boolean(m.unavailableAt) ||
+            u?.status === "deleted" ||
+            u?.status === "inactive";
           return {
             ...m,
-            fullName: u?.fullName ?? "Unknown",
-            avatarUrl: u?.avatarUrl ?? null,
+            fullName: u?.fullName ?? m.displayName ?? "Former teammate",
+            avatarUrl: u?.avatarUrl ?? m.displayAvatar ?? null,
             email: u?.email ?? "",
+            isUnavailable,
           };
         })
         .sort((a, b) => a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName));
@@ -1286,7 +1384,7 @@ export function createFirestoreStore() {
             size: att.size,
             thumbUrl: att.thumbUrl,
             uploaderId: row.senderId,
-            uploaderName: row.senderName ?? "Unknown",
+            uploaderName: row.senderName ?? "Former teammate",
             createdAt: row.createdAt,
           });
           if (out.length >= limit) return out;
@@ -1395,16 +1493,26 @@ export function createFirestoreStore() {
       }
 
       const snap = await q.get();
+      const users = await this.listUsers();
+      const userMap = new Map(users.map((u) => [u.id, u]));
       let rows = snap.docs.map((d) => {
         const data = d.data();
         const m = mapMessage(data, d.id);
+        const u = userMap.get(m.senderId);
+        const persistedName =
+          typeof data.senderName === "string" ? data.senderName : null;
+        const persistedAvatar =
+          typeof data.senderAvatar === "string" || data.senderAvatar === null
+            ? (data.senderAvatar as string | null)
+            : null;
         return {
           ...m,
-          senderName: typeof data.senderName === "string" ? data.senderName : null,
-          senderAvatar:
-            typeof data.senderAvatar === "string" || data.senderAvatar === null
-              ? (data.senderAvatar as string | null)
-              : null,
+          senderName: persistedName ?? u?.fullName ?? null,
+          senderAvatar: persistedAvatar ?? u?.avatarUrl ?? null,
+          isDeletedUser:
+            u?.status === "deleted" ||
+            u?.status === "inactive" ||
+            (!u && !!persistedName),
         };
       });
       if (options?.threadRootId == null) {
@@ -1435,7 +1543,22 @@ export function createFirestoreStore() {
         senderAvatar: data.senderAvatar ?? null,
         createdAt: new Date().toISOString(),
       };
-      await db.collection(COL.messages).doc(docId(id)).set(row);
+      await writeMessagePaths(id, data.channelId, row);
+
+      // #region agent log
+      fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
+        body: JSON.stringify({
+          sessionId: "c7ba17",
+          location: "firestore.ts:createMessage",
+          message: "dual-path message write",
+          data: { messageId: id, channelId: data.channelId },
+          hypothesisId: "H4",
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (data.parentMessageId) {
         const rootRef = db.collection(COL.messages).doc(docId(data.parentMessageId));
@@ -1468,8 +1591,14 @@ export function createFirestoreStore() {
       >,
     ): Promise<Message | null> {
       const ref = db.collection(COL.messages).doc(docId(id));
-      if (!(await ref.get()).exists) return null;
-      await ref.set(patch, { merge: true });
+      const existing = await ref.get();
+      if (!existing.exists) return null;
+      const channelId = Number(existing.data()?.channelId);
+      const patchRow: Record<string, unknown> = { ...patch };
+      if (patch.editedAt !== undefined) {
+        patchRow.editedAt = patch.editedAt?.toISOString() ?? null;
+      }
+      await writeMessagePaths(id, channelId, patchRow, true);
       const snap = await ref.get();
       return mapMessage(snap.data()!, snap.id);
     },
@@ -1490,17 +1619,15 @@ export function createFirestoreStore() {
       if (m.deletedAt) return m;
 
       const deletedAt = new Date();
+      const deletePatch = {
+        body: "",
+        attachments: null,
+        metadata: null,
+        deletedAt: deletedAt.toISOString(),
+        deletedById,
+      };
+      await writeMessagePaths(messageId, channelId, deletePatch, true);
       const ref = db.collection(COL.messages).doc(docId(messageId));
-      await ref.set(
-        {
-          body: "",
-          attachments: null,
-          metadata: null,
-          deletedAt: deletedAt.toISOString(),
-          deletedById,
-        },
-        { merge: true },
-      );
 
       const snap = await db.collection(COL.messages).where("channelId", "==", channelId).get();
       const active = snap.docs
@@ -1529,7 +1656,13 @@ export function createFirestoreStore() {
       if (!m) return null;
       const users = await this.listUsers();
       const user = users.find((u) => u.id === m.senderId);
-      return { ...m, senderName: user?.fullName ?? null };
+      const senderName = m.senderName ?? user?.fullName ?? null;
+      const senderAvatar = m.senderAvatar ?? user?.avatarUrl ?? null;
+      const isDeletedUser =
+        user?.status === "deleted" ||
+        user?.status === "inactive" ||
+        (!user && !!m.senderName);
+      return { ...m, senderName, senderAvatar, isDeletedUser };
     },
 
     async findCalendarEventById(id: number): Promise<CalendarEvent | null> {
@@ -1745,7 +1878,7 @@ export function createFirestoreStore() {
       return items
         .map((item) => ({
           ...item,
-          fullName: userMap[item.userId] ?? "Unknown",
+          fullName: userMap[item.userId] ?? "Former teammate",
           projectName: item.projectId != null ? projectMap[item.projectId] ?? null : null,
           totalPay: item.baseSalary + item.bonus,
         }))
@@ -2068,6 +2201,9 @@ function mapChannelMember(data: FirebaseFirestore.DocumentData, id: string) {
     channelId: data.channelId as number,
     userId: data.userId as number,
     role: data.role as string,
+    displayName: (data.displayName as string | null | undefined) ?? null,
+    displayAvatar: (data.displayAvatar as string | null | undefined) ?? null,
+    unavailableAt: data.unavailableAt ? toDate(data.unavailableAt) : null,
     starred: Boolean(data.starred),
     lastReadAt: data.lastReadAt ? toDate(data.lastReadAt) : null,
     lastReadMessageId: (data.lastReadMessageId as number) ?? null,
@@ -2080,6 +2216,8 @@ function mapMessage(data: FirebaseFirestore.DocumentData, id: string): Message {
     id: Number(id),
     channelId: data.channelId as number,
     senderId: data.senderId as number,
+    senderName: (data.senderName as string | null | undefined) ?? null,
+    senderAvatar: (data.senderAvatar as string | null | undefined) ?? null,
     body: (data.body as string) ?? "",
     attachments: normalizeMessageAttachments(data.attachments) ?? null,
     messageKind: (data.messageKind as string) ?? "text",

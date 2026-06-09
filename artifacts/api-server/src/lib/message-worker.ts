@@ -60,7 +60,7 @@ export function startMessageWorker(): Worker<PersistMessageJob> {
 
       const persisted = messageToJson(
         message,
-        data.senderName ?? "Unknown",
+        data.senderName ?? "Former teammate",
         data.senderAvatar ?? null,
       );
 

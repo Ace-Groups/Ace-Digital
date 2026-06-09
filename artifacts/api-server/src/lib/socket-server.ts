@@ -111,7 +111,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    socket.on("message:send", (raw: MessageSendPayload, ack?: (res: unknown) => void) => {
+    socket.on("message:send", async (raw: MessageSendPayload, ack?: (res: unknown) => void) => {
       try {
         const channelId = Number(raw?.channelId);
         const clientId = typeof raw?.clientId === "string" ? raw.clientId.trim() : "";
@@ -127,6 +127,16 @@ export function initSocketServer(httpServer: HttpServer): Server {
         if (!socket.data.postChannelIds?.has(channelId)) {
           ack?.({ status: "error", error: "You cannot post in this channel" });
           return;
+        }
+
+        const channel = await store.findChannelById(channelId);
+        if (channel?.type === "DM") {
+          const members = await store.listChannelMembers(channelId);
+          const peer = members.find((m) => m.userId !== userId);
+          if (peer?.isUnavailable) {
+            ack?.({ status: "error", error: "This person is no longer available" });
+            return;
+          }
         }
 
         let payload: ReturnType<typeof validateMessagePayload>;
@@ -158,7 +168,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
           clientId,
           channelId,
           senderId: ctx.userId,
-          senderName: socket.data.senderName ?? "Unknown",
+          senderName: socket.data.senderName ?? "Former teammate",
           senderAvatar: socket.data.senderAvatar ?? null,
           body: payload.body,
           attachments: payload.attachments,
@@ -266,7 +276,7 @@ async function broadcastNoteUsers(noteId: number) {
     const clients = await io.in(roomName).fetchSockets();
     const users = clients.map((c) => ({
       userId: c.data.user.userId,
-      fullName: c.data.senderName ?? "Unknown",
+      fullName: c.data.senderName ?? "Former teammate",
       avatarUrl: c.data.senderAvatar ?? null,
     }));
     const uniqueUsers = Array.from(

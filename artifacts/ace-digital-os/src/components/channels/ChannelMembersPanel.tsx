@@ -49,7 +49,8 @@ export function ChannelMembersPanel({
   const [memberSearch, setMemberSearch] = useState("");
 
   const memberIds = new Set(members?.map((m) => m.userId) ?? []);
-  const available = employees?.filter((e) => !memberIds.has(e.id)) ?? [];
+  const available =
+    employees?.filter((e) => !memberIds.has(e.id) && e.status === "active") ?? [];
 
   const filteredAvailable = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
@@ -203,16 +204,24 @@ export function ChannelMembersPanel({
             className={cn(
               "flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-3",
               isMobile ? "min-h-[3.25rem] py-2.5" : "py-2",
+              m.unavailable && "opacity-80",
             )}
           >
             <UserAvatar
               avatarUrl={m.avatarUrl}
               fullName={m.fullName}
-              className="h-9 w-9 shrink-0"
+              className={cn("h-9 w-9 shrink-0", m.unavailable && "grayscale")}
               iconSize={16}
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{m.fullName}</p>
+              <p className="flex flex-wrap items-center gap-1.5 truncate text-sm font-medium">
+                <span className="truncate">{m.fullName}</span>
+                {m.unavailable && (
+                  <span className="shrink-0 rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Unavailable
+                  </span>
+                )}
+              </p>
               <p className="truncate text-xs text-muted-foreground">{m.email}</p>
             </div>
             <Badge variant="secondary" className="shrink-0 text-[10px] capitalize">

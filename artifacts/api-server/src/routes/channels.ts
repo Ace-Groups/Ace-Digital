@@ -47,6 +47,30 @@ async function dmPeerForChannel(channelId: number, userId: number) {
     dmPeerUserId: peer.userId,
     dmPeerName: peer.fullName,
     dmPeerAvatar: peer.avatarUrl ?? null,
+    dmPeerUnavailable: Boolean(peer.isUnavailable),
+  };
+}
+
+async function rejectIfDmPeerUnavailable(
+  channel: { type: string },
+  channelId: number,
+  userId: number,
+): Promise<string | null> {
+  if (channel.type !== "DM") return null;
+  const peer = await dmPeerForChannel(channelId, userId);
+  if (peer?.dmPeerUnavailable) {
+    return "This person is no longer available";
+  }
+  return null;
+}
+
+function messageSender(
+  m: { senderName?: string | null; senderAvatar?: string | null },
+  fallback?: { fullName?: string | null; avatarUrl?: string | null } | null,
+) {
+  return {
+    name: m.senderName ?? fallback?.fullName ?? "Former teammate",
+    avatar: m.senderAvatar ?? fallback?.avatarUrl ?? null,
   };
 }
 
@@ -62,7 +86,12 @@ function channelListItem(
   meta: Awaited<ReturnType<typeof store.listChannelListMeta>>,
   teamMap: Record<number, string>,
   adminAll: boolean,
-  dmPeer?: { dmPeerUserId: number; dmPeerName: string; dmPeerAvatar: string | null } | null,
+  dmPeer?: {
+    dmPeerUserId: number;
+    dmPeerName: string;
+    dmPeerAvatar: string | null;
+    dmPeerUnavailable?: boolean;
+  } | null,
 ) {
   if (!c) return null;
   return {
@@ -85,6 +114,7 @@ function channelListItem(
     dmPeerUserId: dmPeer?.dmPeerUserId ?? null,
     dmPeerName: dmPeer?.dmPeerName ?? null,
     dmPeerAvatar: dmPeer?.dmPeerAvatar ?? null,
+    dmPeerUnavailable: dmPeer?.dmPeerUnavailable ?? false,
     createdById: c.createdById ?? null,
     createdAt: toIso(c.createdAt) ?? new Date().toISOString(),
   };
@@ -365,6 +395,7 @@ router.get(
         fullName: m.fullName,
         email: m.email,
         avatarUrl: m.avatarUrl,
+        unavailable: Boolean(m.isUnavailable),
         role: m.role,
         joinedAt: m.joinedAt.toISOString(),
       })),
@@ -587,11 +618,7 @@ router.get(
 
     res.json(
       messages.map((m) =>
-        messageToJson(
-          m,
-          m.senderName ?? "Unknown",
-          m.senderAvatar ?? null,
-        ),
+        messageToJson(m, messageSender(m).name, messageSender(m).avatar),
       ),
     );
   },
@@ -646,14 +673,9 @@ router.delete(
       return;
     }
 
-    const users = await store.listUsers();
-    const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
-    const sender = users.find((u) => u.id === deleted.senderId);
-    const deletedJson = messageToJson(
-      deleted,
-      sender?.fullName ?? "Unknown",
-      avatarMap[deleted.senderId] ?? null,
-    );
+    const sender = await store.findUserById(deleted.senderId);
+    const display = messageSender(deleted, sender);
+    const deletedJson = messageToJson(deleted, display.name, display.avatar);
     res.json(deletedJson);
   },
 );
@@ -676,6 +698,26 @@ router.post(
     }
     if (!canPostInChannel(ctx, access.channel, access.membership)) {
       res.status(403).json({ error: "You cannot post in this channel" });
+      return;
+    }
+
+    const dmBlocked = await rejectIfDmPeerUnavailable(access.channel, id, ctx.userId);
+    // #region agent log
+    fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c7ba17" },
+      body: JSON.stringify({
+        sessionId: "c7ba17",
+        location: "channels.ts:POST messages",
+        message: "dm send guard",
+        data: { channelId: id, channelType: access.channel.type, blocked: Boolean(dmBlocked) },
+        hypothesisId: "H3",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (dmBlocked) {
+      res.status(403).json({ error: dmBlocked });
       return;
     }
 
@@ -722,7 +764,7 @@ router.post(
 
       const createdJson = messageToJson(
         message,
-        sender?.fullName ?? "Unknown",
+        sender?.fullName ?? "Former teammate",
         sender?.avatarUrl ?? null,
       );
       res.status(201).json(createdJson);
@@ -847,12 +889,10 @@ router.post(
       return;
     }
 
+    const withSender = await store.findMessageByIdWithSender(messageId);
     const sender = await store.findUserById(updated.senderId);
-    const reactionJson = messageToJson(
-      updated,
-      sender?.fullName ?? "Unknown",
-      sender?.avatarUrl ?? null,
-    );
+    const display = messageSender(withSender ?? updated, sender);
+    const reactionJson = messageToJson(withSender ?? updated, display.name, display.avatar);
     res.json(reactionJson);
   },
 );
@@ -924,12 +964,10 @@ router.patch(
       return;
     }
 
+    const withSender = await store.findMessageByIdWithSender(messageId);
     const sender = await store.findUserById(updated.senderId);
-    const pollJson = messageToJson(
-      updated,
-      sender?.fullName ?? "Unknown",
-      sender?.avatarUrl ?? null,
-    );
+    const display = messageSender(withSender ?? updated, sender);
+    const pollJson = messageToJson(withSender ?? updated, display.name, display.avatar);
     res.json(pollJson);
   },
 );
@@ -998,12 +1036,10 @@ router.patch(
       return;
     }
 
+    const withSender = await store.findMessageByIdWithSender(messageId);
     const sender = await store.findUserById(updated.senderId);
-    const rsvpJson = messageToJson(
-      updated,
-      sender?.fullName ?? "Unknown",
-      sender?.avatarUrl ?? null,
-    );
+    const display = messageSender(withSender ?? updated, sender);
+    const rsvpJson = messageToJson(withSender ?? updated, display.name, display.avatar);
     res.json(rsvpJson);
   },
 );
@@ -1053,12 +1089,10 @@ router.patch(
       return;
     }
 
+    const withSender = await store.findMessageByIdWithSender(messageId);
     const sender = await store.findUserById(updated.senderId);
-    const json = messageToJson(
-      updated,
-      sender?.fullName ?? "Unknown",
-      sender?.avatarUrl ?? null,
-    );
+    const display = messageSender(withSender ?? updated, sender);
+    const json = messageToJson(withSender ?? updated, display.name, display.avatar);
     res.json(json);
   },
 );
@@ -1123,23 +1157,18 @@ router.get(
     }
 
     const pins = await store.listChannelPins(id);
-    const users = await store.listUsers();
-    const avatarMap = Object.fromEntries(users.map((u) => [u.id, u.avatarUrl]));
     const out = await Promise.all(
       pins.map(async (pin) => {
         const msg = await store.findMessageByIdWithSender(pin.messageId);
         if (!msg) return null;
-        const sender = users.find((u) => u.id === msg.senderId);
+        const sender = await store.findUserById(msg.senderId);
+        const display = messageSender(msg, sender);
         return {
           channelId: pin.channelId,
           messageId: pin.messageId,
           pinnedById: pin.pinnedById,
           pinnedAt: pin.pinnedAt.toISOString(),
-          message: messageToJson(
-            msg,
-            msg.senderName ?? sender?.fullName ?? "Unknown",
-            avatarMap[msg.senderId] ?? sender?.avatarUrl ?? null,
-          ),
+          message: messageToJson(msg, display.name, display.avatar),
         };
       }),
     );
@@ -1186,16 +1215,13 @@ router.post(
     const pin = await store.pinMessage(channelId, messageId, ctx.userId);
     const msg = await store.findMessageByIdWithSender(messageId);
     const sender = await store.findUserById(msg?.senderId ?? message.senderId);
+    const display = messageSender(msg ?? message, sender);
     res.status(201).json({
       channelId: pin.channelId,
       messageId: pin.messageId,
       pinnedById: pin.pinnedById,
       pinnedAt: pin.pinnedAt.toISOString(),
-      message: messageToJson(
-        msg ?? message,
-        msg?.senderName ?? sender?.fullName ?? "Unknown",
-        sender?.avatarUrl ?? null,
-      ),
+      message: messageToJson(msg ?? message, display.name, display.avatar),
     });
   },
 );
@@ -1331,6 +1357,7 @@ router.post(
         });
         await store.addChannelMember(channel.id, ctx.userId, "owner");
         await store.addChannelMember(channel.id, targetUserId, "member");
+        const opener = await store.findUserById(ctx.userId);
         void store
           .createMessage({
             channelId: channel.id,
@@ -1343,6 +1370,8 @@ router.post(
             editedAt: null,
             deletedAt: null,
             deletedById: null,
+            senderName: opener?.fullName ?? null,
+            senderAvatar: opener?.avatarUrl ?? null,
           })
           .catch((e) => console.error("[dm-system]", e));
       }

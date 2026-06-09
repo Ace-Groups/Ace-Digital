@@ -47,6 +47,7 @@ export function OpenDmDialog({ open, onClose, onOpened }: OpenDmDialogProps) {
     const q = query.trim().toLowerCase();
     return (employees ?? [])
       .filter((e) => e.id !== user?.id)
+      .filter((e) => e.status === "active")
       .filter(
         (e) =>
           !q ||

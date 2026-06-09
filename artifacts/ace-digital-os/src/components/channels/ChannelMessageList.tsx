@@ -235,11 +235,14 @@ export function ChannelMessageList({
 
   if (isLoading) {
     return (
-      <div className="w-full space-y-2 px-5 py-2">
+      <div className="w-full space-y-3 px-4 py-4 sm:px-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex gap-2">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-12 w-48 max-w-[75%] rounded-2xl" />
+          <div key={i} className="flex gap-3">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3 w-36 rounded-full" />
+              <Skeleton className="h-10 w-full max-w-[34rem] rounded-md" />
+            </div>
           </div>
         ))}
       </div>
@@ -248,9 +251,18 @@ export function ChannelMessageList({
 
   if (!filtered.length) {
     return (
-      <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
-        <p>{searchQuery ? "No messages match your search" : "No messages yet"}</p>
-        {!searchQuery && <p className="text-xs">Say hello to the team</p>}
+      <div className="flex h-full min-h-[260px] flex-col items-center justify-center gap-2 px-5 text-center text-sm text-muted-foreground">
+        <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-muted/30 text-lg shadow-sm">
+          {searchQuery ? "…" : "💬"}
+        </div>
+        <p className="font-medium text-foreground">
+          {searchQuery ? "No matching messages" : "You're at the beginning"}
+        </p>
+        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+          {searchQuery
+            ? "Try a different word or clear search to return to the full thread."
+            : "Say hello, share a file, or start a thread. Everything stays in one place."}
+        </p>
       </div>
     );
   }
@@ -260,7 +272,7 @@ export function ChannelMessageList({
       ref={containerRef}
       className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
     >
-      <div className="flex w-full max-w-none flex-col overflow-visible px-3 py-2 sm:px-5 sm:py-3">
+      <div className="flex w-full max-w-none flex-col overflow-visible px-3 py-3 sm:px-6 sm:py-4">
       {loadingOlder && (
         <p className="mb-2 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}

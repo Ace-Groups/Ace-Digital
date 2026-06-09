@@ -9,19 +9,17 @@ import {
 import {
   getFirebaseDb,
   ensureFirebaseAuth,
-  isFirebaseChatEnabled,
   isFirebaseRealtimeEnabled,
 } from "@/lib/firebase-client";
+import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import {
   collection,
   query,
-  where,
   orderBy,
   limit,
   onSnapshot,
-  doc,
-  setDoc,
-  serverTimestamp,
+  type QuerySnapshot,
+  type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
@@ -32,6 +30,11 @@ function messageKey(channelId: number) {
 }
 
 function mapFirestoreDoc(id: string, data: Record<string, unknown>): Message {
+  const senderUnavailable =
+    data.senderUnavailable === true ||
+    data.isDeletedUser === true ||
+    undefined;
+
   return {
     id: Number(id),
     channelId: Number(data.channelId),
@@ -65,13 +68,33 @@ function mapFirestoreDoc(id: string, data: Record<string, unknown>): Message {
         : data.createdAt instanceof Date
           ? data.createdAt.toISOString()
           : new Date().toISOString(),
-  };
+    ...(senderUnavailable ? { senderUnavailable: true as const } : {}),
+  } as Message & { senderUnavailable?: boolean };
+}
+
+function mergeMessageLists(existing: Message[], incoming: Message[]): Message[] {
+  const byId = new Map(existing.map((m) => [m.id, m]));
+  for (const msg of incoming) {
+    const prev = byId.get(msg.id);
+    const prevUnavailable = (prev as Message & { senderUnavailable?: boolean })
+      ?.senderUnavailable;
+    const incomingUnavailable = (msg as Message & { senderUnavailable?: boolean })
+      .senderUnavailable;
+    byId.set(msg.id, {
+      ...(prev ?? {}),
+      ...msg,
+      senderUnavailable: incomingUnavailable ?? prevUnavailable,
+    } as Message);
+  }
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
 }
 
 /**
  * Real-time Firestore subscription for channel messages.
  * Uses channels/{channelId}/messages subcollection, ordered by createdAt asc, limit 100.
- * Syncs into React Query cache for the message list.
+ * Merges into React Query cache (preserves enriched HTTP/socket fields).
  */
 export function useChannelMessagesFirestore(
   channelId: number | null,
@@ -92,21 +115,21 @@ export function useChannelMessagesFirestore(
       const db = getFirebaseDb();
       const messagesRef = collection(db, "channels", String(channelId), "messages");
 
-      const q = query(
-        messagesRef,
-        orderBy("createdAt", "asc"),
-        limit(100),
-      );
+      const q = query(messagesRef, orderBy("createdAt", "asc"), limit(100));
 
-      const handleSnapshot = (snap: Parameters<NonNullable<Parameters<typeof onSnapshot>[1]>>[0]) => {
+      const handleSnapshot = (snap: QuerySnapshot<DocumentData>) => {
         const items = snap.docs.map((d) =>
           mapFirestoreDoc(d.id, d.data() as Record<string, unknown>),
         );
 
         const key = messageKey(channelId);
-        queryClient.setQueryData<Message[]>(key, items);
+        queryClient.setQueryData<Message[]>(key, (old) =>
+          mergeMessageLists(old ?? [], items),
+        );
 
-        const latest = [...items].reverse().find((m) => !m.deleted);
+        const merged =
+          queryClient.getQueryData<Message[]>(key) ?? items;
+        const latest = [...merged].reverse().find((m) => !m.deleted);
         queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), (old) =>
           (old ?? []).map((channel) =>
             channel.id === channelId
@@ -126,17 +149,6 @@ export function useChannelMessagesFirestore(
       };
 
       unsubRef.current = onSnapshot(q, handleSnapshot, handleError);
-
-      // Write channel activity doc so the activity listener picks up changes
-      try {
-        await setDoc(
-          doc(db, "channels", String(channelId)),
-          { lastPostAt: serverTimestamp() },
-          { merge: true },
-        );
-      } catch {
-        // non-critical — activity listener will catch on first message
-      }
     })();
 
     return () => {

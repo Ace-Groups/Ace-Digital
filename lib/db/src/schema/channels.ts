@@ -29,8 +29,11 @@ export const channelMembersTable = pgTable(
       .references(() => channelsTable.id, { onDelete: "cascade" }),
     userId: integer("user_id")
       .notNull()
-      .references(() => usersTable.id, { onDelete: "cascade" }),
+      .references(() => usersTable.id),
     role: text("role").notNull().default("member"),
+    displayName: text("display_name"),
+    displayAvatar: text("display_avatar"),
+    unavailableAt: timestamp("unavailable_at", { withTimezone: true }),
     starred: boolean("starred").notNull().default(false),
     lastReadAt: timestamp("last_read_at", { withTimezone: true }),
     lastReadMessageId: integer("last_read_message_id"),
@@ -43,6 +46,8 @@ export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
   channelId: integer("channel_id").notNull().references(() => channelsTable.id),
   senderId: integer("sender_id").notNull().references(() => usersTable.id),
+  senderName: text("sender_name"),
+  senderAvatar: text("sender_avatar"),
   body: text("body").notNull().default(""),
   attachments: jsonb("attachments").$type<MessageAttachment[]>(),
   messageKind: text("message_kind").notNull().default("text"),

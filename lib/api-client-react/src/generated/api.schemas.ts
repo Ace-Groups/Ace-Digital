@@ -1042,6 +1042,8 @@ export interface Channel {
   dmPeerName?: string | null;
   /** @nullable */
   dmPeerAvatar?: string | null;
+  /** For DM channels, whether the other participant is no longer available */
+  dmPeerUnavailable?: boolean;
   /** @nullable */
   createdById?: number | null;
   createdAt?: string;
@@ -1080,6 +1082,8 @@ export interface ChannelMember {
   email?: string;
   /** @nullable */
   avatarUrl?: string | null;
+  /** Member account is deleted or no longer available */
+  unavailable?: boolean;
   role: string;
   joinedAt?: string;
 }
@@ -1145,6 +1149,8 @@ export interface Message {
   /** @nullable */
   editedAt?: string | null;
   deleted?: boolean;
+  /** Sender account is deleted or no longer available */
+  senderUnavailable?: boolean;
   createdAt: string;
 }
 

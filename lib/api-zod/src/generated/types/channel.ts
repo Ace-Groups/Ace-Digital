@@ -43,6 +43,8 @@ export interface Channel {
   dmPeerName?: string | null;
   /** @nullable */
   dmPeerAvatar?: string | null;
+  /** For DM channels, whether the other participant is no longer available */
+  dmPeerUnavailable?: boolean;
   /** @nullable */
   createdById?: number | null;
   createdAt?: string;

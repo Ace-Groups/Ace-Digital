@@ -21,12 +21,14 @@ export async function channelToJson(
   let dmPeerName: string | null = null;
   let dmPeerAvatar: string | null = null;
 
+  let dmPeerUnavailable = false;
   if (channel.type === "DM" && options?.userId != null) {
     const peer = members.find((m) => m.userId !== options.userId);
     if (peer) {
       dmPeerUserId = peer.userId;
       dmPeerName = peer.fullName;
       dmPeerAvatar = peer.avatarUrl ?? null;
+      dmPeerUnavailable = Boolean(peer.isUnavailable);
     }
   }
 
@@ -56,6 +58,7 @@ export async function channelToJson(
     dmPeerUserId,
     dmPeerName,
     dmPeerAvatar,
+    dmPeerUnavailable,
     createdById: channel.createdById ?? null,
     createdAt: channel.createdAt.toISOString(),
   };
