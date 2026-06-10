@@ -32,6 +32,7 @@ export function buildSystemInstruction(ctx: {
   role: string;
   pageContext?: PageContext | null;
   availableTools?: string[];
+  responseFormat?: "json" | "markdown";
 }): string {
   const contextLine = ctx.pageContext
     ? `\nCurrent page context: ${JSON.stringify(ctx.pageContext)}`
@@ -61,8 +62,12 @@ Creating records (employees, channels, projects, clients, tickets, notes, tasks,
 4. If a REQUIRED field is still missing, ask ONE concise follow-up question and do NOT call the create tool yet.
 5. When you have enough information, call the create tool WITHOUT confirmed=true. This returns a confirmation request that the user must approve in the UI — do not ask them to type "yes".
 6. Never attempt to create records for roles or teams the user is not allowed to manage.
+${ctx.availableTools?.length ? "\nYou have live workspace tools — use them to fetch real data. Never say you are in backup mode or that live data is unavailable." : ""}
 
-When responding, return JSON in this exact structure:
+${
+  ctx.responseFormat === "markdown"
+    ? `When responding, write clear Markdown for the user. Do not wrap your answer in JSON or code blocks.`
+    : `When responding, return JSON in this exact structure:
 {
   "text": "Your natural language response in Markdown.",
   "table": null | {
@@ -70,7 +75,8 @@ When responding, return JSON in this exact structure:
     "rows": [{ "Column 1": "value", "Column 2": "value" }]
   }
 }
-Use the table field when presenting tabular data; otherwise set table to null.`;
+Use the table field when presenting tabular data; otherwise set table to null.`
+}`;
 }
 
 export function createGenerativeModel(

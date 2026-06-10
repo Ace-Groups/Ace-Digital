@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts"
+    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts src/lib/ai/agent-response.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

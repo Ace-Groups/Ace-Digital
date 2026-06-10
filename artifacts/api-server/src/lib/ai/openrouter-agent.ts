@@ -6,7 +6,8 @@ import {
 } from "./openrouter-client";
 import { toOpenRouterTools } from "./openrouter-tools";
 import { executeTool, getToolDeclarations } from "./tool-registry";
-import type { AgentResult, AiMessageMetadata, PageContext } from "./types";
+import { parseAgentModelResponse } from "./agent-response";
+import type { AgentResult, PageContext } from "./types";
 import { logAiAudit } from "./audit";
 
 function isPendingConfirmation(output: unknown): output is {
@@ -20,29 +21,6 @@ function isPendingConfirmation(output: unknown): output is {
     typeof output === "object" &&
     (output as { status?: unknown }).status === "pending_confirmation"
   );
-}
-
-function parseModelResponse(responseText: string): {
-  text: string;
-  metadata: AiMessageMetadata | null;
-} {
-  let parsedText = responseText;
-  let metadata: AiMessageMetadata | null = null;
-
-  try {
-    const parsed = JSON.parse(responseText) as {
-      text?: string;
-      table?: AiMessageMetadata["tableData"];
-    };
-    parsedText = parsed.text || responseText;
-    if (parsed.table?.columns && parsed.table?.rows) {
-      metadata = { layout: "table", tableData: parsed.table };
-    }
-  } catch {
-    // plain text fallback
-  }
-
-  return { text: parsedText, metadata };
 }
 
 async function prefetchWorkspaceContext(
@@ -84,6 +62,7 @@ function buildInitialMessages(
         role: ctx.role,
         pageContext,
         availableTools,
+        responseFormat: "markdown",
       }),
     },
   ];
@@ -242,8 +221,8 @@ export async function runOpenRouterAgent(options: {
       "I fetched your workspace data but couldn't format a reply. Please try asking again.";
   }
 
-  const { text, metadata } = parseModelResponse(lastAssistantText);
-  const finalMetadata: AiMessageMetadata | null = metadata
+  const { text, metadata } = parseAgentModelResponse(lastAssistantText);
+  const finalMetadata = metadata
     ? { ...metadata, toolsUsed }
     : toolsUsed.length
       ? { toolsUsed }

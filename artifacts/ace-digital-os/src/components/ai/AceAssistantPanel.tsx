@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { streamAiChat } from "@/lib/ai-stream";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { getProactiveInsights } from "@/lib/ai-insights";
+import { formatAiDisplayText } from "@/lib/ai-message-format";
 
 
 export function AceAssistantPanel() {
@@ -237,7 +238,7 @@ export function AceAssistantPanel() {
                       <AceAiAvatar size="sm" className="mt-0.5" />
                       <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
                         {m.content && m.metadata?.layout !== "service_error" && (
-                          <p className="whitespace-pre-wrap">{m.content}</p>
+                          <p className="whitespace-pre-wrap">{formatAiDisplayText(m.content)}</p>
                         )}
                         <AiMessageContent
                           body={m.content}
@@ -265,7 +266,7 @@ export function AceAssistantPanel() {
                     <AceAiAvatar size="sm" className="mt-0.5" />
                     <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
                       {streamingText ? (
-                        <p className="whitespace-pre-wrap">{streamingText}</p>
+                        <p className="whitespace-pre-wrap">{formatAiDisplayText(streamingText)}</p>
                       ) : (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Loader2 size={14} className="animate-spin" />

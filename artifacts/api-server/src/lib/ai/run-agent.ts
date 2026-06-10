@@ -10,6 +10,7 @@ import { isAgentConfigured } from "./agent-config";
 import { isOpenRouterConfigured } from "./openrouter-client";
 import { runOpenRouterAgent } from "./openrouter-agent";
 import { executeTool, getToolRequiredPermissions } from "./tool-registry";
+import { parseAgentModelResponse } from "./agent-response";
 import type { AgentResult, AiMessageMetadata, PageContext } from "./types";
 import { logAiAudit } from "./audit";
 
@@ -36,29 +37,6 @@ function isPendingConfirmation(output: unknown): output is {
     typeof output === "object" &&
     (output as { status?: unknown }).status === "pending_confirmation"
   );
-}
-
-function parseModelResponse(responseText: string): {
-  text: string;
-  metadata: AiMessageMetadata | null;
-} {
-  let parsedText = responseText;
-  let metadata: AiMessageMetadata | null = null;
-
-  try {
-    const parsed = JSON.parse(responseText) as {
-      text?: string;
-      table?: AiMessageMetadata["tableData"];
-    };
-    parsedText = parsed.text || responseText;
-    if (parsed.table?.columns && parsed.table?.rows) {
-      metadata = { layout: "table", tableData: parsed.table };
-    }
-  } catch {
-    // plain text fallback
-  }
-
-  return { text: parsedText, metadata };
 }
 
 async function runGeminiAgent(
@@ -155,7 +133,7 @@ async function runGeminiAgent(
         console.error("[AI] Error reading response:", e);
       }
 
-      const { text, metadata } = parseModelResponse(responseText);
+      const { text, metadata } = parseAgentModelResponse(responseText);
       const finalMetadata: AiMessageMetadata | null = metadata
         ? { ...metadata, toolsUsed }
         : toolsUsed.length
