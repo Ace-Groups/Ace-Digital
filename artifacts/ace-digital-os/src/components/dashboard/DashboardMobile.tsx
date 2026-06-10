@@ -6,6 +6,7 @@ import { DashboardStatCards } from "./DashboardStatCards";
 import { DashboardSecondaryWidgets, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
 import { AskAceCard } from "@/components/ai/AskAceCard";
+import { HomeScreenWidgets } from "@/components/pwa/HomeScreenWidgets";
 import { useDashboardPage } from "./useDashboardPage";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,16 @@ export function DashboardMobile() {
           hasData={Boolean(dash)}
           compact
           dash={dash}
+        />
+      </StaggerItem>
+
+      <StaggerItem>
+        <HomeScreenWidgets
+          dash={dash}
+          isLoading={isLoading}
+          widgets={widgets}
+          showChat={showChat}
+          firstName={firstName}
         />
       </StaggerItem>
 

@@ -4,6 +4,7 @@ import { DashboardStatCards } from "./DashboardStatCards";
 import { UpcomingDeadlinesWidget, TeamLoadWidget, UpcomingCalendarWidget, RecentActivityWidget, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
 import { AskAceCard } from "@/components/ai/AskAceCard";
+import { HomeScreenWidgets } from "@/components/pwa/HomeScreenWidgets";
 import { useDashboardPage } from "./useDashboardPage";
 
 export function DashboardDesktop() {
@@ -20,6 +21,16 @@ export function DashboardDesktop() {
           isFetching={isFetching}
           hasData={Boolean(dash)}
           dash={dash}
+        />
+      </StaggerItem>
+
+      <StaggerItem>
+        <HomeScreenWidgets
+          dash={dash}
+          isLoading={isLoading}
+          widgets={widgets}
+          showChat={showChat}
+          firstName={firstName}
         />
       </StaggerItem>
 

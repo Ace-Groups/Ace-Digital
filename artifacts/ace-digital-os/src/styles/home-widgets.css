@@ -1,0 +1,303 @@
+/* ─── PWA home screen widgets (bento + shortcut dock) ─── */
+
+.home-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-widgets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-widgets-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.home-widgets-installed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+  border: 1px solid hsl(var(--primary) / 0.2);
+}
+
+.home-widgets-bento {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .home-widgets-bento {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-widgets-bento {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+.home-widget-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 108px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid hsl(var(--border) / 0.55);
+  background: hsl(var(--card) / 0.85);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.2s var(--motion-spring),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-widget-tile:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  box-shadow: 0 8px 28px hsl(var(--primary) / 0.12);
+}
+
+.home-widget-tile:active {
+  transform: scale(0.97);
+}
+
+.home-widget-tile--span-2 {
+  grid-column: span 2;
+  min-height: 124px;
+}
+
+@media (min-width: 1024px) {
+  .home-widget-tile--span-2 {
+    grid-column: span 2;
+    min-height: 132px;
+  }
+}
+
+.home-widget-tile--hero {
+  background:
+    radial-gradient(ellipse 120% 80% at 100% 0%, hsl(var(--primary) / 0.22), transparent 55%),
+    radial-gradient(ellipse 80% 60% at 0% 100%, hsl(var(--ace-sky) / 0.18), transparent 50%),
+    linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--primary) / 0.08) 100%);
+  border-color: hsl(var(--primary) / 0.25);
+}
+
+.home-widget-tile--tasks {
+  background: linear-gradient(160deg, hsl(174 72% 42% / 0.12), hsl(var(--card)));
+}
+
+.home-widget-tile--chat {
+  background: linear-gradient(160deg, hsl(220 90% 56% / 0.1), hsl(var(--card)));
+}
+
+.home-widget-tile--alerts {
+  background: linear-gradient(160deg, hsl(38 92% 50% / 0.12), hsl(var(--card)));
+}
+
+.home-widget-tile--notes {
+  background: linear-gradient(160deg, hsl(280 65% 55% / 0.1), hsl(var(--card)));
+}
+
+.home-widget-tile--ace {
+  background: linear-gradient(160deg, hsl(var(--primary) / 0.16), hsl(var(--card)));
+}
+
+.home-widget-tile--next {
+  background: linear-gradient(160deg, hsl(12 80% 55% / 0.1), hsl(var(--card)));
+}
+
+.home-widget-glow {
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: hsl(var(--primary) / 0.15);
+  filter: blur(28px);
+  pointer-events: none;
+  animation: home-widget-glow 6s ease-in-out infinite;
+}
+
+@keyframes home-widget-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-8px, 6px) scale(1.08);
+  }
+}
+
+.home-widget-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: hsl(var(--background) / 0.65);
+  border: 1px solid hsl(var(--border) / 0.5);
+  color: hsl(var(--primary));
+}
+
+.home-widget-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.home-widget-value {
+  margin-top: 2px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-widget-sub {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-widget-hero-time {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+@media (min-width: 640px) {
+  .home-widget-hero-time {
+    font-size: 2.25rem;
+  }
+}
+
+.home-widget-ring {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 44px;
+  height: 44px;
+}
+
+.home-widget-ring svg {
+  transform: rotate(-90deg);
+}
+
+.home-widget-ring-track {
+  fill: none;
+  stroke: hsl(var(--muted) / 0.5);
+  stroke-width: 4;
+}
+
+.home-widget-ring-fill {
+  fill: none;
+  stroke: hsl(var(--primary));
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s var(--motion-spring);
+}
+
+.home-widget-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-shortcut-dock {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-shortcut-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.home-shortcut-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--card) / 0.9);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  touch-action: manipulation;
+}
+
+.home-shortcut-pill:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--primary) / 0.06);
+}
+
+.home-shortcut-pill:active {
+  transform: scale(0.96);
+}
+
+.home-shortcut-pill svg {
+  color: hsl(var(--primary));
+}
+
+.home-widgets-hint {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.45;
+}

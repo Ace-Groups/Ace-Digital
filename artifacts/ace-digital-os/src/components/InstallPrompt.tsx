@@ -69,8 +69,8 @@ export function InstallPrompt() {
           <p className="text-sm font-semibold">Install Ace Digital</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {showIos
-              ? "Tap Share, then Add to Home Screen for the full app experience."
-              : "Add to your home screen for faster access and a native feel."}
+              ? "Tap Share → Add to Home Screen. Get live widgets, unread badges, and long-press shortcuts to Tasks, Chat & Notes."
+              : "Install for home screen widgets, unread badges on the icon, and quick shortcuts to Tasks, Chat, Calendar & Notes."}
           </p>
           {showAndroid && (
             <button

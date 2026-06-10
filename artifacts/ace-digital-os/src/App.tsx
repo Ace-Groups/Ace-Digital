@@ -11,6 +11,7 @@ import { SocketProvider, useSocket } from "@/contexts/SocketContext";
 import { useGlobalChatRealtime } from "@/hooks/use-global-chat-realtime";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
+import { usePwaAppBadge } from "@/hooks/use-pwa-app-badge";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -131,6 +132,7 @@ function GlobalChatBoot() {
   const { connected } = useSocket();
   useGlobalChatRealtime(isSessionVerified && connected);
   usePushNotifications();
+  usePwaAppBadge();
   return null;
 }
 
