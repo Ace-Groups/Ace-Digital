@@ -1,18 +1,27 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const port = Number(process.env.PORT ?? 5173);
-const basePath = process.env.BASE_PATH ?? "/";
+const repoRoot = path.resolve(import.meta.dirname, "../..");
 
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${process.env.PORT}"`);
-}
+export default defineConfig(async ({ mode }) => {
+  const env = loadEnv(mode, repoRoot, "");
+  const port = Number(env.PORT ?? process.env.PORT ?? 5173);
+  const basePath = env.BASE_PATH ?? process.env.BASE_PATH ?? "/";
+  /** Default to Render API so local v2 dev works without a local API process. */
+  const apiProxyTarget =
+    env.VITE_DEV_API_PROXY?.trim() ||
+    process.env.VITE_DEV_API_PROXY?.trim() ||
+    "https://ace-digital-api.onrender.com";
 
-export default defineConfig({
+  if (Number.isNaN(port) || port <= 0) {
+    throw new Error(`Invalid PORT value: "${env.PORT ?? process.env.PORT}"`);
+  }
+
+  return {
   base: basePath,
   plugins: [
     react(),
@@ -105,7 +114,7 @@ export default defineConfig({
   },
   server: {
     port,
-    strictPort: true,
+    strictPort: false,
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {
@@ -113,13 +122,19 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: apiProxyTarget,
         changeOrigin: true,
+        secure: true,
+        timeout: 120_000,
+        proxyTimeout: 120_000,
       },
       "/socket.io": {
-        target: "http://localhost:8080",
+        target: apiProxyTarget,
         ws: true,
         changeOrigin: true,
+        secure: true,
+        timeout: 120_000,
+        proxyTimeout: 120_000,
       },
     },
   },
@@ -128,4 +143,5 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
+};
 });

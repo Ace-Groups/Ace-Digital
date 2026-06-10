@@ -90,7 +90,7 @@ function ProtectedRoute({ component: Component }: { component: ComponentType }) 
   const { isAuthenticated, isBootstrapping, user } = useAuth();
   const [location] = useLocation();
 
-  if (isBootstrapping && !user) {
+  if (isBootstrapping) {
     return <LoadingScreen />;
   }
 

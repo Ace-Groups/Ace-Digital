@@ -9,6 +9,7 @@ import {
   StickyNote,
   Ticket,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hapticLight, hapticSheetOpen } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -22,11 +23,12 @@ const ACTIONS = [
 ];
 
 export function QuickCreateFab() {
+  const { isAuthenticated } = useAuth();
   const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
 
-  if (!isMobile) return null;
+  if (!isAuthenticated || !isMobile) return null;
 
   return (
     <>

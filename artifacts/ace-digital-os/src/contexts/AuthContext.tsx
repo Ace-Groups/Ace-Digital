@@ -112,8 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = apiUser ?? cachedUser;
   const isBootstrapping =
     !!token && (!sessionReady || isPending || isLoading || isRefreshing);
-  const isAuthenticated = !!token && !!user;
   const isSessionVerified = !token || (sessionReady && !!apiUser);
+  /** Require server-verified session so stale cached users never mount protected routes. */
+  const isAuthenticated = !!token && isSessionVerified && !!user;
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -184,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(null);
           setSessionReady(true);
           refreshAttemptedRef.current = false;
+          queryClient.clear();
         });
       return;
     }
@@ -195,7 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setSessionReady(true);
     refreshAttemptedRef.current = false;
-  }, [token, isPending, isLoading, isRefreshing, isError, error, refetch, refreshSession]);
+    queryClient.clear();
+  }, [token, isPending, isLoading, isRefreshing, isError, error, refetch, refreshSession, queryClient]);
 
   useEffect(() => {
     if (!token || !user || !isFirebaseChatEnabled()) return;

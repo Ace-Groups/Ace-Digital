@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { hapticLight } from "@/lib/haptics";
 import {
   CommandDialog,
@@ -37,6 +38,10 @@ import {
   useListEmployees,
   useListClients,
   useListNotes,
+  getListProjectsQueryKey,
+  getListEmployeesQueryKey,
+  getListClientsQueryKey,
+  getListNotesQueryKey,
 } from "@workspace/api-client-react";
 
 export function CommandPalette() {
@@ -44,12 +49,22 @@ export function CommandPalette() {
   const [, setLocation] = useLocation();
   const { resolvedTheme, setTheme } = useTheme();
   const { setOpen: setAssistantOpen } = useAceAssistant();
+  const { isSessionVerified } = useAuth();
+  const searchEnabled = open && isSessionVerified;
 
-  // Load searchable data
-  const { data: projects } = useListProjects();
-  const { data: employees } = useListEmployees({});
-  const { data: clients } = useListClients();
-  const { data: notes } = useListNotes();
+  // Load searchable data only when palette is open and user is signed in
+  const { data: projects } = useListProjects(undefined, {
+    query: { enabled: searchEnabled, queryKey: getListProjectsQueryKey() },
+  });
+  const { data: employees } = useListEmployees({}, {
+    query: { enabled: searchEnabled, queryKey: getListEmployeesQueryKey() },
+  });
+  const { data: clients } = useListClients({
+    query: { enabled: searchEnabled, queryKey: getListClientsQueryKey() },
+  });
+  const { data: notes } = useListNotes(undefined, {
+    query: { enabled: searchEnabled, queryKey: getListNotesQueryKey() },
+  });
 
   // Keyboard shortcut listener: ⌘K or Ctrl+K
   useEffect(() => {

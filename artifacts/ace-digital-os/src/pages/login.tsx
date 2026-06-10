@@ -90,7 +90,7 @@ export default function LoginPage() {
         return "Invalid email or password";
       }
       if (err.status >= 500 || err.status === 503) {
-        return "Could not reach the server. Try again in a moment.";
+        return "Server error — close extra dev tabs, run `pnpm dev` once, and try again.";
       }
     }
     if (err instanceof TypeError) {

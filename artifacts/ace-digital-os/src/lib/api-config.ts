@@ -17,11 +17,15 @@ const RENDER_WS_BASE = "https://ace-digital-api.onrender.com";
  * script), all REST traffic goes there instead (Render).
  */
 export function configureApiClient(): void {
+  // Dev: always same-origin `/api` → Vite proxy → Render (avoids CORS on localhost:517x).
+  if (import.meta.env.DEV) {
+    setBaseUrl(null);
+    return;
+  }
   const base = import.meta.env.VITE_API_BASE_URL?.trim();
   if (base) {
     setBaseUrl(base.replace(/\/+$/, ""));
   }
-  // Otherwise leave base URL empty → same-origin /api via Firebase rewrite
 }
 
 /**

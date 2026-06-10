@@ -18,7 +18,10 @@
     "deploy:render:docs": "echo 'Connect repo at https://dashboard.render.com — see docs/DEPLOY_RENDER.md'",
     "db:setup": "node scripts/ensure-database-url.mjs --init && node scripts/setup-local-postgres.mjs",
     "db:push": "pnpm --filter @workspace/db push",
-    "icons:generate": "node scripts/generate-app-icons.mjs"
+    "icons:generate": "node scripts/generate-app-icons.mjs",
+    "dev": "bash scripts/dev-local.sh",
+    "dev:api": "bash scripts/dev-api.sh",
+    "dev:local": "bash scripts/dev-local.sh"
   },
   "packageManager": "pnpm@10.33.2",
   "private": true,
