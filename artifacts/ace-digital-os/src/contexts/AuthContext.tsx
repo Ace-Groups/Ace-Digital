@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -54,6 +62,24 @@ function mapApiUser(raw: User): AuthUser {
   };
 }
 
+function sessionUsersEqual(a: AuthUser | null, b: AuthUser | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.id === b.id &&
+    a.email === b.email &&
+    a.fullName === b.fullName &&
+    a.role === b.role &&
+    a.teamId === b.teamId &&
+    a.teamName === b.teamName &&
+    a.jobTitle === b.jobTitle &&
+    a.avatarUrl === b.avatarUrl &&
+    a.phone === b.phone &&
+    a.status === b.status &&
+    a.mustChangePassword === b.mustChangePassword
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const initialToken = getAuthToken();
   const [token, setToken] = useState<string | null>(initialToken);
@@ -77,10 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const apiUser = rawUser ? mapApiUser(rawUser) : null;
+  const apiUser = useMemo(
+    () => (rawUser ? mapApiUser(rawUser) : null),
+    [rawUser],
+  );
   const user = apiUser ?? cachedUser;
   const isBootstrapping =
     !!token && (!sessionReady || isPending || isLoading || isRefreshing);
+  const isAuthenticated = !!token && !!user;
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -116,19 +146,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logoutMutation, queryClient]);
 
   useEffect(() => {
-    if (apiUser) {
-      writeSessionUser(apiUser);
-      setCachedUser(apiUser);
-      setSessionReady(true);
-      setLastActivity();
-      refreshAttemptedRef.current = false;
-    }
-  }, [apiUser]);
+    if (!rawUser) return;
+    const mapped = mapApiUser(rawUser);
+    writeSessionUser(mapped);
+    setCachedUser((prev) => (sessionUsersEqual(prev, mapped) ? prev : mapped));
+    setSessionReady((ready) => (ready ? ready : true));
+    setLastActivity();
+    refreshAttemptedRef.current = false;
+  }, [rawUser]);
 
   useEffect(() => {
     if (!token) {
-      setSessionReady(true);
-      setCachedUser(null);
+      refreshAttemptedRef.current = false;
+      setSessionReady((ready) => (ready ? ready : true));
+      setCachedUser((prev) => (prev === null ? prev : null));
       return;
     }
 
@@ -139,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const status = error instanceof ApiError ? error.status : null;
     if (status === 401 && !refreshAttemptedRef.current) {
       refreshAttemptedRef.current = true;
+      setSessionReady(false);
       void refreshSession()
         .then(() => refetch())
         .catch(() => {
@@ -148,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCachedUser(null);
           setToken(null);
           setSessionReady(true);
+          refreshAttemptedRef.current = false;
         });
       return;
     }
@@ -158,7 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCachedUser(null);
     setToken(null);
     setSessionReady(true);
-  }, [token, isPending, isLoading, isRefreshing, isError, error, apiUser, refetch, refreshSession]);
+    refreshAttemptedRef.current = false;
+  }, [token, isPending, isLoading, isRefreshing, isError, error, refetch, refreshSession]);
 
   useEffect(() => {
     if (!token || !user || !isFirebaseChatEnabled()) return;
@@ -192,26 +226,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useSessionActivity({
-    isAuthenticated: !!user && sessionReady,
+    isAuthenticated: isAuthenticated && sessionReady,
     logout,
     refreshSession,
   });
 
+  const contextValue = useMemo(
+    () => ({
+      user,
+      authToken: token,
+      isBootstrapping,
+      login,
+      logout,
+      refreshUser,
+      refreshSession,
+      isAuthenticated,
+    }),
+    [
+      user,
+      token,
+      isBootstrapping,
+      login,
+      logout,
+      refreshUser,
+      refreshSession,
+      isAuthenticated,
+    ],
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        authToken: token,
-        isBootstrapping,
-        login,
-        logout,
-        refreshUser,
-        refreshSession,
-        isAuthenticated: !!token && !!user,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 
