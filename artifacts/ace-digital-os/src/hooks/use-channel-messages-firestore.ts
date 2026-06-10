@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetChannelMessagesQueryKey,
   getListChannelsQueryKey,
+  getListDmsQueryKey,
   type Channel,
   type Message,
 } from "@workspace/api-client-react";
@@ -22,7 +23,11 @@ import {
   type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import {
+  CHANNEL_MESSAGE_PARAMS,
+  syncChannelMessagesFromCache,
+} from "@/hooks/use-room-message-list";
+import { dedupeOptimisticPairs } from "@/lib/chat-message-dedupe";
 import { messagePreviewText } from "@/lib/chat-reply";
 
 function messageKey(channelId: number) {
@@ -86,8 +91,10 @@ function mergeMessageLists(existing: Message[], incoming: Message[]): Message[] 
       senderUnavailable: incomingUnavailable ?? prevUnavailable,
     } as Message);
   }
-  return Array.from(byId.values()).sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  return dedupeOptimisticPairs(
+    Array.from(byId.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    ),
   );
 }
 
@@ -127,11 +134,11 @@ export function useChannelMessagesFirestore(
           mergeMessageLists(old ?? [], items),
         );
 
-        const merged =
-          queryClient.getQueryData<Message[]>(key) ?? items;
+        const merged = queryClient.getQueryData<Message[]>(key) ?? items;
+        syncChannelMessagesFromCache(channelId, merged);
         const latest = [...merged].reverse().find((m) => !m.deleted);
-        queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), (old) =>
-          (old ?? []).map((channel) =>
+        const patchSidebarPreview = (channels: Channel[] | undefined) =>
+          (channels ?? []).map((channel) =>
             channel.id === channelId
               ? {
                   ...channel,
@@ -139,8 +146,9 @@ export function useChannelMessagesFirestore(
                   lastMessagePreview: latest ? messagePreviewText(latest) : null,
                 }
               : channel,
-          ),
-        );
+          );
+        queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), patchSidebarPreview);
+        queryClient.setQueryData<Channel[]>(getListDmsQueryKey(), patchSidebarPreview);
       };
 
       const handleError = (err: Error) => {

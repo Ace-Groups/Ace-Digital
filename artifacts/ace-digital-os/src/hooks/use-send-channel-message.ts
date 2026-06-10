@@ -9,7 +9,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnsureChannelJoined, useSocket, useSocketEmit } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
-import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
+import { replaceMessageByClientIdInList } from "@/lib/chat-message-dedupe";
+import { tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 export type PendingMessage = Message & {
   clientId: string;
@@ -80,9 +81,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
       if (!channelId) return;
       pendingRef.current.delete(clientId);
       queryClient.setQueryData<Message[]>(messageQueryKey(channelId), (old) =>
-        (old ?? []).map((m) =>
-          "clientId" in m && (m as PendingMessage).clientId === clientId ? serverMsg : m,
-        ),
+        replaceMessageByClientIdInList(old ?? [], clientId, serverMsg),
       );
       onReplace?.(clientId, serverMsg);
     },

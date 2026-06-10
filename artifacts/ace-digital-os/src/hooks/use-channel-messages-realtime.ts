@@ -3,12 +3,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetChannelMessagesQueryKey,
   getListChannelsQueryKey,
+  getListDmsQueryKey,
   type Channel,
   type Message,
 } from "@workspace/api-client-react";
 import { useEnsureChannelJoined, useSocket } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { messagePreviewText } from "@/lib/chat-reply";
+import {
+  dedupeOptimisticPairs,
+  replaceMessageByClientIdInList,
+} from "@/lib/chat-message-dedupe";
 import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 type WsMessage = Message & { clientId?: string };
@@ -29,6 +34,7 @@ function hasMessage(list: Message[], incoming: WsMessage): boolean {
 }
 
 function upsertMessage(list: Message[], incoming: WsMessage): Message[] {
+  let next: Message[];
   if (incoming.clientId) {
     const tempId = tempMessageIdFromClientId(incoming.clientId);
     const kept = list.filter(
@@ -37,12 +43,13 @@ function upsertMessage(list: Message[], incoming: WsMessage): Message[] {
         m.id !== tempId &&
         m.id !== incoming.id,
     );
-    return [...kept, incoming as Message];
+    next = [...kept, incoming as Message];
+  } else if (list.some((m) => m.id === incoming.id)) {
+    next = list.map((m) => (m.id === incoming.id ? (incoming as Message) : m));
+  } else {
+    next = [...list, incoming as Message];
   }
-  if (list.some((m) => m.id === incoming.id)) {
-    return list.map((m) => (m.id === incoming.id ? (incoming as Message) : m));
-  }
-  return [...list, incoming as Message];
+  return dedupeOptimisticPairs(next);
 }
 
 function replacePersistedMessage(
@@ -50,11 +57,7 @@ function replacePersistedMessage(
   clientId: string,
   message: Message,
 ): Message[] {
-  const tempId = tempMessageIdFromClientId(clientId);
-  const kept = list.filter(
-    (m) => messageClientId(m) !== clientId && m.id !== tempId && m.id !== message.id,
-  );
-  return [...kept, message];
+  return replaceMessageByClientIdInList(list, clientId, message);
 }
 
 export type ChannelMessagesRealtimeHandlers = {
@@ -96,8 +99,8 @@ export function useChannelMessagesRealtime(
       queryClient.setQueryData<Message[]>(key, next);
 
       const latest = [...next].reverse().find((message) => !message.deleted);
-      queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), (old) =>
-        (old ?? []).map((channel) =>
+      const patchSidebarPreview = (channels: Channel[] | undefined) =>
+        (channels ?? []).map((channel) =>
           channel.id === channelId
             ? {
                 ...channel,
@@ -105,8 +108,9 @@ export function useChannelMessagesRealtime(
                 lastMessagePreview: latest ? messagePreviewText(latest) : null,
               }
             : channel,
-        ),
-      );
+        );
+      queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), patchSidebarPreview);
+      queryClient.setQueryData<Channel[]>(getListDmsQueryKey(), patchSidebarPreview);
       handlersRef.current?.onUpsert?.(incoming as Message);
     };
 

@@ -1,5 +1,6 @@
 /** Rocket.Chat RecordList-inspired ordered list with prepend/append/patch. */
 
+import { dedupeOptimisticPairs } from "@/lib/chat-message-dedupe";
 import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 export type RecordListStatus = "loading" | "ready" | "updating";
@@ -54,7 +55,7 @@ export class RecordList<T extends { id: number }> {
 
   setInitial(items: T[], hasMoreBefore = true): void {
     this.commit({
-      items: sortByCreatedAt(dedupeById(items)),
+      items: finalizeItems(items),
       status: "ready",
       hasMoreBefore,
     });
@@ -62,7 +63,7 @@ export class RecordList<T extends { id: number }> {
 
   replace(items: T[], hasMoreBefore?: boolean): void {
     this.commit({
-      items: sortByCreatedAt(dedupeById(items)),
+      items: finalizeItems(items),
       status: "ready",
       hasMoreBefore: hasMoreBefore ?? this.state.hasMoreBefore,
     });
@@ -85,7 +86,7 @@ export class RecordList<T extends { id: number }> {
     }
     this.commit({
       ...snap,
-      items: sortByCreatedAt([...byId.values()]),
+      items: finalizeItems([...byId.values()]),
       status: "ready",
     });
   }
@@ -136,7 +137,7 @@ export class RecordList<T extends { id: number }> {
     });
     this.commit({
       ...this.state,
-      items: sortByCreatedAt(dedupeById([...kept, msg])),
+      items: finalizeItems([...kept, msg]),
       status: "ready",
     });
   }
@@ -153,7 +154,7 @@ export class RecordList<T extends { id: number }> {
       });
       this.commit({
         ...this.state,
-        items: sortByCreatedAt(dedupeById([...kept, incoming])),
+        items: finalizeItems([...kept, incoming]),
         status: "ready",
       });
       return;
@@ -205,4 +206,8 @@ function dedupeById<T extends { id: number }>(items: T[]): T[] {
     seen.add(m.id);
     return true;
   });
+}
+
+function finalizeItems<T extends { id: number }>(items: T[]): T[] {
+  return sortByCreatedAt(dedupeOptimisticPairs(dedupeById(items)));
 }

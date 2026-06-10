@@ -9,8 +9,13 @@ import {
 } from "@workspace/api-client-react";
 import { useSocket } from "@/contexts/SocketContext";
 import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
-import { globalUpsertChannelMessage } from "@/hooks/use-room-message-list";
+import {
+  globalReplaceChannelMessageByClientId,
+  globalUpsertChannelMessage,
+} from "@/hooks/use-room-message-list";
+import { replaceMessageByClientIdInList } from "@/lib/chat-message-dedupe";
 import { messagePreviewText } from "@/lib/chat-reply";
+import { dedupeOptimisticPairs } from "@/lib/chat-message-dedupe";
 import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
 type WsMessage = Message & { clientId?: string };
@@ -20,6 +25,7 @@ function messageKey(channelId: number) {
 }
 
 function upsertInCache(list: Message[], incoming: WsMessage): Message[] {
+  let next: Message[];
   if (incoming.clientId) {
     const tempId = tempMessageIdFromClientId(incoming.clientId);
     const kept = list.filter(
@@ -28,20 +34,17 @@ function upsertInCache(list: Message[], incoming: WsMessage): Message[] {
         m.id !== tempId &&
         m.id !== incoming.id,
     );
-    return [...kept, incoming as Message];
+    next = [...kept, incoming as Message];
+  } else if (list.some((m) => m.id === incoming.id)) {
+    next = list.map((m) => (m.id === incoming.id ? (incoming as Message) : m));
+  } else {
+    next = [...list, incoming as Message];
   }
-  if (list.some((m) => m.id === incoming.id)) {
-    return list.map((m) => (m.id === incoming.id ? (incoming as Message) : m));
-  }
-  return [...list, incoming as Message];
+  return dedupeOptimisticPairs(next);
 }
 
 function replacePersisted(list: Message[], clientId: string, message: Message): Message[] {
-  const tempId = tempMessageIdFromClientId(clientId);
-  const kept = list.filter(
-    (m) => messageClientId(m) !== clientId && m.id !== tempId && m.id !== message.id,
-  );
-  return [...kept, message];
+  return replaceMessageByClientIdInList(list, clientId, message);
 }
 
 function patchChannelListPreview(
@@ -105,7 +108,7 @@ export function useGlobalChatRealtime(enabled: boolean) {
       queryClient.setQueryData<Message[]>(key, (old) =>
         replacePersisted(old ?? [], clientId, message),
       );
-      globalUpsertChannelMessage(channelId, message);
+      globalReplaceChannelMessageByClientId(channelId, clientId, message);
     };
 
     socket.on("message:new", onNew);

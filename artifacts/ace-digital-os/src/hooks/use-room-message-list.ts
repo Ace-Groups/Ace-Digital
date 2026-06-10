@@ -100,7 +100,7 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
         list.setInitial([], false);
       }
     },
-    [list],
+    [list, channelId],
   );
 
   const loadOlder = useCallback(async (): Promise<boolean> => {
@@ -183,6 +183,31 @@ export function useRoomMessageList(channelId: number | null, enabled: boolean) {
 /** Apply a realtime message to an in-memory channel list (any open thread). */
 export function globalUpsertChannelMessage(channelId: number, msg: Message): void {
   channelLists.get(channelId)?.upsertOne(msg);
+}
+
+/** Replace optimistic row by clientId in an open channel list (persisted ack). */
+export function globalReplaceChannelMessageByClientId(
+  channelId: number,
+  clientId: string,
+  msg: Message,
+): void {
+  channelLists.get(channelId)?.replaceByClientId(clientId, msg);
+}
+
+/** Keep RecordList aligned when Firestore updates the React Query cache directly. */
+export function syncChannelMessagesFromCache(channelId: number, items: Message[]): void {
+  const list = channelLists.get(channelId);
+  if (!list) return;
+  const snap = list.getSnapshot();
+  if (snap.status === "loading") {
+    list.setInitial(items, items.length >= CHANNEL_MESSAGE_PARAMS.limit);
+    return;
+  }
+  if (items.length > 0 && !shouldSkipIncomingMerge(snap.items, items)) {
+    list.mergeRealtime(items);
+  } else if (items.length === 0 && snap.items.length === 0) {
+    list.setInitial([], false);
+  }
 }
 
 /** Stable key so sync effect does not run when React Query returns a new array ref with same ids. */
