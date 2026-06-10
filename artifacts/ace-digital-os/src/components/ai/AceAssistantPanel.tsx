@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
 import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
-import { AceAiHero } from "@/components/ai/AceAiHero";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetAiConversation,
@@ -175,7 +174,7 @@ export function AceAssistantPanel() {
             )}
           >
             <GlassContainer variant="header" className="flex shrink-0 items-center gap-2 rounded-none border-b border-border/50 px-4 py-3">
-              <AceAiAvatar size="md" withRing />
+              <AceAiAvatar size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">Ask Ace</p>
                 {contextLabel && (
@@ -206,8 +205,11 @@ export function AceAssistantPanel() {
 
             <ScrollArea className="flex-1 px-4 py-3">
               {messages.length === 0 && !pendingUserMsg && (
-                <div className="mb-4 space-y-4">
-                  <AceAiHero className="max-w-[220px]" />
+                <div className="mb-4 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <AceAiAvatar size="sm" />
+                    <p className="text-sm font-medium">Ace AI</p>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     I can query projects, tasks, finance, tickets, calendar, notes, and more —
                     scoped to your permissions.

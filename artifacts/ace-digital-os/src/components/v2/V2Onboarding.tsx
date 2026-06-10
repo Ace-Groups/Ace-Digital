@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Zap, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AceAiHero } from "@/components/ai/AceAiHero";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { hapticSuccess } from "@/lib/haptics";
 
 const STORAGE_KEY = "ace-v2-onboarding-seen";
@@ -81,7 +81,7 @@ export function V2Onboarding() {
             </button>
             <div className="mb-5 flex min-h-14 items-center justify-center">
               {current.hero ? (
-                <AceAiHero className="max-w-[200px]" />
+                <AceAiAvatar size="lg" />
               ) : Icon ? (
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Icon size={26} />

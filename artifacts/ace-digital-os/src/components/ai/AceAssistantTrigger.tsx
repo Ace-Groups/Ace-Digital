@@ -23,7 +23,7 @@ export function AceAssistantTrigger({ collapsed, className }: AceAssistantTrigge
       )}
       aria-label="Ask Ace AI"
     >
-      <AceAiAvatar size="sm" withRing />
+      <AceAiAvatar size="sm" />
       {!collapsed && <span>Ask Ace</span>}
     </button>
   );

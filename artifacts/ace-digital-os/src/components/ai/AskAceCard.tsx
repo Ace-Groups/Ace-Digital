@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { SurfaceCard } from "@/components/design";
 import { Button } from "@/components/ui/button";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
-import { AceAiHero } from "@/components/ai/AceAiHero";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { hapticLight } from "@/lib/haptics";
 import { springSoft } from "@/components/design/motion";
 
@@ -23,11 +23,9 @@ export function AskAceCard() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={springSoft}>
-      <SurfaceCard padding="md" glow className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/5 via-card to-card">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex shrink-0 justify-center sm:w-[140px]">
-            <AceAiHero className="max-w-[200px] sm:max-w-none" />
-          </div>
+      <SurfaceCard padding="md" className="border-border/60">
+        <div className="flex items-start gap-3">
+          <AceAiAvatar size="md" className="mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="v2-stat-label">Ace Intelligence</p>
             <h3 className="text-base font-semibold tracking-tight">Ask Ace about your workspace</h3>

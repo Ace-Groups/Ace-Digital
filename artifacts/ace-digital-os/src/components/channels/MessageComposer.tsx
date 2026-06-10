@@ -643,7 +643,7 @@ export function MessageComposer({
                               <img
                                 src={ACEBOT_AVATAR}
                                 alt="Ace AI"
-                                className="h-7 w-7 rounded-full bg-primary/10 object-cover object-top"
+                                className="h-6 w-6 object-contain mix-blend-lighten dark:mix-blend-normal"
                               />
                               <div className="min-w-0 flex-1">
                                 <span className="block truncate">{c.label}</span>
