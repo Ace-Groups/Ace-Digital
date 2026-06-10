@@ -18,7 +18,7 @@ import {
   replaceMessageByClientIdInList,
 } from "@/lib/chat-message-dedupe";
 import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
-import { sameOrderedMessageIds } from "@/lib/message-list-equality";
+import { sameMessageListSnapshot } from "@/lib/message-list-equality";
 
 type WsMessage = Message & { clientId?: string };
 
@@ -88,7 +88,7 @@ export function useChannelMessagesRealtime(
       const key = messageKey(channelId);
       const prev = queryClient.getQueryData<Message[]>(key) ?? [];
       const next = upsertMessage(prev, incoming);
-      if (sameOrderedMessageIds(prev, next)) return;
+      if (sameMessageListSnapshot(prev, next)) return;
       queryClient.setQueryData<Message[]>(key, next);
 
       const latest = [...next].reverse().find((message) => !message.deleted);

@@ -99,64 +99,14 @@ export function StatusPage({
                 type="button"
                 size="lg"
                 className="gap-2 shadow-brand-sm"
-                onClick={() => {
-                  // #region agent log
-                  fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-Debug-Session-Id": "c75a30",
-                    },
-                    body: JSON.stringify({
-                      sessionId: "c75a30",
-                      runId: "error-nav",
-                      hypothesisId: "A",
-                      location: "StatusPage.tsx:primary-onClick",
-                      message: "primary action onClick fired",
-                      data: {
-                        label: primaryAction.label,
-                        href: primaryAction.href ?? null,
-                        pathname: window.location.pathname,
-                      },
-                      timestamp: Date.now(),
-                    }),
-                  }).catch(() => {});
-                  // #endregion
-                  primaryAction.onClick?.();
-                }}
+                onClick={primaryAction.onClick}
               >
                 <Home size={16} aria-hidden />
                 {primaryAction.label}
               </Button>
             ) : (
               <Button asChild size="lg" className="gap-2 shadow-brand-sm">
-                <Link
-                  href={primaryAction.href ?? "/"}
-                  onClick={() => {
-                    // #region agent log
-                    fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "c75a30",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "c75a30",
-                        runId: "error-nav",
-                        hypothesisId: "B",
-                        location: "StatusPage.tsx:primary-link",
-                        message: "primary action Link clicked",
-                        data: {
-                          label: primaryAction.label,
-                          href: primaryAction.href ?? "/",
-                          pathname: window.location.pathname,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                    // #endregion
-                  }}
-                >
+                <Link href={primaryAction.href ?? "/"}>
                   <Home size={16} aria-hidden />
                   {primaryAction.label}
                 </Link>

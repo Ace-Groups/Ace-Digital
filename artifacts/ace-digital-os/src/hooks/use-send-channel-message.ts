@@ -8,7 +8,10 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnsureChannelJoined, useSocket, useSocketEmit } from "@/contexts/SocketContext";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import {
+  CHANNEL_MESSAGE_PARAMS,
+  globalPatchChannelMessageByClientId,
+} from "@/hooks/use-room-message-list";
 import { replaceMessageByClientIdInList } from "@/lib/chat-message-dedupe";
 import { tempMessageIdFromClientId } from "@/lib/chat-message-ids";
 
@@ -98,6 +101,10 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
             : m,
         ),
       );
+      globalPatchChannelMessageByClientId(channelId, clientId, (m) => ({
+        ...(m as PendingMessage),
+        status: "failed",
+      }));
     },
     [channelId, queryClient],
   );

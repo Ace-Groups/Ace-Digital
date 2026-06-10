@@ -10,28 +10,6 @@ interface ErrorFallbackProps {
 export function ErrorFallback({ onRetry, errorMessage }: ErrorFallbackProps) {
   const signOut = useSignOutRedirect();
 
-  const goDashboard = () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7752/ingest/0a1917d0-6bbb-48b6-8f35-a60640186c6d", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "c75a30",
-      },
-      body: JSON.stringify({
-        sessionId: "c75a30",
-        runId: "error-nav",
-        hypothesisId: "A",
-        location: "ErrorFallback.tsx:goDashboard",
-        message: "navigating home via full page load",
-        data: { from: window.location.pathname },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    window.location.assign("/");
-  };
-
   return (
     <StatusPage
       code="500"
@@ -43,7 +21,10 @@ export function ErrorFallback({ onRetry, errorMessage }: ErrorFallbackProps) {
       }
       tone="danger"
       onSignOut={signOut}
-      primaryAction={{ label: "Back to dashboard", onClick: goDashboard }}
+      primaryAction={{
+        label: "Back to dashboard",
+        onClick: () => window.location.assign("/"),
+      }}
       secondaryAction={{
         label: "Try again",
         onClick: onRetry,

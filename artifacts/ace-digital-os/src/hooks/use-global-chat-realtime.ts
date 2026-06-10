@@ -107,10 +107,13 @@ export function useGlobalChatRealtime(enabled: boolean) {
       if (!channelId) return;
 
       const key = messageKey(channelId);
-      queryClient.setQueryData<Message[]>(key, (old) =>
-        replacePersisted(old ?? [], clientId, message),
-      );
+      let next: Message[] = [];
+      queryClient.setQueryData<Message[]>(key, (old) => {
+        next = replacePersisted(old ?? [], clientId, message);
+        return next;
+      });
       globalReplaceChannelMessageByClientId(channelId, clientId, message);
+      if (next.length) syncChannelMessagesFromCache(channelId, next);
     };
 
     socket.on("message:new", onNew);

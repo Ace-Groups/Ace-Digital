@@ -11,7 +11,8 @@ import {
   getGetChannelMessagesQueryKey,
 } from "@workspace/api-client-react";
 import { RecordList, type RecordListState } from "@/lib/record-list";
-import { sameOrderedMessageIds } from "@/lib/message-list-equality";
+import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
+import { sameMessageListSnapshot } from "@/lib/message-list-equality";
 
 export const CHANNEL_MESSAGE_PARAMS = { limit: 50 } as const;
 
@@ -27,11 +28,11 @@ const EMPTY_MESSAGE_LIST_SNAPSHOT: RecordListState<Message> = {
 function shouldSkipIncomingMerge(existing: Message[], incoming: Message[]): boolean {
   if (!incoming.length) return true;
   if (existing.length === incoming.length) {
-    return sameOrderedMessageIds(existing, incoming);
+    return sameMessageListSnapshot(existing, incoming);
   }
   if (existing.length > incoming.length) {
     const tail = existing.slice(-incoming.length);
-    return sameOrderedMessageIds(tail, incoming);
+    return sameMessageListSnapshot(tail, incoming);
   }
   return false;
 }
@@ -194,6 +195,22 @@ export function globalReplaceChannelMessageByClientId(
   channelLists.get(channelId)?.replaceByClientId(clientId, msg);
 }
 
+/** Patch an optimistic row in an open channel list (e.g. send failed). */
+export function globalPatchChannelMessageByClientId(
+  channelId: number,
+  clientId: string,
+  updater: (msg: Message) => Message,
+): void {
+  const list = channelLists.get(channelId);
+  if (!list) return;
+  const snap = list.getSnapshot();
+  const tempId = tempMessageIdFromClientId(clientId);
+  const target = snap.items.find(
+    (m) => messageClientId(m) === clientId || m.id === tempId,
+  );
+  if (target) list.patch(target.id, updater);
+}
+
 /** Keep RecordList aligned when Firestore updates the React Query cache directly. */
 export function syncChannelMessagesFromCache(channelId: number, items: Message[]): void {
   const list = channelLists.get(channelId);
@@ -213,7 +230,15 @@ export function syncChannelMessagesFromCache(channelId: number, items: Message[]
 /** Stable key so sync effect does not run when React Query returns a new array ref with same ids. */
 export function useMessageListSyncKey(messages: Message[] | undefined): string {
   return useMemo(
-    () => (messages?.length ? messages.map((m) => m.id).join(",") : ""),
+    () =>
+      messages?.length
+        ? messages
+            .map((m) => {
+              const status = "status" in m ? String((m as { status?: string }).status ?? "") : "";
+              return status ? `${m.id}:${status}` : String(m.id);
+            })
+            .join(",")
+        : "",
     [messages],
   );
 }

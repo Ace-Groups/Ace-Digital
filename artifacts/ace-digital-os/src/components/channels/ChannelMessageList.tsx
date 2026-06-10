@@ -10,6 +10,7 @@ import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
 import { cn } from "@/lib/utils";
 import { messageClientId } from "@/lib/chat-message-ids";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { MessageBodyNameMaps } from "@/lib/chat-mentions";
 
 function isPendingMessage(msg: Message | PendingMessage): msg is PendingMessage {
@@ -83,6 +84,7 @@ export function ChannelMessageList({
   onUnpinMessage,
   mentionNameMaps,
 }: ChannelMessageListProps) {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [pendingNewCount, setPendingNewCount] = useState(0);
@@ -273,7 +275,12 @@ export function ChannelMessageList({
       ref={containerRef}
       className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
     >
-      <div className="flex w-full max-w-none flex-col overflow-visible px-3 py-3 sm:px-6 sm:py-4">
+      <div
+        className={cn(
+          "flex w-full max-w-none flex-col overflow-visible",
+          isMobile ? "px-3.5 py-3 pb-4" : "px-3 py-3 sm:px-6 sm:py-4",
+        )}
+      >
       {loadingOlder && (
         <p className="mb-2 text-center text-xs text-muted-foreground">Loading older messages…</p>
       )}
