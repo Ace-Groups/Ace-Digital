@@ -19,7 +19,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ReplyTarget } from "@/components/channels/ChannelThreadHeader";
 import type { MessageAttachment, MessageInput } from "@workspace/api-client-react";
-import { ACEBOT_AVATAR } from "@/lib/ace-ai-brand";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
@@ -640,11 +640,7 @@ export function MessageComposer({
                             </>
                           ) : c.kind === "bot" ? (
                             <>
-                              <img
-                                src={ACEBOT_AVATAR}
-                                alt="Ace AI"
-                                className="h-6 w-6 object-contain mix-blend-lighten dark:mix-blend-normal"
-                              />
+                              <AceAiAvatar size="sm" />
                               <div className="min-w-0 flex-1">
                                 <span className="block truncate">{c.label}</span>
                                 <span className="text-[10px] text-muted-foreground">AI Assistant</span>
