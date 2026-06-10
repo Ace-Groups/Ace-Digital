@@ -43,7 +43,7 @@ export default defineConfig(async ({ mode }) => {
       ],
       manifest: false,
       workbox: {
-        cacheId: "ace-digital-os-v48",
+        cacheId: "ace-digital-os-v2",
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

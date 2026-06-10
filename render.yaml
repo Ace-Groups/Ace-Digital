@@ -7,6 +7,7 @@
 #   RESEND_API_KEY                 — Resend API key (re_...) from https://resend.com/api-keys
 #   EMAIL_FROM                     — sender address with domain verified in Resend
 #                                      Example: "Ace-Digital <no-reply@acedigital.com>"
+#   GEMINI_API_KEY                 — Google AI Studio key for Ace AI assistant
 
 services:
   - type: web
@@ -37,6 +38,8 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
+        sync: false
+      - key: GEMINI_API_KEY
         sync: false
       - key: APP_LOGIN_URL
         value: https://ace-digital-os.web.app/login

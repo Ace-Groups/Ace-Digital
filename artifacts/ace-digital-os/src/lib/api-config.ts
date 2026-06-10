@@ -16,16 +16,30 @@ const RENDER_WS_BASE = "https://ace-digital-api.onrender.com";
  * When `VITE_API_BASE_URL` is set explicitly (e.g. the `build:web:render`
  * script), all REST traffic goes there instead (Render).
  */
+function productionApiBase(): string | null {
+  const base = import.meta.env.VITE_API_BASE_URL?.trim();
+  return base ? base.replace(/\/+$/, "") : null;
+}
+
 export function configureApiClient(): void {
   // Dev: always same-origin `/api` → Vite proxy → Render (avoids CORS on localhost:517x).
   if (import.meta.env.DEV) {
     setBaseUrl(null);
     return;
   }
-  const base = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (base) {
-    setBaseUrl(base.replace(/\/+$/, ""));
-  }
+  setBaseUrl(productionApiBase());
+}
+
+/**
+ * Resolve a relative API path to the correct origin in every environment.
+ * Matches `configureApiClient` so raw fetch (e.g. AI SSE) hits the same backend
+ * as generated hooks — Render in production builds, same-origin otherwise.
+ */
+export function resolveApiUrl(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (import.meta.env.DEV) return normalized;
+  const base = productionApiBase();
+  return base ? `${base}${normalized}` : normalized;
 }
 
 /**

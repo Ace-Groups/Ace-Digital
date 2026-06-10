@@ -9,6 +9,7 @@ initializeApp();
 const jwtSecret = defineSecret("JWT_SECRET");
 const resendApiKey = defineSecret("RESEND_API_KEY");
 const emailFrom = defineSecret("EMAIL_FROM");
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 process.env.USE_FIRESTORE = "true";
 
@@ -30,6 +31,9 @@ function applyRuntimeSecrets(): void {
 
   const from = emailFrom.value()?.trim();
   if (from) process.env.EMAIL_FROM = from;
+
+  const gemini = geminiApiKey.value()?.trim();
+  if (gemini) process.env.GEMINI_API_KEY = gemini;
 }
 
 async function getApp(): Promise<Express> {
@@ -71,9 +75,9 @@ export const api = functions
   .region("asia-south1")
   .runWith({
     memory: "512MB",
-    timeoutSeconds: 60,
+    timeoutSeconds: 120,
     maxInstances: 10,
-    secrets: [jwtSecret, resendApiKey, emailFrom],
+    secrets: [jwtSecret, resendApiKey, emailFrom, geminiApiKey],
     serviceAccount: "firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {

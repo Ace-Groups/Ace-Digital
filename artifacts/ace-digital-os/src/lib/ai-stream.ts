@@ -1,4 +1,5 @@
 import { getAuthToken } from "@/lib/api";
+import { resolveApiUrl } from "@/lib/api-config";
 import type { AiChatInput } from "@workspace/api-client-react";
 
 export type AiStreamEvent =
@@ -21,7 +22,7 @@ export async function streamAiChat(
 
   let res: Response;
   try {
-    res = await fetch("/api/v1/ai/chat/stream", {
+    res = await fetch(resolveApiUrl("/api/v1/ai/chat/stream"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
