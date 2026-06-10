@@ -1,4 +1,10 @@
 {
+  "database": [
+    {
+      "instance": "ace-digital-os-default-rtdb",
+      "rules": "firebase/database.rules.json"
+    }
+  ],
   "firestore": {
     "rules": "firebase/firestore.rules",
     "indexes": "firebase/firestore.indexes.json"
@@ -88,6 +94,9 @@
     },
     "firestore": {
       "port": 8080
+    },
+    "database": {
+      "port": 9000
     },
     "ui": {
       "enabled": true

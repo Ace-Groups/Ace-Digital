@@ -1,4 +1,4 @@
-import { store } from "@workspace/db";
+import { createNotificationWithPush } from "./push-notify";
 
 export async function notifyTaskAssignees(
   assigneeIds: number[],
@@ -8,7 +8,7 @@ export async function notifyTaskAssignees(
   const unique = [...new Set(assigneeIds)].filter((id) => id !== actorId);
   await Promise.all(
     unique.map((userId) =>
-      store.createNotification({
+      createNotificationWithPush({
         userId,
         title: "Task assigned",
         body: `You were assigned to "${taskTitle}"`,

@@ -23,6 +23,9 @@ function envOrProd(envValue: string | undefined, fallback: string): string {
   return fallback;
 }
 
+/** asia-southeast1 RTDB URL (matches Firebase Console instance). */
+const DEFAULT_DATABASE_URL = `https://${PROJECT_ID}-default-rtdb.asia-southeast1.firebasedatabase.app`;
+
 export const firebaseConfig = {
   apiKey: envOrProd(import.meta.env.VITE_FIREBASE_API_KEY, PROD_WEB_APP.apiKey),
   authDomain: envOrProd(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, PROD_WEB_APP.authDomain),
@@ -33,6 +36,10 @@ export const firebaseConfig = {
     PROD_WEB_APP.messagingSenderId,
   ),
   appId: envOrProd(import.meta.env.VITE_FIREBASE_APP_ID, PROD_WEB_APP.appId),
+  databaseURL: envOrProd(
+    import.meta.env.VITE_FIREBASE_DATABASE_URL,
+    DEFAULT_DATABASE_URL,
+  ),
 };
 
 export function isFirebaseConfigured(): boolean {

@@ -2,6 +2,7 @@ import * as functions from "firebase-functions/v1";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import type { Express } from "express";
+import { dispatchPushNotification } from "./push-dispatcher";
 
 initializeApp();
 
@@ -41,6 +42,30 @@ async function getApp(): Promise<Express> {
   return cachedApp;
 }
 
+type NotificationDoc = {
+  userId?: number;
+  title?: string;
+  body?: string;
+  link?: string | null;
+};
+
+async function handlePushDispatch(data: NotificationDoc, source: string): Promise<void> {
+  const userId = Number(data.userId);
+  const title = data.title?.trim();
+  const body = data.body?.trim();
+  if (!Number.isFinite(userId) || userId <= 0 || !title || !body) {
+    console.warn(`[push:${source}] skipping invalid payload`, data);
+    return;
+  }
+
+  await dispatchPushNotification({
+    userId,
+    title,
+    body,
+    link: data.link ?? null,
+  });
+}
+
 /** Gen 1 HTTPS function — compatible with Firebase Blaze tier */
 export const api = functions
   .region("asia-south1")
@@ -49,7 +74,6 @@ export const api = functions
     timeoutSeconds: 60,
     maxInstances: 10,
     secrets: [jwtSecret, resendApiKey, emailFrom],
-    // Firebase Admin SDK SA can mint custom tokens; App Engine default SA often cannot.
     serviceAccount: "firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {
@@ -62,5 +86,34 @@ export const api = functions
         error:
           err instanceof Error ? err.message : "Server configuration error",
       });
+    }
+  });
+
+/**
+ * Firestore-mode: dispatch push when an in-app notification row is created.
+ */
+export const onNotificationCreated = functions
+  .region("asia-south1")
+  .firestore.document("notifications/{notificationId}")
+  .onCreate(async (snap) => {
+    try {
+      await handlePushDispatch(snap.data() as NotificationDoc, "notifications");
+    } catch (err) {
+      console.error("[push:notifications] dispatch failed", err);
+    }
+  });
+
+/**
+ * Postgres-mode bridge: API writes push_outbox docs after createNotification.
+ */
+export const onPushOutboxCreated = functions
+  .region("asia-south1")
+  .firestore.document("push_outbox/{outboxId}")
+  .onCreate(async (snap) => {
+    try {
+      await handlePushDispatch(snap.data() as NotificationDoc, "push_outbox");
+      await snap.ref.delete();
+    } catch (err) {
+      console.error("[push:push_outbox] dispatch failed", err);
     }
   });

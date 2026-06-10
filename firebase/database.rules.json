@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "note_acl": {
+      "$noteId": {
+        "members": {
+          "$userId": {
+            ".read": "auth != null && (auth.token.userId == $userId || root.child('note_acl').child($noteId).child('members').child(auth.token.userId).val() === true)",
+            ".write": false
+          }
+        }
+      }
+    },
+    "note_collab": {
+      "$noteId": {
+        ".read": "auth != null && root.child('note_acl').child($noteId).child('members').child(auth.token.userId).val() === true",
+        "updates": {
+          ".write": "auth != null && root.child('note_acl').child($noteId).child('members').child(auth.token.userId).val() === true"
+        },
+        "awareness": {
+          "$clientId": {
+            ".read": "auth != null && root.child('note_acl').child($noteId).child('members').child(auth.token.userId).val() === true",
+            ".write": "auth != null && auth.token.userId == newData.child('userId').val() && root.child('note_acl').child($noteId).child('members').child(auth.token.userId).val() === true"
+          }
+        }
+      }
+    }
+  }
+}

@@ -495,3 +495,160 @@
   background: hsl(var(--primary));
   transition: width 0.3s ease;
 }
+
+/* ─── Collaborative editor ─── */
+
+.note-editor-sync-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px 0;
+}
+
+.note-editor-sync-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+}
+
+.note-editor-sync-pill--synced {
+  color: hsl(174 72% 56%);
+  background: hsl(174 72% 56% / 0.12);
+}
+
+.note-editor-sync-pill--syncing {
+  color: hsl(45 93% 58%);
+  background: hsl(45 93% 58% / 0.12);
+}
+
+.note-editor-sync-pill--offline {
+  color: hsl(var(--muted-foreground));
+}
+
+.note-editor-sync-pill--error {
+  color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.12);
+}
+
+/* Remote collaborator carets (CollaborationCaret extension) */
+.note-editor .collaboration-carets__caret {
+  border-left: 2px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+.note-editor .collaboration-carets__label {
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  left: -1px;
+  line-height: 1;
+  padding: 2px 6px;
+  position: absolute;
+  top: -1.35em;
+  user-select: none;
+  white-space: nowrap;
+  background: currentColor;
+}
+
+.note-editor .collaboration-carets__selection {
+  background-color: currentColor;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* ─── Dynamic Island presence ─── */
+
+.note-dynamic-island-wrap {
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+}
+
+.note-dynamic-island {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  max-width: min(92vw, 420px);
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(8, 10, 12, 0.82);
+  border: 1px solid rgba(0, 229, 204, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 20px rgba(0, 229, 204, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transform: translateZ(0);
+  pointer-events: auto;
+}
+
+.note-dynamic-island--expanded {
+  padding: 0 14px;
+  min-height: 34px;
+}
+
+.note-dynamic-island--typing {
+  border-color: rgba(0, 229, 204, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 204, 0.12) inset,
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(0, 229, 204, 0.18);
+}
+
+.note-dynamic-island--sync {
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+.note-dynamic-island--offline {
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.note-dynamic-island--error {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.note-dynamic-island__inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.note-dynamic-island__icon {
+  width: 14px;
+  height: 14px;
+  shrink: 0;
+  color: hsl(174 72% 56%);
+}
+
+.note-dynamic-island__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-island-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(8, 10, 12, 0.95);
+}

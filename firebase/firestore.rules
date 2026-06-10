@@ -28,6 +28,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /users/{userId}/user_tokens/{tokenId} {
+      allow read: if signedIn() && authUserId() == int(userId);
+      allow write: if false;
+    }
+
+    match /push_outbox/{outboxId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -262,15 +262,14 @@ export function initSocketServer(httpServer: HttpServer): Server {
       }
     });
 
-    socket.on("note:edit", (payload: { noteId: number; title: string; content: string }) => {
+    socket.on("note:title_edit", (payload: { noteId: number; title: string }) => {
       const noteId = Number(payload?.noteId);
       if (!Number.isFinite(noteId) || noteId <= 0) return;
       if (!socket.rooms.has(`note_${noteId}`)) return;
 
-      socket.to(`note_${noteId}`).emit("note:edited", {
+      socket.to(`note_${noteId}`).emit("note:title_edited", {
         noteId,
         title: payload.title,
-        content: payload.content,
         senderId: socket.data.user.userId,
       });
     });

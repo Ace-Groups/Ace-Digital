@@ -1,4 +1,4 @@
-import { store } from "@workspace/db";
+import { createNotificationWithPush } from "./push-notify";
 
 export async function notifyCalendarAttendees(
   attendeeIds: number[],
@@ -9,7 +9,7 @@ export async function notifyCalendarAttendees(
   const unique = [...new Set(attendeeIds)].filter((id) => id !== actorId);
   await Promise.all(
     unique.map((userId) =>
-      store.createNotification({
+      createNotificationWithPush({
         userId,
         title: "Calendar",
         body: `Scheduled: ${title}`,
@@ -26,7 +26,7 @@ export async function notifyCalendarOwner(
   eventId: number,
 ): Promise<void> {
   if (ownerId === actorId) return;
-  await store.createNotification({
+  await createNotificationWithPush({
     userId: ownerId,
     title: "Calendar",
     body: `${title} was added to your calendar`,

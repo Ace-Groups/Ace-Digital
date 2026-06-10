@@ -4,6 +4,10 @@ import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { getIo } from "../lib/socket-server";
 import { ensureDefaultNotes } from "../lib/default-notes";
+import {
+  removeNoteFromRtdb,
+  syncNoteAclToRtdb,
+} from "../lib/note-rtdb-acl";
 
 const notesRouter = Router();
 
@@ -30,6 +34,8 @@ notesRouter.post("/v1/notes", requireAuth, async (req, res, next) => {
       ...input,
       createdById: ctx.userId,
     });
+
+    void syncNoteAclToRtdb(note);
 
     const io = getIo();
     if (io) {
@@ -63,6 +69,8 @@ notesRouter.get("/v1/notes/:id", requireAuth, async (req, res, next) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
+    void syncNoteAclToRtdb(note);
+
     res.json(note);
   } catch (error) {
     next(error);
@@ -90,6 +98,8 @@ notesRouter.patch("/v1/notes/:id", requireAuth, async (req, res, next) => {
     const updated = await store.updateNote(note.id, patch);
 
     if (updated) {
+      void syncNoteAclToRtdb(updated);
+
       const io = getIo();
       if (io) {
         io.to(`note_${note.id}`).emit("note:saved", {
@@ -124,6 +134,7 @@ notesRouter.delete("/v1/notes/:id", requireAuth, async (req, res, next) => {
       return;
     }
     await store.deleteNote(note.id);
+    void removeNoteFromRtdb(note.id);
 
     const io = getIo();
     if (io) {

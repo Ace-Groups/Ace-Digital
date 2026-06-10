@@ -29,6 +29,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Note } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { NoteEditor } from "@/components/notes/NoteEditor";
+import { CollaborativeNoteEditor } from "@/components/notes/CollaborativeNoteEditor";
+import {
+  NotePresenceDynamicIsland,
+  type NoteCollabPresenceState,
+} from "@/components/notes/NotePresenceDynamicIsland";
+import { isFirebaseCollabEnabled } from "@/lib/firebase-rtdb";
 import { ShareNoteDialog } from "@/components/notes/ShareNoteDialog";
 import { ShareNoteToChatDialog } from "@/components/notes/ShareNoteToChatDialog";
 import "@/styles/note-editor.css";
@@ -68,6 +74,10 @@ export default function NotesPage() {
   const [collaborators, setCollaborators] = useState<
     { userId: number; fullName: string; avatarUrl: string | null }[]
   >([]);
+  const [collabPresence, setCollabPresence] = useState<NoteCollabPresenceState | null>(
+    null,
+  );
+  const collabIslandEnabled = isFirebaseCollabEnabled();
   const { data: employees } = useListEmployees();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
@@ -211,6 +221,7 @@ export default function NotesPage() {
     if (lastNoteId && lastNoteId !== currentNoteId) {
       socket.emit("leave_note", lastNoteId);
       setCollaborators([]);
+      setCollabPresence(null);
       lastJoinedNoteIdRef.current = null;
     }
 
@@ -235,16 +246,17 @@ export default function NotesPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNoteEdited = (payload: {
+    const handleNoteTitleEdited = (payload: {
       noteId: number;
       title: string;
-      content: string;
       senderId: number;
     }) => {
       if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
         setTitle(payload.title);
-        setContent(payload.content);
-        lastSavedRef.current = { title: payload.title, content: payload.content };
+        lastSavedRef.current = {
+          ...lastSavedRef.current,
+          title: payload.title,
+        };
       }
     };
 
@@ -264,8 +276,10 @@ export default function NotesPage() {
     }) => {
       if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
         setTitle(payload.note.title);
-        setContent(payload.note.content);
-        lastSavedRef.current = { title: payload.note.title, content: payload.note.content };
+        lastSavedRef.current = {
+          ...lastSavedRef.current,
+          title: payload.note.title,
+        };
       }
     };
 
@@ -289,30 +303,29 @@ export default function NotesPage() {
       }
     };
 
-    socket.on("note:edited", handleNoteEdited);
+    socket.on("note:title_edited", handleNoteTitleEdited);
     socket.on("note:users", handleNoteUsers);
     socket.on("note:saved", handleNoteSaved);
     socket.on("notes:refresh", handleNotesRefresh);
 
     return () => {
-      socket.off("note:edited", handleNoteEdited);
+      socket.off("note:title_edited", handleNoteTitleEdited);
       socket.off("note:users", handleNoteUsers);
       socket.off("note:saved", handleNoteSaved);
       socket.off("notes:refresh", handleNotesRefresh);
     };
   }, [selectedNoteId, socket, user?.id, queryClient, toast]);
 
-  const broadcastEdit = useCallback(
-    (newTitle: string, newContent: string) => {
+  const broadcastTitleEdit = useCallback(
+    (newTitle: string) => {
       if (selectedNoteId && socket) {
-        socket.emit("note:edit", {
+        socket.emit("note:title_edit", {
           noteId: selectedNoteId,
           title: newTitle,
-          content: newContent,
         });
       }
     },
-    [selectedNoteId, socket]
+    [selectedNoteId, socket],
   );
 
   // Debounced auto-save
@@ -330,20 +343,19 @@ export default function NotesPage() {
   const handleTitleChange = useCallback(
     (val: string) => {
       setTitle(val);
-      broadcastEdit(val, content);
+      broadcastTitleEdit(val);
       scheduleAutoSave(val, content);
     },
-    [content, scheduleAutoSave, broadcastEdit]
+    [content, scheduleAutoSave, broadcastTitleEdit],
   );
 
-  // Content change
+  // Content change — Yjs handles real-time body sync; REST save exports HTML to Postgres.
   const handleContentChange = useCallback(
     (html: string) => {
       setContent(html);
-      broadcastEdit(title, html);
       scheduleAutoSave(title, html);
     },
-    [title, scheduleAutoSave, broadcastEdit]
+    [title, scheduleAutoSave],
   );
 
   // Delete
@@ -608,7 +620,18 @@ export default function NotesPage() {
           {isEditorActive ? (
             <>
               {/* Editor header */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b bg-card/50">
+              <div className="relative flex flex-col border-b bg-card/50">
+                {selectedNoteId && collabIslandEnabled && collabPresence && (
+                  <div className="flex justify-center pt-2 px-4 pointer-events-none">
+                    <NotePresenceDynamicIsland
+                      status={collabPresence.status}
+                      peers={collabPresence.peers}
+                      error={collabPresence.error}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 px-4 py-3">
                 {/* Back button on mobile */}
                 <Button
                   variant="ghost"
@@ -617,6 +640,7 @@ export default function NotesPage() {
                   onClick={() => {
                     setSelectedNoteId(null);
                     setCreating(false);
+                    setCollabPresence(null);
                   }}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -632,8 +656,8 @@ export default function NotesPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 ml-auto">
-                  {/* Active collaborators list */}
-                  {collaborators.length > 0 && (
+                  {/* Socket fallback when Firebase collab is off */}
+                  {!collabIslandEnabled && collaborators.length > 0 && (
                     <div className="flex items-center gap-1.5 mr-2" title="Collaborators active on this note">
                       <span className="text-xs text-muted-foreground mr-1 hidden sm:inline">Editing:</span>
                       <div className="flex -space-x-1.5 overflow-hidden">
@@ -687,6 +711,7 @@ export default function NotesPage() {
                       </Button>
                     )}
                 </div>
+                </div>
               </div>
 
               {/* Shared users bar */}
@@ -711,11 +736,22 @@ export default function NotesPage() {
 
               {/* Editor */}
               <div className="flex-1 min-h-0 overflow-hidden">
-                <NoteEditor
-                  content={content}
-                  onChange={handleContentChange}
-                  placeholder="Start writing your note..."
-                />
+                {selectedNoteId && user ? (
+                  <CollaborativeNoteEditor
+                    noteId={selectedNoteId}
+                    initialHtml={content}
+                    user={{ id: user.id, fullName: user.fullName }}
+                    onHtmlChange={handleContentChange}
+                    onPresenceChange={setCollabPresence}
+                    placeholder="Start writing your note..."
+                  />
+                ) : (
+                  <NoteEditor
+                    content={content}
+                    onChange={handleContentChange}
+                    placeholder="Start writing your note..."
+                  />
+                )}
               </div>
             </>
           ) : (

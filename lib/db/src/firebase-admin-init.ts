@@ -52,14 +52,25 @@ export function ensureFirebaseAdminApp(): App {
         );
       }
     }
+    const resolvedProjectId = projectId ?? serviceAccount.projectId;
     return initializeApp({
       credential: cert(serviceAccount),
-      projectId: projectId ?? serviceAccount.projectId,
+      projectId: resolvedProjectId,
+      databaseURL:
+        process.env.FIREBASE_DATABASE_URL?.trim() ??
+        (resolvedProjectId
+          ? `https://${resolvedProjectId}-default-rtdb.asia-southeast1.firebasedatabase.app`
+          : undefined),
     });
   }
 
   if (projectId) {
-    return initializeApp({ projectId });
+    return initializeApp({
+      projectId,
+      databaseURL:
+        process.env.FIREBASE_DATABASE_URL?.trim() ??
+        `https://${projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`,
+    });
   }
 
   return initializeApp();

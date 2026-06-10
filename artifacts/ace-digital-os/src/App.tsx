@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SocketProvider, useSocket } from "@/contexts/SocketContext";
 import { useGlobalChatRealtime } from "@/hooks/use-global-chat-realtime";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -16,6 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
+import { FluidAppShell } from "@/components/layout/FluidAppShell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
@@ -122,6 +124,7 @@ function GlobalChatBoot() {
   const { isAuthenticated } = useAuth();
   const { connected } = useSocket();
   useGlobalChatRealtime(isAuthenticated && connected);
+  usePushNotifications();
   return null;
 }
 
@@ -199,7 +202,9 @@ function App() {
             <PrefetchBoot />
             <MobileChromeProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <AppRouter />
+                <FluidAppShell>
+                  <AppRouter />
+                </FluidAppShell>
                 <InstallPrompt />
                 <CommandPalette />
               </WouterRouter>

@@ -1,47 +1,70 @@
 /**
- * Contextual Haptics Engine
- * Provides native-like vibration feedback on supported devices.
+ * Tactile feedback — maps to expo-haptics ImpactFeedbackStyle on native;
+ * uses navigator.vibrate on web/PWA where permitted.
  */
 
-// Basic check to see if the device supports navigator.vibrate
-const hasHaptics = typeof window !== "undefined" && typeof navigator !== "undefined" && "vibrate" in navigator;
+export enum ImpactFeedbackStyle {
+  Light = "light",
+  Medium = "medium",
+  Heavy = "heavy",
+}
 
-/** Light tap, used for minor interactions like switching tabs or selecting small items */
-export function hapticLight() {
+const hasHaptics =
+  typeof window !== "undefined" &&
+  typeof navigator !== "undefined" &&
+  "vibrate" in navigator;
+
+function vibrate(pattern: number | number[]): void {
   if (!hasHaptics) return;
   try {
-    navigator.vibrate(10);
-  } catch (e) {
-    // Ignore if not permitted
+    navigator.vibrate(pattern);
+  } catch {
+    // Permission denied or unsupported
   }
 }
 
-/** Medium tap, used for opening modals, toggles, or standard actions */
-export function hapticMedium() {
-  if (!hasHaptics) return;
-  try {
-    navigator.vibrate(20);
-  } catch (e) {
-    // Ignore
+/** Primary API — mirrors expo-haptics ImpactFeedbackStyle. */
+export function impact(style: ImpactFeedbackStyle): void {
+  switch (style) {
+    case ImpactFeedbackStyle.Light:
+      vibrate(10);
+      break;
+    case ImpactFeedbackStyle.Medium:
+      vibrate(20);
+      break;
+    case ImpactFeedbackStyle.Heavy:
+      vibrate([30, 20, 30]);
+      break;
   }
 }
 
-/** Heavy tap or sequence, used for destructive actions or major success states */
-export function hapticHeavy() {
-  if (!hasHaptics) return;
-  try {
-    navigator.vibrate([30, 20, 30]);
-  } catch (e) {
-    // Ignore
-  }
+/** Light tap — typing, selection, minor toggles. */
+export function hapticLight(): void {
+  impact(ImpactFeedbackStyle.Light);
 }
 
-/** Success pattern, e.g. completing a task */
-export function hapticSuccess() {
+/** Medium tap — modals, confirmations, success states. */
+export function hapticMedium(): void {
+  impact(ImpactFeedbackStyle.Medium);
+}
+
+/** Heavy tap — destructive actions. */
+export function hapticHeavy(): void {
+  impact(ImpactFeedbackStyle.Heavy);
+}
+
+/** Success pattern — task complete, save confirmed. */
+export function hapticSuccess(): void {
   if (!hasHaptics) return;
-  try {
-    navigator.vibrate([15, 30, 15, 30, 30]);
-  } catch (e) {
-    // Ignore
-  }
+  vibrate([15, 30, 15, 30, 30]);
+}
+
+/** Selection change — list pickers, tabs. */
+export function hapticSelection(): void {
+  impact(ImpactFeedbackStyle.Light);
+}
+
+/** Destructive action — delete, revoke. */
+export function hapticDestructive(): void {
+  impact(ImpactFeedbackStyle.Medium);
 }

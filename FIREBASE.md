@@ -55,6 +55,65 @@ Refresh a single admin without wiping data:
 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
 ```
 
+## One-time: enable Realtime Database (notes collaboration)
+
+Collaborative notes use **Firebase RTDB** for Yjs sync (`note_collab/`, `note_acl/`). The first instance must be created once per project:
+
+```bash
+./scripts/enable-firebase-rtdb.sh
+```
+
+Or manually: [Firebase Console → Realtime Database](https://console.firebase.google.com/project/ace-digital-os/database) → **Create Database** → region **asia-southeast1** → locked mode, then:
+
+```bash
+firebase deploy --only database --project ace-digital-os
+```
+
+**databaseURL** (asia-southeast1): `https://ace-digital-os-default-rtdb.asia-southeast1.firebasedatabase.app`  
+Set `VITE_FIREBASE_DATABASE_URL` at build time if your instance URL differs.
+
+## Omnichannel push notifications
+
+| Piece | Location |
+|-------|----------|
+| Token storage | Firestore `users/{userId}/user_tokens/{tokenId}` (API writes) |
+| Dispatcher | Cloud Functions `onNotificationCreated`, `onPushOutboxCreated` |
+| FCM web | `firebase-messaging-sw.js` + `VITE_FIREBASE_VAPID_KEY` |
+| Expo mobile | `platform: "expo"` tokens via `POST /v1/push-tokens` |
+
+### 1. Web push VAPID key
+
+Firebase Console → Project settings → Cloud Messaging → **Web Push certificates** → Generate key pair.
+
+```bash
+# Build with VAPID (Render / local)
+VITE_FIREBASE_VAPID_KEY=your_key pnpm run build:web:render
+```
+
+### 2. Deploy push functions
+
+```bash
+cd firebase/functions && npm run build && cd ../..
+# Codebase name is "api" — use functions:api:<exportName>
+firebase deploy --only functions:api:onNotificationCreated,functions:api:onPushOutboxCreated --project ace-digital-os
+```
+
+Or deploy the entire functions codebase:
+
+```bash
+firebase deploy --only functions:api --project ace-digital-os
+```
+
+Web push build (replace with your VAPID key from Firebase Console → Cloud Messaging):
+
+```bash
+VITE_FIREBASE_VAPID_KEY="YOUR_VAPID_KEY_HERE" pnpm run build:web:render
+```
+
+Also deploy Firestore rules: `firebase deploy --only firestore:rules`
+
+Set optional `APP_ORIGIN=https://ace-digital-os.web.app` on functions for absolute deep links in push payloads.
+
 ## One-time: enable API (Blaze) — required
 
 Your project must show **billing enabled**. Check:

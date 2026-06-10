@@ -17,6 +17,7 @@ import channelsRouter from "./channels";
 import calendarRouter from "./calendar";
 import activityRouter from "./activity";
 import notesRouter from "./notes";
+import pushTokensRouter from "./push-tokens";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(channelsRouter);
 router.use(calendarRouter);
 router.use(activityRouter);
 router.use(notesRouter);
+router.use(pushTokensRouter);
 
 export default router;

@@ -1,4 +1,5 @@
 import { store } from "@workspace/db";
+import { createNotificationWithPush } from "./push-notify";
 
 export async function notifyChannelMembers(
   channelId: number,
@@ -15,7 +16,7 @@ export async function notifyChannelMembers(
   }
   await Promise.all(
     targets.map(async (m) => {
-      await store.createNotification({
+      await createNotificationWithPush({
         userId: m.userId,
         title: `#${channelName}`,
         body: preview,
