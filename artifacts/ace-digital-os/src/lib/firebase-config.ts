@@ -1,5 +1,12 @@
 const PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "ace-digital-os";
 
+/**
+ * Firebase default web push VAPID public key — works when no custom key is set in Cloud Messaging.
+ * Override with VITE_FIREBASE_VAPID_KEY or FIREBASE_WEB_PUSH_VAPID_KEY on the API.
+ */
+export const PROD_WEB_PUSH_VAPID_KEY =
+  "BDOU99-h67HcA6JeFXHbSNMu7e2yNNu3RzoMj8TM4W88jITfq7ZmPvIM1Iv-4_l2LxQcYwhqby2xGpWwzjfAnG4";
+
 /** Production web app (Firebase console) — used when VITE_* env vars are not set at build time. */
 const PROD_WEB_APP = {
   apiKey: "AIzaSyAN2QCws2eizQX9PTyTftLClB3WMauxG3c",

@@ -42,6 +42,8 @@ interface AuthContextValue {
   refreshUser: () => Promise<void>;
   refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
+  /** True once the server has confirmed the current session (avoids stale-token API calls). */
+  isSessionVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -111,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isBootstrapping =
     !!token && (!sessionReady || isPending || isLoading || isRefreshing);
   const isAuthenticated = !!token && !!user;
+  const isSessionVerified = !token || (sessionReady && !!apiUser);
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -226,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useSessionActivity({
-    isAuthenticated: isAuthenticated && sessionReady,
+    isAuthenticated: isSessionVerified,
     logout,
     refreshSession,
   });
@@ -241,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       refreshSession,
       isAuthenticated,
+      isSessionVerified,
     }),
     [
       user,
@@ -251,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       refreshSession,
       isAuthenticated,
+      isSessionVerified,
     ],
   );
 

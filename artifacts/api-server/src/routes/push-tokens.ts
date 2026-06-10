@@ -12,6 +12,21 @@ const pushTokensRouter = Router();
 
 const PLATFORMS = new Set<PushTokenPlatform>(["web", "expo", "ios", "android"]);
 
+function readVapidPublicKey(): string | null {
+  const key = process.env.FIREBASE_WEB_PUSH_VAPID_KEY?.trim();
+  return key && key.length > 20 ? key : null;
+}
+
+/** Public config for web clients — no auth required. */
+pushTokensRouter.get("/v1/push/config", (_req, res) => {
+  const vapidPublicKey = readVapidPublicKey();
+  if (!vapidPublicKey) {
+    res.json({ configured: false, vapidPublicKey: null });
+    return;
+  }
+  res.json({ configured: true, vapidPublicKey });
+});
+
 pushTokensRouter.post("/v1/push-tokens", requireAuth, async (req, res, next) => {
   try {
     if (!isPushInfrastructureAvailable()) {

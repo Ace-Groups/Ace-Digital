@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { store } from "@workspace/db";
 import { hasPermission } from "@workspace/rbac";
+import { notifySalaryPosted } from "../lib/notify";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
@@ -224,6 +225,14 @@ router.post(
         ? await store.findProjectById(Number(projectId))
         : null;
 
+    const totalPay = Number(baseStr) + Number(bonusStr);
+    void notifySalaryPosted(
+      Number(userId),
+      Number(month),
+      Number(year),
+      totalPay,
+      ctx.userId,
+    );
     res.status(201).json({
       id: row.id,
       userId: Number(userId),
@@ -235,7 +244,7 @@ router.post(
       year: Number(year),
       baseSalary: Number(baseStr),
       bonus: Number(bonusStr),
-      totalPay: Number(baseStr) + Number(bonusStr),
+      totalPay,
       createdAt: new Date(row.createdAt as string | Date).toISOString(),
     });
   },

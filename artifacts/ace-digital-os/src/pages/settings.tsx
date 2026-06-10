@@ -22,7 +22,12 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Camera, KeyRound, ShieldCheck, Check, X } from "lucide-react";
+import { Bell, Camera, KeyRound, ShieldCheck, Check, X } from "lucide-react";
+import {
+  enableWebPushNotifications,
+  getNotificationPermission,
+  isWebPushAvailable,
+} from "@/lib/push-notifications";
 
 const NOTIF_PREFS_KEY = "ace-digital-notification-prefs";
 
@@ -164,11 +169,19 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotifPrefs);
+  const [pushAvailable, setPushAvailable] = useState(false);
+  const [pushPermission, setPushPermission] = useState(getNotificationPermission());
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     setFullName(user?.fullName ?? "");
     setPhone(user?.phone ?? "");
   }, [user?.fullName, user?.phone]);
+
+  useEffect(() => {
+    void isWebPushAvailable().then(setPushAvailable);
+    setPushPermission(getNotificationPermission());
+  }, []);
 
   function saveNotifPrefs(next: NotificationPrefs) {
     setNotifPrefs(next);
@@ -342,10 +355,66 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Notifications</CardTitle>
             <CardDescription>
-              Email preferences (stored on this device until server sync is added)
+              Push and email preferences for this device
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {pushAvailable && (
+              <>
+                <div className="flex min-h-11 items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Bell className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                    <div>
+                      <p className="text-sm font-medium">Push notifications</p>
+                      <p className="text-xs text-muted-foreground">
+                        {pushPermission === "granted"
+                          ? "Enabled — chat, approvals, tasks, salary, and assignments"
+                          : pushPermission === "denied"
+                            ? "Blocked in browser settings"
+                            : "Get alerts on this device"}
+                      </p>
+                    </div>
+                  </div>
+                  {pushPermission === "granted" ? (
+                    <span className="text-xs font-medium text-emerald-600">On</span>
+                  ) : pushPermission === "denied" ? (
+                    <span className="text-xs text-muted-foreground">Blocked</span>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="min-h-9"
+                      disabled={pushBusy}
+                      onClick={() => {
+                        setPushBusy(true);
+                        void enableWebPushNotifications()
+                          .then((result) => {
+                            setPushPermission(getNotificationPermission());
+                            if (result.ok) {
+                              toast({ title: "Push notifications enabled" });
+                            } else if (result.reason === "denied") {
+                              toast({
+                                title: "Notifications blocked",
+                                description: "Allow notifications in your browser settings.",
+                                variant: "destructive",
+                              });
+                            } else {
+                              toast({
+                                title: "Could not enable push",
+                                variant: "destructive",
+                              });
+                            }
+                          })
+                          .finally(() => setPushBusy(false));
+                      }}
+                    >
+                      {pushBusy ? "Enabling…" : "Enable"}
+                    </Button>
+                  )}
+                </div>
+                <Separator />
+              </>
+            )}
             <div className="flex min-h-11 items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium">Task assignments</p>

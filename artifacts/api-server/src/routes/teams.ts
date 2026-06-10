@@ -4,6 +4,7 @@ import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { employeeWithProfile } from "../lib/employee-serializer";
+import { notifyTeamProjectAssignment } from "../lib/notify";
 
 const router = Router();
 
@@ -97,6 +98,7 @@ router.post(
   requireAuth,
   requirePermission("teams:write"),
   async (req, res): Promise<void> => {
+    const ctx = getAccessContext(req);
     const id = Number(req.params.id);
     const projectId = Number(req.body?.projectId);
     if (!projectId) {
@@ -108,6 +110,7 @@ router.post(
       res.status(404).json({ error: "Project not found" });
       return;
     }
+    void notifyTeamProjectAssignment(id, p.name, ctx.userId);
     res.json({ success: true });
   },
 );

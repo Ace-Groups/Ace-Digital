@@ -40,5 +40,7 @@ services:
         sync: false
       - key: APP_LOGIN_URL
         value: https://ace-digital-os.web.app/login
+      - key: FIREBASE_WEB_PUSH_VAPID_KEY
+        sync: false
       - key: SKIP_INSTALL_DEPS
         value: "true"

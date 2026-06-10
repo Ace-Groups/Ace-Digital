@@ -5,6 +5,10 @@ import { canApproveApproval } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import {
+  notifyApprovalRequester,
+  notifyApprovalReviewers,
+} from "../lib/approval-notify";
 
 const router = Router();
 
@@ -68,6 +72,8 @@ router.post(
       reviewedAt: null,
       note: null,
     });
+    const requester = await store.findUserById(ctx.userId);
+    void notifyApprovalReviewers(approval, requester?.fullName ?? "Someone");
     res.status(201).json(await approvalWithRelations(approval));
   },
 );
@@ -113,6 +119,8 @@ router.post(
       entityId: id,
       metadata: { title: approval.title, type: approval.type },
     });
+    const reviewer = await store.findUserById(ctx.userId);
+    void notifyApprovalRequester(approval, "APPROVED", reviewer?.fullName ?? "Reviewer");
     res.json(await approvalWithRelations(approval));
   },
 );
@@ -158,6 +166,8 @@ router.post(
       entityId: id,
       metadata: { title: approval.title },
     });
+    const reviewer = await store.findUserById(ctx.userId);
+    void notifyApprovalRequester(approval, "REJECTED", reviewer?.fullName ?? "Reviewer");
     res.json(await approvalWithRelations(approval));
   },
 );

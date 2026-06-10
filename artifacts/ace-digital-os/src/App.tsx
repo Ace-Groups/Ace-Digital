@@ -15,6 +15,7 @@ import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
 import { FluidAppShell } from "@/components/layout/FluidAppShell";
@@ -121,9 +122,9 @@ function PrefetchBoot() {
 }
 
 function GlobalChatBoot() {
-  const { isAuthenticated } = useAuth();
+  const { isSessionVerified } = useAuth();
   const { connected } = useSocket();
-  useGlobalChatRealtime(isAuthenticated && connected);
+  useGlobalChatRealtime(isSessionVerified && connected);
   usePushNotifications();
   return null;
 }
@@ -206,6 +207,7 @@ function App() {
                   <AppRouter />
                 </FluidAppShell>
                 <InstallPrompt />
+                <PushPermissionPrompt />
                 <CommandPalette />
               </WouterRouter>
               <Toaster />

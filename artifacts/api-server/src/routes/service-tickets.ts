@@ -15,6 +15,7 @@ import {
   resolveServiceTicketUpdateLinks,
   type ServiceTicketLinkType,
 } from "../lib/service-ticket-links";
+import { notifyServiceTicketAssignee } from "../lib/notify";
 
 const router = Router();
 
@@ -177,6 +178,14 @@ router.post(
       entityId: ticket.id,
       metadata: { ticketNumber: ticket.ticketNumber, title: ticket.title },
     });
+    if (ticket.assigneeId != null) {
+      void notifyServiceTicketAssignee(
+        ticket.assigneeId,
+        ticket.title,
+        ticket.id,
+        ctx.userId,
+      );
+    }
     res.status(201).json(await enrichTicket(ticket));
   },
 );
@@ -324,6 +333,14 @@ router.patch(
           toAssigneeName: nextName,
         },
       });
+      if (ticket.assigneeId != null) {
+        void notifyServiceTicketAssignee(
+          ticket.assigneeId,
+          ticket.title,
+          ticket.id,
+          ctx.userId,
+        );
+      }
     }
     res.json(await enrichTicket(ticket));
   },

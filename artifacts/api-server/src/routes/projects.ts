@@ -5,6 +5,7 @@ import { canWriteProject } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
+import { notifyApprovalReviewers } from "../lib/approval-notify";
 
 const router = Router();
 
@@ -75,7 +76,7 @@ router.post(
   });
 
   if (budget && Number(budget) > 500000) {
-    await store.createApproval({
+    const budgetApproval = await store.createApproval({
       type: "PROJECT_BUDGET",
       title: `Budget Approval for "${name}"`,
       description: `Project budget exceeds ₹5,00,000. Requires management approval.`,
@@ -87,6 +88,8 @@ router.post(
       reviewedAt: null,
       note: null,
     });
+    const requester = await store.findUserById(req.user!.userId);
+    void notifyApprovalReviewers(budgetApproval, requester?.fullName ?? "Someone");
   }
 
   await store.insertActivityLog({

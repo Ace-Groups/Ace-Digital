@@ -25,7 +25,7 @@ const SocketContext = createContext<SocketContextValue>({
 });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, authToken } = useAuth();
+  const { isSessionVerified, authToken } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const joinedRef = useRef(new Set<number>());
@@ -37,7 +37,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !authToken) {
+    if (!isSessionVerified || !authToken) {
       setSocket((prev) => {
         prev?.disconnect();
         return null;
@@ -69,7 +69,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setConnected(false);
       clearJoinState();
     };
-  }, [isAuthenticated, authToken, clearJoinState]);
+  }, [isSessionVerified, authToken, clearJoinState]);
 
   const ensureJoined = useCallback(
     (channelId: number): Promise<void> => {
