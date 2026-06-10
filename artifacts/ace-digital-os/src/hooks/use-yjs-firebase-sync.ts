@@ -43,6 +43,8 @@ export type UseYjsFirebaseSyncResult = {
   awareness: Awareness | null;
   /** Minimal provider shape required by CollaborationCaret. */
   provider: { awareness: Awareness } | null;
+  /** True once IndexedDB + optional RTDB replay + Postgres seeding have finished. */
+  docReady: boolean;
   status: YjsSyncStatus;
   error: Error | null;
   userColor: string;
@@ -58,6 +60,11 @@ type RtdbAwarenessPayload = {
   userId: string;
   update: string;
 };
+
+function isEffectivelyEmptyHtml(html: string): boolean {
+  const trimmed = html.trim();
+  return !trimmed || trimmed === "<p></p>";
+}
 
 /**
  * Local-first Yjs sync over Firebase RTDB with IndexedDB persistence.
@@ -75,8 +82,8 @@ export function useYjsFirebaseSync({
   const [error, setError] = useState<Error | null>(null);
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [awareness, setAwareness] = useState<Awareness | null>(null);
+  const [docReady, setDocReady] = useState(false);
 
-  const seededRef = useRef(false);
   const initialHtmlRef = useRef(initialHtml);
   initialHtmlRef.current = initialHtml;
 
@@ -84,6 +91,7 @@ export function useYjsFirebaseSync({
     if (!enabled || noteId <= 0) {
       setYdoc(null);
       setAwareness(null);
+      setDocReady(false);
       setStatus("loading");
       setError(null);
       return;
@@ -96,9 +104,9 @@ export function useYjsFirebaseSync({
 
     setYdoc(doc);
     setAwareness(awarenessInstance);
+    setDocReady(false);
     setStatus("loading");
     setError(null);
-    seededRef.current = false;
 
     awarenessInstance.setLocalStateField("user", {
       name: userName,
@@ -108,22 +116,16 @@ export function useYjsFirebaseSync({
 
     const idb = new IndexeddbPersistence(`ace-note-${noteId}`, doc);
     const unsubs: Array<() => void> = [];
-    let connected = true;
+    let connected = false;
     let awarenessRef: DatabaseReference | null = null;
     let rtdb: Database | null = null;
 
-    const seedFromPostgresHtml = () => {
-      if (seededRef.current) return;
+    const seedFromPostgresIfEmpty = () => {
       const fragment = doc.getXmlFragment("default");
-      if (!isYFragmentEmpty(fragment)) {
-        seededRef.current = true;
-        return;
-      }
+      if (!isYFragmentEmpty(fragment)) return;
+
       const html = initialHtmlRef.current.trim();
-      if (!html || html === "<p></p>") {
-        seededRef.current = true;
-        return;
-      }
+      if (isEffectivelyEmptyHtml(html)) return;
 
       const extensions = createNoteEditorExtensions({ collaborative: true });
       const json = generateJSON(html, extensions);
@@ -134,39 +136,35 @@ export function useYjsFirebaseSync({
       doc.transact(() => {
         prosemirrorJSONToYXmlFragment(schema, json, fragment);
       });
-      seededRef.current = true;
     };
 
-    const setupRtdb = async () => {
-      rtdb = await getFirebaseRtdbWhenReady();
-      if (cancelled || !rtdb) {
-        if (!cancelled) setStatus("offline");
-        return;
-      }
-
-      await idb.whenSynced;
-      if (cancelled) return;
-
-      seedFromPostgresHtml();
-
-      const updatesRef = ref(rtdb, `note_collab/${noteId}/updates`);
-      awarenessRef = ref(rtdb, `note_collab/${noteId}/awareness/${clientId}`);
-      const connectedRef = ref(rtdb, ".info/connected");
-      const appliedUpdateKeys = new Set<string>();
-
+    const applyExistingRtdbUpdates = async (
+      database: Database,
+      appliedUpdateKeys: Set<string>,
+    ) => {
+      const updatesRef = ref(database, `note_collab/${noteId}/updates`);
       const existingSnap = await get(updatesRef);
-      if (existingSnap.exists()) {
-        const entries = existingSnap.val() as Record<string, RtdbUpdatePayload>;
-        for (const [key, payload] of Object.entries(entries)) {
-          if (!payload?.u) continue;
-          appliedUpdateKeys.add(key);
-          Y.applyUpdate(doc, base64ToUint8Array(payload.u), "firebase");
-        }
+      if (!existingSnap.exists()) return;
+
+      const entries = existingSnap.val() as Record<string, RtdbUpdatePayload>;
+      for (const [key, payload] of Object.entries(entries)) {
+        if (!payload?.u) continue;
+        appliedUpdateKeys.add(key);
+        Y.applyUpdate(doc, base64ToUint8Array(payload.u), "firebase");
       }
+    };
+
+    const setupRtdbRelay = (
+      database: Database,
+      appliedUpdateKeys: Set<string>,
+    ) => {
+      const updatesRef = ref(database, `note_collab/${noteId}/updates`);
+      awarenessRef = ref(database, `note_collab/${noteId}/awareness/${clientId}`);
+      const connectedRef = ref(database, ".info/connected");
 
       const connectedUnsub = onValue(connectedRef, (snap) => {
         connected = Boolean(snap.val());
-        setStatus(connected ? "synced" : "offline");
+        if (!cancelled) setStatus(connected ? "synced" : "offline");
       });
       unsubs.push(connectedUnsub);
 
@@ -184,7 +182,7 @@ export function useYjsFirebaseSync({
 
       const onLocalUpdate = (update: Uint8Array, origin: unknown) => {
         if (origin === "firebase") return;
-        setStatus(connected ? "syncing" : "offline");
+        if (!cancelled) setStatus(connected ? "syncing" : "offline");
         void push(updatesRef, {
           u: uint8ArrayToBase64(update),
           by: userId,
@@ -215,7 +213,7 @@ export function useYjsFirebaseSync({
       publishAwareness();
 
       const awarenessUnsub = onValue(
-        ref(rtdb, `note_collab/${noteId}/awareness`),
+        ref(database, `note_collab/${noteId}/awareness`),
         (snapshot) => {
           const all = snapshot.val() as Record<string, RtdbAwarenessPayload> | null;
           if (!all) return;
@@ -231,16 +229,45 @@ export function useYjsFirebaseSync({
         },
       );
       unsubs.push(awarenessUnsub);
-
-      if (!cancelled) setStatus(connected ? "synced" : "offline");
     };
 
-    void setupRtdb().catch((err: unknown) => {
-      if (!cancelled) {
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setStatus("error");
+    const bootstrap = async () => {
+      try {
+        await idb.whenSynced;
+        if (cancelled) return;
+
+        const appliedUpdateKeys = new Set<string>();
+        rtdb = await getFirebaseRtdbWhenReady();
+
+        if (rtdb) {
+          await applyExistingRtdbUpdates(rtdb, appliedUpdateKeys);
+          if (cancelled) return;
+        }
+
+        // Postgres is the fallback whenever local + RTDB replay left the doc empty.
+        seedFromPostgresIfEmpty();
+
+        if (cancelled) return;
+
+        setDocReady(true);
+
+        if (rtdb) {
+          setupRtdbRelay(rtdb, appliedUpdateKeys);
+          setStatus(connected ? "synced" : "offline");
+        } else {
+          setStatus("offline");
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          seedFromPostgresIfEmpty();
+          setDocReady(true);
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setStatus("error");
+        }
       }
-    });
+    };
+
+    void bootstrap();
 
     return () => {
       cancelled = true;
@@ -253,6 +280,7 @@ export function useYjsFirebaseSync({
       void idb.destroy();
       setYdoc(null);
       setAwareness(null);
+      setDocReady(false);
     };
   }, [enabled, noteId, userId, userName, userColor]);
 
@@ -265,6 +293,7 @@ export function useYjsFirebaseSync({
     ydoc,
     awareness,
     provider,
+    docReady,
     status,
     error,
     userColor,

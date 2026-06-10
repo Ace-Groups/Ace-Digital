@@ -797,6 +797,7 @@ export default function NotesPage() {
               <div className="flex-1 min-h-0 overflow-hidden">
                 {selectedNoteId && user ? (
                   <CollaborativeNoteEditor
+                    key={selectedNoteId}
                     noteId={selectedNoteId}
                     initialHtml={content}
                     user={{ id: user.id, fullName: user.fullName }}

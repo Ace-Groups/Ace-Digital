@@ -120,7 +120,7 @@ export function CollaborativeNoteEditor({
 }: CollaborativeNoteEditorProps) {
   const collabEnabled = isFirebaseCollabEnabled();
 
-  const { ydoc, provider, status, error, userColor } = useYjsFirebaseSync({
+  const { ydoc, provider, docReady, status, error, userColor } = useYjsFirebaseSync({
     noteId,
     userId: user.id,
     userName: user.fullName,
@@ -150,17 +150,18 @@ export function CollaborativeNoteEditor({
     );
   }
 
-  if (!ydoc || !provider) {
+  if (!ydoc || !provider || !docReady) {
     return (
       <div className="note-editor flex flex-1 items-center justify-center text-muted-foreground">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>Loading collaborative editor…</span>
+        <span>Loading note…</span>
       </div>
     );
   }
 
   return (
     <CollabEditorSurface
+      key={noteId}
       ydoc={ydoc}
       provider={provider}
       user={user}
