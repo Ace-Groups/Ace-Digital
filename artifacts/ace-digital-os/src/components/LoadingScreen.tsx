@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./loading-animation.css";
 
 export function LoadingScreen() {
@@ -40,8 +41,8 @@ export function LoadingScreen() {
     };
   }, []);
 
-  return (
-    <div className="ace-loader-screen">
+  return createPortal(
+    <div className="ace-loader-screen" role="status" aria-live="polite" aria-label="Loading">
       <div className="ace-loader-content">
         <div className="ace-loader-stage">
           <div className="ace-loader" style={{ perspective: "1000px" }}>
@@ -57,7 +58,8 @@ export function LoadingScreen() {
         </div>
         <p className="ace-loader-text">Ace-Digital</p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

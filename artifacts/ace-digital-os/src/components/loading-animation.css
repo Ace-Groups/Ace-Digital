@@ -5,11 +5,16 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  min-height: 100svh;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
   background: linear-gradient(135deg, #052659 0%, #0a3a7a 40%, #5483B3 100%);
-  flex-direction: column;
 }
 
 .ace-loader-content {
@@ -17,25 +22,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(2rem, 8vw, 3.25rem);
-  width: 100%;
-  max-width: 26rem;
+  gap: clamp(1.5rem, 5vh, 2.5rem);
+  width: min(100%, 26rem);
   padding: 0 1.5rem;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .ace-loader-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   width: min(92vw, 26rem);
-  height: min(68vw, 20rem);
+  min-height: clamp(14rem, 44vmin, 22rem);
   flex-shrink: 0;
   overflow: visible;
   isolation: isolate;
-  /* Room for isometric cube faces + ground shadows (do not clip with overflow:hidden) */
-  padding: clamp(0.5rem, 3vw, 1.25rem);
-  margin-bottom: clamp(1rem, 4vw, 1.75rem);
+  /* Isometric cubes extend above the 10vmin anchor box — reserve headroom */
+  padding: clamp(2.5rem, 10vmin, 4rem) clamp(0.5rem, 3vw, 1.25rem)
+    clamp(0.75rem, 3vmin, 1.5rem);
 }
 
 .ace-loader {
@@ -49,7 +51,6 @@
   position: relative;
   z-index: 10;
   margin: 0;
-  margin-top: clamp(1.25rem, 5vw, 2rem);
   flex-shrink: 0;
   text-align: center;
   font-size: clamp(1.375rem, 5.5vw, 1.875rem);
@@ -64,18 +65,17 @@
 @media (max-width: 767px) {
   .ace-loader-stage {
     width: min(94vw, 24rem);
-    height: min(62vw, 18rem);
-    padding: clamp(0.25rem, 2vw, 0.75rem);
+    min-height: clamp(13rem, 52vmin, 20rem);
+    padding-top: clamp(2rem, 12vmin, 3.5rem);
   }
 
   .ace-loader-stage .ace-loader {
-    transform: scale(0.92);
+    transform: scale(0.9);
     transform-origin: center center;
   }
 
   .ace-loader-text {
     font-size: clamp(1.5rem, 6vw, 2rem);
-    margin-top: clamp(1.5rem, 6vw, 2.5rem);
   }
 }
 
@@ -96,7 +96,9 @@
 .ace-loader .cubes {
   width: 10vmin;
   height: 10vmin;
-  transform: rotateX(60deg) rotateZ(-45deg);
+  /* translateY offsets the isometric stack so the visual centroid sits in the viewport */
+  transform: rotateX(60deg) rotateZ(-45deg) translateY(16%);
+  transform-origin: center center;
   backface-visibility: visible;
   overflow: visible;
   transform-style: preserve-3d;
