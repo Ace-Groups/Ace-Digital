@@ -51,7 +51,7 @@ export function DashboardHeroCard({
   return (
     <div
       className={cn(
-        "w-full rounded-2xl border border-border/80 dark:border-white/5 bg-card/45 dark:bg-[#0a0a0b]/45 shadow-sm dark:shadow-2xl relative overflow-hidden backdrop-blur-xl text-foreground",
+        "v2-surface-elevated w-full relative overflow-hidden text-foreground",
         compact ? "p-4 sm:p-5" : "p-6 md:p-8"
       )}
     >

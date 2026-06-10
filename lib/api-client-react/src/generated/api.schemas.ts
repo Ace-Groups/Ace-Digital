@@ -1281,6 +1281,92 @@ export interface NoteUpdate {
   sharedUserIds?: number[];
 }
 
+export interface AiPageContext {
+  route?: string;
+  projectId?: number;
+  clientId?: number;
+  noteId?: number;
+  channelId?: number;
+}
+
+export interface AiChatInput {
+  message: string;
+  conversationId?: number;
+  title?: string;
+  pageContext?: AiPageContext;
+}
+
+export type AiMessageMetadataLayout = typeof AiMessageMetadataLayout[keyof typeof AiMessageMetadataLayout];
+
+
+export const AiMessageMetadataLayout = {
+  table: 'table',
+  permission_denied: 'permission_denied',
+} as const;
+
+export type AiMessageMetadataTableData = { [key: string]: unknown };
+
+export interface AiMessageMetadata {
+  layout?: AiMessageMetadataLayout;
+  tableData?: AiMessageMetadataTableData;
+  toolsUsed?: string[];
+}
+
+export type AiConversationMessageRole = typeof AiConversationMessageRole[keyof typeof AiConversationMessageRole];
+
+
+export const AiConversationMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface AiConversationMessage {
+  id: number;
+  role: AiConversationMessageRole;
+  content: string;
+  metadata?: AiMessageMetadata;
+  createdAt: string;
+}
+
+export interface AiConversation {
+  id: number;
+  title: string;
+  pageContext?: AiPageContext;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AiConversationDetail = AiConversation & {
+  messages?: AiConversationMessage[];
+};
+
+export interface AiChatResponse {
+  conversationId: number;
+  text: string;
+  message?: AiConversationMessage;
+  metadata?: AiMessageMetadata;
+  toolsUsed?: string[];
+  rateLimitRemaining?: number;
+}
+
+export interface AiReportNarrativeInput {
+  type: string;
+  period: string;
+  projectId?: number;
+}
+
+export interface AiReportNarrativeResponse {
+  narrative: string;
+  metadata?: AiMessageMetadata;
+  toolsUsed?: string[];
+}
+
+export interface AiNoteEnrichResponse {
+  summary: string;
+  tags: string[];
+  metadata?: AiMessageMetadata;
+}
+
 export type ListProjectsParams = {
 status?: string;
 teamId?: number;

@@ -21,6 +21,13 @@ import type {
 
 import type {
   ActivityLog,
+  AiChatInput,
+  AiChatResponse,
+  AiConversation,
+  AiConversationDetail,
+  AiNoteEnrichResponse,
+  AiReportNarrativeInput,
+  AiReportNarrativeResponse,
   Approval,
   ApprovalInput,
   ApprovalReviewInput,
@@ -6162,6 +6169,443 @@ export const useGenerateReport = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getGenerateReportMutationOptions(options));
+    }
+
+export const getAiChatUrl = () => {
+
+
+
+
+  return `/api/v1/ai/chat`
+}
+
+/**
+ * @summary Send a message to Ace AI assistant
+ */
+export const aiChat = async (aiChatInput: AiChatInput, options?: RequestInit): Promise<AiChatResponse> => {
+
+  return customFetch<AiChatResponse>(getAiChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiChatInput,)
+  }
+);}
+
+
+
+
+export const getAiChatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChat>>, TError,{data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiChat>>, TError,{data: BodyType<AiChatInput>}, TContext> => {
+
+const mutationKey = ['aiChat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiChat>>, {data: BodyType<AiChatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiChatMutationResult = NonNullable<Awaited<ReturnType<typeof aiChat>>>
+    export type AiChatMutationBody = BodyType<AiChatInput>
+    export type AiChatMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a message to Ace AI assistant
+ */
+export const useAiChat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChat>>, TError,{data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiChat>>,
+        TError,
+        {data: BodyType<AiChatInput>},
+        TContext
+      > => {
+      return useMutation(getAiChatMutationOptions(options));
+    }
+
+export const getAiChatStreamUrl = () => {
+
+
+
+
+  return `/api/v1/ai/chat/stream`
+}
+
+/**
+ * @summary Stream Ace AI assistant response via SSE
+ */
+export const aiChatStream = async (aiChatInput: AiChatInput, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getAiChatStreamUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiChatInput,)
+  }
+);}
+
+
+
+
+export const getAiChatStreamMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatStream>>, TError,{data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiChatStream>>, TError,{data: BodyType<AiChatInput>}, TContext> => {
+
+const mutationKey = ['aiChatStream'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiChatStream>>, {data: BodyType<AiChatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiChatStream(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiChatStreamMutationResult = NonNullable<Awaited<ReturnType<typeof aiChatStream>>>
+    export type AiChatStreamMutationBody = BodyType<AiChatInput>
+    export type AiChatStreamMutationError = ErrorType<void>
+
+    /**
+ * @summary Stream Ace AI assistant response via SSE
+ */
+export const useAiChatStream = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatStream>>, TError,{data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiChatStream>>,
+        TError,
+        {data: BodyType<AiChatInput>},
+        TContext
+      > => {
+      return useMutation(getAiChatStreamMutationOptions(options));
+    }
+
+export const getListAiConversationsUrl = () => {
+
+
+
+
+  return `/api/v1/ai/conversations`
+}
+
+/**
+ * @summary List AI conversations for current user
+ */
+export const listAiConversations = async ( options?: RequestInit): Promise<AiConversation[]> => {
+
+  return customFetch<AiConversation[]>(getListAiConversationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiConversationsQueryKey = () => {
+    return [
+    `/api/v1/ai/conversations`
+    ] as const;
+    }
+
+
+export const getListAiConversationsQueryOptions = <TData = Awaited<ReturnType<typeof listAiConversations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiConversationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiConversations>>> = ({ signal }) => listAiConversations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiConversations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiConversationsQueryResult = NonNullable<Awaited<ReturnType<typeof listAiConversations>>>
+export type ListAiConversationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List AI conversations for current user
+ */
+
+export function useListAiConversations<TData = Awaited<ReturnType<typeof listAiConversations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiConversationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAiConversationUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/ai/conversations/${id}`
+}
+
+/**
+ * @summary Get AI conversation with messages
+ */
+export const getAiConversation = async (id: number, options?: RequestInit): Promise<AiConversationDetail> => {
+
+  return customFetch<AiConversationDetail>(getGetAiConversationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiConversationQueryKey = (id: number,) => {
+    return [
+    `/api/v1/ai/conversations/${id}`
+    ] as const;
+    }
+
+
+export const getGetAiConversationQueryOptions = <TData = Awaited<ReturnType<typeof getAiConversation>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiConversation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiConversationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiConversation>>> = ({ signal }) => getAiConversation(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiConversation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiConversationQueryResult = NonNullable<Awaited<ReturnType<typeof getAiConversation>>>
+export type GetAiConversationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get AI conversation with messages
+ */
+
+export function useGetAiConversation<TData = Awaited<ReturnType<typeof getAiConversation>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiConversation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiConversationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAiReportNarrativeUrl = () => {
+
+
+
+
+  return `/api/v1/ai/reports/narrative`
+}
+
+/**
+ * @summary Generate AI executive summary for a report
+ */
+export const aiReportNarrative = async (aiReportNarrativeInput: AiReportNarrativeInput, options?: RequestInit): Promise<AiReportNarrativeResponse> => {
+
+  return customFetch<AiReportNarrativeResponse>(getAiReportNarrativeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiReportNarrativeInput,)
+  }
+);}
+
+
+
+
+export const getAiReportNarrativeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiReportNarrative>>, TError,{data: BodyType<AiReportNarrativeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiReportNarrative>>, TError,{data: BodyType<AiReportNarrativeInput>}, TContext> => {
+
+const mutationKey = ['aiReportNarrative'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiReportNarrative>>, {data: BodyType<AiReportNarrativeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiReportNarrative(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiReportNarrativeMutationResult = NonNullable<Awaited<ReturnType<typeof aiReportNarrative>>>
+    export type AiReportNarrativeMutationBody = BodyType<AiReportNarrativeInput>
+    export type AiReportNarrativeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate AI executive summary for a report
+ */
+export const useAiReportNarrative = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiReportNarrative>>, TError,{data: BodyType<AiReportNarrativeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiReportNarrative>>,
+        TError,
+        {data: BodyType<AiReportNarrativeInput>},
+        TContext
+      > => {
+      return useMutation(getAiReportNarrativeMutationOptions(options));
+    }
+
+export const getAiNoteEnrichUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/ai/notes/${id}/enrich`
+}
+
+/**
+ * @summary Summarize note and suggest tags
+ */
+export const aiNoteEnrich = async (id: number, options?: RequestInit): Promise<AiNoteEnrichResponse> => {
+
+  return customFetch<AiNoteEnrichResponse>(getAiNoteEnrichUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiNoteEnrichMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiNoteEnrich>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiNoteEnrich>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiNoteEnrich'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiNoteEnrich>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiNoteEnrich(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiNoteEnrichMutationResult = NonNullable<Awaited<ReturnType<typeof aiNoteEnrich>>>
+
+    export type AiNoteEnrichMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Summarize note and suggest tags
+ */
+export const useAiNoteEnrich = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiNoteEnrich>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiNoteEnrich>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiNoteEnrichMutationOptions(options));
     }
 
 export const getListChannelsUrl = () => {

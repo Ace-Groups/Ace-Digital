@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AdaptiveLayout } from "./AdaptiveLayout";
+import { V2PageCanvas } from "@/components/v2/V2PageCanvas";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -12,7 +13,7 @@ interface AppLayoutProps {
 export function AppLayout({ children, title, fillViewport }: AppLayoutProps) {
   return (
     <AdaptiveLayout title={title} fillViewport={fillViewport}>
-      {children}
+      {fillViewport ? children : <V2PageCanvas stagger>{children}</V2PageCanvas>}
     </AdaptiveLayout>
   );
 }

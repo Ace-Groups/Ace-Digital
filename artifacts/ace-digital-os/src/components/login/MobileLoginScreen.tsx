@@ -45,7 +45,7 @@ export function MobileLoginScreen({
   const passwordRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="relative flex min-h-dvh w-full flex-col bg-background text-foreground brand-gradient-subtle">
+    <div className="relative flex min-h-dvh w-full flex-col v2-ambient-bg text-foreground">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/10 to-transparent"
         aria-hidden
@@ -54,9 +54,7 @@ export function MobileLoginScreen({
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-7 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
         <div className="flex flex-col items-center gap-2">
           <img src={aceLogo} alt="" className="size-11 object-contain" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Ace Digital OS
-          </p>
+          <p className="v2-stat-label">Ace Digital OS v2</p>
         </div>
 
         <section className="rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-brand-sm">

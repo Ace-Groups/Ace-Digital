@@ -31,10 +31,10 @@ export function DesktopShell({ children, title, fillViewport }: DesktopShellProp
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background brand-gradient-subtle">
+    <div className="flex h-[100dvh] overflow-hidden v2-ambient-bg">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-4 px-4 py-3 sm:px-6 sm:py-3.5 glass-header">
+        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-4 px-4 py-3 sm:px-6 sm:py-3.5 glass-header border-b border-border/40">
           {title && (
             <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
           )}
@@ -43,7 +43,7 @@ export function DesktopShell({ children, title, fillViewport }: DesktopShellProp
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
-              className="flex h-9 w-56 items-center gap-2 rounded-xl border border-border/80 bg-muted/40 pl-3 pr-2 text-left text-xs text-muted-foreground hover:bg-muted/60 lg:w-72 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="flex h-10 w-56 items-center gap-2 rounded-2xl border border-border/60 bg-card/60 pl-3.5 pr-2 text-left text-xs text-muted-foreground shadow-v2-xs hover:bg-card/90 hover:border-primary/20 lg:w-80 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/25 v2-input-glow"
             >
               <Search size={14} className="text-muted-foreground shrink-0" />
               <span className="flex-1 truncate">Search or run commands…</span>

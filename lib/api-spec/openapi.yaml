@@ -32,6 +32,8 @@ tags:
     description: Approvals
   - name: reports
     description: Reports
+  - name: ai
+    description: Ace AI assistant
   - name: channels
     description: Channels & Comms
   - name: activity
@@ -1646,6 +1648,121 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Report"
+
+  # AI ASSISTANT
+  /v1/ai/chat:
+    post:
+      operationId: aiChat
+      tags: [ai]
+      summary: Send a message to Ace AI assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiChatInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiChatResponse"
+        "429":
+          description: Rate limit exceeded
+
+  /v1/ai/chat/stream:
+    post:
+      operationId: aiChatStream
+      tags: [ai]
+      summary: Stream Ace AI assistant response via SSE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiChatInput"
+      responses:
+        "200":
+          description: Server-sent events stream (start, chunk, done, error)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "429":
+          description: Rate limit exceeded
+
+  /v1/ai/conversations:
+    get:
+      operationId: listAiConversations
+      tags: [ai]
+      summary: List AI conversations for current user
+      responses:
+        "200":
+          description: Conversation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiConversation"
+
+  /v1/ai/conversations/{id}:
+    get:
+      operationId: getAiConversation
+      tags: [ai]
+      summary: Get AI conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiConversationDetail"
+
+  /v1/ai/reports/narrative:
+    post:
+      operationId: aiReportNarrative
+      tags: [ai]
+      summary: Generate AI executive summary for a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiReportNarrativeInput"
+      responses:
+        "200":
+          description: Narrative generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiReportNarrativeResponse"
+
+  /v1/ai/notes/{id}/enrich:
+    post:
+      operationId: aiNoteEnrich
+      tags: [ai]
+      summary: Summarize note and suggest tags
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note enrichment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiNoteEnrichResponse"
 
   # CHANNELS & COMMS
   /v1/channels:
@@ -4083,3 +4200,140 @@ components:
           type: array
           items:
             type: integer
+
+    AiPageContext:
+      type: object
+      properties:
+        route:
+          type: string
+        projectId:
+          type: integer
+        clientId:
+          type: integer
+        noteId:
+          type: integer
+        channelId:
+          type: integer
+
+    AiChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        conversationId:
+          type: integer
+        title:
+          type: string
+        pageContext:
+          $ref: "#/components/schemas/AiPageContext"
+
+    AiMessageMetadata:
+      type: object
+      properties:
+        layout:
+          type: string
+          enum: [table, permission_denied]
+        tableData:
+          type: object
+        toolsUsed:
+          type: array
+          items:
+            type: string
+
+    AiConversationMessage:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/AiMessageMetadata"
+        createdAt:
+          type: string
+
+    AiConversation:
+      type: object
+      required: [id, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        pageContext:
+          $ref: "#/components/schemas/AiPageContext"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    AiConversationDetail:
+      allOf:
+        - $ref: "#/components/schemas/AiConversation"
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: "#/components/schemas/AiConversationMessage"
+
+    AiChatResponse:
+      type: object
+      required: [conversationId, text]
+      properties:
+        conversationId:
+          type: integer
+        text:
+          type: string
+        message:
+          $ref: "#/components/schemas/AiConversationMessage"
+        metadata:
+          $ref: "#/components/schemas/AiMessageMetadata"
+        toolsUsed:
+          type: array
+          items:
+            type: string
+        rateLimitRemaining:
+          type: integer
+
+    AiReportNarrativeInput:
+      type: object
+      required: [type, period]
+      properties:
+        type:
+          type: string
+        period:
+          type: string
+        projectId:
+          type: integer
+
+    AiReportNarrativeResponse:
+      type: object
+      required: [narrative]
+      properties:
+        narrative:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/AiMessageMetadata"
+        toolsUsed:
+          type: array
+          items:
+            type: string
+
+    AiNoteEnrichResponse:
+      type: object
+      required: [summary, tags]
+      properties:
+        summary:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          $ref: "#/components/schemas/AiMessageMetadata"

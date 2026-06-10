@@ -9,6 +9,7 @@ import {
   useListClients,
   useListSalaryPostings,
   getListReportsQueryKey,
+  useAiReportNarrative,
 } from "@workspace/api-client-react";
 import type {
   Report,
@@ -60,6 +61,7 @@ import {
   TrendingUp,
   CalendarIcon,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -584,6 +586,21 @@ export default function ReportsPage() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<number | null>(null);
+  const [aiSummaryOpen, setAiSummaryOpen] = useState(false);
+  const [aiSummaryText, setAiSummaryText] = useState("");
+  const [aiSummaryTitle, setAiSummaryTitle] = useState("");
+
+  const aiNarrative = useAiReportNarrative({
+    mutation: {
+      onSuccess: (data) => {
+        setAiSummaryText(data.narrative);
+        setAiSummaryOpen(true);
+      },
+      onError: () => {
+        toast({ title: "AI summary failed", variant: "destructive" });
+      },
+    },
+  });
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
@@ -682,6 +699,17 @@ export default function ReportsPage() {
     } finally {
       setDownloading(null);
     }
+  }
+
+  function handleAiSummary(report: Report) {
+    setAiSummaryTitle(report.title ?? "Report");
+    toast({ title: "Generating AI summary…" });
+    aiNarrative.mutate({
+      data: {
+        type: report.type ?? "PROJECT_STATUS",
+        period: report.period ?? "",
+      },
+    });
   }
 
   /* ── Quick generate (for the type cards) ── */
@@ -872,6 +900,21 @@ export default function ReportsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleAiSummary(report)}
+                        disabled={aiNarrative.isPending}
+                        data-testid={`btn-ai-summary-report-${report.id}`}
+                        title="Generate AI Summary"
+                        className="shrink-0"
+                      >
+                        {aiNarrative.isPending ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={15} />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleDownload(report)}
                         disabled={isDownloading}
                         data-testid={`btn-download-report-${report.id}`}
@@ -891,6 +934,18 @@ export default function ReportsPage() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={aiSummaryOpen} onOpenChange={setAiSummaryOpen}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles size={16} className="text-primary" />
+                AI Summary — {aiSummaryTitle}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-sm whitespace-pre-wrap text-foreground">{aiSummaryText}</div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

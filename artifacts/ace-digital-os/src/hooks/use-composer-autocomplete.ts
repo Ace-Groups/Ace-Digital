@@ -21,6 +21,11 @@ export type ComposerCandidate =
       label: string;
       subtitle?: string | null;
       channel: Pick<Channel, "type" | "avatarUrl" | "name" | "dmPeerAvatar">;
+    }
+  | {
+      kind: "bot";
+      label: string;
+      insertToken: string;
     };
 
 type UseComposerAutocompleteArgs = {
@@ -48,7 +53,21 @@ export function useComposerAutocomplete({
 
     if (trigger.kind === "user") {
       const query = trigger.query;
-      return (members ?? [])
+      const botCandidates: ComposerCandidate[] = [];
+      const q = query.toLowerCase();
+      if (
+        !q ||
+        "acebot".startsWith(q) ||
+        "ace".startsWith(q) ||
+        "bot".startsWith(q)
+      ) {
+        botCandidates.push({
+          kind: "bot",
+          label: "AceBot",
+          insertToken: "@AceBot",
+        });
+      }
+      const memberCandidates = (members ?? [])
         .filter((m) => m.userId !== currentUserId)
         .map((m) => ({
           member: m,
@@ -66,6 +85,7 @@ export function useComposerAutocomplete({
           label: member.fullName,
           avatarUrl: member.avatarUrl,
         }));
+      return [...botCandidates, ...memberCandidates].slice(0, MAX_CANDIDATES);
     }
 
     const query = trigger.query;

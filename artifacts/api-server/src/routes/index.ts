@@ -18,6 +18,7 @@ import calendarRouter from "./calendar";
 import activityRouter from "./activity";
 import notesRouter from "./notes";
 import pushTokensRouter from "./push-tokens";
+import aiRouter from "./ai";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(calendarRouter);
 router.use(activityRouter);
 router.use(notesRouter);
 router.use(pushTokensRouter);
+router.use(aiRouter);
 
 export default router;

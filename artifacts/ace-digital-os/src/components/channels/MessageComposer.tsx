@@ -288,6 +288,12 @@ export function MessageComposer({
 
     try {
       await onSend({ body: caption });
+      if (/@AceBot/i.test(rawCaption)) {
+        toast({
+          title: "AceBot is thinking…",
+          description: "You'll see a reply in this channel shortly.",
+        });
+      }
     } catch (err) {
       setMessage(rawCaption);
       toast({
@@ -345,6 +351,12 @@ export function MessageComposer({
     const pos = el?.selectionStart ?? cursor;
     if (candidate.kind === "user") {
       applyInsertedText(insertMentionToken(message, pos, candidate.userId, candidate.label));
+      return;
+    }
+    if (candidate.kind === "bot") {
+      const before = message.slice(0, pos).replace(/@([A-Za-z0-9_.\- ]*)$/, "");
+      const after = message.slice(pos);
+      applyInsertedText(`${before}${candidate.insertToken} ${after}`);
       return;
     }
     applyInsertedText(insertChannelToken(message, pos, candidate.channelId, candidate.label));
@@ -591,7 +603,13 @@ export function MessageComposer({
                   <ul className="max-h-48 overflow-y-auto py-1">
                     {autocomplete.candidates.map((c, i) => (
                       <li
-                        key={c.kind === "user" ? `user-${c.userId}` : `channel-${c.channelId}`}
+                        key={
+                          c.kind === "user"
+                            ? `user-${c.userId}`
+                            : c.kind === "bot"
+                              ? "bot-ace"
+                              : `channel-${c.channelId}`
+                        }
                       >
                         <button
                           type="button"
@@ -617,6 +635,18 @@ export function MessageComposer({
                               <div className="min-w-0 flex-1">
                                 <span className="block truncate">{c.label}</span>
                                 <span className="text-[10px] text-muted-foreground">Member</span>
+                              </div>
+                            </>
+                          ) : c.kind === "bot" ? (
+                            <>
+                              <img
+                                src="/bot-avatar.png"
+                                alt=""
+                                className="h-7 w-7 rounded-full bg-muted object-cover"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate">{c.label}</span>
+                                <span className="text-[10px] text-muted-foreground">AI Assistant</span>
                               </div>
                             </>
                           ) : (

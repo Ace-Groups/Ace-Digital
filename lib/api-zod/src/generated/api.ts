@@ -2022,6 +2022,164 @@ export const GenerateReportBody = zod.object({
 
 
 /**
+ * @summary Send a message to Ace AI assistant
+ */
+export const AiChatBody = zod.object({
+  "message": zod.string(),
+  "conversationId": zod.number().optional(),
+  "title": zod.string().optional(),
+  "pageContext": zod.object({
+  "route": zod.string().optional(),
+  "projectId": zod.number().optional(),
+  "clientId": zod.number().optional(),
+  "noteId": zod.number().optional(),
+  "channelId": zod.number().optional()
+}).optional()
+})
+
+export const AiChatResponse = zod.object({
+  "conversationId": zod.number(),
+  "text": zod.string(),
+  "message": zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "metadata": zod.object({
+  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "tableData": zod.object({
+
+}).passthrough().optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+}).optional(),
+  "createdAt": zod.string()
+}).optional(),
+  "metadata": zod.object({
+  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "tableData": zod.object({
+
+}).passthrough().optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+}).optional(),
+  "toolsUsed": zod.array(zod.string()).optional(),
+  "rateLimitRemaining": zod.number().optional()
+})
+
+
+/**
+ * @summary Stream Ace AI assistant response via SSE
+ */
+export const AiChatStreamBody = zod.object({
+  "message": zod.string(),
+  "conversationId": zod.number().optional(),
+  "title": zod.string().optional(),
+  "pageContext": zod.object({
+  "route": zod.string().optional(),
+  "projectId": zod.number().optional(),
+  "clientId": zod.number().optional(),
+  "noteId": zod.number().optional(),
+  "channelId": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * @summary List AI conversations for current user
+ */
+export const ListAiConversationsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "pageContext": zod.object({
+  "route": zod.string().optional(),
+  "projectId": zod.number().optional(),
+  "clientId": zod.number().optional(),
+  "noteId": zod.number().optional(),
+  "channelId": zod.number().optional()
+}).optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListAiConversationsResponse = zod.array(ListAiConversationsResponseItem)
+
+
+/**
+ * @summary Get AI conversation with messages
+ */
+export const GetAiConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAiConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "pageContext": zod.object({
+  "route": zod.string().optional(),
+  "projectId": zod.number().optional(),
+  "clientId": zod.number().optional(),
+  "noteId": zod.number().optional(),
+  "channelId": zod.number().optional()
+}).optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).and(zod.object({
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "metadata": zod.object({
+  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "tableData": zod.object({
+
+}).passthrough().optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+}).optional(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Generate AI executive summary for a report
+ */
+export const AiReportNarrativeBody = zod.object({
+  "type": zod.string(),
+  "period": zod.string(),
+  "projectId": zod.number().optional()
+})
+
+export const AiReportNarrativeResponse = zod.object({
+  "narrative": zod.string(),
+  "metadata": zod.object({
+  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "tableData": zod.object({
+
+}).passthrough().optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+}).optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary Summarize note and suggest tags
+ */
+export const AiNoteEnrichParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiNoteEnrichResponse = zod.object({
+  "summary": zod.string(),
+  "tags": zod.array(zod.string()),
+  "metadata": zod.object({
+  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "tableData": zod.object({
+
+}).passthrough().optional(),
+  "toolsUsed": zod.array(zod.string()).optional()
+}).optional()
+})
+
+
+/**
  * @summary List accessible channels
  */
 export const ListChannelsResponseItem = zod.object({

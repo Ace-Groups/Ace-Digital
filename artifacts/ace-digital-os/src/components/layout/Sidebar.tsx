@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import aceLogo from "@/assets/ace-logo.png";
+import { AceAssistantTrigger } from "@/components/ai/AceAssistantTrigger";
 
 const NAV_ICONS = {
   dashboard: LayoutDashboard,
@@ -72,7 +73,7 @@ export function Sidebar() {
           data-testid="sidebar"
           data-collapsed={collapsed ? "true" : "false"}
           className={cn(
-            "sticky top-0 flex h-[100dvh] flex-col overflow-hidden bg-sidebar/80 text-sidebar-foreground border-r border-sidebar-border/40 backdrop-blur-xl shadow-brand-md transition-[width] duration-300 ease-out",
+            "sticky top-0 flex h-[100dvh] flex-col overflow-hidden bg-sidebar/90 text-sidebar-foreground border-r border-sidebar-border/30 backdrop-blur-2xl shadow-v2-md transition-[width] duration-300 ease-out",
             collapsed ? "w-[4.25rem]" : "w-64",
           )}
         >
@@ -122,8 +123,8 @@ export function Sidebar() {
                 ? "mx-auto h-10 w-10 justify-center p-0"
                 : "gap-3 px-3 py-2.5 hover:translate-x-0.5",
               active
-                ? "bg-primary text-primary-foreground shadow-sm dark:bg-sidebar-primary dark:text-sidebar-primary-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                ? "v2-nav-pill-active bg-primary/12 text-primary shadow-v2-xs"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
             );
 
             const link = (
@@ -156,6 +157,14 @@ export function Sidebar() {
         <div className="space-y-1 border-t border-sidebar-border p-2">
           {collapsed ? (
             <>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-center">
+                    <AceAssistantTrigger collapsed />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">Ask Ace</TooltipContent>
+              </Tooltip>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Link
@@ -206,6 +215,7 @@ export function Sidebar() {
             </>
           ) : (
             <>
+              <AceAssistantTrigger />
               <Link
                 href="/settings"
                 data-testid="nav-settings"

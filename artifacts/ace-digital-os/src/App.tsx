@@ -20,6 +20,11 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
 import { FluidAppShell } from "@/components/layout/FluidAppShell";
 import { CommandPalette } from "@/components/CommandPalette";
+import { AceAssistantProvider } from "@/contexts/AceAssistantContext";
+import { AceAssistantPanel } from "@/components/ai/AceAssistantPanel";
+import { V2Onboarding } from "@/components/v2/V2Onboarding";
+import { KeyboardShortcutsSheet } from "@/components/v2/KeyboardShortcutsSheet";
+import { QuickCreateFab } from "@/components/v2/QuickCreateFab";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
 const ErrorPage = lazyWithReload(() => import("@/pages/error"));
@@ -197,6 +202,7 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
+            <AceAssistantProvider>
             <ErrorBoundary>
             <SocketProvider>
             <GlobalChatBoot />
@@ -206,15 +212,20 @@ function App() {
                 <FluidAppShell>
                   <AppRouter />
                 </FluidAppShell>
+                <AceAssistantPanel />
                 <InstallPrompt />
                 <PushPermissionPrompt />
                 <CommandPalette />
+                <KeyboardShortcutsSheet />
+                <V2Onboarding />
+                <QuickCreateFab />
               </WouterRouter>
               <Toaster />
               <FormEnterNavigation />
             </MobileChromeProvider>
             </SocketProvider>
             </ErrorBoundary>
+            </AceAssistantProvider>
           </AuthProvider>
         </TooltipProvider>
       </PersistQueryClientProvider>

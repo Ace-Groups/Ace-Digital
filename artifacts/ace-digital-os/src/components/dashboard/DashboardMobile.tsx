@@ -5,6 +5,7 @@ import { DashboardHeroCard } from "./DashboardHeroCard";
 import { DashboardStatCards } from "./DashboardStatCards";
 import { DashboardSecondaryWidgets, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
+import { AskAceCard } from "@/components/ai/AskAceCard";
 import { useDashboardPage } from "./useDashboardPage";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,10 @@ export function DashboardMobile() {
             <DashboardStatCards widgets={widgets} dash={dash} isLoading={isLoading} />
           </div>
         </div>
+      </StaggerItem>
+
+      <StaggerItem>
+        <AskAceCard />
       </StaggerItem>
 
       <StaggerItem>

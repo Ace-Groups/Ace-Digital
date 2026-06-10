@@ -8,7 +8,7 @@ import { FluidRouteTransition } from "@/components/design/fluid-motion";
  */
 export function FluidAppShell({ children }: { children: ReactNode }) {
   return (
-    <GlassAppShell>
+    <GlassAppShell className="v2-ambient-bg">
       <FluidRouteTransition>{children}</FluidRouteTransition>
     </GlassAppShell>
   );

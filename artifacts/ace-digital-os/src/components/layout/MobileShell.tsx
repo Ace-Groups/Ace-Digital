@@ -103,9 +103,9 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
   const showAppHeader = !immersivePage || Boolean(title?.trim());
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
+    <div className="flex h-[100dvh] flex-col overflow-hidden v2-ambient-bg">
       {showAppHeader && (
-      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-1.5 border-b border-border/80 bg-card/95 px-2.5 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-4">
+      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-1.5 border-b border-border/50 bg-card/80 px-2.5 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-xl sm:gap-3 sm:px-4">
         <img src={aceLogo} alt="" className="h-8 w-8 shrink-0 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
@@ -171,7 +171,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
           className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(5.35rem+env(safe-area-inset-bottom))] items-center justify-center px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))]"
           aria-label="Main navigation"
         >
-          <div className="flex h-[4.35rem] w-full max-w-md items-stretch justify-around rounded-2xl border border-border/70 bg-background/90 px-1.5 shadow-brand-xl backdrop-blur-xl dark:bg-black/70">
+          <div className="flex h-[4.35rem] w-full max-w-md items-stretch justify-around rounded-2xl border border-border/50 bg-card/85 px-1.5 shadow-v2-lg backdrop-blur-2xl">
             {primary.map((item) => {
               const Icon = ICONS[item.route];
               const active = isActive(item.href);

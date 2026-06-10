@@ -54,7 +54,7 @@ export function StatusPage({
   const styles = toneStyles[tone];
 
   return (
-    <div className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-background brand-gradient-subtle px-4 py-10">
+    <div className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden v2-ambient-bg px-4 py-10">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         aria-hidden
@@ -72,7 +72,7 @@ export function StatusPage({
 
       <div className="relative z-10 mx-auto w-full max-w-lg">
         <div
-          className={`relative overflow-hidden rounded-3xl border border-border/70 bg-card/80 p-8 shadow-brand-md backdrop-blur-md sm:p-10 ${styles.ring} bg-gradient-to-br`}
+          className={`relative overflow-hidden rounded-3xl border border-border/50 bg-card/90 p-8 shadow-v2-lg backdrop-blur-xl sm:p-10 ${styles.ring} bg-gradient-to-br`}
         >
           <div className="mb-8 flex items-center justify-between gap-4">
             <img src={aceLogo} alt="Ace Digital" className="h-8 w-auto opacity-90" />

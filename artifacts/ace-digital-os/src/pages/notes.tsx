@@ -37,6 +37,7 @@ import {
 import { isFirebaseCollabEnabled } from "@/lib/firebase-rtdb";
 import { ShareNoteDialog } from "@/components/notes/ShareNoteDialog";
 import { ShareNoteToChatDialog } from "@/components/notes/ShareNoteToChatDialog";
+import { NoteAiActions } from "@/components/ai/NoteAiActions";
 import "@/styles/note-editor.css";
 
 /** Strip HTML for preview text */
@@ -686,6 +687,7 @@ export default function NotesPage() {
                         <span className="hidden sm:inline">Share</span>
                       </Button>
                     )}
+                  {selectedNote && <NoteAiActions noteId={selectedNote.id} />}
                   {selectedNote && (
                     <Button
                       variant="ghost"

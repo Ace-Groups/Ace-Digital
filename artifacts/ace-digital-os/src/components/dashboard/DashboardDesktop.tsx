@@ -3,6 +3,7 @@ import { DashboardHeroCard } from "./DashboardHeroCard";
 import { DashboardStatCards } from "./DashboardStatCards";
 import { UpcomingDeadlinesWidget, TeamLoadWidget, UpcomingCalendarWidget, RecentActivityWidget, WorkspaceAnalyticsWidget } from "./DashboardWidgets";
 import { ChatWidget } from "./ChatWidget";
+import { AskAceCard } from "@/components/ai/AskAceCard";
 import { useDashboardPage } from "./useDashboardPage";
 
 export function DashboardDesktop() {
@@ -26,6 +27,10 @@ export function DashboardDesktop() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
           <DashboardStatCards widgets={widgets} dash={dash} isLoading={isLoading} />
         </div>
+      </StaggerItem>
+
+      <StaggerItem>
+        <AskAceCard />
       </StaggerItem>
 
       <StaggerItem>

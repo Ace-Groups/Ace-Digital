@@ -1,6 +1,6 @@
 /**
- * Tactile feedback — maps to expo-haptics ImpactFeedbackStyle on native;
- * uses navigator.vibrate on web/PWA where permitted.
+ * Ace OS v2 — semantic haptic feedback layer.
+ * Maps to navigator.vibrate on web/PWA; mirrors expo-haptics on native.
  */
 
 export enum ImpactFeedbackStyle {
@@ -8,6 +8,19 @@ export enum ImpactFeedbackStyle {
   Medium = "medium",
   Heavy = "heavy",
 }
+
+export type HapticEvent =
+  | "tap"
+  | "selection"
+  | "success"
+  | "warning"
+  | "error"
+  | "impact"
+  | "navigation"
+  | "sheetOpen"
+  | "sheetClose"
+  | "destructive"
+  | "toggle";
 
 const hasHaptics =
   typeof window !== "undefined" &&
@@ -38,14 +51,47 @@ export function impact(style: ImpactFeedbackStyle): void {
   }
 }
 
-/** Light tap — typing, selection, minor toggles. */
-export function hapticLight(): void {
-  impact(ImpactFeedbackStyle.Light);
+/** Semantic haptic API — use this throughout v2 UI. */
+export function haptic(event: HapticEvent): void {
+  switch (event) {
+    case "tap":
+    case "selection":
+    case "toggle":
+      impact(ImpactFeedbackStyle.Light);
+      break;
+    case "navigation":
+      vibrate(8);
+      break;
+    case "success":
+      vibrate([12, 24, 12, 24, 28]);
+      break;
+    case "warning":
+      vibrate([20, 40, 20]);
+      break;
+    case "error":
+    case "destructive":
+      vibrate([30, 20, 40]);
+      break;
+    case "impact":
+      impact(ImpactFeedbackStyle.Medium);
+      break;
+    case "sheetOpen":
+      vibrate([16, 28, 16]);
+      break;
+    case "sheetClose":
+      vibrate(12);
+      break;
+  }
 }
 
-/** Medium tap — modals, confirmations, success states. */
+/** Light tap — typing, selection, minor toggles. */
+export function hapticLight(): void {
+  haptic("tap");
+}
+
+/** Medium tap — modals, confirmations. */
 export function hapticMedium(): void {
-  impact(ImpactFeedbackStyle.Medium);
+  haptic("impact");
 }
 
 /** Heavy tap — destructive actions. */
@@ -55,16 +101,25 @@ export function hapticHeavy(): void {
 
 /** Success pattern — task complete, save confirmed. */
 export function hapticSuccess(): void {
-  if (!hasHaptics) return;
-  vibrate([15, 30, 15, 30, 30]);
+  haptic("success");
 }
 
 /** Selection change — list pickers, tabs. */
 export function hapticSelection(): void {
-  impact(ImpactFeedbackStyle.Light);
+  haptic("selection");
 }
 
 /** Destructive action — delete, revoke. */
 export function hapticDestructive(): void {
-  impact(ImpactFeedbackStyle.Medium);
+  haptic("destructive");
+}
+
+/** Navigation between routes or tabs. */
+export function hapticNavigation(): void {
+  haptic("navigation");
+}
+
+/** Sheet / drawer open. */
+export function hapticSheetOpen(): void {
+  haptic("sheetOpen");
 }

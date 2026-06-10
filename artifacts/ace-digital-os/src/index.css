@@ -65,6 +65,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+
+  --shadow-v2-xs: var(--elevation-xs);
+  --shadow-v2-sm: var(--elevation-sm);
+  --shadow-v2-md: var(--elevation-md);
+  --shadow-v2-lg: var(--elevation-lg);
+  --shadow-v2-xl: var(--elevation-xl);
 }
 
 /* LIGHT MODE */
@@ -145,7 +153,20 @@
   --ace-navy: 215 91% 19%;
   --ace-blue: 211 38% 52%;
   --ace-sky: 203 100% 87%;
+  --ace-glow: 211 90% 62%;
   --shadow-brand: 210 25% 75%;
+
+  /* v2 elevation scale */
+  --elevation-xs: 0 1px 2px hsl(215 50% 12% / 0.04);
+  --elevation-sm: 0 2px 8px hsl(215 50% 12% / 0.06), 0 1px 2px hsl(215 50% 12% / 0.04);
+  --elevation-md: 0 8px 24px hsl(215 50% 12% / 0.08), 0 2px 6px hsl(215 50% 12% / 0.04);
+  --elevation-lg: 0 16px 48px hsl(215 50% 12% / 0.12), 0 4px 12px hsl(215 50% 12% / 0.06);
+  --elevation-xl: 0 24px 64px hsl(215 50% 12% / 0.16), 0 8px 24px hsl(215 50% 12% / 0.08);
+
+  /* v2 spacing rhythm */
+  --space-page-x: 1rem;
+  --space-page-y: 1.25rem;
+  --space-section: 1.5rem;
 }
 
 /* DARK MODE */
@@ -199,6 +220,13 @@
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --shadow-brand: 222 47% 2%;
+  --ace-glow: 184 100% 50%;
+
+  --elevation-xs: 0 1px 2px hsl(0 0% 0% / 0.2);
+  --elevation-sm: 0 2px 8px hsl(0 0% 0% / 0.25), 0 1px 2px hsl(0 0% 0% / 0.15);
+  --elevation-md: 0 8px 24px hsl(0 0% 0% / 0.35), 0 2px 6px hsl(0 0% 0% / 0.2);
+  --elevation-lg: 0 16px 48px hsl(0 0% 0% / 0.45), 0 4px 12px hsl(0 0% 0% / 0.25);
+  --elevation-xl: 0 24px 64px hsl(0 0% 0% / 0.55), 0 8px 24px hsl(0 0% 0% / 0.3);
 }
 
 * {
@@ -463,12 +491,128 @@ body {
   .touch-scroll {
     -webkit-overflow-scrolling: touch;
   }
+
+  /* ── Ace OS v2 design utilities ── */
+
+  .v2-page {
+    @apply mx-auto w-full max-w-[1600px] space-y-5 sm:space-y-7;
+  }
+
+  .v2-surface {
+    @apply rounded-2xl border border-border/60 bg-card/90 shadow-v2-sm backdrop-blur-sm;
+  }
+
+  .v2-surface-elevated {
+    @apply rounded-2xl border border-border/50 bg-card shadow-v2-md;
+    box-shadow: var(--elevation-md);
+  }
+
+  .v2-surface-interactive {
+    @apply rounded-2xl border border-border/60 bg-card/90 shadow-v2-sm backdrop-blur-sm transition-all duration-300;
+    transition-timing-function: var(--motion-spring);
+  }
+
+  .v2-surface-interactive:hover {
+    @apply border-primary/25 shadow-v2-md;
+    transform: translateY(-1px);
+  }
+
+  .v2-surface-interactive:active {
+    transform: translateY(0) scale(0.995);
+  }
+
+  .v2-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground;
+  }
+
+  .v2-chip-active {
+    @apply border-primary/30 bg-primary/10 text-primary;
+  }
+
+  .v2-glow-ring {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15), 0 0 24px hsl(var(--ace-glow) / 0.12);
+  }
+
+  .v2-nav-pill {
+    @apply relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200;
+    transition-timing-function: var(--motion-spring);
+  }
+
+  .v2-nav-pill-active {
+    @apply bg-primary/12 text-primary;
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.2);
+  }
+
+  .v2-stat-value {
+    font-family: var(--app-font-display);
+    @apply text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl;
+  }
+
+  .v2-stat-label {
+    @apply text-[11px] font-semibold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .v2-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+
+  .v2-input-glow:focus-within {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12);
+  }
+
+  .v2-ambient-bg {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--ace-sky) / 0.15), transparent),
+      hsl(var(--background));
+  }
+
+  .dark .v2-ambient-bg {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(184 100% 50% / 0.04), transparent),
+      hsl(var(--background));
+  }
+
+  .v2-fab {
+    @apply fixed z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-v2-lg;
+    box-shadow: var(--elevation-lg), 0 0 32px hsl(var(--primary) / 0.25);
+  }
+
+  .shadow-brand-xl {
+    box-shadow: var(--elevation-xl);
+  }
+
+  .text-display-md {
+    font-family: var(--app-font-display);
+    font-size: 1.75rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .text-display-lg {
+    font-family: var(--app-font-display);
+    font-size: 2.25rem;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --space-page-x: 1.5rem;
+      --space-page-y: 1.75rem;
+      --space-section: 2rem;
+    }
+  }
 }
 
 :root {
+  --motion-instant: 100ms;
   --motion-fast: 150ms;
-  --motion-base: 300ms;
-  --motion-slow: 500ms;
+  --motion-base: 280ms;
+  --motion-slow: 480ms;
+  --motion-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --chat-bg: hsl(0 0% 100%);
   --chat-sidebar-bg: hsl(var(--sidebar));

@@ -19,7 +19,10 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
 } from "lucide-react";
+import { useAceAssistant } from "@/contexts/AceAssistantContext";
+import { hapticLight } from "@/lib/haptics";
 import {
   CommandDialog,
   CommandInput,
@@ -40,6 +43,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { resolvedTheme, setTheme } = useTheme();
+  const { setOpen: setAssistantOpen } = useAceAssistant();
 
   // Load searchable data
   const { data: projects } = useListProjects();
@@ -67,15 +71,32 @@ export function CommandPalette() {
   }, []);
 
   const runCommand = (command: () => void) => {
+    hapticLight();
     setOpen(false);
     command();
   };
+
+  // ⌘J — open Ace Assistant
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setAssistantOpen(true);
+      }
+      if (e.key === "n" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [setAssistantOpen]);
 
   const isDark = resolvedTheme === "dark";
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Type a command or search workspace..." />
+      <CommandInput placeholder="Search, navigate, or ask Ace anything…" />
       <CommandList className="max-h-[350px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
         <CommandEmpty>No results found.</CommandEmpty>
 
@@ -161,6 +182,27 @@ export function CommandPalette() {
             ))}
           </CommandGroup>
         )}
+
+        <CommandSeparator className="my-1" />
+
+        {/* AI */}
+        <CommandGroup heading="Ace AI">
+          <CommandItem
+            value="ask ace assistant ai help insights"
+            onSelect={() =>
+              runCommand(() => {
+                setAssistantOpen(true);
+              })
+            }
+            className="flex items-center justify-between rounded-xl px-3 py-2.5 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles size={15} className="text-primary" />
+              <span className="text-xs font-medium">Ask Ace Assistant</span>
+            </div>
+            <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[9px]">⌘J</kbd>
+          </CommandItem>
+        </CommandGroup>
 
         <CommandSeparator className="my-1" />
 
