@@ -1,15 +1,12 @@
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  StatusPageContactAdmin,
-  StatusPageSignOut,
-} from "@/components/errors/StatusPage";
-import { Home } from "lucide-react";
+import { StatusPageContactAdmin } from "@/components/errors/StatusPage";
+import { useSignOutRedirect } from "@/hooks/use-sign-out-redirect";
+import { Home, LogOut } from "lucide-react";
 
 export default function ForbiddenPage() {
-  const { logout } = useAuth();
+  const signOut = useSignOutRedirect();
 
   return (
     <AppLayout title="Access denied">
@@ -26,17 +23,26 @@ export default function ForbiddenPage() {
             need access, or return to an area you can use.
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg" className="gap-2">
               <Link href="/">
                 <Home size={16} aria-hidden />
                 Back to dashboard
               </Link>
             </Button>
-            <StatusPageSignOut onSignOut={logout} />
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="gap-2"
+              onClick={() => void signOut()}
+            >
+              <LogOut size={16} aria-hidden />
+              Sign out
+            </Button>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 flex justify-center border-t border-border/60 pt-6">
             <StatusPageContactAdmin />
           </div>
         </div>

@@ -173,15 +173,26 @@ export function RecentActivityWidget({ dash, isLoading }: { dash?: DashboardData
 }
 
 
+function projectChartLabel(name: string | null | undefined): { name: string; fullName: string } {
+  const fullName = typeof name === "string" && name.trim() ? name : "Untitled";
+  return {
+    fullName,
+    name: fullName.length > 15 ? `${fullName.substring(0, 12)}...` : fullName,
+  };
+}
+
 export function WorkspaceAnalyticsWidget({ dash, isLoading }: { dash?: DashboardData; isLoading: boolean }) {
-  // Prep data for charts
   const teamLoadData = dash?.teamLoad ?? [];
-  const projectProgressData = (dash?.upcomingDeadlines ?? []).map(p => ({
-    name: p.name.length > 15 ? p.name.substring(0, 12) + "..." : p.name,
-    fullName: p.name,
-    Progress: p.progress,
-    Priority: p.priority,
-  }));
+  const projectProgressData = isLoading
+    ? []
+    : (dash?.upcomingDeadlines ?? []).map((p) => {
+        const label = projectChartLabel(p.name);
+        return {
+          ...label,
+          Progress: p.progress ?? 0,
+          Priority: p.priority ?? "MEDIUM",
+        };
+      });
 
   return (
     <Card className="border-border/70 overflow-hidden bg-card/45 dark:bg-[#0a0a0b]/45 shadow-sm dark:shadow-2xl relative backdrop-blur-xl">

@@ -13,6 +13,7 @@ interface StatusPageProps {
   tone?: StatusPageTone;
   primaryAction?: { label: string; href: string };
   secondaryAction?: { label: string; onClick: () => void; icon?: ReactNode };
+  onSignOut?: () => void | Promise<void>;
   extra?: ReactNode;
 }
 
@@ -47,6 +48,7 @@ export function StatusPage({
   tone = "neutral",
   primaryAction = { label: "Back to dashboard", href: "/" },
   secondaryAction,
+  onSignOut,
   extra,
 }: StatusPageProps) {
   const styles = toneStyles[tone];
@@ -121,9 +123,29 @@ export function StatusPage({
                 Go back
               </Button>
             )}
+            {onSignOut ? (
+              <Button
+                type="button"
+                size="lg"
+                variant="ghost"
+                className="gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => void onSignOut()}
+              >
+                <LogOut size={16} aria-hidden />
+                Sign out
+              </Button>
+            ) : null}
           </div>
 
-          {extra ? <div className="mt-6 border-t border-border/60 pt-6">{extra}</div> : null}
+          {extra || onSignOut ? (
+            <div className="mt-6 border-t border-border/60 pt-6">
+              {extra ?? (
+                <div className="flex justify-center">
+                  <StatusPageContactAdmin />
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -141,6 +163,21 @@ export function StatusPageSignOut({ onSignOut }: { onSignOut: () => void | Promi
       <LogOut size={15} aria-hidden />
       Sign out
     </Button>
+  );
+}
+
+export function StatusPageFooter({
+  onSignOut,
+  showContact = true,
+}: {
+  onSignOut: () => void | Promise<void>;
+  showContact?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+      {showContact ? <StatusPageContactAdmin /> : <span />}
+      <StatusPageSignOut onSignOut={onSignOut} />
+    </div>
   );
 }
 

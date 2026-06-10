@@ -2,7 +2,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@workspace/api-client-react";
@@ -25,7 +24,6 @@ function LoginDesktopFallback() {
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -105,7 +103,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(data.email.trim(), data.password);
-      setLocation("/");
     } catch (err) {
       toast({
         title: "Login failed",

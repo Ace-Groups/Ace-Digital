@@ -1,4 +1,4 @@
-import { Suspense, useEffect, type ComponentType } from "react";
+import { Suspense, type ComponentType } from "react";
 import { lazyWithReload } from "@/lib/lazy-with-reload";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, onlineManager } from "@tanstack/react-query";
@@ -127,20 +127,13 @@ function GlobalChatBoot() {
 
 function LoginRoute() {
   const { isAuthenticated, isBootstrapping } = useAuth();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (!isBootstrapping && isAuthenticated) {
-      setLocation("/");
-    }
-  }, [isBootstrapping, isAuthenticated, setLocation]);
 
   if (isBootstrapping) {
     return <LoadingScreen />;
   }
 
   if (isAuthenticated) {
-    return null;
+    return <Redirect to="/" />;
   }
 
   return <LoginPage />;
@@ -187,7 +180,6 @@ function AppRouter() {
 
 function App() {
   return (
-    <ErrorBoundary>
     <ThemeProvider>
       <PersistQueryClientProvider
         client={queryClient}
@@ -201,6 +193,7 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
+            <ErrorBoundary>
             <SocketProvider>
             <GlobalChatBoot />
             <PrefetchBoot />
@@ -214,11 +207,11 @@ function App() {
               <FormEnterNavigation />
             </MobileChromeProvider>
             </SocketProvider>
+            </ErrorBoundary>
           </AuthProvider>
         </TooltipProvider>
       </PersistQueryClientProvider>
     </ThemeProvider>
-    </ErrorBoundary>
   );
 }
 
