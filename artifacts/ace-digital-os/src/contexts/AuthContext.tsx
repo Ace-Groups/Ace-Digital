@@ -1,32 +1,34 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useLogin, useLogout, useRefreshAuth, ApiError } from "@workspace/api-client-react";
+import {
+  useGetMe,
+  useLogin,
+  useLogout,
+  useRefreshAuth,
+  ApiError,
+  type User,
+} from "@workspace/api-client-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setAuthToken, clearAuthToken, getAuthToken } from "@/lib/api";
 import { ensureFirebaseAuth, signOutFirebase, resetFirebaseAuthState } from "@/lib/firebase-client";
 import { isFirebaseChatEnabled } from "@/lib/firebase-config";
 import { useSessionActivity } from "@/hooks/useSessionActivity";
 import { clearLastActivity, setLastActivity } from "@/lib/session";
+import {
+  clearSessionUser,
+  readSessionUser,
+  writeSessionUser,
+  type SessionUser,
+} from "@/lib/session-user";
 
-interface AuthUser {
-  id: number;
-  email: string;
-  fullName: string;
-  role: string;
-  teamId: number | null;
-  teamName: string | null;
-  jobTitle: string | null;
-  avatarUrl: string | null;
-  phone: string | null;
-  status: string;
-  mustChangePassword: boolean;
-}
+interface AuthUser extends SessionUser {}
 
 interface AuthContextValue {
   user: AuthUser | null;
   authToken: string | null;
-  isLoading: boolean;
+  /** True while validating an existing session — never redirect to login during this. */
+  isBootstrapping: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -36,8 +38,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function mapApiUser(raw: User): AuthUser {
+  return {
+    id: raw.id,
+    email: raw.email,
+    fullName: raw.fullName,
+    role: raw.role,
+    teamId: raw.teamId ?? null,
+    teamName: raw.teamName ?? null,
+    jobTitle: raw.jobTitle ?? null,
+    avatarUrl: raw.avatarUrl ?? null,
+    phone: raw.phone ?? null,
+    status: raw.status ?? "active",
+    mustChangePassword: raw.mustChangePassword ?? false,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(getAuthToken());
+  const initialToken = getAuthToken();
+  const [token, setToken] = useState<string | null>(initialToken);
+  const [cachedUser, setCachedUser] = useState<AuthUser | null>(() =>
+    initialToken ? readSessionUser() : null,
+  );
+  const [sessionReady, setSessionReady] = useState(!initialToken);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
   const refreshAttemptedRef = useRef(false);
 
@@ -53,32 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const user: AuthUser | null = rawUser
-    ? {
-        id: rawUser.id,
-        email: rawUser.email,
-        fullName: rawUser.fullName,
-        role: rawUser.role,
-        teamId: rawUser.teamId ?? null,
-        teamName: rawUser.teamName ?? null,
-        jobTitle: rawUser.jobTitle ?? null,
-        avatarUrl: rawUser.avatarUrl ?? null,
-        phone: rawUser.phone ?? null,
-        status: rawUser.status ?? "active",
-        mustChangePassword: rawUser.mustChangePassword ?? false,
-      }
-    : null;
+  const apiUser = rawUser ? mapApiUser(rawUser) : null;
+  const user = apiUser ?? cachedUser;
+  const isBootstrapping = !!token && (!sessionReady || isLoading || isRefreshing);
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
   const refreshMutation = useRefreshAuth();
 
   const refreshSession = useCallback(async () => {
-    const result = await refreshMutation.mutateAsync();
-    setAuthToken(result.token);
-    setToken(result.token);
-    setLastActivity();
-    await queryClient.invalidateQueries({ queryKey: ["getMe"] });
+    setIsRefreshing(true);
+    try {
+      const result = await refreshMutation.mutateAsync();
+      setAuthToken(result.token);
+      setToken(result.token);
+      setLastActivity();
+      await queryClient.invalidateQueries({ queryKey: ["getMe"] });
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [refreshMutation, queryClient]);
 
   const logout = useCallback(async () => {
@@ -89,17 +106,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await signOutFirebase();
     clearAuthToken();
+    clearSessionUser();
     clearLastActivity();
+    setCachedUser(null);
     setToken(null);
+    setSessionReady(true);
     queryClient.clear();
   }, [logoutMutation, queryClient]);
 
   useEffect(() => {
-    if (!token || isLoading) return;
+    if (apiUser) {
+      writeSessionUser(apiUser);
+      setCachedUser(apiUser);
+      setSessionReady(true);
+      setLastActivity();
+      refreshAttemptedRef.current = false;
+    }
+  }, [apiUser]);
+
+  useEffect(() => {
+    if (!token) {
+      setSessionReady(true);
+      setCachedUser(null);
+      return;
+    }
+
+    if (isLoading || isRefreshing) return;
 
     if (!isError) {
-      refreshAttemptedRef.current = false;
-      if (user) setLastActivity();
+      if (!apiUser) {
+        setSessionReady(true);
+      }
       return;
     }
 
@@ -110,18 +147,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then(() => refetch())
         .catch(() => {
           clearAuthToken();
+          clearSessionUser();
           clearLastActivity();
+          setCachedUser(null);
           setToken(null);
+          setSessionReady(true);
         });
       return;
     }
 
-    if (status === 401) {
-      clearAuthToken();
-      clearLastActivity();
-      setToken(null);
-    }
-  }, [token, isLoading, isError, error, user, refetch, refreshSession]);
+    clearAuthToken();
+    clearSessionUser();
+    clearLastActivity();
+    setCachedUser(null);
+    setToken(null);
+    setSessionReady(true);
+  }, [token, isLoading, isRefreshing, isError, error, apiUser, refetch, refreshSession]);
 
   useEffect(() => {
     if (!token || !user || !isFirebaseChatEnabled()) return;
@@ -133,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await loginMutation.mutateAsync({ data: { email, password } });
       setAuthToken(result.token);
       setToken(result.token);
+      setSessionReady(false);
       setLastActivity();
       resetFirebaseAuthState();
       void ensureFirebaseAuth();
@@ -145,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useSessionActivity({
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && sessionReady,
     logout,
     refreshSession,
   });
@@ -155,12 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         authToken: token,
-        isLoading: !!token && isLoading,
+        isBootstrapping,
         login,
         logout,
         refreshUser,
         refreshSession,
-        isAuthenticated: !!user,
+        isAuthenticated: !!token && !!user,
       }}
     >
       {children}

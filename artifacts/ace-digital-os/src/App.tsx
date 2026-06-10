@@ -12,12 +12,14 @@ import { useGlobalChatRealtime } from "@/hooks/use-global-chat-realtime";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
 import { CommandPalette } from "@/components/CommandPalette";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
+const ErrorPage = lazyWithReload(() => import("@/pages/error"));
 const ForbiddenPage = lazyWithReload(() => import("@/pages/forbidden"));
 const LoginPage = lazyWithReload(() => import("@/pages/login"));
 const DashboardPage = lazyWithReload(() => import("@/pages/dashboard"));
@@ -77,10 +79,10 @@ function PageFallback() {
 }
 
 function ProtectedRoute({ component: Component }: { component: ComponentType }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
   const [location] = useLocation();
 
-  if (isLoading) {
+  if (isBootstrapping && !user) {
     return <LoadingScreen />;
   }
 
@@ -123,20 +125,32 @@ function GlobalChatBoot() {
   return null;
 }
 
-function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [location, setLocation] = useLocation();
+function LoginRoute() {
+  const { isAuthenticated, isBootstrapping } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && location === "/login") {
+    if (!isBootstrapping && isAuthenticated) {
       setLocation("/");
     }
-  }, [isLoading, isAuthenticated, location, setLocation]);
+  }, [isBootstrapping, isAuthenticated, setLocation]);
 
+  if (isBootstrapping) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    return null;
+  }
+
+  return <LoginPage />;
+}
+
+function AppRouter() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Switch>
-        <Route path="/login" component={LoginPage} />
+        <Route path="/login" component={LoginRoute} />
         <Route
           path="/change-password"
           component={() => <ProtectedRoute component={ChangePasswordPage} />}
@@ -164,6 +178,7 @@ function AppRouter() {
         <Route path="/channels" component={() => <ProtectedRoute component={ChannelsPage} />} />
         <Route path="/activity" component={() => <ProtectedRoute component={ActivityPage} />} />
         <Route path="/notes" component={() => <ProtectedRoute component={NotesPage} />} />
+        <Route path="/error" component={ErrorPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -172,6 +187,7 @@ function AppRouter() {
 
 function App() {
   return (
+    <ErrorBoundary>
     <ThemeProvider>
       <PersistQueryClientProvider
         client={queryClient}
@@ -202,6 +218,7 @@ function App() {
         </TooltipProvider>
       </PersistQueryClientProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
