@@ -19,6 +19,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ReplyTarget } from "@/components/channels/ChannelThreadHeader";
 import type { MessageAttachment, MessageInput } from "@workspace/api-client-react";
+import { ACEBOT_AVATAR } from "@/lib/ace-ai-brand";
 import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/lib/chat-media";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
@@ -640,9 +641,9 @@ export function MessageComposer({
                           ) : c.kind === "bot" ? (
                             <>
                               <img
-                                src="/bot-avatar.png"
-                                alt=""
-                                className="h-7 w-7 rounded-full bg-muted object-cover"
+                                src={ACEBOT_AVATAR}
+                                alt="Ace AI"
+                                className="h-7 w-7 rounded-full bg-primary/10 object-cover object-top"
                               />
                               <div className="min-w-0 flex-1">
                                 <span className="block truncate">{c.label}</span>

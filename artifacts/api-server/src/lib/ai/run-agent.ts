@@ -5,9 +5,15 @@ import {
   formatGeminiErrorForUser,
 } from "./gemini-errors";
 import { withGeminiResilience } from "./gemini-keys";
+import { logger } from "../logger";
+import { isAgentConfigured } from "./agent-config";
+import { isOpenRouterConfigured } from "./openrouter-client";
+import { runOpenRouterAgent } from "./openrouter-agent";
 import { executeTool, getToolRequiredPermissions } from "./tool-registry";
 import type { AgentResult, AiMessageMetadata, PageContext } from "./types";
 import { logAiAudit } from "./audit";
+
+export { isAgentConfigured } from "./agent-config";
 
 export type RunAgentOptions = {
   ctx: AccessContext;
@@ -55,23 +61,14 @@ function parseModelResponse(responseText: string): {
   return { text: parsedText, metadata };
 }
 
-export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
-  const { ctx, prompt, pageContext, history = [], endpoint = "agent", allowedTools } = options;
-  const started = Date.now();
-
-  if (!isGeminiConfigured()) {
-    return {
-      text: "Ace AI is offline. GEMINI_API_KEY is not configured on the server.",
-      metadata: null,
-      permissionDenied: false,
-      toolsUsed: [],
-    };
-  }
-
+async function runGeminiAgent(
+  options: RunAgentOptions & { started: number },
+): Promise<AgentResult> {
+  const { ctx, prompt, pageContext, history = [], endpoint = "agent", allowedTools, started } =
+    options;
   const toolsUsed: string[] = [];
 
-  try {
-    return await withGeminiResilience(async (client) => {
+  return withGeminiResilience(async (client) => {
       const model = createGenerativeModel({ ctx, pageContext, allowedTools }, client);
       if (!model) throw new Error("GEMINI_API_KEY is not configured");
 
@@ -180,13 +177,44 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         toolsUsed,
       };
     });
+}
+
+export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
+  const { ctx, prompt, pageContext, history = [], endpoint = "agent" } = options;
+  const started = Date.now();
+
+  if (!isAgentConfigured()) {
+    return {
+      text: "Ace AI is offline. Configure GEMINI_API_KEY or OPENROUTER_API_KEY on the server.",
+      metadata: null,
+      permissionDenied: false,
+      toolsUsed: [],
+    };
+  }
+
+  if (!isGeminiConfigured()) {
+    return runOpenRouterAgent({ ctx, prompt, pageContext, history, endpoint });
+  }
+
+  try {
+    return await runGeminiAgent({ ...options, started });
   } catch (err) {
     console.error("[AI] Gemini agent failed:", formatGeminiErrorForLog(err));
+
+    if (isOpenRouterConfigured()) {
+      try {
+        logger.warn({ err: formatGeminiErrorForLog(err) }, "Falling back to OpenRouter");
+        return await runOpenRouterAgent({ ctx, prompt, pageContext, history, endpoint });
+      } catch (fallbackErr) {
+        console.error("[AI] OpenRouter fallback failed:", fallbackErr);
+      }
+    }
+
     return {
       text: formatGeminiErrorForUser(err),
-      metadata: { layout: "service_error" as const, toolsUsed },
+      metadata: { layout: "service_error" as const, toolsUsed: [] },
       permissionDenied: false,
-      toolsUsed,
+      toolsUsed: [],
     };
   }
 }

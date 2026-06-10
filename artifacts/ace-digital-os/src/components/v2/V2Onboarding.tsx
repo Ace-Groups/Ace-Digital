@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Zap, Brain, X } from "lucide-react";
+import { Sparkles, Zap, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AceAiHero } from "@/components/ai/AceAiHero";
 import { hapticSuccess } from "@/lib/haptics";
 
 const STORAGE_KEY = "ace-v2-onboarding-seen";
 
-const SLIDES = [
+const SLIDES: {
+  icon?: LucideIcon;
+  hero?: boolean;
+  title: string;
+  description: string;
+}[] = [
   {
     icon: Sparkles,
     title: "Welcome to Ace OS v2",
@@ -18,7 +24,7 @@ const SLIDES = [
     description: "Spring animations, haptic feedback, and gestures that make the app feel alive.",
   },
   {
-    icon: Brain,
+    hero: true,
     title: "AI that works for you",
     description: "Ace Assistant now has more power — insights, actions, and streaming responses.",
   },
@@ -73,8 +79,14 @@ export function V2Onboarding() {
             >
               <X size={16} />
             </button>
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Icon size={26} />
+            <div className="mb-5 flex min-h-14 items-center justify-center">
+              {current.hero ? (
+                <AceAiHero className="max-w-[200px]" />
+              ) : Icon ? (
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Icon size={26} />
+                </div>
+              ) : null}
             </div>
             <h2 className="text-display-sm font-semibold">{current.title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{current.description}</p>

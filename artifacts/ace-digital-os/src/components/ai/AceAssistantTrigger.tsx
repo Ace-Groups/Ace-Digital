@@ -1,6 +1,6 @@
-import { Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 
 type AceAssistantTriggerProps = {
   collapsed?: boolean;
@@ -23,7 +23,7 @@ export function AceAssistantTrigger({ collapsed, className }: AceAssistantTrigge
       )}
       aria-label="Ask Ace AI"
     >
-      <Bot size={18} className="shrink-0 text-primary" />
+      <AceAiAvatar size="sm" withRing />
       {!collapsed && <span>Ask Ace</span>}
     </button>
   );

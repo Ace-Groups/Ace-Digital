@@ -1,8 +1,9 @@
 import { store } from "@workspace/db";
 import type { AccessContext } from "@workspace/db";
 import { getOrCreateAcebotUser } from "./ai/acebot-user";
-import { isGeminiConfigured } from "./ai/gemini-client";
-import { runAgent } from "./ai/run-agent";
+import { isAgentConfigured, runAgent } from "./ai/run-agent";
+
+const ACEBOT_AVATAR = "/images/ace-ai/ace-ai-avatar.png";
 
 export async function triggerAceBot(
   channelId: number,
@@ -15,11 +16,11 @@ export async function triggerAceBot(
   const triggeringMsg = await store.findMessageById(messageId);
   const parentMessageId = triggeringMsg?.parentMessageId ?? null;
 
-  if (!isGeminiConfigured()) {
+  if (!isAgentConfigured()) {
     await store.createMessage({
       channelId,
       senderId: acebotUser.id,
-      body: "AceBot is currently offline. GEMINI_API_KEY is not configured in the environment.",
+      body: "AceBot is currently offline. Configure GEMINI_API_KEY or OPENROUTER_API_KEY on the server.",
       messageKind: "text",
       attachments: null,
       metadata: null,
@@ -28,7 +29,7 @@ export async function triggerAceBot(
       deletedAt: null,
       deletedById: null,
       senderName: "AceBot",
-      senderAvatar: "/bot-avatar.png",
+      senderAvatar: ACEBOT_AVATAR,
     });
     return;
   }
@@ -59,7 +60,7 @@ export async function triggerAceBot(
       deletedAt: null,
       deletedById: null,
       senderName: "AceBot",
-      senderAvatar: "/bot-avatar.png",
+      senderAvatar: ACEBOT_AVATAR,
     });
     return;
   }
@@ -84,7 +85,7 @@ export async function triggerAceBot(
       deletedAt: null,
       deletedById: null,
       senderName: "AceBot",
-      senderAvatar: "/bot-avatar.png",
+      senderAvatar: ACEBOT_AVATAR,
     });
   } catch (err) {
     console.error("[AceBot] Error processing model flow:", err);
@@ -100,7 +101,7 @@ export async function triggerAceBot(
       deletedAt: null,
       deletedById: null,
       senderName: "AceBot",
-      senderAvatar: "/bot-avatar.png",
+      senderAvatar: ACEBOT_AVATAR,
     });
   }
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Loader2, Plus, Send, Sparkles, X } from "lucide-react";
+import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
+import { AceAiHero } from "@/components/ai/AceAiHero";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetAiConversation,
@@ -173,9 +175,7 @@ export function AceAssistantPanel() {
             )}
           >
             <GlassContainer variant="header" className="flex shrink-0 items-center gap-2 rounded-none border-b border-border/50 px-4 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20">
-                <Bot size={18} className="text-primary" />
-              </div>
+              <AceAiAvatar size="md" withRing />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">Ask Ace</p>
                 {contextLabel && (
@@ -206,7 +206,8 @@ export function AceAssistantPanel() {
 
             <ScrollArea className="flex-1 px-4 py-3">
               {messages.length === 0 && !pendingUserMsg && (
-                <div className="mb-4 space-y-3">
+                <div className="mb-4 space-y-4">
+                  <AceAiHero className="max-w-[220px]" />
                   <p className="text-sm text-muted-foreground">
                     I can query projects, tasks, finance, tickets, calendar, notes, and more —
                     scoped to your permissions.
@@ -228,18 +229,11 @@ export function AceAssistantPanel() {
               )}
 
               <div className="space-y-3 pb-4">
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={cn(
-                      "rounded-xl px-3 py-2 text-sm",
-                      m.role === "user"
-                        ? "ml-8 bg-primary text-primary-foreground"
-                        : "mr-4 bg-muted/50 text-foreground",
-                    )}
-                  >
-                    {m.role === "assistant" ? (
-                      <>
+                {messages.map((m) =>
+                  m.role === "assistant" ? (
+                    <div key={m.id} className="flex gap-2 mr-2">
+                      <AceAiAvatar size="sm" className="mt-0.5" />
+                      <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
                         {m.content && m.metadata?.layout !== "service_error" && (
                           <p className="whitespace-pre-wrap">{m.content}</p>
                         )}
@@ -248,27 +242,35 @@ export function AceAssistantPanel() {
                           metadata={m.metadata}
                           conversationId={conversationId ?? undefined}
                         />
-                      </>
-                    ) : (
-                      m.content && <p className="whitespace-pre-wrap">{m.content}</p>
-                    )}
-                  </div>
-                ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={m.id}
+                      className="ml-8 rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground"
+                    >
+                      {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
+                    </div>
+                  ),
+                )}
                 {pendingUserMsg && (
                   <div className="ml-8 rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground">
                     {pendingUserMsg}
                   </div>
                 )}
                 {isStreaming && (
-                  <div className="mr-4 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
-                    {streamingText ? (
-                      <p className="whitespace-pre-wrap">{streamingText}</p>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 size={14} className="animate-spin" />
-                        Ace is thinking…
-                      </div>
-                    )}
+                  <div className="flex gap-2 mr-2">
+                    <AceAiAvatar size="sm" className="mt-0.5" />
+                    <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
+                      {streamingText ? (
+                        <p className="whitespace-pre-wrap">{streamingText}</p>
+                      ) : (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 size={14} className="animate-spin" />
+                          Ace is thinking…
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div ref={bottomRef} />

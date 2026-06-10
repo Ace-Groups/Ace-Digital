@@ -1,8 +1,9 @@
-import { Bot, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { SurfaceCard } from "@/components/design";
 import { Button } from "@/components/ui/button";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
+import { AceAiHero } from "@/components/ai/AceAiHero";
 import { hapticLight } from "@/lib/haptics";
 import { springSoft } from "@/components/design/motion";
 
@@ -22,10 +23,10 @@ export function AskAceCard() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={springSoft}>
-      <SurfaceCard padding="md" glow className="border-primary/15 bg-gradient-to-br from-primary/5 via-card to-card">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/20">
-            <Bot size={22} className="text-primary" />
+      <SurfaceCard padding="md" glow className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/5 via-card to-card">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 justify-center sm:w-[140px]">
+            <AceAiHero className="max-w-[200px] sm:max-w-none" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="v2-stat-label">Ace Intelligence</p>

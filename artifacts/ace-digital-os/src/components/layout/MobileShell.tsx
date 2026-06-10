@@ -42,6 +42,8 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useMobileChrome } from "@/contexts/MobileChromeContext";
 import aceLogo from "@/assets/ace-logo.png";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
+import { useAceAssistant } from "@/contexts/AceAssistantContext";
 import { hapticLight } from "@/lib/haptics";
 
 
@@ -71,6 +73,7 @@ interface MobileShellProps {
 export function MobileShell({ children, title, fillViewport }: MobileShellProps) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { setOpen: setAssistantOpen } = useAceAssistant();
   const { data: notifications } = useListNotifications({
     query: {
       queryKey: getListNotificationsQueryKey(),
@@ -240,6 +243,20 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
                 </li>
               );
             })}
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  hapticLight();
+                  setAssistantOpen(true);
+                  setMoreOpen(false);
+                }}
+                className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3 text-left text-sm font-medium active:bg-muted"
+              >
+                <AceAiAvatar size="sm" />
+                Ask Ace
+              </button>
+            </li>
             <li>
               <button
                 type="button"

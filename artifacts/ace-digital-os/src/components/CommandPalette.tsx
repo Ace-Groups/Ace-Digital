@@ -21,6 +21,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { hapticLight } from "@/lib/haptics";
@@ -212,7 +213,7 @@ export function CommandPalette() {
             className="flex items-center justify-between rounded-xl px-3 py-2.5 cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <Sparkles size={15} className="text-primary" />
+              <AceAiAvatar size="xs" />
               <span className="text-xs font-medium">Ask Ace Assistant</span>
             </div>
             <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[9px]">⌘J</kbd>

@@ -6,6 +6,9 @@ import { checkToolPermission, getToolRequiredPermissions } from "./tool-permissi
 import { getToolDeclarations } from "./tool-registry";
 import { gateAction } from "./action-tools";
 import { formatGeminiErrorForUser, isGeminiQuotaExhausted } from "./gemini-errors";
+import { isAgentConfigured } from "./agent-config";
+import { isGeminiConfigured } from "./gemini-client";
+import { isOpenRouterConfigured } from "./openrouter-client";
 
 const employee: AccessContext = { userId: 10, role: "employee", teamId: 1 };
 const hr: AccessContext = { userId: 20, role: "hr", teamId: null };
@@ -132,4 +135,35 @@ test("canAssignRole prevents role escalation via AI create", () => {
   assert.equal(canAssignRole(hr.role, "employee"), true);
   assert.equal(canAssignRole(hr.role, "management"), false);
   assert.equal(canAssignRole(employee.role, "employee"), false);
+});
+
+test("isAgentConfigured when only OpenRouter key is set", () => {
+  const prevGemini = process.env.GEMINI_API_KEY;
+  const prevFallback = process.env.GEMINI_API_KEY_FALLBACK;
+  const prevOr = process.env.OPENROUTER_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY_FALLBACK;
+  process.env.OPENROUTER_API_KEY = "sk-or-test";
+  assert.equal(isGeminiConfigured(), false);
+  assert.equal(isOpenRouterConfigured(), true);
+  assert.equal(isAgentConfigured(), true);
+  if (prevGemini) process.env.GEMINI_API_KEY = prevGemini;
+  else delete process.env.GEMINI_API_KEY;
+  if (prevFallback) process.env.GEMINI_API_KEY_FALLBACK = prevFallback;
+  else delete process.env.GEMINI_API_KEY_FALLBACK;
+  if (prevOr) process.env.OPENROUTER_API_KEY = prevOr;
+  else delete process.env.OPENROUTER_API_KEY;
+});
+
+test("isAgentConfigured when only Gemini key is set", () => {
+  const prevGemini = process.env.GEMINI_API_KEY;
+  const prevOr = process.env.OPENROUTER_API_KEY;
+  process.env.GEMINI_API_KEY = "gemini-test";
+  delete process.env.OPENROUTER_API_KEY;
+  assert.equal(isGeminiConfigured(), true);
+  assert.equal(isOpenRouterConfigured(), false);
+  assert.equal(isAgentConfigured(), true);
+  if (prevGemini) process.env.GEMINI_API_KEY = prevGemini;
+  else delete process.env.GEMINI_API_KEY;
+  if (prevOr) process.env.OPENROUTER_API_KEY = prevOr;
 });

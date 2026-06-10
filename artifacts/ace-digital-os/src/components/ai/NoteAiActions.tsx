@@ -1,4 +1,5 @@
-import { Bot, Loader2, Sparkles, Tags } from "lucide-react";
+import { Loader2, Sparkles, Tags } from "lucide-react";
+import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { useAiNoteEnrich } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,7 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
         onClick={() => askAce(ASK_ACE_CHIPS[0])}
         title="Ask Ace about this note"
       >
-        <Bot className="h-4 w-4 sm:mr-1.5" />
+        <AceAiAvatar size="xs" className="sm:mr-1.5" />
         <span className="hidden sm:inline">Ask Ace</span>
       </Button>
 
