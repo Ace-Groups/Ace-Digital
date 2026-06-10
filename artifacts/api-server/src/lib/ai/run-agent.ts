@@ -193,7 +193,14 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   }
 
   if (!isGeminiConfigured()) {
-    return runOpenRouterAgent({ ctx, prompt, pageContext, history, endpoint });
+    return runOpenRouterAgent({
+      ctx,
+      prompt,
+      pageContext,
+      history,
+      endpoint,
+      allowedTools: options.allowedTools,
+    });
   }
 
   try {
@@ -204,7 +211,14 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     if (isOpenRouterConfigured()) {
       try {
         logger.warn({ err: formatGeminiErrorForLog(err) }, "Falling back to OpenRouter");
-        return await runOpenRouterAgent({ ctx, prompt, pageContext, history, endpoint });
+        return await runOpenRouterAgent({
+          ctx,
+          prompt,
+          pageContext,
+          history,
+          endpoint,
+          allowedTools: options.allowedTools,
+        });
       } catch (fallbackErr) {
         console.error("[AI] OpenRouter fallback failed:", fallbackErr);
       }

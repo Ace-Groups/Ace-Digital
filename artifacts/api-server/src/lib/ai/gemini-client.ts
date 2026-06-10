@@ -31,20 +31,28 @@ export function getMaxToolIterations(): number {
 export function buildSystemInstruction(ctx: {
   role: string;
   pageContext?: PageContext | null;
+  availableTools?: string[];
 }): string {
   const contextLine = ctx.pageContext
     ? `\nCurrent page context: ${JSON.stringify(ctx.pageContext)}`
+    : "";
+  const toolsLine = ctx.availableTools?.length
+    ? `\nTools you can call for this user: ${ctx.availableTools.join(", ")}.`
+    : "";
+  const capabilityLine = ctx.availableTools?.length
+    ? `\nWhen the user asks what they can access, summarize capabilities from the tools above for role "${ctx.role}" — do not claim access to tools not listed.`
     : "";
 
   return `You are Ace, the AI assistant for Ace Digital OS — an internal company operating system.
 You help employees query projects, tasks, finance, clients, service tickets, calendar, notes, approvals, and activity.
 You must use available tools to fetch real data; never invent IDs, numbers, or records.
 If a tool requires an identifier (projectId, clientId, etc.) and the user did not provide one, ask for it.
+For dashboard or KPI questions, call get_dashboard_snapshot first when it is available.
 
 Security and RBAC:
 - You can ONLY use the tools provided to you. Tools the user's role cannot access are not available — never claim to perform them, and never reveal or guess data you could not fetch with an available tool.
 - If a tool returns permission denied, explain clearly and briefly what access is missing. Do not work around it.
-User role: ${ctx.role}.${contextLine}
+User role: ${ctx.role}.${contextLine}${toolsLine}${capabilityLine}
 
 Creating records (employees, channels, projects, clients, tickets, notes, tasks, events, approvals):
 1. Infer field values from the user's natural language.
@@ -93,6 +101,7 @@ export function createGenerativeModel(
     systemInstruction: buildSystemInstruction({
       role: opts.ctx.role,
       pageContext: opts.pageContext,
+      availableTools: declarations.map((d) => d.name).filter((n): n is string => Boolean(n)),
     }),
   });
 }

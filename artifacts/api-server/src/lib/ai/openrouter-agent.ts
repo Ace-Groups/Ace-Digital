@@ -1,25 +1,90 @@
 import type { AccessContext } from "@workspace/db";
-import { buildSystemInstruction } from "./gemini-client";
-import { chatOpenRouter, type OpenRouterMessage } from "./openrouter-client";
-import type { AgentResult, PageContext } from "./types";
+import { buildSystemInstruction, getMaxToolIterations } from "./gemini-client";
+import {
+  chatOpenRouterCompletion,
+  type OpenRouterChatMessage,
+} from "./openrouter-client";
+import { toOpenRouterTools } from "./openrouter-tools";
+import { executeTool, getToolDeclarations } from "./tool-registry";
+import type { AgentResult, AiMessageMetadata, PageContext } from "./types";
 import { logAiAudit } from "./audit";
 
-const FALLBACK_SYSTEM_NOTE = `
-You are running in BACKUP mode (OpenRouter free model). Live workspace tools are unavailable in this mode.
-Do not invent project IDs, employee records, financial figures, or other workspace data.
-If the user asks for live data you cannot fetch, say clearly that live workspace lookup is temporarily unavailable and answer from the conversation context only.
-Keep responses concise and helpful.`;
+function isPendingConfirmation(output: unknown): output is {
+  status: "pending_confirmation";
+  actionType: string;
+  summary: string;
+  payload: Record<string, unknown>;
+} {
+  return (
+    !!output &&
+    typeof output === "object" &&
+    (output as { status?: unknown }).status === "pending_confirmation"
+  );
+}
 
-function toOpenRouterMessages(
+function parseModelResponse(responseText: string): {
+  text: string;
+  metadata: AiMessageMetadata | null;
+} {
+  let parsedText = responseText;
+  let metadata: AiMessageMetadata | null = null;
+
+  try {
+    const parsed = JSON.parse(responseText) as {
+      text?: string;
+      table?: AiMessageMetadata["tableData"];
+    };
+    parsedText = parsed.text || responseText;
+    if (parsed.table?.columns && parsed.table?.rows) {
+      metadata = { layout: "table", tableData: parsed.table };
+    }
+  } catch {
+    // plain text fallback
+  }
+
+  return { text: parsedText, metadata };
+}
+
+async function prefetchWorkspaceContext(
+  ctx: AccessContext,
+  prompt: string,
+  availableToolNames: string[],
+): Promise<{ note: string; tools: string[] }> {
+  const tools: string[] = [];
+  if (!availableToolNames.includes("get_dashboard_snapshot")) {
+    return { note: "", tools };
+  }
+  if (!/\b(dashboard|kpi|kpis|needs my attention|summarize my)\b/i.test(prompt)) {
+    return { note: "", tools };
+  }
+
+  const result = await executeTool(ctx, "get_dashboard_snapshot", {});
+  if (!result.ok) {
+    return { note: "", tools };
+  }
+
+  tools.push("get_dashboard_snapshot");
+  return {
+    note: `\n\nLive dashboard snapshot for this user (already fetched — use these numbers in your answer):\n${JSON.stringify(result.output)}`,
+    tools,
+  };
+}
+
+function buildInitialMessages(
   ctx: AccessContext,
   pageContext: PageContext | null | undefined,
+  availableTools: string[],
   history: { role: "user" | "model"; parts: { text: string }[] }[],
   prompt: string,
-): OpenRouterMessage[] {
-  const messages: OpenRouterMessage[] = [
+): OpenRouterChatMessage[] {
+  const messages: OpenRouterChatMessage[] = [
     {
       role: "system",
-      content: `${buildSystemInstruction({ role: ctx.role, pageContext })}${FALLBACK_SYSTEM_NOTE}`,
+      content: buildSystemInstruction({
+        role: ctx.role,
+        pageContext,
+        availableTools,
+      }),
     },
   ];
 
@@ -34,58 +99,168 @@ function toOpenRouterMessages(
   return messages;
 }
 
-function parseFallbackResponse(responseText: string): {
-  text: string;
-  metadata: AgentResult["metadata"];
-} {
-  try {
-    const parsed = JSON.parse(responseText) as {
-      text?: string;
-      table?: { columns?: string[]; rows?: Record<string, unknown>[] };
-    };
-    const text = parsed.text?.trim() || responseText;
-    if (parsed.table?.columns?.length && parsed.table.rows) {
-      return {
-        text,
-        metadata: {
-          layout: "table",
-          tableData: { columns: parsed.table.columns, rows: parsed.table.rows },
-          toolsUsed: ["openrouter:fallback"],
-        },
-      };
-    }
-    return { text, metadata: { toolsUsed: ["openrouter:fallback"] } };
-  } catch {
-    return { text: responseText, metadata: { toolsUsed: ["openrouter:fallback"] } };
-  }
-}
-
 export async function runOpenRouterAgent(options: {
   ctx: AccessContext;
   prompt: string;
   pageContext?: PageContext | null;
   history?: { role: "user" | "model"; parts: { text: string }[] }[];
   endpoint?: string;
+  allowedTools?: string[];
 }): Promise<AgentResult> {
-  const { ctx, prompt, pageContext, history = [], endpoint = "openrouter/fallback" } = options;
+  const {
+    ctx,
+    prompt,
+    pageContext,
+    history = [],
+    endpoint = "openrouter",
+    allowedTools,
+  } = options;
   const started = Date.now();
+  const toolsUsed: string[] = [];
 
-  const messages = toOpenRouterMessages(ctx, pageContext, history, prompt);
-  const raw = await chatOpenRouter(messages);
-  const { text, metadata } = parseFallbackResponse(raw);
+  const declarations = getToolDeclarations({ ctx, allowedTools });
+  const availableToolNames = declarations.map((d) => d.name ?? "").filter(Boolean);
+  const openRouterTools = toOpenRouterTools(declarations);
+
+  let messages = buildInitialMessages(
+    ctx,
+    pageContext,
+    availableToolNames,
+    history,
+    prompt,
+  );
+
+  const prefetch = await prefetchWorkspaceContext(ctx, prompt, availableToolNames);
+  if (prefetch.note) {
+    const system = messages[0];
+    if (system?.role === "system") {
+      messages = [{ ...system, content: system.content + prefetch.note }, ...messages.slice(1)];
+    }
+    toolsUsed.push(...prefetch.tools);
+  }
+
+  const maxIterations = getMaxToolIterations();
+  let iterations = 0;
+  let lastAssistantText = "";
+
+  while (iterations <= maxIterations) {
+    const { message } = await chatOpenRouterCompletion({
+      messages,
+      tools: openRouterTools.length ? openRouterTools : undefined,
+    });
+
+    if (message.tool_calls?.length) {
+      messages.push({
+        role: "assistant",
+        content: message.content,
+        tool_calls: message.tool_calls,
+      });
+
+      for (const call of message.tool_calls) {
+        const name = call.function.name;
+        toolsUsed.push(name);
+
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(call.function.arguments || "{}") as Record<string, unknown>;
+        } catch {
+          args = {};
+        }
+
+        const execResult = await executeTool(ctx, name, args);
+
+        if (!execResult.ok && execResult.permissionDenied) {
+          const requiredPerms = execResult.requiredPermissions.map(String);
+          void logAiAudit({
+            userId: ctx.userId,
+            endpoint,
+            tools: toolsUsed,
+            durationMs: Date.now() - started,
+            denied: true,
+          });
+          return {
+            text:
+              `You don't have permission to access that data. Your role (${ctx.role}) is missing: ${requiredPerms.join(", ")}. ` +
+              `I can still help with: ${availableToolNames.slice(0, 8).join(", ")}${availableToolNames.length > 8 ? ", …" : ""}.`,
+            metadata: {
+              layout: "permission_denied",
+              errorDetails: {
+                userId: ctx.userId,
+                role: ctx.role,
+                requiredPermissions: requiredPerms,
+              },
+              toolsUsed,
+            },
+            permissionDenied: true,
+            toolsUsed,
+          };
+        }
+
+        const output = execResult.ok ? execResult.output : execResult.output;
+
+        if (execResult.ok && isPendingConfirmation(output)) {
+          void logAiAudit({
+            userId: ctx.userId,
+            endpoint,
+            tools: toolsUsed,
+            durationMs: Date.now() - started,
+            denied: false,
+          });
+          return {
+            text: `${output.summary}. Review the details and confirm to proceed.`,
+            metadata: {
+              layout: "action_confirmation",
+              pendingAction: {
+                actionType: output.actionType,
+                summary: output.summary,
+                payload: output.payload,
+              },
+              toolsUsed,
+            },
+            permissionDenied: false,
+            toolsUsed,
+          };
+        }
+
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify(output),
+        });
+      }
+
+      iterations++;
+      continue;
+    }
+
+    lastAssistantText = message.content?.trim() ?? "";
+    break;
+  }
+
+  if (!lastAssistantText && toolsUsed.length > 0) {
+    lastAssistantText =
+      "I fetched your workspace data but couldn't format a reply. Please try asking again.";
+  }
+
+  const { text, metadata } = parseModelResponse(lastAssistantText);
+  const finalMetadata: AiMessageMetadata | null = metadata
+    ? { ...metadata, toolsUsed }
+    : toolsUsed.length
+      ? { toolsUsed }
+      : null;
 
   void logAiAudit({
     userId: ctx.userId,
     endpoint,
-    tools: ["openrouter:fallback"],
+    tools: toolsUsed,
     durationMs: Date.now() - started,
     denied: false,
   });
 
   return {
     text,
-    metadata,
+    metadata: finalMetadata,
     permissionDenied: false,
-    toolsUsed: ["openrouter:fallback"],
+    toolsUsed,
   };
 }
