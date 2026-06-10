@@ -8,6 +8,10 @@
 
 export * from './activityLog';
 export * from './activityLogMetadata';
+export * from './aiActionConfirmInput';
+export * from './aiActionConfirmInputPayload';
+export * from './aiActionConfirmResponse';
+export * from './aiActionConfirmResponseResult';
 export * from './aiChatInput';
 export * from './aiChatResponse';
 export * from './aiConversation';
@@ -19,6 +23,8 @@ export * from './aiMessageMetadataLayout';
 export * from './aiMessageMetadataTableData';
 export * from './aiNoteEnrichResponse';
 export * from './aiPageContext';
+export * from './aiPendingAction';
+export * from './aiPendingActionPayload';
 export * from './aiReportNarrativeInput';
 export * from './aiReportNarrativeResponse';
 export * from './approval';

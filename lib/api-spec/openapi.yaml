@@ -1692,6 +1692,29 @@ paths:
         "429":
           description: Rate limit exceeded
 
+  /v1/ai/actions/confirm:
+    post:
+      operationId: aiActionConfirm
+      tags: [ai]
+      summary: Confirm and execute a pending AI action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiActionConfirmInput"
+      responses:
+        "200":
+          description: Action executed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiActionConfirmResponse"
+        "400":
+          description: Invalid action or missing fields
+        "403":
+          description: Insufficient permissions
+
   /v1/ai/conversations:
     get:
       operationId: listAiConversations
@@ -4228,18 +4251,59 @@ components:
         pageContext:
           $ref: "#/components/schemas/AiPageContext"
 
+    AiPendingAction:
+      type: object
+      required: [actionType, summary, payload]
+      properties:
+        actionType:
+          type: string
+        summary:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+
     AiMessageMetadata:
       type: object
       properties:
         layout:
           type: string
-          enum: [table, permission_denied]
+          enum: [table, permission_denied, action_confirmation]
         tableData:
           type: object
+        pendingAction:
+          $ref: "#/components/schemas/AiPendingAction"
         toolsUsed:
           type: array
           items:
             type: string
+
+    AiActionConfirmInput:
+      type: object
+      required: [actionType]
+      properties:
+        conversationId:
+          type: integer
+        actionType:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+
+    AiActionConfirmResponse:
+      type: object
+      required: [status, actionType]
+      properties:
+        status:
+          type: string
+        actionType:
+          type: string
+        result:
+          type: object
+          additionalProperties: true
+        conversationId:
+          type: integer
+          nullable: true
 
     AiConversationMessage:
       type: object

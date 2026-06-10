@@ -12,4 +12,5 @@ export type AiMessageMetadataLayout = typeof AiMessageMetadataLayout[keyof typeo
 export const AiMessageMetadataLayout = {
   table: 'table',
   permission_denied: 'permission_denied',
+  action_confirmation: 'action_confirmation',
 } as const;

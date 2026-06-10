@@ -1296,12 +1296,21 @@ export interface AiChatInput {
   pageContext?: AiPageContext;
 }
 
+export type AiPendingActionPayload = { [key: string]: unknown };
+
+export interface AiPendingAction {
+  actionType: string;
+  summary: string;
+  payload: AiPendingActionPayload;
+}
+
 export type AiMessageMetadataLayout = typeof AiMessageMetadataLayout[keyof typeof AiMessageMetadataLayout];
 
 
 export const AiMessageMetadataLayout = {
   table: 'table',
   permission_denied: 'permission_denied',
+  action_confirmation: 'action_confirmation',
 } as const;
 
 export type AiMessageMetadataTableData = { [key: string]: unknown };
@@ -1309,7 +1318,25 @@ export type AiMessageMetadataTableData = { [key: string]: unknown };
 export interface AiMessageMetadata {
   layout?: AiMessageMetadataLayout;
   tableData?: AiMessageMetadataTableData;
+  pendingAction?: AiPendingAction;
   toolsUsed?: string[];
+}
+
+export type AiActionConfirmInputPayload = { [key: string]: unknown };
+
+export interface AiActionConfirmInput {
+  conversationId?: number;
+  actionType: string;
+  payload?: AiActionConfirmInputPayload;
+}
+
+export type AiActionConfirmResponseResult = { [key: string]: unknown };
+
+export interface AiActionConfirmResponse {
+  status: string;
+  actionType: string;
+  result?: AiActionConfirmResponseResult;
+  conversationId?: number | null;
 }
 
 export type AiConversationMessageRole = typeof AiConversationMessageRole[keyof typeof AiConversationMessageRole];

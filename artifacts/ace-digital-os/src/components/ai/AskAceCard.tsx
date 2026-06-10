@@ -13,17 +13,11 @@ const DASHBOARD_PROMPTS = [
 ];
 
 export function AskAceCard() {
-  const { setOpen, setConversationId: resetConversation } = useAceAssistant();
+  const { openWithPrompt } = useAceAssistant();
 
-  function openWithPrompt(prompt: string) {
+  function runPrompt(prompt: string) {
     hapticLight();
-    resetConversation(null);
-    setOpen(true);
-    window.setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent("ace-assistant-prompt", { detail: { prompt } }),
-      );
-    }, 100);
+    openWithPrompt(prompt);
   }
 
   return (
@@ -47,7 +41,7 @@ export function AskAceCard() {
                   variant="outline"
                   size="sm"
                   className="h-8 rounded-full text-xs"
-                  onClick={() => openWithPrompt(p)}
+                  onClick={() => runPrompt(p)}
                 >
                   <Sparkles size={12} className="mr-1 text-primary" />
                   {p}

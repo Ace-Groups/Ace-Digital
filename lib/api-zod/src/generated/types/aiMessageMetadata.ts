@@ -7,9 +7,11 @@
  */
 import type { AiMessageMetadataLayout } from './aiMessageMetadataLayout';
 import type { AiMessageMetadataTableData } from './aiMessageMetadataTableData';
+import type { AiPendingAction } from './aiPendingAction';
 
 export interface AiMessageMetadata {
   layout?: AiMessageMetadataLayout;
   tableData?: AiMessageMetadataTableData;
+  pendingAction?: AiPendingAction;
   toolsUsed?: string[];
 }

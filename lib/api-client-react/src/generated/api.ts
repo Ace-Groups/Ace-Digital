@@ -21,6 +21,8 @@ import type {
 
 import type {
   ActivityLog,
+  AiActionConfirmInput,
+  AiActionConfirmResponse,
   AiChatInput,
   AiChatResponse,
   AiConversation,
@@ -6311,6 +6313,77 @@ export const useAiChatStream = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiChatStreamMutationOptions(options));
+    }
+
+export const getAiActionConfirmUrl = () => {
+
+
+
+
+  return `/api/v1/ai/actions/confirm`
+}
+
+/**
+ * @summary Confirm and execute a pending AI action
+ */
+export const aiActionConfirm = async (aiActionConfirmInput: AiActionConfirmInput, options?: RequestInit): Promise<AiActionConfirmResponse> => {
+
+  return customFetch<AiActionConfirmResponse>(getAiActionConfirmUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiActionConfirmInput,)
+  }
+);}
+
+
+
+
+export const getAiActionConfirmMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiActionConfirm>>, TError,{data: BodyType<AiActionConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiActionConfirm>>, TError,{data: BodyType<AiActionConfirmInput>}, TContext> => {
+
+const mutationKey = ['aiActionConfirm'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiActionConfirm>>, {data: BodyType<AiActionConfirmInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiActionConfirm(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiActionConfirmMutationResult = NonNullable<Awaited<ReturnType<typeof aiActionConfirm>>>
+    export type AiActionConfirmMutationBody = BodyType<AiActionConfirmInput>
+    export type AiActionConfirmMutationError = ErrorType<void>
+
+    /**
+ * @summary Confirm and execute a pending AI action
+ */
+export const useAiActionConfirm = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiActionConfirm>>, TError,{data: BodyType<AiActionConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiActionConfirm>>,
+        TError,
+        {data: BodyType<AiActionConfirmInput>},
+        TContext
+      > => {
+      return useMutation(getAiActionConfirmMutationOptions(options));
     }
 
 export const getListAiConversationsUrl = () => {

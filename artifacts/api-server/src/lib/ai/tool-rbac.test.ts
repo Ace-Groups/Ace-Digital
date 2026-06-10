@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessContext } from "@workspace/rbac";
-import { hasPermission } from "@workspace/rbac";
+import { hasPermission, canAssignRole } from "@workspace/rbac";
 import { checkToolPermission, getToolRequiredPermissions } from "./tool-permissions";
+import { getToolDeclarations } from "./tool-registry";
+import { gateAction } from "./action-tools";
 
 const employee: AccessContext = { userId: 10, role: "employee", teamId: 1 };
+const hr: AccessContext = { userId: 20, role: "hr", teamId: null };
 const management: AccessContext = { userId: 30, role: "management", teamId: null };
+
+function toolNames(ctx: AccessContext): string[] {
+  return getToolDeclarations({ ctx }).map((d) => d.name);
+}
 
 test("unknown tool returns error without permission flag", () => {
   const result = checkToolPermission(employee, "nonexistent_tool");
@@ -58,4 +65,61 @@ test("action tools declared with correct permissions", () => {
   assert.deepEqual(getToolRequiredPermissions("create_task"), ["tasks:write"]);
   assert.deepEqual(getToolRequiredPermissions("post_channel_message"), ["channels:post"]);
   assert.deepEqual(getToolRequiredPermissions("submit_approval"), ["approvals:submit"]);
+});
+
+test("new create tools declared with correct permissions", () => {
+  assert.deepEqual(getToolRequiredPermissions("create_employee"), ["employees:write"]);
+  assert.deepEqual(getToolRequiredPermissions("create_channel"), ["channels:write"]);
+  assert.deepEqual(getToolRequiredPermissions("create_project"), ["projects:write"]);
+  assert.deepEqual(getToolRequiredPermissions("create_client"), ["clients:write"]);
+  assert.deepEqual(getToolRequiredPermissions("create_service_ticket"), ["service_tickets:write"]);
+  assert.deepEqual(getToolRequiredPermissions("create_note"), ["notes:write"]);
+  assert.deepEqual(getToolRequiredPermissions("get_note"), ["notes:read"]);
+  assert.deepEqual(getToolRequiredPermissions("lookup_employee"), ["employees:read"]);
+  assert.deepEqual(getToolRequiredPermissions("list_teams"), ["teams:read"]);
+});
+
+test("employee denied privileged create tools", () => {
+  for (const tool of ["create_employee", "create_client"]) {
+    const result = checkToolPermission(employee, tool);
+    assert.ok(result, `${tool} should be denied`);
+    assert.equal(result?.ok, false);
+    if (result && !result.ok) assert.equal(result.permissionDenied, true);
+  }
+});
+
+test("management allowed create_employee and create_client", () => {
+  assert.equal(checkToolPermission(management, "create_employee"), null);
+  assert.equal(checkToolPermission(management, "create_client"), null);
+});
+
+test("role-filtered declarations hide privileged tools from employees", () => {
+  const names = toolNames(employee);
+  assert.ok(!names.includes("create_employee"), "employee must not see create_employee");
+  assert.ok(!names.includes("list_clients"), "employee must not see list_clients");
+});
+
+test("role-filtered declarations expose privileged tools to management", () => {
+  const names = toolNames(management);
+  assert.ok(names.includes("create_employee"));
+  assert.ok(names.includes("create_client"));
+});
+
+test("allowedTools allowlist overrides role default (note enrich uses none)", () => {
+  assert.equal(getToolDeclarations({ allowedTools: [] }).length, 0);
+  const only = getToolDeclarations({ allowedTools: ["get_note"] }).map((d) => d.name);
+  assert.deepEqual(only, ["get_note"]);
+});
+
+test("confirmation gate withholds execution until confirmed=true", () => {
+  const pending = gateAction("create_employee", "Create employee", {}, { fullName: "A" });
+  assert.ok(pending);
+  assert.equal(pending?.status, "pending_confirmation");
+  assert.equal(gateAction("create_employee", "Create employee", { confirmed: true }, {}), null);
+});
+
+test("canAssignRole prevents role escalation via AI create", () => {
+  assert.equal(canAssignRole(hr.role, "employee"), true);
+  assert.equal(canAssignRole(hr.role, "management"), false);
+  assert.equal(canAssignRole(employee.role, "employee"), false);
 });

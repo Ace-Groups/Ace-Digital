@@ -1,9 +1,23 @@
 import { SchemaType, type FunctionDeclaration } from "@google/generative-ai";
 import { store, type AccessContext } from "@workspace/db";
-import { hasPermission, type Permission } from "@workspace/rbac";
+import {
+  hasPermission,
+  canEditTask,
+  canPostInChannel,
+  type Permission,
+} from "@workspace/rbac";
 import type { ToolExecutionResult } from "./types";
 import { checkToolPermission, getToolRequiredPermissions } from "./tool-permissions";
 import { gateAction } from "./action-tools";
+import { assertNoteAccess } from "./note-access";
+import {
+  createEmployeeAction,
+  createChannelAction,
+  createProjectAction,
+  createClientAction,
+  createServiceTicketAction,
+  createNoteAction,
+} from "../services/ai-actions";
 
 export { checkToolPermission, getToolRequiredPermissions };
 
@@ -383,6 +397,40 @@ const TOOLS: Record<string, ToolDef> = {
     },
   },
 
+  get_note: {
+    declaration: {
+      name: "get_note",
+      description:
+        "Read a single note by ID (title and content) when the user is viewing it. Use the noteId from the current page context. Access is denied if the user cannot view the note.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          noteId: { type: SchemaType.STRING, description: "Numeric note ID." },
+        },
+        required: ["noteId"],
+      },
+    },
+    requiredPermissions: ["notes:read"],
+    execute: async (ctx, args) => {
+      const noteId = Number(args.noteId);
+      if (Number.isNaN(noteId)) return { error: "Invalid noteId" };
+      const allowed = await assertNoteAccess(ctx.userId, noteId);
+      if (!allowed) return { error: "You do not have access to this note." };
+      const note = await store.findNoteById(noteId);
+      if (!note) return { error: "Note not found" };
+      const plain = note.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      return {
+        status: "success",
+        note: {
+          id: note.id,
+          title: note.title,
+          content: plain.slice(0, 4000),
+          updatedAt: iso(note.updatedAt),
+        },
+      };
+    },
+  },
+
   list_approvals: {
     declaration: {
       name: "list_approvals",
@@ -525,6 +573,11 @@ const TOOLS: Record<string, ToolDef> = {
       const taskId = Number(args.taskId);
       const status = String(args.status || "");
       if (Number.isNaN(taskId)) return { error: "Invalid taskId" };
+      const existingTask = await store.findTaskById(taskId);
+      if (!existingTask) return { error: "Task not found" };
+      if (!canEditTask(ctx, existingTask)) {
+        return { error: "You can only update tasks you created or are assigned to manage." };
+      }
       const gate = gateAction("update_task_status", `Set task #${taskId} to ${status}`, args, {
         taskId,
         status,
@@ -608,6 +661,13 @@ const TOOLS: Record<string, ToolDef> = {
       const channelId = Number(args.channelId);
       const body = String(args.body || "").trim();
       if (Number.isNaN(channelId) || !body) return { error: "channelId and body required" };
+
+      const channel = await store.findChannelById(channelId);
+      if (!channel) return { error: "Channel not found" };
+      const membership = await store.findChannelMembership(channelId, ctx.userId);
+      if (!canPostInChannel(ctx, channel, membership)) {
+        return { error: "You cannot post in this channel." };
+      }
       const gate = gateAction(
         "post_channel_message",
         `Post message to channel #${channelId}`,
@@ -678,6 +738,306 @@ const TOOLS: Record<string, ToolDef> = {
     },
   },
 
+  list_teams: {
+    declaration: {
+      name: "list_teams",
+      description:
+        "List teams (id and name). Use to resolve a team name to a teamId before creating records.",
+      parameters: { type: SchemaType.OBJECT, properties: {} },
+    },
+    requiredPermissions: ["teams:read"],
+    execute: async () => {
+      const teams = await store.listTeams();
+      return {
+        status: "success",
+        count: teams.length,
+        teams: truncate(teams.map((t) => ({ id: t.id, name: t.name }))),
+      };
+    },
+  },
+
+  lookup_employee: {
+    declaration: {
+      name: "lookup_employee",
+      description:
+        "Find employees by partial name or email. Use to resolve a person to a userId for channel members or assignees.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          query: { type: SchemaType.STRING, description: "Name or email fragment." },
+        },
+        required: ["query"],
+      },
+    },
+    requiredPermissions: ["employees:read"],
+    execute: async (_ctx, args) => {
+      const q = String(args.query || "").trim().toLowerCase();
+      if (!q) return { error: "query is required" };
+      const users = await store.listUsers();
+      const matched = users.filter(
+        (u) =>
+          u.fullName.toLowerCase().includes(q) ||
+          (u.email?.toLowerCase().includes(q) ?? false),
+      );
+      return {
+        status: "success",
+        count: matched.length,
+        employees: truncate(
+          matched.map((u) => ({ id: u.id, fullName: u.fullName, email: u.email, role: u.role })),
+        ),
+      };
+    },
+  },
+
+  create_employee: {
+    declaration: {
+      name: "create_employee",
+      description:
+        "Create (hire) a new employee. Requires confirmation unless confirmed=true. Required: fullName, email. Optional: role, teamId, jobTitle, phone. A temporary password is auto-generated and emailed.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          fullName: { type: SchemaType.STRING, description: "Employee full name." },
+          email: { type: SchemaType.STRING, description: "Work email." },
+          role: {
+            type: SchemaType.STRING,
+            description: "Role (employee, team_lead, hr, finance, client_manager, management). Defaults to employee.",
+          },
+          teamId: { type: SchemaType.STRING, description: "Optional team ID." },
+          jobTitle: { type: SchemaType.STRING, description: "Optional job title." },
+          phone: { type: SchemaType.STRING, description: "Optional phone number." },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["fullName", "email"],
+      },
+    },
+    requiredPermissions: ["employees:write"],
+    execute: async (ctx, args) => {
+      const fullName = String(args.fullName || "").trim();
+      const email = String(args.email || "").trim();
+      if (!fullName || !email) return { error: "fullName and email are required" };
+      const role = args.role ? String(args.role).toLowerCase() : "employee";
+      const payload = {
+        fullName,
+        email,
+        role,
+        teamId: args.teamId ? Number(args.teamId) : null,
+        jobTitle: args.jobTitle ? String(args.jobTitle) : null,
+        phone: args.phone ? String(args.phone) : null,
+      };
+      const gate = gateAction(
+        "create_employee",
+        `Create employee "${fullName}" (${role})`,
+        args,
+        payload,
+      );
+      if (gate) return gate;
+
+      const result = await createEmployeeAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", employee: result.data };
+    },
+  },
+
+  create_channel: {
+    declaration: {
+      name: "create_channel",
+      description:
+        "Create a chat channel. Requires confirmation unless confirmed=true. Required: name. Optional: description, type (TEAM or ANNOUNCEMENT), teamId, memberIds.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING, description: "Channel name (lowercase, hyphens)." },
+          description: { type: SchemaType.STRING, description: "Optional description." },
+          type: { type: SchemaType.STRING, description: "TEAM (default) or ANNOUNCEMENT." },
+          teamId: { type: SchemaType.STRING, description: "Optional team ID." },
+          memberIds: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING },
+            description: "Optional list of user IDs to add.",
+          },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["name"],
+      },
+    },
+    requiredPermissions: ["channels:write"],
+    execute: async (ctx, args) => {
+      const name = String(args.name || "").trim();
+      if (!name) return { error: "name is required" };
+      const memberIds = Array.isArray(args.memberIds)
+        ? args.memberIds.map((id) => Number(id)).filter((id) => id > 0)
+        : [];
+      const payload = {
+        name,
+        description: args.description ? String(args.description) : null,
+        type: args.type === "ANNOUNCEMENT" ? "ANNOUNCEMENT" : "TEAM",
+        teamId: args.teamId ? Number(args.teamId) : null,
+        memberIds,
+      };
+      const gate = gateAction("create_channel", `Create channel "#${name}"`, args, payload);
+      if (gate) return gate;
+
+      const result = await createChannelAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", channel: result.data };
+    },
+  },
+
+  create_project: {
+    declaration: {
+      name: "create_project",
+      description:
+        "Create a project. Requires confirmation unless confirmed=true. Required: name. Optional: description, teamId, priority, clientId, deadline.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING, description: "Project name." },
+          description: { type: SchemaType.STRING, description: "Optional description." },
+          teamId: { type: SchemaType.STRING, description: "Optional team ID." },
+          priority: { type: SchemaType.STRING, description: "LOW, MEDIUM, or HIGH." },
+          clientId: { type: SchemaType.STRING, description: "Optional client ID." },
+          deadline: { type: SchemaType.STRING, description: "Optional ISO date." },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["name"],
+      },
+    },
+    requiredPermissions: ["projects:write"],
+    execute: async (ctx, args) => {
+      const name = String(args.name || "").trim();
+      if (!name) return { error: "name is required" };
+      const payload = {
+        name,
+        description: args.description ? String(args.description) : null,
+        teamId: args.teamId ? Number(args.teamId) : null,
+        priority: args.priority ? String(args.priority) : "MEDIUM",
+        clientId: args.clientId ? Number(args.clientId) : null,
+        deadline: args.deadline ? String(args.deadline) : null,
+      };
+      const gate = gateAction("create_project", `Create project "${name}"`, args, payload);
+      if (gate) return gate;
+
+      const result = await createProjectAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", project: result.data };
+    },
+  },
+
+  create_client: {
+    declaration: {
+      name: "create_client",
+      description:
+        "Create a client. Requires confirmation unless confirmed=true. Required: companyName, contactName, email. Optional: phone, assignedTeamId.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          companyName: { type: SchemaType.STRING, description: "Company name." },
+          contactName: { type: SchemaType.STRING, description: "Primary contact name." },
+          email: { type: SchemaType.STRING, description: "Contact email." },
+          phone: { type: SchemaType.STRING, description: "Optional phone." },
+          assignedTeamId: { type: SchemaType.STRING, description: "Optional team ID." },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["companyName", "contactName", "email"],
+      },
+    },
+    requiredPermissions: ["clients:write"],
+    execute: async (ctx, args) => {
+      const companyName = String(args.companyName || "").trim();
+      const contactName = String(args.contactName || "").trim();
+      const email = String(args.email || "").trim();
+      if (!companyName || !contactName || !email) {
+        return { error: "companyName, contactName and email are required" };
+      }
+      const payload = {
+        companyName,
+        contactName,
+        email,
+        phone: args.phone ? String(args.phone) : null,
+        assignedTeamId: args.assignedTeamId ? Number(args.assignedTeamId) : null,
+      };
+      const gate = gateAction("create_client", `Create client "${companyName}"`, args, payload);
+      if (gate) return gate;
+
+      const result = await createClientAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", client: result.data };
+    },
+  },
+
+  create_service_ticket: {
+    declaration: {
+      name: "create_service_ticket",
+      description:
+        "Create a service ticket / to-do. Requires confirmation unless confirmed=true. Required: title. Optional: description, clientId, projectId, priority.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          title: { type: SchemaType.STRING, description: "Ticket title." },
+          description: { type: SchemaType.STRING, description: "Optional details." },
+          clientId: { type: SchemaType.STRING, description: "Optional client ID (makes it a CLIENT ticket)." },
+          projectId: { type: SchemaType.STRING, description: "Optional project ID." },
+          priority: { type: SchemaType.STRING, description: "LOW, MEDIUM, or HIGH." },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["title"],
+      },
+    },
+    requiredPermissions: ["service_tickets:write"],
+    execute: async (ctx, args) => {
+      const title = String(args.title || "").trim();
+      if (!title) return { error: "title is required" };
+      const payload = {
+        title,
+        description: args.description ? String(args.description) : null,
+        clientId: args.clientId ? Number(args.clientId) : null,
+        projectId: args.projectId ? Number(args.projectId) : null,
+        priority: args.priority ? String(args.priority) : "MEDIUM",
+      };
+      const gate = gateAction("create_service_ticket", `Create ticket "${title}"`, args, payload);
+      if (gate) return gate;
+
+      const result = await createServiceTicketAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", ticket: result.data };
+    },
+  },
+
+  create_note: {
+    declaration: {
+      name: "create_note",
+      description:
+        "Create a note. Requires confirmation unless confirmed=true. Required: title. Optional: content, teamId.",
+      parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+          title: { type: SchemaType.STRING, description: "Note title." },
+          content: { type: SchemaType.STRING, description: "Optional body text." },
+          teamId: { type: SchemaType.STRING, description: "Optional team ID to share with." },
+          confirmed: { type: SchemaType.BOOLEAN, description: "Must be true to execute." },
+        },
+        required: ["title"],
+      },
+    },
+    requiredPermissions: ["notes:write"],
+    execute: async (ctx, args) => {
+      const title = String(args.title || "").trim();
+      if (!title) return { error: "title is required" };
+      const payload = {
+        title,
+        content: args.content ? String(args.content) : "",
+        teamId: args.teamId ? Number(args.teamId) : null,
+      };
+      const gate = gateAction("create_note", `Create note "${title}"`, args, payload);
+      if (gate) return gate;
+
+      const result = await createNoteAction(ctx, payload);
+      if (!result.ok) return { error: result.error };
+      return { status: "success", note: result.data };
+    },
+  },
+
   generate_report_data: {
     declaration: {
       name: "generate_report_data",
@@ -724,8 +1084,24 @@ const TOOLS: Record<string, ToolDef> = {
   },
 };
 
-export function getToolDeclarations(): FunctionDeclaration[] {
-  return Object.values(TOOLS).map((t) => t.declaration);
+/**
+ * Return tool declarations for the model.
+ * - `allowedTools` restricts to an explicit allowlist (e.g. note enrich uses []).
+ * - Otherwise, only tools the user's role can actually call are exposed,
+ *   so privileged tool names never leak to lower-privilege roles.
+ */
+export function getToolDeclarations(filter?: {
+  ctx?: AccessContext;
+  allowedTools?: string[];
+}): FunctionDeclaration[] {
+  let entries = Object.entries(TOOLS);
+  if (filter?.allowedTools) {
+    const allow = new Set(filter.allowedTools);
+    entries = entries.filter(([name]) => allow.has(name));
+  } else if (filter?.ctx) {
+    entries = entries.filter(([name]) => checkToolPermission(filter.ctx!, name) === null);
+  }
+  return entries.map(([, t]) => t.declaration);
 }
 
 export async function executeTool(

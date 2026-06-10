@@ -10,7 +10,22 @@ export type RunAgentOptions = {
   pageContext?: PageContext | null;
   history?: { role: "user" | "model"; parts: { text: string }[] }[];
   endpoint?: string;
+  /** Restrict which tools the model may call for this run. Omit for role-default set. */
+  allowedTools?: string[];
 };
+
+function isPendingConfirmation(output: unknown): output is {
+  status: "pending_confirmation";
+  actionType: string;
+  summary: string;
+  payload: Record<string, unknown>;
+} {
+  return (
+    !!output &&
+    typeof output === "object" &&
+    (output as { status?: unknown }).status === "pending_confirmation"
+  );
+}
 
 function parseModelResponse(responseText: string): {
   text: string;
@@ -36,7 +51,7 @@ function parseModelResponse(responseText: string): {
 }
 
 export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
-  const { ctx, prompt, pageContext, history = [], endpoint = "agent" } = options;
+  const { ctx, prompt, pageContext, history = [], endpoint = "agent", allowedTools } = options;
   const started = Date.now();
   const toolsUsed: string[] = [];
 
@@ -49,7 +64,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     };
   }
 
-  const model = createGenerativeModel({ role: ctx.role, pageContext });
+  const model = createGenerativeModel({ ctx, pageContext, allowedTools });
   if (!model) {
     return {
       text: "Ace AI could not initialize. Please try again later.",
@@ -104,6 +119,32 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       }
 
       const output = execResult.ok ? execResult.output : execResult.output;
+
+      // A mutating tool that needs confirmation: stop and surface a confirm card.
+      if (execResult.ok && isPendingConfirmation(output)) {
+        void logAiAudit({
+          userId: ctx.userId,
+          endpoint,
+          tools: toolsUsed,
+          durationMs: Date.now() - started,
+          denied: false,
+        });
+        return {
+          text: `${output.summary}. Review the details and confirm to proceed.`,
+          metadata: {
+            layout: "action_confirmation",
+            pendingAction: {
+              actionType: output.actionType,
+              summary: output.summary,
+              payload: output.payload,
+            },
+            toolsUsed,
+          },
+          permissionDenied: false,
+          toolsUsed,
+        };
+      }
+
       responses.push({ functionResponse: { name, response: output } });
     }
 

@@ -8,14 +8,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { AiMessageMetadata } from "@workspace/api-client-react";
+import { ActionConfirmationCard } from "@/components/ai/ActionConfirmationCard";
 
 type AiMessageContentProps = {
   body?: string | null;
   metadata?: AiMessageMetadata | null;
+  conversationId?: number;
 };
 
-export function AiMessageContent({ body, metadata }: AiMessageContentProps) {
+export function AiMessageContent({ body, metadata, conversationId }: AiMessageContentProps) {
   if (!metadata?.layout) return null;
+
+  if (metadata.layout === "action_confirmation" && metadata.pendingAction) {
+    return (
+      <ActionConfirmationCard
+        pendingAction={metadata.pendingAction}
+        conversationId={conversationId}
+      />
+    );
+  }
 
   if (metadata.layout === "table" && metadata.tableData) {
     const tableData = metadata.tableData as {

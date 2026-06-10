@@ -5,6 +5,8 @@ import { getAccessContext, getAccessContextFresh } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import {
   runAgent,
+  executeTool,
+  assertNoteAccess,
   checkAiRateLimit,
   listAiConversations,
   getAiConversation,
@@ -16,18 +18,21 @@ import {
 
 const router = Router();
 
-async function assertNoteAccess(userId: number, noteId: number): Promise<boolean> {
-  const note = await store.findNoteById(noteId);
-  if (!note) return false;
-  const user = await store.findUserById(userId);
-  if (
-    note.createdById === userId ||
-    note.sharedUserIds?.includes(userId) ||
-    (note.teamId != null && note.teamId === user?.teamId)
-  ) {
-    return true;
+/**
+ * Drop any context the user is not allowed to see so a spoofed client payload
+ * can never widen what the agent will surface (e.g. a noteId they can't read).
+ */
+async function sanitizePageContext(
+  userId: number,
+  pageContext: PageContext | undefined | null,
+): Promise<PageContext | null> {
+  if (!pageContext) return null;
+  const safe: PageContext = { ...pageContext };
+  if (safe.noteId != null) {
+    const allowed = await assertNoteAccess(userId, safe.noteId);
+    if (!allowed) delete safe.noteId;
   }
-  return false;
+  return safe;
 }
 
 router.post("/v1/ai/chat", requireAuth, async (req, res): Promise<void> => {
@@ -50,12 +55,14 @@ router.post("/v1/ai/chat", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const safeContext = await sanitizePageContext(ctx.userId, pageContext);
+
   let convId = conversationId;
   if (!convId) {
     const conv = await createAiConversation(
       ctx.userId,
       title?.trim() || message.trim().slice(0, 60),
-      pageContext ?? null,
+      safeContext,
     );
     convId = conv.id;
   } else {
@@ -77,7 +84,7 @@ router.post("/v1/ai/chat", requireAuth, async (req, res): Promise<void> => {
   const result = await runAgent({
     ctx,
     prompt: message.trim(),
-    pageContext: pageContext ?? null,
+    pageContext: safeContext,
     history: geminiHistory,
     endpoint: "chat",
   });
@@ -120,12 +127,14 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
+  const safeContext = await sanitizePageContext(ctx.userId, pageContext);
+
   let convId = conversationId;
   if (!convId) {
     const conv = await createAiConversation(
       ctx.userId,
       title?.trim() || message.trim().slice(0, 60),
-      pageContext ?? null,
+      safeContext,
     );
     convId = conv.id;
   } else {
@@ -159,7 +168,7 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
     const result = await runAgent({
       ctx,
       prompt: message.trim(),
-      pageContext: pageContext ?? null,
+      pageContext: safeContext,
       history: geminiHistory,
       endpoint: "chat/stream",
     });
@@ -233,6 +242,55 @@ router.get("/v1/ai/conversations/:id", requireAuth, async (req, res): Promise<vo
       createdAt: m.createdAt.toISOString(),
     })),
   });
+});
+
+router.post("/v1/ai/actions/confirm", requireAuth, async (req, res): Promise<void> => {
+  const ctx = await getAccessContextFresh(req);
+  const { conversationId, actionType, payload } = req.body as {
+    conversationId?: number;
+    actionType?: string;
+    payload?: Record<string, unknown>;
+  };
+
+  if (!actionType) {
+    res.status(400).json({ error: "actionType is required" });
+    return;
+  }
+
+  // Re-execute the tool with confirmed=true. executeTool re-checks RBAC, and
+  // each action's own validation (canAssignRole, canWriteProject, etc.) runs again.
+  const result = await executeTool(ctx, actionType, {
+    ...(payload ?? {}),
+    confirmed: true,
+  });
+
+  if (!result.ok) {
+    if (result.permissionDenied) {
+      res.status(403).json({
+        error: `You do not have permission to perform this action.`,
+        requiredPermissions: result.requiredPermissions.map(String),
+      });
+      return;
+    }
+    res.status(400).json({ error: (result.output as { error?: string })?.error ?? "Action failed" });
+    return;
+  }
+
+  // Record the completed action in the conversation when one is provided.
+  if (conversationId) {
+    const existing = await getAiConversation(ctx.userId, conversationId);
+    if (existing) {
+      await appendAiMessage(
+        ctx.userId,
+        conversationId,
+        "assistant",
+        `Done — the ${actionType.replace(/_/g, " ")} action completed successfully.`,
+        null,
+      );
+    }
+  }
+
+  res.json({ status: "success", actionType, result: result.output, conversationId: conversationId ?? null });
 });
 
 router.post(
@@ -320,6 +378,7 @@ Note content: ${plain.slice(0, 4000)}`;
       prompt,
       pageContext: { route: "/notes", noteId },
       endpoint: "notes/enrich",
+      allowedTools: [],
     });
 
     let summary = result.text;

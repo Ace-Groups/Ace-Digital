@@ -17,6 +17,12 @@ type AceAssistantContextValue = {
   pageContext: AiPageContext;
   conversationId: number | null;
   setConversationId: (id: number | null) => void;
+  /** A prompt queued for the panel to send once it mounts/opens. */
+  pendingPrompt: string | null;
+  /** Clear the queued prompt after the panel consumes it. */
+  consumePendingPrompt: () => void;
+  /** Open the panel in a fresh conversation and queue a prompt to send. */
+  openWithPrompt: (prompt: string) => void;
 };
 
 export type { AceAssistantContextValue };
@@ -46,6 +52,7 @@ export function AceAssistantProvider({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
 
   const [routePath, routeSearch] = useMemo(() => {
     const q = location.indexOf("?");
@@ -59,6 +66,14 @@ export function AceAssistantProvider({ children }: { children: ReactNode }) {
   );
 
   const toggle = useCallback(() => setOpen((v) => !v), []);
+
+  const consumePendingPrompt = useCallback(() => setPendingPrompt(null), []);
+
+  const openWithPrompt = useCallback((prompt: string) => {
+    setConversationId(null);
+    setPendingPrompt(prompt);
+    setOpen(true);
+  }, []);
 
   useEffect(() => {
     function onOpen() {
@@ -87,8 +102,11 @@ export function AceAssistantProvider({ children }: { children: ReactNode }) {
       pageContext,
       conversationId,
       setConversationId,
+      pendingPrompt,
+      consumePendingPrompt,
+      openWithPrompt,
     }),
-    [open, toggle, pageContext, conversationId],
+    [open, toggle, pageContext, conversationId, pendingPrompt, consumePendingPrompt, openWithPrompt],
   );
 
   return (

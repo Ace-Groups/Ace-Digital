@@ -2045,19 +2045,29 @@ export const AiChatResponse = zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
+  "pendingAction": zod.object({
+  "actionType": zod.string(),
+  "summary": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown())
+}).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
 }).optional(),
   "createdAt": zod.string()
 }).optional(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
+  "pendingAction": zod.object({
+  "actionType": zod.string(),
+  "summary": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown())
+}).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
 }).optional(),
   "toolsUsed": zod.array(zod.string()).optional(),
@@ -2079,6 +2089,23 @@ export const AiChatStreamBody = zod.object({
   "noteId": zod.number().optional(),
   "channelId": zod.number().optional()
 }).optional()
+})
+
+
+/**
+ * @summary Confirm and execute a pending AI action
+ */
+export const AiActionConfirmBody = zod.object({
+  "conversationId": zod.number().optional(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const AiActionConfirmResponse = zod.object({
+  "status": zod.string(),
+  "actionType": zod.string(),
+  "result": zod.record(zod.string(), zod.unknown()).optional(),
+  "conversationId": zod.number().nullish()
 })
 
 
@@ -2126,10 +2153,15 @@ export const GetAiConversationResponse = zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
+  "pendingAction": zod.object({
+  "actionType": zod.string(),
+  "summary": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown())
+}).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
 }).optional(),
   "createdAt": zod.string()
@@ -2149,10 +2181,15 @@ export const AiReportNarrativeBody = zod.object({
 export const AiReportNarrativeResponse = zod.object({
   "narrative": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
+  "pendingAction": zod.object({
+  "actionType": zod.string(),
+  "summary": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown())
+}).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
 }).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
@@ -2170,10 +2207,15 @@ export const AiNoteEnrichResponse = zod.object({
   "summary": zod.string(),
   "tags": zod.array(zod.string()),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
+  "pendingAction": zod.object({
+  "actionType": zod.string(),
+  "summary": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown())
+}).optional(),
   "toolsUsed": zod.array(zod.string()).optional()
 }).optional()
 })

@@ -1,4 +1,4 @@
-import { Loader2, Sparkles, Tags } from "lucide-react";
+import { Bot, Loader2, Sparkles, Tags } from "lucide-react";
 import { useAiNoteEnrich } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,13 +9,22 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAceAssistant } from "@/contexts/AceAssistantContext";
+import { hapticLight } from "@/lib/haptics";
 
 type NoteAiActionsProps = {
   noteId: number;
 };
 
+const ASK_ACE_CHIPS = [
+  "Summarize this note and list any action items.",
+  "What are the key decisions in this note?",
+  "Draft a follow-up message based on this note.",
+];
+
 export function NoteAiActions({ noteId }: NoteAiActionsProps) {
   const { toast } = useToast();
+  const { openWithPrompt } = useAceAssistant();
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -37,6 +46,11 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
     enrich.mutate({ id: noteId });
   }
 
+  function askAce(prompt: string) {
+    hapticLight();
+    openWithPrompt(prompt);
+  }
+
   return (
     <>
       <Button
@@ -54,6 +68,18 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
           <Sparkles className="h-4 w-4 sm:mr-1.5" />
         )}
         <span className="hidden sm:inline">AI</span>
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-9 px-2 sm:px-3"
+        onClick={() => askAce(ASK_ACE_CHIPS[0])}
+        title="Ask Ace about this note"
+      >
+        <Bot className="h-4 w-4 sm:mr-1.5" />
+        <span className="hidden sm:inline">Ask Ace</span>
       </Button>
 
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
@@ -78,6 +104,24 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
               ))}
             </div>
           )}
+          <div className="flex flex-col gap-1.5 border-t border-border/50 pt-3">
+            <span className="text-xs font-medium text-muted-foreground">Ask Ace</span>
+            <div className="flex flex-wrap gap-1.5">
+              {ASK_ACE_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    setSummaryOpen(false);
+                    askAce(chip);
+                  }}
+                  className="v2-chip hover:bg-primary/10 hover:text-primary"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

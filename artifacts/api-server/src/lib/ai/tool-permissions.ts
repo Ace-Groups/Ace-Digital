@@ -21,6 +21,7 @@ export const TOOL_PERMISSIONS: Record<string, ToolPermissionDef> = {
   list_service_tickets: { requiredPermissions: ["service_tickets:read"] },
   list_calendar_events: { requiredPermissions: ["calendar:read"] },
   search_notes: { requiredPermissions: ["notes:read"] },
+  get_note: { requiredPermissions: ["notes:read"] },
   list_approvals: {
     requiredPermissions: ["approvals:review", "approvals:submit"],
     anyOf: true,
@@ -32,6 +33,14 @@ export const TOOL_PERMISSIONS: Record<string, ToolPermissionDef> = {
   create_calendar_event: { requiredPermissions: ["calendar:write"] },
   post_channel_message: { requiredPermissions: ["channels:post"] },
   submit_approval: { requiredPermissions: ["approvals:submit"] },
+  list_teams: { requiredPermissions: ["teams:read"] },
+  lookup_employee: { requiredPermissions: ["employees:read"] },
+  create_employee: { requiredPermissions: ["employees:write"] },
+  create_channel: { requiredPermissions: ["channels:write"] },
+  create_project: { requiredPermissions: ["projects:write"] },
+  create_client: { requiredPermissions: ["clients:write"] },
+  create_service_ticket: { requiredPermissions: ["service_tickets:write"] },
+  create_note: { requiredPermissions: ["notes:write"] },
 };
 
 function checkPerms(

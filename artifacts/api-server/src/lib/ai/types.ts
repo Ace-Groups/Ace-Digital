@@ -13,14 +13,21 @@ export type AiTableData = {
   rows: Record<string, unknown>[];
 };
 
+export type AiPendingAction = {
+  actionType: string;
+  summary: string;
+  payload: Record<string, unknown>;
+};
+
 export type AiMessageMetadata = {
-  layout?: "table" | "permission_denied";
+  layout?: "table" | "permission_denied" | "action_confirmation";
   tableData?: AiTableData;
   errorDetails?: {
     userId: number;
     role: string;
     requiredPermissions: string[];
   };
+  pendingAction?: AiPendingAction;
   toolsUsed?: string[];
 };
 

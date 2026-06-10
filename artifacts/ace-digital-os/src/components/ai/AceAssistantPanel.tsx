@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Loader2, Plus, Send, Sparkles, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetAiConversation,
   getGetAiConversationQueryKey,
@@ -15,6 +16,7 @@ import {
 } from "@/contexts/AceAssistantContext";
 import { AiMessageContent } from "@/components/ai/AiMessageContent";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import { streamAiChat } from "@/lib/ai-stream";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { getProactiveInsights } from "@/lib/ai-insights";
@@ -22,17 +24,27 @@ import { getProactiveInsights } from "@/lib/ai-insights";
 
 export function AceAssistantPanel() {
   const isMobile = useIsMobile();
-  const { open, setOpen, pageContext, conversationId, setConversationId } =
-    useAceAssistant();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const {
+    open,
+    setOpen,
+    pageContext,
+    conversationId,
+    setConversationId,
+    pendingPrompt,
+    consumePendingPrompt,
+  } = useAceAssistant();
   const [input, setInput] = useState("");
   const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const quickPrompts = getProactiveInsights(pageContext);
 
   const convIdForQuery = conversationId ?? 0;
-  const { data: conversation, refetch } = useGetAiConversation(convIdForQuery, {
+  const { data: conversation } = useGetAiConversation(convIdForQuery, {
     query: {
       queryKey: getGetAiConversationQueryKey(convIdForQuery),
       enabled: open && conversationId != null && conversationId > 0,
@@ -43,55 +55,96 @@ export function AceAssistantPanel() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation?.messages, pendingUserMsg, isStreaming, streamingText]);
 
-  useEffect(() => {
-    function onPrompt(e: Event) {
-      const detail = (e as CustomEvent<{ prompt?: string }>).detail;
-      if (detail?.prompt) handleSend(detail.prompt);
-    }
-    window.addEventListener("ace-assistant-prompt", onPrompt);
-    return () => window.removeEventListener("ace-assistant-prompt", onPrompt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, pageContext, isStreaming]);
+  const handleSend = useCallback(
+    async (text?: string) => {
+      const msg = (text ?? input).trim();
+      if (!msg || isStreaming) return;
+      hapticLight();
+      setInput("");
+      setPendingUserMsg(msg);
+      setStreamingText("");
+      setIsStreaming(true);
 
-  async function handleSend(text?: string) {
-    const msg = (text ?? input).trim();
-    if (!msg || isStreaming) return;
-    hapticLight();
-    setInput("");
-    setPendingUserMsg(msg);
-    setStreamingText("");
-    setIsStreaming(true);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    await streamAiChat(
-      {
-        message: msg,
-        conversationId: conversationId ?? undefined,
-        pageContext,
-      },
-      (event) => {
-        if (event.type === "start") {
-          setConversationId(event.conversationId);
-        } else if (event.type === "chunk") {
-          setStreamingText((prev) => prev + event.text);
-        } else if (event.type === "done") {
-          setConversationId(event.conversationId);
-          setPendingUserMsg(null);
-          setStreamingText("");
-          hapticSuccess();
-          void refetch();
-        } else if (event.type === "error") {
-          setPendingUserMsg(null);
-          setStreamingText("");
+      let finalConvId = conversationId ?? 0;
+      let errored = false;
+
+      try {
+        await streamAiChat(
+          {
+            message: msg,
+            conversationId: conversationId ?? undefined,
+            pageContext,
+          },
+          (event) => {
+            if (event.type === "start") {
+              finalConvId = event.conversationId;
+              setConversationId(event.conversationId);
+            } else if (event.type === "chunk") {
+              setStreamingText((prev) => prev + event.text);
+            } else if (event.type === "done") {
+              finalConvId = event.conversationId;
+              setConversationId(event.conversationId);
+              hapticSuccess();
+            } else if (event.type === "error") {
+              errored = true;
+              toast({
+                title: "Ace AI",
+                description: event.error,
+                variant: "destructive",
+              });
+            }
+          },
+          controller.signal,
+        );
+
+        // Wait for the persisted conversation before clearing optimistic UI,
+        // so the reply doesn't flash empty between stream end and refetch.
+        if (!errored && finalConvId > 0) {
+          await queryClient.refetchQueries({
+            queryKey: getGetAiConversationQueryKey(finalConvId),
+          });
         }
-      },
-    );
-    setIsStreaming(false);
-  }
+      } catch {
+        toast({
+          title: "Ace AI",
+          description: "Something went wrong sending your message.",
+          variant: "destructive",
+        });
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
+        setPendingUserMsg(null);
+        setStreamingText("");
+        setIsStreaming(false);
+      }
+    },
+    [input, isStreaming, conversationId, pageContext, toast, queryClient, setConversationId],
+  );
+
+  // Consume a queued prompt (e.g. from a suggestion chip elsewhere) once open.
+  useEffect(() => {
+    if (open && pendingPrompt && !isStreaming) {
+      const prompt = pendingPrompt;
+      consumePendingPrompt();
+      void handleSend(prompt);
+    }
+  }, [open, pendingPrompt, isStreaming, consumePendingPrompt, handleSend]);
+
+  // Abort any in-flight stream when the panel closes.
+  useEffect(() => {
+    if (!open) abortRef.current?.abort();
+  }, [open]);
 
   function handleNewChat() {
+    abortRef.current?.abort();
     setConversationId(null);
     setInput("");
     setPendingUserMsg(null);
+    setStreamingText("");
+    setIsStreaming(false);
   }
 
   const contextLabel = formatContextLabel(pageContext);
@@ -185,9 +238,13 @@ export function AceAssistantPanel() {
                         : "mr-4 bg-muted/50 text-foreground",
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
                     {m.role === "assistant" && (
-                      <AiMessageContent body={m.content} metadata={m.metadata} />
+                      <AiMessageContent
+                        body={m.content}
+                        metadata={m.metadata}
+                        conversationId={conversationId ?? undefined}
+                      />
                     )}
                   </div>
                 ))}
@@ -213,6 +270,21 @@ export function AceAssistantPanel() {
             </ScrollArea>
 
             <div className="shrink-0 border-t border-border/50 p-3">
+              {messages.length > 0 && !isStreaming && quickPrompts.length > 0 && (
+                <div className="mb-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border">
+                  {quickPrompts.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handleSend(p)}
+                      className="v2-chip shrink-0 whitespace-nowrap hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Sparkles size={12} className="text-primary" />
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
               <form
                 className="flex items-end gap-2"
                 onSubmit={(e) => {

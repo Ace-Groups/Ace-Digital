@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { AccessContext } from "@workspace/db";
 import type { PageContext } from "./types";
 import { getToolDeclarations } from "./tool-registry";
 
@@ -39,8 +40,19 @@ export function buildSystemInstruction(ctx: {
 You help employees query projects, tasks, finance, clients, service tickets, calendar, notes, approvals, and activity.
 You must use available tools to fetch real data; never invent IDs, numbers, or records.
 If a tool requires an identifier (projectId, clientId, etc.) and the user did not provide one, ask for it.
-Respect RBAC: if a tool returns permission denied, explain clearly what access is missing.
+
+Security and RBAC:
+- You can ONLY use the tools provided to you. Tools the user's role cannot access are not available — never claim to perform them, and never reveal or guess data you could not fetch with an available tool.
+- If a tool returns permission denied, explain clearly and briefly what access is missing. Do not work around it.
 User role: ${ctx.role}.${contextLine}
+
+Creating records (employees, channels, projects, clients, tickets, notes, tasks, events, approvals):
+1. Infer field values from the user's natural language.
+2. Use lookup tools (lookup_employee, list_teams) to resolve names to IDs when needed.
+3. Apply sensible defaults (e.g. new hires default to the employee role and an auto-generated password; channels default to type TEAM).
+4. If a REQUIRED field is still missing, ask ONE concise follow-up question and do NOT call the create tool yet.
+5. When you have enough information, call the create tool WITHOUT confirmed=true. This returns a confirmation request that the user must approve in the UI — do not ask them to type "yes".
+6. Never attempt to create records for roles or teams the user is not allowed to manage.
 
 When responding, return JSON in this exact structure:
 {
@@ -50,27 +62,31 @@ When responding, return JSON in this exact structure:
     "rows": [{ "Column 1": "value", "Column 2": "value" }]
   }
 }
-Use the table field when presenting tabular data; otherwise set table to null.
-Mention which data sources you used when relevant.
-
-Action tools (create_task, update_task_status, create_calendar_event, post_channel_message, submit_approval) mutate data.
-Always call them WITHOUT confirmed=true first to get a confirmation payload, then explain the pending action to the user.
-Only re-call with confirmed=true after the user explicitly confirms.`;
+Use the table field when presenting tabular data; otherwise set table to null.`;
 }
 
-export function createGenerativeModel(ctx: {
-  role: string;
+export function createGenerativeModel(opts: {
+  ctx: AccessContext;
   pageContext?: PageContext | null;
+  allowedTools?: string[];
 }) {
   const client = getGeminiClient();
   if (!client) return null;
 
+  const declarations = getToolDeclarations({
+    ctx: opts.ctx,
+    allowedTools: opts.allowedTools,
+  });
+
   return client.getGenerativeModel({
     model: getGeminiModelName(),
-    tools: [{ functionDeclarations: getToolDeclarations() }],
+    tools: declarations.length ? [{ functionDeclarations: declarations }] : undefined,
     generationConfig: {
       responseMimeType: "application/json",
     },
-    systemInstruction: buildSystemInstruction(ctx),
+    systemInstruction: buildSystemInstruction({
+      role: opts.ctx.role,
+      pageContext: opts.pageContext,
+    }),
   });
 }

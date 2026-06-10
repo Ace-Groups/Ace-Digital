@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./note-access";
 export * from "./gemini-client";
 export * from "./context-pack";
 export * from "./run-agent";
