@@ -7,13 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 
 interface ResponsiveSheetProps {
@@ -40,21 +33,26 @@ export function ResponsiveSheet({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className={cn("max-h-[94dvh]", className)}>
-          <DrawerHeader className="shrink-0 text-left pb-2">
-            <DrawerTitle className="text-lg">{title}</DrawerTitle>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className={cn(
+            "flex max-h-[94dvh] w-[calc(100%-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0",
+            className,
+          )}
+        >
+          <DialogHeader className="shrink-0 border-b border-border/60 px-4 py-4 text-left">
+            <DialogTitle className="text-lg">{title}</DialogTitle>
             {description ? (
-              <DrawerDescription>{description}</DrawerDescription>
+              <DialogDescription>{description}</DialogDescription>
             ) : (
-              <DrawerDescription className="sr-only">{title}</DrawerDescription>
+              <DialogDescription className="sr-only">{title}</DialogDescription>
             )}
-          </DrawerHeader>
-          <div className="mobile-form touch-scroll overflow-y-auto overscroll-contain px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          </DialogHeader>
+          <div className="mobile-form touch-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             {children}
           </div>
-        </DrawerContent>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
     );
   }
 

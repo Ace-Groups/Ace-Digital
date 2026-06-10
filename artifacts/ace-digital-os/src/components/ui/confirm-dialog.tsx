@@ -12,15 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-
 export interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -104,15 +95,17 @@ export function ConfirmDialog({
   if (isMobile) {
     if (!open) return null;
     return (
-      <Drawer open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
-        <DrawerContent className="pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
+      <AlertDialog open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
+        <AlertDialogContent className="confirm-dialog-content pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
             {description ? (
-              <DrawerDescription className="text-left">{description}</DrawerDescription>
+              <AlertDialogDescription asChild={typeof description !== "string"}>
+                {typeof description === "string" ? description : <div>{description}</div>}
+              </AlertDialogDescription>
             ) : null}
-          </DrawerHeader>
-          <DrawerFooter className="pt-0">
+          </AlertDialogHeader>
+          <div className="pt-2">
             <ConfirmActions
               layout="drawer"
               cancelLabel={cancelLabel}
@@ -122,9 +115,9 @@ export function ConfirmDialog({
               onCancel={handleCancel}
               onConfirm={handleConfirm}
             />
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
