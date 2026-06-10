@@ -671,14 +671,16 @@ export default function ChannelsPage() {
         onCreated={(id) => selectChannel(id)}
       />
 
-      <ChannelSettingsSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        channel={selectedChannel ?? null}
-        onArchived={() => {
-          backToList();
-        }}
-      />
+      {settingsOpen && selectedChannel ? (
+        <ChannelSettingsSheet
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          channel={selectedChannel}
+          onArchived={() => {
+            backToList();
+          }}
+        />
+      ) : null}
 
       <OpenDmDialog
         open={openDmOpen}

@@ -29,6 +29,7 @@ export function ResponsiveSheet({
 }: ResponsiveSheetProps) {
   const isMobile = useIsMobile();
 
+  // Avoid mounting Radix Dialog (portal/focus trap) until the sheet is opened.
   if (!open) return null;
 
   if (isMobile) {

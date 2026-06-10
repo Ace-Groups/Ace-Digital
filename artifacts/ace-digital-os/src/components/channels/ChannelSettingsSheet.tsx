@@ -23,8 +23,9 @@ import { ChannelMembersPanel } from "./ChannelMembersPanel";
 import { ChannelIcon } from "./ChannelIcon";
 import type { Channel } from "@workspace/api-client-react";
 import { Archive, ImageOff, Loader2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+
+type SettingsTab = "about" | "members" | "settings";
 
 interface ChannelSettingsSheetProps {
   open: boolean;
@@ -70,12 +71,14 @@ export function ChannelSettingsSheet({
   const [description, setDescription] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("about");
 
-  const { data: members } = useListChannelMembers(channel?.id ?? 0, {
+  const membersChannelId = channel?.id ?? 0;
+  const { data: members } = useListChannelMembers(membersChannelId, {
     query: {
-      enabled: open && !!channel?.id,
-      queryKey: getListChannelMembersQueryKey(channel?.id ?? 0),
-      staleTime: 0,
+      enabled: open && membersChannelId > 0,
+      queryKey: getListChannelMembersQueryKey(membersChannelId),
+      staleTime: 30_000,
     },
   });
 
@@ -119,12 +122,15 @@ export function ChannelSettingsSheet({
   }, [channel, name, description, avatarUrl]);
 
   useEffect(() => {
-    if (channel && open) {
-      setName(channel.name);
-      setDescription(channel.description ?? "");
-      setAvatarUrl(channel.avatarUrl ?? "");
-    }
-  }, [channel, open]);
+    if (open) setActiveTab("about");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !channel) return;
+    setName(channel.name);
+    setDescription(channel.description ?? "");
+    setAvatarUrl(channel.avatarUrl ?? "");
+  }, [open, channel?.id, channel?.name, channel?.description, channel?.avatarUrl]);
 
   async function invalidate() {
     await queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
@@ -234,19 +240,38 @@ export function ChannelSettingsSheet({
         }
         className={isMobile ? undefined : "max-w-lg"}
       >
-        <Tabs defaultValue="about" className={cn(isMobile && "pb-2")}>
-          <TabsList className="mb-4 w-full">
-            <TabsTrigger value="about" className="flex-1">
-              About
-            </TabsTrigger>
-            <TabsTrigger value="members" className="flex-1">
-              Members
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex-1">
-              Settings
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="about" className="space-y-6">
+        <div className={cn(isMobile && "pb-2")}>
+          <div
+            className="mb-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground"
+            role="tablist"
+            aria-label="Channel settings sections"
+          >
+            {(
+              [
+                ["about", "About"],
+                ["members", "Members"],
+                ["settings", "Settings"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === value}
+                className={cn(
+                  "inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  activeTab === value
+                    ? "bg-background text-foreground shadow"
+                    : "text-muted-foreground",
+                )}
+                onClick={() => setActiveTab(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTab === "about" ? (
+          <div className="space-y-6">
             <SettingsSection title="About">
               <p className="text-sm text-muted-foreground">
                 {channel.description?.trim() || "No description yet."}
@@ -271,16 +296,18 @@ export function ChannelSettingsSheet({
                 </Button>
               </SettingsSection>
             ) : null}
-          </TabsContent>
-          <TabsContent value="members">
+          </div>
+          ) : null}
+          {activeTab === "members" ? (
             <SettingsSection
               title="Members"
               description={`${members?.length ?? channel.memberCount ?? 0} people in this channel`}
             >
               <ChannelMembersPanel channelId={channel.id} canManage={canManage} active={open} />
             </SettingsSection>
-          </TabsContent>
-          <TabsContent value="settings" className="space-y-6">
+          ) : null}
+          {activeTab === "settings" ? (
+          <div className="space-y-6">
           {canManage ? (
             <>
               <SettingsSection
@@ -415,8 +442,9 @@ export function ChannelSettingsSheet({
               </p>
             </>
           )}
-          </TabsContent>
-        </Tabs>
+          </div>
+          ) : null}
+        </div>
       </ResponsiveSheet>
 
       {archiveConfirmOpen ? (

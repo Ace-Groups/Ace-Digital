@@ -12,6 +12,10 @@ export default function ErrorPage() {
       description="Something prevented this page from loading correctly. Try again, return home, or sign out and back in."
       tone="danger"
       onSignOut={signOut}
+      primaryAction={{
+        label: "Back to dashboard",
+        onClick: () => window.location.assign("/"),
+      }}
       secondaryAction={{
         label: "Try again",
         onClick: () => window.location.reload(),

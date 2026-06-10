@@ -57,7 +57,7 @@ export function ChannelMembersPanel({
     if (!q) return available;
     return available.filter(
       (e) =>
-        e.fullName.toLowerCase().includes(q) ||
+        (e.fullName?.toLowerCase().includes(q) ?? false) ||
         (e.email?.toLowerCase().includes(q) ?? false),
     );
   }, [available, memberSearch]);
