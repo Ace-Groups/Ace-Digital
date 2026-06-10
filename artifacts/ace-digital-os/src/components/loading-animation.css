@@ -22,7 +22,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(1.5rem, 5vh, 2.5rem);
+  gap: 0;
   width: min(100%, 26rem);
   padding: 0 1.5rem;
 }
@@ -47,19 +47,38 @@
   transform-style: preserve-3d;
 }
 
-.ace-loader-text {
+.ace-loader-brand {
   position: relative;
   z-index: 10;
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: clamp(2rem, 7vh, 3.25rem);
   flex-shrink: 0;
   text-align: center;
-  font-size: clamp(1.375rem, 5.5vw, 1.875rem);
+}
+
+.ace-loader-text {
+  margin: 0;
+  font-size: clamp(1.5rem, 5.5vw, 2rem);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   color: #e8f4ff;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   font-family: system-ui, -apple-system, sans-serif;
   text-shadow: 0 2px 24px rgba(5, 38, 89, 0.5);
+}
+
+.ace-loader-version {
+  margin: 0;
+  font-size: clamp(0.8125rem, 3.2vw, 0.9375rem);
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(232, 244, 255, 0.72);
+  letter-spacing: 0.14em;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-transform: uppercase;
 }
 
 @media (max-width: 767px) {
@@ -74,8 +93,12 @@
     transform-origin: center center;
   }
 
+  .ace-loader-brand {
+    margin-top: clamp(1.75rem, 8vh, 2.75rem);
+  }
+
   .ace-loader-text {
-    font-size: clamp(1.5rem, 6vw, 2rem);
+    font-size: clamp(1.625rem, 6vw, 2.125rem);
   }
 }
 

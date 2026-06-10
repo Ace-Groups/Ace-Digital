@@ -56,7 +56,10 @@ export function LoadingScreen() {
             </div>
           </div>
         </div>
-        <p className="ace-loader-text">Ace OS v2</p>
+        <div className="ace-loader-brand">
+          <p className="ace-loader-text">Ace Digital</p>
+          <p className="ace-loader-version">V_1.01</p>
+        </div>
       </div>
     </div>,
     document.body,

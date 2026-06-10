@@ -1,7 +1,7 @@
 {
-  "name": "Ace OS v2",
-  "short_name": "Ace OS v2",
-  "description": "Projects, teams, clients, finance, and Ace AI in one place.",
+  "name": "Ace Digital",
+  "short_name": "Ace Digital",
+  "description": "Ace Digital V_1.01 — projects, teams, clients, finance, and Ace AI.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#052659",
