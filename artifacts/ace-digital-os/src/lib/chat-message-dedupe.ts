@@ -12,13 +12,19 @@ export function optimisticContentKey(msg: ContentKeyed): string {
  * Remove optimistic rows (negative id) that already have a persisted twin
  * (positive id, same sender + body). Unmatched optimistic rows stay (in-flight sends).
  */
+function optimisticPairKey(msg: ContentKeyed): string {
+  const clientId = messageClientId(msg);
+  if (clientId) return `cid:${clientId}`;
+  return `body:${optimisticContentKey(msg)}`;
+}
+
 export function dedupeOptimisticPairs<T extends { id: number } & ContentKeyed>(
   messages: T[],
 ): T[] {
   const tempsByKey = new Map<string, T[]>();
   for (const m of messages) {
     if (m.id >= 0) continue;
-    const key = optimisticContentKey(m);
+    const key = optimisticPairKey(m);
     const bucket = tempsByKey.get(key) ?? [];
     bucket.push(m);
     tempsByKey.set(key, bucket);
@@ -31,7 +37,8 @@ export function dedupeOptimisticPairs<T extends { id: number } & ContentKeyed>(
   for (const m of messages) {
     if (m.id < 0) continue;
     persisted.push(m);
-    const key = optimisticContentKey(m);
+    const clientId = messageClientId(m);
+    const key = clientId ? `cid:${clientId}` : `body:${optimisticContentKey(m)}`;
     const bucket = tempsByKey.get(key);
     if (!bucket?.length) continue;
     const temp = bucket.shift()!;

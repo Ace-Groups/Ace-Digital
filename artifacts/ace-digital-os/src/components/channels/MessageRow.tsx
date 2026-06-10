@@ -24,6 +24,7 @@ interface MessageRowProps {
   footer?: ReactNode;
   toolbar?: ReactNode;
   className?: string;
+  deliveryState?: "sending" | "failed" | "sent";
 }
 
 export function MessageRow({
@@ -33,6 +34,7 @@ export function MessageRow({
   footer,
   toolbar,
   className,
+  deliveryState = "sent",
 }: MessageRowProps) {
   const timeLabel = useMemo(
     () =>
@@ -59,9 +61,13 @@ export function MessageRow({
   return (
     <article
       data-testid={`message-${msg.id}`}
+      data-delivery={deliveryState}
       className={cn(
-        "group relative flex gap-2 rounded-md px-1 py-1.5 transition-colors duration-150 sm:gap-3 sm:px-2 sm:py-1",
+        "group relative flex gap-2 rounded-md px-1 py-1.5 transition-all duration-300 sm:gap-3 sm:px-2 sm:py-1",
         "hover:bg-[var(--chat-row-hover)] active:bg-[var(--chat-row-hover)]",
+        deliveryState === "sending" &&
+          "message-sending opacity-[0.82] ring-1 ring-primary/25 ring-offset-0",
+        deliveryState === "failed" && "opacity-90 ring-1 ring-destructive/40",
         className,
       )}
     >

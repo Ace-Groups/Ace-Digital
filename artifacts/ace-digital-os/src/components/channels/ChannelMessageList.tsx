@@ -9,6 +9,7 @@ import { messageDayKey } from "@/lib/chat-display";
 import type { PendingMessage } from "@/hooks/use-send-channel-message";
 import { captureScrollAnchor, restoreScrollAnchor } from "@/lib/scroll-preserve";
 import { cn } from "@/lib/utils";
+import { messageClientId } from "@/lib/chat-message-ids";
 import type { MessageBodyNameMaps } from "@/lib/chat-mentions";
 
 function isPendingMessage(msg: Message | PendingMessage): msg is PendingMessage {
@@ -290,7 +291,7 @@ export function ChannelMessageList({
 
           return (
             <div
-              key={msg.id}
+              key={messageClientId(msg) ?? `msg-${msg.id}`}
               data-message-index={index}
               className={cn(
                 showMeta ? "pt-3 first:pt-0" : sameSenderAsPrev ? "pt-0.5" : "pt-1",

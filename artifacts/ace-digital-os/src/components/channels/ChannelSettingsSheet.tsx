@@ -419,21 +419,23 @@ export function ChannelSettingsSheet({
         </Tabs>
       </ResponsiveSheet>
 
-      <ConfirmDialog
-        open={archiveConfirmOpen}
-        onOpenChange={setArchiveConfirmOpen}
-        title="Archive this channel?"
-        description={
-          <>
-            <strong>#{channel.name}</strong> will be hidden from the channel list. Members can
-            still access it if they have a direct link until you restore it from the database.
-          </>
-        }
-        confirmLabel="Archive"
-        variant="destructive"
-        loading={updateChannel.isPending}
-        onConfirm={() => void handleArchive()}
-      />
+      {archiveConfirmOpen ? (
+        <ConfirmDialog
+          open={archiveConfirmOpen}
+          onOpenChange={setArchiveConfirmOpen}
+          title="Archive this channel?"
+          description={
+            <>
+              <strong>#{channel.name}</strong> will be hidden from the channel list. Members can
+              still access it if they have a direct link until you restore it from the database.
+            </>
+          }
+          confirmLabel="Archive"
+          variant="destructive"
+          loading={updateChannel.isPending}
+          onConfirm={() => void handleArchive()}
+        />
+      ) : null}
     </>
   );
 }

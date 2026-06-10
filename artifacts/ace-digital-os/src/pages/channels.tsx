@@ -185,7 +185,7 @@ export default function ChannelsPage() {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
         staleTime: 120_000,
-        refetchInterval: firebaseLive ? false : 30_000,
+        refetchInterval: firebaseLive ? false : 3_000,
         placeholderData: (previousData) =>
           previousData ??
           (selectedChannelId

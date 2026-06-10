@@ -12,6 +12,7 @@ import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import {
   globalReplaceChannelMessageByClientId,
   globalUpsertChannelMessage,
+  syncChannelMessagesFromCache,
 } from "@/hooks/use-room-message-list";
 import { replaceMessageByClientIdInList } from "@/lib/chat-message-dedupe";
 import { messagePreviewText } from "@/lib/chat-reply";
@@ -84,6 +85,7 @@ export function useGlobalChatRealtime(enabled: boolean) {
       queryClient.setQueryData<Message[]>(key, next);
 
       globalUpsertChannelMessage(channelId, incoming as Message);
+      syncChannelMessagesFromCache(channelId, next);
 
       const latest = [...next].reverse().find((m) => !m.deleted);
       queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), (old) =>

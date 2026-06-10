@@ -352,9 +352,18 @@ export function MessageBubble({
     </div>
   );
 
+  const deliveryState = pending
+    ? msg.status === "failed"
+      ? "failed"
+      : "sending"
+    : "sent";
+
   return (
     <div
-      className="relative"
+      className={cn(
+        "relative",
+        deliveryState === "sending" && "message-sending-wrap",
+      )}
       onPointerDown={onBubblePointerDown}
       onPointerUp={clearLongPress}
       onPointerLeave={clearLongPress}
@@ -363,8 +372,9 @@ export function MessageBubble({
       <MessageRow
         msg={msg as Message}
         showHeader={showMeta}
+        deliveryState={deliveryState}
         toolbar={
-          showActions ? (
+          showActions && !isMobile ? (
             <MessageHoverToolbar
               onReact={(emoji) => onToggleReaction?.(emoji)}
               onReply={
@@ -380,9 +390,16 @@ export function MessageBubble({
         }
         footer={
           <>
+            {pending && isMe && msg.status === "sending" && (
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-primary/80">
+                <Loader2 size={10} className="animate-spin" />
+                Sending…
+              </span>
+            )}
             {pending && isMe && msg.status === "failed" && (
-              <span className="mt-1 inline-flex text-muted-foreground">
-                <AlertCircle size={12} className="text-destructive" />
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-destructive">
+                <AlertCircle size={10} />
+                Failed to send
               </span>
             )}
             {!pending && onToggleReaction && (

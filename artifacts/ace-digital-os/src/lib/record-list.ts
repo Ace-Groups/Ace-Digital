@@ -75,11 +75,16 @@ export class RecordList<T extends { id: number }> {
     const minIncomingTime = Math.min(
       ...incoming.map((m) => createdAtMs(m as T & HasCreatedAt)),
     );
-    const olderKept = snap.items.filter(
-      (m) => createdAtMs(m as T & HasCreatedAt) < minIncomingTime,
-    );
+    const incomingIds = new Set(incoming.map((m) => m.id));
+    const preserved = snap.items.filter((m) => {
+      const ms = createdAtMs(m as T & HasCreatedAt);
+      if (ms < minIncomingTime) return true;
+      if (m.id < 0) return true;
+      if (!incomingIds.has(m.id)) return true;
+      return false;
+    });
     const byId = new Map<number, T>();
-    for (const m of olderKept) byId.set(m.id, m);
+    for (const m of preserved) byId.set(m.id, m);
     for (const m of incoming) {
       const existing = byId.get(m.id);
       byId.set(m.id, existing && shallowRecordEqual(existing, m) ? existing : m);

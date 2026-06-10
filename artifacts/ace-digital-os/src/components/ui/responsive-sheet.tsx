@@ -36,6 +36,8 @@ export function ResponsiveSheet({
 }: ResponsiveSheetProps) {
   const isMobile = useIsMobile();
 
+  if (!open) return null;
+
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>

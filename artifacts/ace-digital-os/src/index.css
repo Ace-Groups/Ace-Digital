@@ -496,6 +496,38 @@ body {
   animation: shimmer 2s ease-in-out infinite;
 }
 
+@keyframes message-sending-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+  }
+  50% {
+    box-shadow: 0 0 14px 2px hsl(var(--primary) / 0.22);
+  }
+}
+
+.message-sending {
+  animation: message-sending-glow 1.6s ease-in-out infinite;
+}
+
+.message-sending-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.08) 45%,
+    hsl(var(--primary) / 0.16) 50%,
+    hsl(var(--primary) / 0.08) 55%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
 .contain-region {
   content-visibility: auto;
   contain-intrinsic-size: auto 100px auto 600px;

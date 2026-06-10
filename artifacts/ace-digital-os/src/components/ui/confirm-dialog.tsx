@@ -102,6 +102,7 @@ export function ConfirmDialog({
   };
 
   if (isMobile) {
+    if (!open) return null;
     return (
       <Drawer open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
         <DrawerContent className="pb-[max(1rem,env(safe-area-inset-bottom))]">

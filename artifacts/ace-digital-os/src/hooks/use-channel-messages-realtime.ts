@@ -8,29 +8,22 @@ import {
   type Message,
 } from "@workspace/api-client-react";
 import { useEnsureChannelJoined, useSocket } from "@/contexts/SocketContext";
-import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
+import {
+  CHANNEL_MESSAGE_PARAMS,
+  syncChannelMessagesFromCache,
+} from "@/hooks/use-room-message-list";
 import { messagePreviewText } from "@/lib/chat-reply";
 import {
   dedupeOptimisticPairs,
   replaceMessageByClientIdInList,
 } from "@/lib/chat-message-dedupe";
 import { messageClientId, tempMessageIdFromClientId } from "@/lib/chat-message-ids";
+import { sameOrderedMessageIds } from "@/lib/message-list-equality";
 
 type WsMessage = Message & { clientId?: string };
 
 function messageKey(channelId: number) {
   return getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS);
-}
-
-function hasMessage(list: Message[], incoming: WsMessage): boolean {
-  if (list.some((m) => m.id === incoming.id)) return true;
-  if (incoming.clientId) {
-    const tempId = tempMessageIdFromClientId(incoming.clientId);
-    return list.some(
-      (m) => messageClientId(m) === incoming.clientId || m.id === tempId,
-    );
-  }
-  return false;
 }
 
 function upsertMessage(list: Message[], incoming: WsMessage): Message[] {
@@ -94,8 +87,8 @@ export function useChannelMessagesRealtime(
       if (incoming.channelId !== channelId) return;
       const key = messageKey(channelId);
       const prev = queryClient.getQueryData<Message[]>(key) ?? [];
-      if (hasMessage(prev, incoming)) return;
       const next = upsertMessage(prev, incoming);
+      if (sameOrderedMessageIds(prev, next)) return;
       queryClient.setQueryData<Message[]>(key, next);
 
       const latest = [...next].reverse().find((message) => !message.deleted);
@@ -111,6 +104,7 @@ export function useChannelMessagesRealtime(
         );
       queryClient.setQueryData<Channel[]>(getListChannelsQueryKey(), patchSidebarPreview);
       queryClient.setQueryData<Channel[]>(getListDmsQueryKey(), patchSidebarPreview);
+      syncChannelMessagesFromCache(channelId, next);
       handlersRef.current?.onUpsert?.(incoming as Message);
     };
 
@@ -123,9 +117,12 @@ export function useChannelMessagesRealtime(
     }) => {
       if (message.channelId !== channelId) return;
       const key = messageKey(channelId);
-      queryClient.setQueryData<Message[]>(key, (old) =>
-        replacePersistedMessage(old ?? [], clientId, message),
-      );
+      let next: Message[] = [];
+      queryClient.setQueryData<Message[]>(key, (old) => {
+        next = replacePersistedMessage(old ?? [], clientId, message);
+        return next;
+      });
+      if (next.length) syncChannelMessagesFromCache(channelId, next);
       handlersRef.current?.onPersisted?.(clientId, message);
     };
 
