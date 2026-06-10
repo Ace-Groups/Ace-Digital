@@ -67,11 +67,12 @@ export function NoteEditorToolbar({ editor }: NoteEditorToolbarProps) {
           className="note-heading-select"
           value={currentHeading}
           onChange={(e) => setHeading(e.target.value)}
+          aria-label="Text style"
         >
           <option value="paragraph">Paragraph</option>
-          <option value="1">Heading 1</option>
-          <option value="2">Heading 2</option>
-          <option value="3">Heading 3</option>
+          <option value="1">H1</option>
+          <option value="2">H2</option>
+          <option value="3">H3</option>
         </select>
       </div>
 

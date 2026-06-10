@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { PageHeader } from "@/components/ui/page-header";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileChromeFlags } from "@/contexts/MobileChromeContext";
 import {
   useListNotes,
   useCreateNote,
@@ -22,7 +23,15 @@ import {
   FileText,
   Users,
   ChevronLeft,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSocket } from "@/contexts/SocketContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -70,6 +79,7 @@ export default function NotesPage() {
   const { socket } = useSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const { data: notes, isLoading } = useListNotes();
   const [collaborators, setCollaborators] = useState<
@@ -456,57 +466,70 @@ export default function NotesPage() {
 
   const isEditorActive = selectedNote != null || creating;
 
+  useMobileChromeFlags({
+    immersivePage: isMobile,
+    hideBottomNav: isMobile,
+  });
+
+  const closeEditor = useCallback(() => {
+    setSelectedNoteId(null);
+    setCreating(false);
+    setCollabPresence(null);
+  }, []);
+
   return (
-    <AppLayout title="Notes" fillViewport>
-      <div className="flex flex-1 min-h-0 bg-background/50">
-        {/* ── Left Sidebar ── */}
+    <AppLayout title="" fillViewport>
+      <div className="notes-workspace flex flex-1 min-h-0">
+        {/* ── List panel ── */}
         <div
-          className={`flex flex-col border-r bg-card/50 w-full md:w-[320px] md:min-w-[280px] md:max-w-[360px] shrink-0 ${
-            isEditorActive ? "hidden md:flex" : "flex"
+          className={`notes-list-panel ${
+            isEditorActive ? "notes-list-panel--hidden-mobile" : ""
           }`}
         >
-          <div className="p-4 border-b space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">Notes</h2>
-              <Button size="sm" onClick={handleNewNote}>
-                <Plus className="mr-1 h-4 w-4" />
-                New
+          <div className="notes-list-header">
+            <div className="notes-list-header-top">
+              <div className="min-w-0">
+                <h2 className="notes-list-title">Notes</h2>
+                {!isLoading && (
+                  <p className="notes-list-subtitle">
+                    {filteredNotes.length}{" "}
+                    {filteredNotes.length === 1 ? "note" : "notes"}
+                  </p>
+                )}
+              </div>
+              <Button size="sm" className="shrink-0" onClick={handleNewNote}>
+                <Plus className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">New</span>
               </Button>
             </div>
-            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                className="pl-9 h-9"
+                className="notes-list-search pl-9"
                 placeholder="Search notes..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            {/* Tabs */}
-            <div className="flex rounded-lg bg-muted p-0.5">
+            <div className="notes-list-tabs" role="tablist" aria-label="Note filters">
               <button
                 type="button"
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  tab === "mine"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                role="tab"
+                aria-selected={tab === "mine"}
+                className={`notes-list-tab ${tab === "mine" ? "is-active" : ""}`}
                 onClick={() => setTab("mine")}
               >
-                <FileText className="inline-block mr-1 h-3.5 w-3.5" />
+                <FileText className="h-3.5 w-3.5 shrink-0" />
                 My Notes
               </button>
               <button
                 type="button"
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  tab === "shared"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                role="tab"
+                aria-selected={tab === "shared"}
+                className={`notes-list-tab ${tab === "shared" ? "is-active" : ""}`}
                 onClick={() => setTab("shared")}
               >
-                <Users className="inline-block mr-1 h-3.5 w-3.5" />
+                <Users className="h-3.5 w-3.5 shrink-0" />
                 Shared
               </button>
             </div>
@@ -612,18 +635,138 @@ export default function NotesPage() {
           </ScrollArea>
         </div>
 
-        {/* ── Right Panel (Editor) ── */}
+        {/* ── Editor panel ── */}
         <div
-          className={`flex-1 flex flex-col min-h-0 min-w-0 ${
-            isEditorActive ? "flex" : "hidden md:flex"
+          className={`notes-editor-panel ${
+            isEditorActive ? "notes-editor-panel--active" : ""
           }`}
         >
           {isEditorActive ? (
             <>
-              {/* Editor header */}
-              <div className="relative flex flex-col border-b bg-card/50">
+              <header className="notes-editor-header">
+                <div className="notes-editor-header-main">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="notes-editor-back md:hidden"
+                    onClick={closeEditor}
+                    aria-label="Back to notes"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+
+                  <Input
+                    value={title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    placeholder="Note title..."
+                    className="notes-editor-title-input"
+                  />
+
+                  <div className="notes-editor-actions">
+                    {!collabIslandEnabled && collaborators.length > 0 && (
+                      <div
+                        className="notes-editor-collab-avatars hidden sm:flex"
+                        title="Collaborators active on this note"
+                      >
+                        <div className="flex -space-x-1.5 overflow-hidden">
+                          {collaborators.map((collab) => (
+                            <div
+                              key={collab.userId}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background"
+                              title={`${collab.fullName} is editing`}
+                            >
+                              {collab.fullName ? getInitials(collab.fullName) : "?"}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="hidden md:flex items-center gap-1">
+                      {selectedNote && selectedNote.createdById === user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 px-3"
+                          onClick={() => setShareDialogOpen(true)}
+                          title="Share with employees"
+                        >
+                          <Share2 className="h-4 w-4 mr-1.5" />
+                          Share
+                        </Button>
+                      )}
+                      {selectedNote && <NoteAiActions noteId={selectedNote.id} />}
+                      {selectedNote && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 px-3"
+                          onClick={() => setChatDialogOpen(true)}
+                          title="Share to chat"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1.5" />
+                          Chat
+                        </Button>
+                      )}
+                      {selectedNote && selectedNote.createdById === user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={handleDelete}
+                          title="Delete note"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-0.5 md:hidden">
+                      {selectedNote && <NoteAiActions noteId={selectedNote.id} />}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label="Note actions"
+                          >
+                            <MoreHorizontal className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {selectedNote && selectedNote.createdById === user?.id && (
+                            <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share
+                            </DropdownMenuItem>
+                          )}
+                          {selectedNote && (
+                            <DropdownMenuItem onClick={() => setChatDialogOpen(true)}>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Share to chat
+                            </DropdownMenuItem>
+                          )}
+                          {selectedNote && selectedNote.createdById === user?.id && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={handleDelete}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+
                 {selectedNoteId && collabIslandEnabled && collabPresence && (
-                  <div className="flex justify-center pt-2 px-4 pointer-events-none">
+                  <div className="notes-editor-presence">
                     <NotePresenceDynamicIsland
                       status={collabPresence.status}
                       peers={collabPresence.peers}
@@ -632,109 +775,23 @@ export default function NotesPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 px-4 py-3">
-                {/* Back button on mobile */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  onClick={() => {
-                    setSelectedNoteId(null);
-                    setCreating(false);
-                    setCollabPresence(null);
-                  }}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-
-                {/* Title input */}
-                <Input
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Note title..."
-                  className="flex-1 border-none bg-transparent text-lg font-bold shadow-none focus-visible:ring-0 px-0 h-auto"
-                />
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 ml-auto">
-                  {/* Socket fallback when Firebase collab is off */}
-                  {!collabIslandEnabled && collaborators.length > 0 && (
-                    <div className="flex items-center gap-1.5 mr-2" title="Collaborators active on this note">
-                      <span className="text-xs text-muted-foreground mr-1 hidden sm:inline">Editing:</span>
-                      <div className="flex -space-x-1.5 overflow-hidden">
-                        {collaborators.map((collab) => (
-                          <div
-                            key={collab.userId}
-                            className="inline-block h-6 w-6 rounded-full ring-2 ring-background bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center"
-                            title={`${collab.fullName} is editing`}
-                          >
-                            {collab.fullName ? getInitials(collab.fullName) : "?"}
-                          </div>
-                        ))}
-                      </div>
+                {selectedNote && (selectedNote.sharedUserIds?.length ?? 0) > 0 && (
+                  <div className="notes-editor-shared-bar">
+                    <Users className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="shrink-0">Shared with:</span>
+                    <div className="notes-editor-shared-chips">
+                      {selectedNote.sharedUserIds!.map((uid) => {
+                        const emp = employeeMap.get(uid);
+                        return (
+                          <span key={uid} className="notes-editor-shared-chip">
+                            {emp?.fullName ?? `User #${uid}`}
+                          </span>
+                        );
+                      })}
                     </div>
-                  )}
-                  {selectedNote &&
-                    selectedNote.createdById === user?.id && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 px-2 sm:px-3"
-                        onClick={() => setShareDialogOpen(true)}
-                        title="Share with employees"
-                      >
-                        <Share2 className="h-4 w-4 sm:mr-1.5" />
-                        <span className="hidden sm:inline">Share</span>
-                      </Button>
-                    )}
-                  {selectedNote && <NoteAiActions noteId={selectedNote.id} />}
-                  {selectedNote && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 px-2 sm:px-3"
-                      onClick={() => setChatDialogOpen(true)}
-                      title="Share to chat"
-                    >
-                      <MessageSquare className="h-4 w-4 sm:mr-1.5" />
-                      <span className="hidden sm:inline">Chat</span>
-                    </Button>
-                  )}
-                  {selectedNote &&
-                    selectedNote.createdById === user?.id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={handleDelete}
-                        title="Delete note"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                </div>
-                </div>
-              </div>
-
-              {/* Shared users bar */}
-              {selectedNote &&
-                (selectedNote.sharedUserIds?.length ?? 0) > 0 && (
-                  <div className="flex items-center gap-2 px-5 py-2 border-b bg-primary/5 text-xs text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" />
-                    <span>Shared with:</span>
-                    {selectedNote.sharedUserIds!.map((uid) => {
-                      const emp = employeeMap.get(uid);
-                      return (
-                        <span
-                          key={uid}
-                          className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
-                        >
-                          {emp?.fullName ?? `User #${uid}`}
-                        </span>
-                      );
-                    })}
                   </div>
                 )}
+              </header>
 
               {/* Editor */}
               <div className="flex-1 min-h-0 overflow-hidden">
@@ -757,22 +814,20 @@ export default function NotesPage() {
               </div>
             </>
           ) : (
-            /* Empty state */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4 max-w-sm px-6">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="notes-empty-state">
+              <div className="notes-empty-state-inner">
+                <div className="notes-empty-state-icon">
                   <FileText className="h-8 w-8 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">
                     Select a note or create a new one
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Choose an existing note from the sidebar, or click{" "}
-                    <strong className="text-primary font-medium">New Note</strong> to start writing down your ideas and sharing them.
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Pick a note from the list or start fresh with a new one.
                   </p>
                 </div>
-                <Button onClick={handleNewNote} className="shadow-lg hover:shadow-primary/25">
+                <Button onClick={handleNewNote}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Note
                 </Button>
