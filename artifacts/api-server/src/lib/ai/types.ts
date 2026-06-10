@@ -20,7 +20,7 @@ export type AiPendingAction = {
 };
 
 export type AiMessageMetadata = {
-  layout?: "table" | "permission_denied" | "action_confirmation";
+  layout?: "table" | "permission_denied" | "action_confirmation" | "service_error";
   tableData?: AiTableData;
   errorDetails?: {
     userId: number;

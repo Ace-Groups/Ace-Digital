@@ -2045,7 +2045,7 @@ export const AiChatResponse = zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation', 'service_error']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
@@ -2059,7 +2059,7 @@ export const AiChatResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation', 'service_error']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
@@ -2153,7 +2153,7 @@ export const GetAiConversationResponse = zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation', 'service_error']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
@@ -2181,7 +2181,7 @@ export const AiReportNarrativeBody = zod.object({
 export const AiReportNarrativeResponse = zod.object({
   "narrative": zod.string(),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation', 'service_error']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),
@@ -2207,7 +2207,7 @@ export const AiNoteEnrichResponse = zod.object({
   "summary": zod.string(),
   "tags": zod.array(zod.string()),
   "metadata": zod.object({
-  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation']).optional(),
+  "layout": zod.enum(['table', 'permission_denied', 'action_confirmation', 'service_error']).optional(),
   "tableData": zod.object({
 
 }).passthrough().optional(),

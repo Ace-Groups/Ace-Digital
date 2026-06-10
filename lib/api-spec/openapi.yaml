@@ -4268,7 +4268,7 @@ components:
       properties:
         layout:
           type: string
-          enum: [table, permission_denied, action_confirmation]
+          enum: [table, permission_denied, action_confirmation, service_error]
         tableData:
           type: object
         pendingAction:

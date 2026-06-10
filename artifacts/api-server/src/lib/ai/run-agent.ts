@@ -1,5 +1,10 @@
 import type { AccessContext } from "@workspace/db";
 import { createGenerativeModel, getMaxToolIterations, isGeminiConfigured } from "./gemini-client";
+import {
+  formatGeminiErrorForLog,
+  formatGeminiErrorForUser,
+} from "./gemini-errors";
+import { withGeminiResilience } from "./gemini-keys";
 import { executeTool, getToolRequiredPermissions } from "./tool-registry";
 import type { AgentResult, AiMessageMetadata, PageContext } from "./types";
 import { logAiAudit } from "./audit";
@@ -53,7 +58,6 @@ function parseModelResponse(responseText: string): {
 export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const { ctx, prompt, pageContext, history = [], endpoint = "agent", allowedTools } = options;
   const started = Date.now();
-  const toolsUsed: string[] = [];
 
   if (!isGeminiConfigured()) {
     return {
@@ -64,144 +68,127 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     };
   }
 
-  const model = createGenerativeModel({ ctx, pageContext, allowedTools });
-  if (!model) {
-    return {
-      text: "Ace AI could not initialize. Please try again later.",
-      metadata: null,
-      permissionDenied: false,
-      toolsUsed: [],
-    };
-  }
+  const toolsUsed: string[] = [];
 
-  const chat = model.startChat({ history });
-  let result;
   try {
-    result = await chat.sendMessage(prompt);
-  } catch (err) {
-    console.error("[AI] Gemini sendMessage failed:", err);
-    const detail = err instanceof Error ? err.message : "Unknown Gemini error";
-    return {
-      text: `Ace AI could not complete your request. (${detail})`,
-      metadata: null,
-      permissionDenied: false,
-      toolsUsed: [],
-    };
-  }
-  let iterations = 0;
-  const maxIterations = getMaxToolIterations();
+    return await withGeminiResilience(async (client) => {
+      const model = createGenerativeModel({ ctx, pageContext, allowedTools }, client);
+      if (!model) throw new Error("GEMINI_API_KEY is not configured");
 
-  while (iterations < maxIterations) {
-    const response = result.response;
-    if (!response?.functionCalls) break;
-    const calls = response.functionCalls();
-    if (!calls?.length) break;
+      const chat = model.startChat({ history });
+      let result = await chat.sendMessage(prompt);
+      let iterations = 0;
+      const maxIterations = getMaxToolIterations();
 
-    iterations++;
-    const responses: { functionResponse: { name: string; response: unknown } }[] = [];
+      while (iterations < maxIterations) {
+        const response = result.response;
+        if (!response?.functionCalls) break;
+        const calls = response.functionCalls();
+        if (!calls?.length) break;
 
-    for (const call of calls) {
-      const { name, args } = call;
-      toolsUsed.push(name);
-      const execResult = await executeTool(ctx, name, (args ?? {}) as Record<string, unknown>);
+        iterations++;
+        const responses: { functionResponse: { name: string; response: unknown } }[] = [];
 
-      if (!execResult.ok && execResult.permissionDenied) {
-        const requiredPerms = execResult.requiredPermissions.map(String);
-        void logAiAudit({
-          userId: ctx.userId,
-          endpoint,
-          tools: toolsUsed,
-          durationMs: Date.now() - started,
-          denied: true,
-        });
-        return {
-          text: `ACCESS DENIED: Insufficient permissions. Role '${ctx.role}' lacks: ${requiredPerms.join(", ")}.`,
-          metadata: {
-            layout: "permission_denied",
-            errorDetails: {
+        for (const call of calls) {
+          const { name, args } = call;
+          toolsUsed.push(name);
+          const execResult = await executeTool(ctx, name, (args ?? {}) as Record<string, unknown>);
+
+          if (!execResult.ok && execResult.permissionDenied) {
+            const requiredPerms = execResult.requiredPermissions.map(String);
+            void logAiAudit({
               userId: ctx.userId,
-              role: ctx.role,
-              requiredPermissions: requiredPerms,
-            },
-            toolsUsed,
-          },
-          permissionDenied: true,
-          toolsUsed,
-        };
+              endpoint,
+              tools: toolsUsed,
+              durationMs: Date.now() - started,
+              denied: true,
+            });
+            return {
+              text: `ACCESS DENIED: Insufficient permissions. Role '${ctx.role}' lacks: ${requiredPerms.join(", ")}.`,
+              metadata: {
+                layout: "permission_denied",
+                errorDetails: {
+                  userId: ctx.userId,
+                  role: ctx.role,
+                  requiredPermissions: requiredPerms,
+                },
+                toolsUsed,
+              },
+              permissionDenied: true,
+              toolsUsed,
+            };
+          }
+
+          const output = execResult.ok ? execResult.output : execResult.output;
+
+          if (execResult.ok && isPendingConfirmation(output)) {
+            void logAiAudit({
+              userId: ctx.userId,
+              endpoint,
+              tools: toolsUsed,
+              durationMs: Date.now() - started,
+              denied: false,
+            });
+            return {
+              text: `${output.summary}. Review the details and confirm to proceed.`,
+              metadata: {
+                layout: "action_confirmation",
+                pendingAction: {
+                  actionType: output.actionType,
+                  summary: output.summary,
+                  payload: output.payload,
+                },
+                toolsUsed,
+              },
+              permissionDenied: false,
+              toolsUsed,
+            };
+          }
+
+          responses.push({ functionResponse: { name, response: output } });
+        }
+
+        result = await chat.sendMessage(responses as Parameters<typeof chat.sendMessage>[0]);
       }
 
-      const output = execResult.ok ? execResult.output : execResult.output;
-
-      // A mutating tool that needs confirmation: stop and surface a confirm card.
-      if (execResult.ok && isPendingConfirmation(output)) {
-        void logAiAudit({
-          userId: ctx.userId,
-          endpoint,
-          tools: toolsUsed,
-          durationMs: Date.now() - started,
-          denied: false,
-        });
-        return {
-          text: `${output.summary}. Review the details and confirm to proceed.`,
-          metadata: {
-            layout: "action_confirmation",
-            pendingAction: {
-              actionType: output.actionType,
-              summary: output.summary,
-              payload: output.payload,
-            },
-            toolsUsed,
-          },
-          permissionDenied: false,
-          toolsUsed,
-        };
+      let responseText = "";
+      try {
+        responseText = result.response.text();
+      } catch (e) {
+        console.error("[AI] Error reading response:", e);
       }
 
-      responses.push({ functionResponse: { name, response: output } });
-    }
+      const { text, metadata } = parseModelResponse(responseText);
+      const finalMetadata: AiMessageMetadata | null = metadata
+        ? { ...metadata, toolsUsed }
+        : toolsUsed.length
+          ? { toolsUsed }
+          : null;
 
-    try {
-      result = await chat.sendMessage(responses as Parameters<typeof chat.sendMessage>[0]);
-    } catch (err) {
-      console.error("[AI] Gemini tool round failed:", err);
-      const detail = err instanceof Error ? err.message : "Unknown Gemini error";
+      void logAiAudit({
+        userId: ctx.userId,
+        endpoint,
+        tools: toolsUsed,
+        durationMs: Date.now() - started,
+        denied: false,
+      });
+
       return {
-        text: `Ace AI could not complete your request. (${detail})`,
-        metadata: toolsUsed.length ? { toolsUsed } : null,
+        text,
+        metadata: finalMetadata,
         permissionDenied: false,
         toolsUsed,
       };
-    }
+    });
+  } catch (err) {
+    console.error("[AI] Gemini agent failed:", formatGeminiErrorForLog(err));
+    return {
+      text: formatGeminiErrorForUser(err),
+      metadata: { layout: "service_error" as const, toolsUsed },
+      permissionDenied: false,
+      toolsUsed,
+    };
   }
-
-  let responseText = "";
-  try {
-    responseText = result.response.text();
-  } catch (e) {
-    console.error("[AI] Error reading response:", e);
-  }
-
-  const { text, metadata } = parseModelResponse(responseText);
-  const finalMetadata: AiMessageMetadata | null = metadata
-    ? { ...metadata, toolsUsed }
-    : toolsUsed.length
-      ? { toolsUsed }
-      : null;
-
-  void logAiAudit({
-    userId: ctx.userId,
-    endpoint,
-    tools: toolsUsed,
-    durationMs: Date.now() - started,
-    denied: false,
-  });
-
-  return {
-    text,
-    metadata: finalMetadata,
-    permissionDenied: false,
-    toolsUsed,
-  };
 }
 
 export function formatPermissionDeniedMessage(

@@ -1311,6 +1311,7 @@ export const AiMessageMetadataLayout = {
   table: 'table',
   permission_denied: 'permission_denied',
   action_confirmation: 'action_confirmation',
+  service_error: 'service_error',
 } as const;
 
 export type AiMessageMetadataTableData = { [key: string]: unknown };

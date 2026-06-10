@@ -5,6 +5,7 @@ import { hasPermission, canAssignRole } from "@workspace/rbac";
 import { checkToolPermission, getToolRequiredPermissions } from "./tool-permissions";
 import { getToolDeclarations } from "./tool-registry";
 import { gateAction } from "./action-tools";
+import { formatGeminiErrorForUser, isGeminiQuotaExhausted } from "./gemini-errors";
 
 const employee: AccessContext = { userId: 10, role: "employee", teamId: 1 };
 const hr: AccessContext = { userId: 20, role: "hr", teamId: null };
@@ -116,6 +117,15 @@ test("confirmation gate withholds execution until confirmed=true", () => {
   assert.ok(pending);
   assert.equal(pending?.status, "pending_confirmation");
   assert.equal(gateAction("create_employee", "Create employee", { confirmed: true }, {}), null);
+});
+
+test("Gemini quota errors map to user-safe billing message", () => {
+  const err = new Error(
+    '[GoogleGenerativeAI Error]: 429 Too Many Requests — Your prepayment credits are depleted.',
+  );
+  assert.equal(isGeminiQuotaExhausted(err), true);
+  assert.match(formatGeminiErrorForUser(err), /billing balance/i);
+  assert.doesNotMatch(formatGeminiErrorForUser(err), /generativelanguage\.googleapis\.com/);
 });
 
 test("canAssignRole prevents role escalation via AI create", () => {

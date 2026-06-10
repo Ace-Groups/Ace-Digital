@@ -8,6 +8,8 @@
 #   EMAIL_FROM                     — sender address with domain verified in Resend
 #                                      Example: "Ace-Digital <no-reply@acedigital.com>"
 #   GEMINI_API_KEY                 — Google AI Studio key for Ace AI assistant
+#   GEMINI_API_KEY_FALLBACK        — optional second key if primary quota is exhausted
+#   GEMINI_MODEL                   — default gemini-2.0-flash (avoid gemini-flash-latest)
 
 services:
   - type: web
@@ -41,6 +43,10 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_API_KEY_FALLBACK
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
       - key: APP_LOGIN_URL
         value: https://ace-digital-os.web.app/login
       - key: FIREBASE_WEB_PUSH_VAPID_KEY

@@ -238,13 +238,19 @@ export function AceAssistantPanel() {
                         : "mr-4 bg-muted/50 text-foreground",
                     )}
                   >
-                    {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
-                    {m.role === "assistant" && (
-                      <AiMessageContent
-                        body={m.content}
-                        metadata={m.metadata}
-                        conversationId={conversationId ?? undefined}
-                      />
+                    {m.role === "assistant" ? (
+                      <>
+                        {m.content && m.metadata?.layout !== "service_error" && (
+                          <p className="whitespace-pre-wrap">{m.content}</p>
+                        )}
+                        <AiMessageContent
+                          body={m.content}
+                          metadata={m.metadata}
+                          conversationId={conversationId ?? undefined}
+                        />
+                      </>
+                    ) : (
+                      m.content && <p className="whitespace-pre-wrap">{m.content}</p>
                     )}
                   </div>
                 ))}

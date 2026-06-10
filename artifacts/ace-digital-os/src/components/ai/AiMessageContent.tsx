@@ -19,6 +19,8 @@ type AiMessageContentProps = {
 export function AiMessageContent({ body, metadata, conversationId }: AiMessageContentProps) {
   if (!metadata?.layout) return null;
 
+  // service_error still renders body text in the card below
+
   if (metadata.layout === "action_confirmation" && metadata.pendingAction) {
     return (
       <ActionConfirmationCard
@@ -67,6 +69,18 @@ export function AiMessageContent({ body, metadata, conversationId }: AiMessageCo
             </TableBody>
           </Table>
         </div>
+      </div>
+    );
+  }
+
+  if (metadata.layout === "service_error") {
+    return (
+      <div className="mt-2 overflow-hidden rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+        <div className="mb-2 flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
+          <AlertCircle size={16} />
+          <span>Ace AI unavailable</span>
+        </div>
+        <p className="text-foreground/90 leading-relaxed">{body}</p>
       </div>
     );
   }

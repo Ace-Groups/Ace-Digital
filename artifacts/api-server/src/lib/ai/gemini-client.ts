@@ -1,31 +1,31 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AccessContext } from "@workspace/db";
 import type { PageContext } from "./types";
 import { getToolDeclarations } from "./tool-registry";
-
-const apiKey = process.env.GEMINI_API_KEY?.trim() || "";
-
-let genAI: GoogleGenerativeAI | null = null;
+import {
+  getGeminiApiKeys,
+  getGeminiClientForKey,
+  isAnyGeminiKeyConfigured,
+  resolveGeminiModelName,
+} from "./gemini-keys";
 
 export function isGeminiConfigured(): boolean {
-  return Boolean(apiKey);
+  return isAnyGeminiKeyConfigured();
 }
 
-export function getGeminiClient(): GoogleGenerativeAI | null {
-  if (!apiKey) return null;
-  if (!genAI) {
-    genAI = new GoogleGenerativeAI(apiKey);
-  }
-  return genAI;
+export function getGeminiClient(): ReturnType<typeof getGeminiClientForKey> | null {
+  const keys = getGeminiApiKeys();
+  if (!keys.length) return null;
+  return getGeminiClientForKey(keys[0]!);
 }
 
 export function getGeminiModelName(): string {
-  return process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+  return resolveGeminiModelName();
 }
 
 export function getMaxToolIterations(): number {
   const n = Number(process.env.AI_MAX_TOOL_ITERATIONS);
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 15) : 8;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 15) : 6;
 }
 
 export function buildSystemInstruction(ctx: {
@@ -65,13 +65,16 @@ When responding, return JSON in this exact structure:
 Use the table field when presenting tabular data; otherwise set table to null.`;
 }
 
-export function createGenerativeModel(opts: {
-  ctx: AccessContext;
-  pageContext?: PageContext | null;
-  allowedTools?: string[];
-}) {
-  const client = getGeminiClient();
-  if (!client) return null;
+export function createGenerativeModel(
+  opts: {
+    ctx: AccessContext;
+    pageContext?: PageContext | null;
+    allowedTools?: string[];
+  },
+  client?: GoogleGenerativeAI,
+) {
+  const gemini = client ?? getGeminiClient();
+  if (!gemini) return null;
 
   const declarations = getToolDeclarations({
     ctx: opts.ctx,
@@ -83,7 +86,7 @@ export function createGenerativeModel(opts: {
     ? undefined
     : { responseMimeType: "application/json" as const };
 
-  return client.getGenerativeModel({
+  return gemini.getGenerativeModel({
     model: getGeminiModelName(),
     tools: declarations.length ? [{ functionDeclarations: declarations }] : undefined,
     generationConfig,
