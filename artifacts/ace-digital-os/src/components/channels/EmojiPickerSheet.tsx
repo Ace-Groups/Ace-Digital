@@ -84,16 +84,18 @@ export function EmojiPickerSheet({
     return (
       <>
         <div onClick={() => onOpenChange(true)}>{trigger ?? defaultTrigger}</div>
-        <Drawer open={open} onOpenChange={onOpenChange}>
-          <DrawerContent className="pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Emoji</DrawerTitle>
-            </DrawerHeader>
-            <div className="px-4 pb-2">
-              <EmojiGrid onPick={handlePick} />
-            </div>
-          </DrawerContent>
-        </Drawer>
+        {open ? (
+          <Drawer open={open} onOpenChange={onOpenChange}>
+            <DrawerContent className="pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <DrawerHeader className="text-left">
+                <DrawerTitle>Emoji</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-2">
+                <EmojiGrid onPick={handlePick} />
+              </div>
+            </DrawerContent>
+          </Drawer>
+        ) : null}
       </>
     );
   }

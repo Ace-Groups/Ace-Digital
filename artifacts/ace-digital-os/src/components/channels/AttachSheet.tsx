@@ -68,6 +68,7 @@ export function AttachSheet({ open, onOpenChange, onAction }: AttachSheetProps) 
   const isMobile = useIsMobile();
 
   if (isMobile) {
+    if (!open) return null;
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="pb-[max(1rem,env(safe-area-inset-bottom))]">
