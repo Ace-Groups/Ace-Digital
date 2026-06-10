@@ -31,6 +31,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return this.props.children;
     }
 
-    return <ErrorFallback onRetry={this.handleRetry} />;
+    return (
+      <ErrorFallback onRetry={this.handleRetry} errorMessage={this.state.errorMessage} />
+    );
   }
 }
