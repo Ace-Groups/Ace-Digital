@@ -78,12 +78,15 @@ export function createGenerativeModel(opts: {
     allowedTools: opts.allowedTools,
   });
 
+  // JSON response mode conflicts with function calling on Gemini — only enable when tool-free.
+  const generationConfig = declarations.length
+    ? undefined
+    : { responseMimeType: "application/json" as const };
+
   return client.getGenerativeModel({
     model: getGeminiModelName(),
     tools: declarations.length ? [{ functionDeclarations: declarations }] : undefined,
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
+    generationConfig,
     systemInstruction: buildSystemInstruction({
       role: opts.ctx.role,
       pageContext: opts.pageContext,

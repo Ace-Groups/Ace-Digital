@@ -42,8 +42,12 @@ export async function streamAiChat(
 
   if (!res.ok) {
     const err = await res.json().catch(() => null);
+    const serverMessage =
+      err && typeof err === "object" && "error" in err
+        ? String((err as { error: unknown }).error)
+        : "";
     const message =
-      (err && typeof err === "object" && "error" in err && String((err as { error: unknown }).error)) ||
+      serverMessage ||
       (res.status === 429
         ? "AI rate limit exceeded. Try again shortly."
         : res.status >= 500

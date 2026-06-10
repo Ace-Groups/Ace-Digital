@@ -75,7 +75,19 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   }
 
   const chat = model.startChat({ history });
-  let result = await chat.sendMessage(prompt);
+  let result;
+  try {
+    result = await chat.sendMessage(prompt);
+  } catch (err) {
+    console.error("[AI] Gemini sendMessage failed:", err);
+    const detail = err instanceof Error ? err.message : "Unknown Gemini error";
+    return {
+      text: `Ace AI could not complete your request. (${detail})`,
+      metadata: null,
+      permissionDenied: false,
+      toolsUsed: [],
+    };
+  }
   let iterations = 0;
   const maxIterations = getMaxToolIterations();
 
@@ -148,7 +160,18 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       responses.push({ functionResponse: { name, response: output } });
     }
 
-    result = await chat.sendMessage(responses as Parameters<typeof chat.sendMessage>[0]);
+    try {
+      result = await chat.sendMessage(responses as Parameters<typeof chat.sendMessage>[0]);
+    } catch (err) {
+      console.error("[AI] Gemini tool round failed:", err);
+      const detail = err instanceof Error ? err.message : "Unknown Gemini error";
+      return {
+        text: `Ace AI could not complete your request. (${detail})`,
+        metadata: toolsUsed.length ? { toolsUsed } : null,
+        permissionDenied: false,
+        toolsUsed,
+      };
+    }
   }
 
   let responseText = "";

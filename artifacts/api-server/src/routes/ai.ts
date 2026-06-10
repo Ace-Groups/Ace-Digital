@@ -107,6 +107,16 @@ router.post("/v1/ai/chat", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
+function aiErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    if (/FAILED_PRECONDITION|requires an index/i.test(err.message)) {
+      return "Ace AI storage is not ready. Contact support or retry in a few minutes.";
+    }
+    return err.message;
+  }
+  return "Ace AI request failed.";
+}
+
 router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> => {
   const ctx = await getAccessContextFresh(req);
   const rate = await checkAiRateLimit(ctx.userId);
@@ -127,31 +137,41 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  const safeContext = await sanitizePageContext(ctx.userId, pageContext);
+  let convId: number;
+  let geminiHistory: { role: "user" | "model"; parts: { text: string }[] }[];
+  let safeContext: PageContext | null;
 
-  let convId = conversationId;
-  if (!convId) {
-    const conv = await createAiConversation(
-      ctx.userId,
-      title?.trim() || message.trim().slice(0, 60),
-      safeContext,
-    );
-    convId = conv.id;
-  } else {
-    const existing = await getAiConversation(ctx.userId, convId);
-    if (!existing) {
-      res.status(404).json({ error: "Conversation not found" });
-      return;
+  try {
+    safeContext = await sanitizePageContext(ctx.userId, pageContext);
+
+    if (!conversationId) {
+      const conv = await createAiConversation(
+        ctx.userId,
+        title?.trim() || message.trim().slice(0, 60),
+        safeContext,
+      );
+      convId = conv.id;
+    } else {
+      const existing = await getAiConversation(ctx.userId, conversationId);
+      if (!existing) {
+        res.status(404).json({ error: "Conversation not found" });
+        return;
+      }
+      convId = conversationId;
     }
+
+    const history = await listAiConversationMessages(ctx.userId, convId);
+    geminiHistory = history.map((m) => ({
+      role: m.role === "user" ? ("user" as const) : ("model" as const),
+      parts: [{ text: m.content }],
+    }));
+
+    await appendAiMessage(ctx.userId, convId, "user", message.trim(), null);
+  } catch (err) {
+    console.error("[AI] stream setup error:", err);
+    res.status(500).json({ error: aiErrorMessage(err) });
+    return;
   }
-
-  const history = await listAiConversationMessages(ctx.userId, convId);
-  const geminiHistory = history.map((m) => ({
-    role: m.role === "user" ? ("user" as const) : ("model" as const),
-    parts: [{ text: m.content }],
-  }));
-
-  await appendAiMessage(ctx.userId, convId, "user", message.trim(), null);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -174,9 +194,7 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
     });
 
     const words = result.text.split(/(\s+)/);
-    let accumulated = "";
     for (const chunk of words) {
-      accumulated += chunk;
       send("chunk", { text: chunk });
       await new Promise((r) => setTimeout(r, 12));
     }
@@ -199,7 +217,7 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
     });
   } catch (err) {
     console.error("[AI] stream error:", err);
-    send("error", { error: "Stream failed" });
+    send("error", { error: aiErrorMessage(err) });
   } finally {
     res.end();
   }

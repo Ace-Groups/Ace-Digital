@@ -21,23 +21,22 @@ const COL_MSG = "ai_messages";
 
 export async function listAiConversations(userId: number): Promise<AiConversation[]> {
   if (useFirestore()) {
-    const snap = await fs()
-      .collection(COL_CONV)
-      .where("userId", "==", userId)
-      .orderBy("updatedAt", "desc")
-      .limit(50)
-      .get();
-    return snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: Number(d.id),
-        userId: data.userId as number,
-        title: data.title as string,
-        pageContext: (data.pageContext as PageContext | null) ?? null,
-        createdAt: new Date(data.createdAt as string),
-        updatedAt: new Date(data.updatedAt as string),
-      };
-    });
+    // Single-field equality query — no composite index required (sort in memory).
+    const snap = await fs().collection(COL_CONV).where("userId", "==", userId).get();
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: Number(d.id),
+          userId: data.userId as number,
+          title: data.title as string,
+          pageContext: (data.pageContext as PageContext | null) ?? null,
+          createdAt: new Date(data.createdAt as string),
+          updatedAt: new Date(data.updatedAt as string),
+        };
+      })
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 50);
   }
 
   return [...conversations.values()]
@@ -113,22 +112,24 @@ export async function listAiConversationMessages(
   if (!conv) return [];
 
   if (useFirestore()) {
+    // Single-field equality query — no composite index required (sort in memory).
     const snap = await fs()
       .collection(COL_MSG)
       .where("conversationId", "==", conversationId)
-      .orderBy("createdAt", "asc")
       .get();
-    return snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: Number(d.id),
-        conversationId,
-        role: data.role as "user" | "assistant",
-        content: data.content as string,
-        metadata: (data.metadata as AiMessageMetadata | null) ?? null,
-        createdAt: new Date(data.createdAt as string),
-      };
-    });
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: Number(d.id),
+          conversationId,
+          role: data.role as "user" | "assistant",
+          content: data.content as string,
+          metadata: (data.metadata as AiMessageMetadata | null) ?? null,
+          createdAt: new Date(data.createdAt as string),
+        };
+      })
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
   return messages.get(conversationId) ?? [];
