@@ -55,6 +55,12 @@ services:
         value: openrouter/free
       - key: APP_LOGIN_URL
         value: https://ace-digital-os.web.app/login
+      - key: APP_URL
+        value: https://ace-digital-os.web.app
+      - key: API_PUBLIC_URL
+        value: https://ace-digital-api.onrender.com
+      - key: FIREBASE_STORAGE_BUCKET
+        value: ace-digital-os.firebasestorage.app
       - key: FIREBASE_WEB_PUSH_VAPID_KEY
         sync: false
       - key: SKIP_INSTALL_DEPS

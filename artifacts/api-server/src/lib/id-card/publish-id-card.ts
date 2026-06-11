@@ -12,6 +12,7 @@ import {
   type StoredIdCardAssets,
 } from "./id-card-store";
 import { logger } from "../logger";
+import { ID_CARD_TEMPLATE_VERSION } from "./template-version";
 
 const CARD_RENDER_WIDTH = 540;
 
@@ -78,7 +79,7 @@ export async function publishIdCardForUser(
   const employeeCode = employeeCodeFromUser(user);
   const org = await getOrgCredentialSettings();
   const verifyUrl = buildVerifyUrl(org.verifyBaseUrl, employeeCode);
-  const prefix = `id-cards/${employeeCode}`;
+  const prefix = `id-cards/${employeeCode}/${ID_CARD_TEMPLATE_VERSION}`;
   const issuedAt = new Date().toISOString();
 
   const [frontPng, backPng, pdfBytes] = await Promise.all([
@@ -103,6 +104,7 @@ export async function publishIdCardForUser(
     verifyUrl,
     issuedAt,
     storagePrefix: prefix,
+    templateVersion: ID_CARD_TEMPLATE_VERSION,
   };
 
   await saveIdCardAssets(assets);
@@ -112,15 +114,12 @@ export async function publishIdCardForUser(
 export async function getOrPublishIdCardAssets(
   user: User,
   extras?: Parameters<typeof publishIdCardForUser>[1],
-  force = false,
 ): Promise<PublishIdCardResult> {
-  if (!force) {
-    const existing = await getIdCardAssetsByUserId(user.id);
-    if (existing) {
-      const pair = await prepareIdCardPair(user, extras);
-      const pdfBytes = await idCardPairToPdf(pair.frontSvg, pair.backSvg);
-      return { pair, assets: existing, pdfBytes };
-    }
+  const existing = await getIdCardAssetsByUserId(user.id);
+  if (existing?.templateVersion === ID_CARD_TEMPLATE_VERSION) {
+    const pair = await prepareIdCardPair(user, extras);
+    const pdfBytes = await idCardPairToPdf(pair.frontSvg, pair.backSvg);
+    return { pair, assets: existing, pdfBytes };
   }
   return publishIdCardForUser(user, extras);
 }

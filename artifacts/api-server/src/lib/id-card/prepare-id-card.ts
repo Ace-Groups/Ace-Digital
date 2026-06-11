@@ -35,7 +35,7 @@ export async function prepareIdCardPair(
     }
   }
 
-  const qrSvg = await generateQrSvg(verifyUrl, 120);
+  const qrSvg = await generateQrSvg(verifyUrl, 200);
   const cardData = await buildIdCardDataFromUser(user, {
     ...extras,
     verifyUrl,

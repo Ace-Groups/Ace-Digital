@@ -111,8 +111,11 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
 
   if (!card) return null;
 
-  const previewUrl = side === "front" ? card.frontPngUrl : card.backPngUrl;
   const svg = side === "front" ? card.frontSvg : card.backSvg;
+  const rawPreview = side === "front" ? card.frontPngUrl : card.backPngUrl;
+  const previewUrl = rawPreview
+    ? `${rawPreview}${rawPreview.includes("?") ? "&" : "?"}t=${encodeURIComponent(card.issuedAt ?? Date.now().toString())}`
+    : null;
   const isPortrait = card.frontSvg.includes('height="856"') || card.frontSvg.includes("height='856'");
 
   return (
@@ -209,11 +212,11 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
           >
             <div className="id-card-lanyard" aria-hidden />
             <div className="id-card-svg-wrap">
-              {previewUrl ? (
+              {svg ? (
+                <div className="id-card-svg-render" dangerouslySetInnerHTML={{ __html: svg }} />
+              ) : previewUrl ? (
                 <img src={previewUrl} alt={`ID card ${side}`} className="id-card-preview-img" />
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: svg }} />
-              )}
+              ) : null}
             </div>
           </div>
           <p className="id-card-stage-caption">

@@ -12,6 +12,7 @@ export type StoredIdCardAssets = {
   verifyUrl: string;
   issuedAt: string;
   storagePrefix: string;
+  templateVersion: string;
 };
 
 const COLLECTION = "employee_id_cards";

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import metaRouter from "./meta";
 import authRouter from "./auth";
 import meRouter from "./me";
 import dashboardRouter from "./dashboard";
@@ -30,6 +31,7 @@ const router: IRouter = Router();
 router.use(publicVerifyRouter);
 router.use(idCardPublicRouter);
 router.use(healthRouter);
+router.use(metaRouter);
 router.use(authRouter);
 router.use(meRouter);
 router.use(dashboardRouter);
