@@ -317,7 +317,7 @@ export default function EmployeesPage() {
     setEditOpen(false);
     setEditing(null);
     try {
-      await runOptimistic({
+      const updated = await runOptimistic({
         apply: () => {
           const prev = snapshotList<Employee>(queryClient, employeesKey);
           patchListItem(queryClient, employeesKey, employeeId, (e) => ({
@@ -332,7 +332,13 @@ export default function EmployeesPage() {
           void queryClient.invalidateQueries({ queryKey: employeesKey });
         },
       });
-      toast({ title: "Employee updated" });
+      toast({
+        title: "Employee updated",
+        description:
+          (updated as { idCardSent?: boolean }).idCardSent
+            ? "Updated ID card emailed to the employee."
+            : undefined,
+      });
     } catch {
       toast({ title: "Could not save changes", variant: "destructive" });
     }

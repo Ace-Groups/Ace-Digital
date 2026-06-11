@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  encodeAvatarUrl,
-  parseAvatarUrl,
+  encodeEmployeeIdentityImages,
+  getProfilePhotoUrl,
+  parseEmployeeIdentityImages,
   resizeImageFile,
 } from "@/lib/avatar";
 import { defaultMascotForRole } from "@/lib/mascots";
@@ -32,7 +33,7 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
   const { can } = usePermissions();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [avatarData, setAvatarData] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [selectedMascot, setSelectedMascot] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
@@ -40,12 +41,14 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
 
   useEffect(() => {
     if (!open) return;
-    const parsed = parseAvatarUrl(user?.avatarUrl);
-    setAvatarData(parsed.type === "image" ? parsed.value : null);
-    setSelectedMascot(parsed.type === "mascot" ? parsed.value : null);
+    const identity = parseEmployeeIdentityImages(user?.avatarUrl);
+    setProfilePhoto(identity.profilePhotoUrl ?? getProfilePhotoUrl(user?.avatarUrl));
+    setSelectedMascot(
+      identity.mascotId ?? ROLE_DEFAULT_FROM_USER(user?.role),
+    );
     setSaved(false);
     setShowAvatarEditor(false);
-  }, [open, user?.avatarUrl]);
+  }, [open, user?.avatarUrl, user?.role]);
 
   async function handleFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
@@ -53,16 +56,22 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
       return;
     }
     try {
-      const resized = await resizeImageFile(file);
-      setAvatarData(resized);
-      setSelectedMascot(null);
+      const resized = await resizeImageFile(file, 640);
+      setProfilePhoto(resized);
     } catch {
       toast({ title: "Upload failed", variant: "destructive" });
     }
   }
 
   async function handleSaveAvatar() {
-    const avatarUrl = encodeAvatarUrl(avatarData, selectedMascot, "mascot");
+    const mascotId =
+      selectedMascot ?? ROLE_DEFAULT_FROM_USER(user?.role);
+    const avatarUrl =
+      encodeEmployeeIdentityImages({
+        profilePhotoUrl: profilePhoto,
+        mascotId,
+      }) ?? defaultMascotForRole(user?.role ?? "employee");
+
     try {
       await updateProfile.mutateAsync({ data: { avatarUrl } });
       await refreshUser();
@@ -78,12 +87,6 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
     await logout();
     setLocation("/login");
   }
-
-  const previewUrl = avatarData
-    ? avatarData
-    : selectedMascot
-      ? encodeAvatarUrl(null, selectedMascot, "mascot")
-      : user?.avatarUrl ?? defaultMascotForRole(user?.role ?? "employee");
 
   const showMyProfile = can("employees:read_self") || can("employees:read");
 
@@ -102,8 +105,9 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
             className="relative group"
           >
             <UserAvatar
-              avatarUrl={previewUrl}
+              avatarUrl={user?.avatarUrl}
               fullName={user?.fullName}
+              display="profile"
               className="h-20 w-20 ring-4 ring-primary/20"
               fallbackClassName="bg-primary text-white text-2xl"
               iconSize={36}
@@ -123,7 +127,7 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
 
         {showAvatarEditor && (
           <div className="space-y-4 rounded-lg border border-border p-4">
-            <p className="text-sm font-medium">Change avatar</p>
+            <p className="text-sm font-medium">Profile photo &amp; app avatar</p>
             <div className="flex gap-2">
               <FilePickControl
                 accept="image/*"
@@ -139,17 +143,19 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setAvatarData(null);
+                  setProfilePhoto(null);
                   setSelectedMascot(ROLE_DEFAULT_FROM_USER(user?.role));
                 }}
               >
                 Reset
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Or pick a mascot</p>
+            <p className="text-xs text-muted-foreground">
+              Photo appears on your profile and ID card. Pick a bird for chat and navigation.
+            </p>
             <MascotPicker
               selectedId={selectedMascot}
-              onSelect={(id) => { setSelectedMascot(id); setAvatarData(null); }}
+              onSelect={(id) => setSelectedMascot(id)}
             />
             <Button onClick={handleSaveAvatar} disabled={updateProfile.isPending} className="w-full gap-2">
               {updateProfile.isPending ? (
@@ -157,7 +163,7 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
               ) : saved ? (
                 <><Check size={16} /> Saved!</>
               ) : (
-                "Save avatar"
+                "Save profile"
               )}
             </Button>
           </div>

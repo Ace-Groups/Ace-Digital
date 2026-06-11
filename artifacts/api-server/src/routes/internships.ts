@@ -18,6 +18,8 @@ import {
   INTERNSHIP_STEPS,
 } from "../lib/internship-store";
 import { runInternshipPipeline } from "../lib/internship-pipeline";
+import { emailIdCardForUser } from "../lib/id-card/resolve-extras";
+import { idCardInternshipSnapshot } from "../lib/id-card/id-card-snapshot";
 
 const router = Router();
 
@@ -323,6 +325,11 @@ router.patch(
     const id = Number(req.params.id);
     const { mentorId, university, program, startDate, endDate, notes, status } =
       req.body;
+    const existing = await findInternshipById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Internship not found" });
+      return;
+    }
     const updated = await updateInternship(id, {
       mentorId: mentorId !== undefined ? Number(mentorId) || null : undefined,
       university: typeof university === "string" ? university : undefined,
@@ -336,7 +343,13 @@ router.patch(
       res.status(404).json({ error: "Internship not found" });
       return;
     }
-    res.json(updated);
+
+    let idCardSent = false;
+    if (idCardInternshipSnapshot(existing) !== idCardInternshipSnapshot(updated)) {
+      idCardSent = await emailIdCardForUser(updated.userId);
+    }
+
+    res.json({ ...updated, idCardSent });
   },
 );
 

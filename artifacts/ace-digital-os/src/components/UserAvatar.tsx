@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { getPresetAvatar, parseAvatarUrl } from "@/lib/avatar";
+import { getPresetAvatar, getProfilePhotoUrl, parseAvatarUrl } from "@/lib/avatar";
 import { getMascotSrc } from "@/lib/mascots";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,8 @@ interface UserAvatarProps {
   fallbackClassName?: string;
   presetClassName?: string;
   iconSize?: number;
+  /** `profile` shows the HR headshot when available; `app` keeps the bird/mascot avatar. */
+  display?: "app" | "profile";
 }
 
 export function UserAvatar({
@@ -20,8 +22,12 @@ export function UserAvatar({
   fallbackClassName,
   presetClassName,
   iconSize = 18,
+  display = "app",
 }: UserAvatarProps) {
-  const parsed = parseAvatarUrl(avatarUrl);
+  const profilePhoto = display === "profile" ? getProfilePhotoUrl(avatarUrl) : null;
+  const parsed = profilePhoto
+    ? ({ type: "image" as const, value: profilePhoto })
+    : parseAvatarUrl(avatarUrl);
   const initials = getInitials(fullName);
 
   if (parsed.type === "mascot") {

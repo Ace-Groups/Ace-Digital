@@ -8,6 +8,8 @@ import { employeeWithProfile } from "../lib/employee-serializer";
 import { generateTemporaryPassword } from "../lib/password";
 import { sendCredentialsEmail, sendOnboardingSequence, sendIdCardEmail } from "../lib/email";
 import { isInternJobTitle } from "../lib/id-card/is-intern";
+import { emailIdCardForUser } from "../lib/id-card/resolve-extras";
+import { idCardUserSnapshot } from "../lib/id-card/id-card-snapshot";
 import { createInternship } from "../lib/internship-store";
 import { runInternshipPipeline } from "../lib/internship-pipeline";
 import {
@@ -448,7 +450,13 @@ router.patch(
         ...(salaryMode !== undefined && { salaryMode: String(salaryMode) }),
       });
     }
-    res.json(await employeeWithProfile(user, ctx));
+
+    let idCardSent = false;
+    if (idCardUserSnapshot(existingUser) !== idCardUserSnapshot(user)) {
+      idCardSent = await emailIdCardForUser(id);
+    }
+
+    res.json({ ...(await employeeWithProfile(user, ctx)), idCardSent });
   },
 );
 

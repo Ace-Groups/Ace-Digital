@@ -56,6 +56,11 @@ export function parseAvatarUrl(avatarUrl: string | null | undefined): ParsedAvat
   return { type: "image", value: avatarUrl };
 }
 
+/** Profile headshot from identity encoding (ignores app mascot). */
+export function getProfilePhotoUrl(avatarUrl: string | null | undefined): string | null {
+  return parseEmployeeIdentityImages(avatarUrl).profilePhotoUrl;
+}
+
 export function parseEmployeeIdentityImages(
   avatarUrl: string | null | undefined,
 ): EmployeeIdentityImages {

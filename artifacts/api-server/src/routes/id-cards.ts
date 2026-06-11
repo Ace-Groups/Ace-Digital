@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { store } from "@workspace/db";
 import { hasPermission } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
@@ -14,30 +13,9 @@ import { idCardPairToPdf } from "../lib/credentials/pdf-from-svg";
 import { buildVerifyUrl, getOrgCredentialSettings } from "../lib/credentials/org-settings";
 import { ensureUserVerifySlug } from "../lib/credentials/slug";
 import { sendIdCardEmail } from "../lib/email";
-import { findInternshipByUserId } from "../lib/internship-store";
+import { resolveIdCardExtras } from "../lib/id-card/resolve-extras";
 
 const router = Router();
-
-async function resolveCardExtras(userId: number) {
-  const internship = await findInternshipByUserId(userId);
-  const user = await store.findUserById(userId);
-  if (!user) return null;
-  const team = user.teamId != null ? await store.findTeamById(user.teamId) : null;
-  const mentor =
-    internship?.mentorId != null
-      ? await store.findUserById(internship.mentorId)
-      : null;
-  return {
-    user,
-    extras: {
-      teamName: team?.name ?? null,
-      university: internship?.university ?? null,
-      program: internship?.program ?? null,
-      mentorName: mentor?.fullName ?? null,
-      endDate: internship?.endDate ?? null,
-    },
-  };
-}
 
 router.get(
   "/v1/employees/:id/id-card",
@@ -56,7 +34,7 @@ router.get(
       return;
     }
 
-    const resolved = await resolveCardExtras(id);
+    const resolved = await resolveIdCardExtras(id);
     if (!resolved) {
       res.status(404).json({ error: "Employee not found" });
       return;
@@ -98,7 +76,7 @@ router.get(
       return;
     }
 
-    const resolved = await resolveCardExtras(id);
+    const resolved = await resolveIdCardExtras(id);
     if (!resolved) {
       res.status(404).json({ error: "Employee not found" });
       return;
@@ -119,7 +97,7 @@ router.post(
   requirePermission("employees:write", "employees:password_reset"),
   async (req, res): Promise<void> => {
     const id = Number(req.params.id);
-    const resolved = await resolveCardExtras(id);
+    const resolved = await resolveIdCardExtras(id);
     if (!resolved) {
       res.status(404).json({ error: "Employee not found" });
       return;
