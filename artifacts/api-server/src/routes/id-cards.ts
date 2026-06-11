@@ -3,15 +3,8 @@ import { hasPermission } from "@workspace/rbac";
 import { requireAuth } from "../lib/auth";
 import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
-import {
-  buildIdCardDataFromUser,
-  svgToDataUrl,
-  isInternJobTitle,
-  prepareIdCardPair,
-} from "../lib/id-card";
-import { idCardPairToPdf } from "../lib/credentials/pdf-from-svg";
-import { buildVerifyUrl, getOrgCredentialSettings } from "../lib/credentials/org-settings";
-import { employeeCodeFromUser } from "../lib/credentials/employee-code";
+import { isInternJobTitle } from "../lib/id-card";
+import { publishIdCardForUser } from "../lib/id-card/publish-id-card";
 import { ensureUserVerifySlug } from "../lib/credentials/slug";
 import { sendIdCardEmail } from "../lib/email";
 import { resolveIdCardExtras } from "../lib/id-card/resolve-extras";
@@ -41,22 +34,21 @@ router.get(
       return;
     }
 
-    const pair = await prepareIdCardPair(resolved.user, resolved.extras);
-    const cardData = await buildIdCardDataFromUser(resolved.user, resolved.extras);
+    const { pair, assets } = await publishIdCardForUser(resolved.user, resolved.extras);
     const slug = await ensureUserVerifySlug(resolved.user);
-    const org = await getOrgCredentialSettings();
-    const code = employeeCodeFromUser(resolved.user);
 
     res.json({
       variant: pair.variant,
-      employeeCode: cardData.employeeCode,
+      employeeCode: assets.employeeCode,
       isIntern: isInternJobTitle(resolved.user.jobTitle),
       frontSvg: pair.frontSvg,
       backSvg: pair.backSvg,
-      frontDataUrl: svgToDataUrl(pair.frontSvg),
-      backDataUrl: svgToDataUrl(pair.backSvg),
+      frontPngUrl: assets.frontPngUrl,
+      backPngUrl: assets.backPngUrl,
+      pdfUrl: assets.pdfUrl,
       verifySlug: slug,
-      verifyUrl: buildVerifyUrl(org.verifyBaseUrl, code),
+      verifyUrl: assets.verifyUrl,
+      issuedAt: assets.issuedAt,
     });
   },
 );
@@ -84,12 +76,11 @@ router.get(
       return;
     }
 
-    const pair = await prepareIdCardPair(resolved.user, resolved.extras);
-    const pdf = await idCardPairToPdf(pair.frontSvg, pair.backSvg);
-    const code = resolved.user.employeeCode ?? `ACE${resolved.user.id}`;
+    const { pdfBytes, assets } = await publishIdCardForUser(resolved.user, resolved.extras);
+    const code = assets.employeeCode;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${code}-id-card.pdf"`);
-    res.send(Buffer.from(pdf));
+    res.send(Buffer.from(pdfBytes));
   },
 );
 

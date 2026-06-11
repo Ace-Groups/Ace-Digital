@@ -20,5 +20,11 @@ service firebase.storage {
         && isChannelMember(int(channelId))
         && request.resource.size < 50 * 1024 * 1024;
     }
+
+    /** Published employee ID cards — public read for email embeds; writes via Admin SDK only. */
+    match /id-cards/{employeeCode}/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

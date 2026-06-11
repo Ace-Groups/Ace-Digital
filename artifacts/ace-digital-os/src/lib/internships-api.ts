@@ -36,10 +36,12 @@ export type IdCardResponse = {
   isIntern: boolean;
   frontSvg: string;
   backSvg: string;
-  frontDataUrl: string;
-  backDataUrl: string;
+  frontPngUrl?: string;
+  backPngUrl?: string;
+  pdfUrl?: string;
   verifySlug?: string;
   verifyUrl?: string;
+  issuedAt?: string;
 };
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

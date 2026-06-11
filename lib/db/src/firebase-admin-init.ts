@@ -53,9 +53,13 @@ export function ensureFirebaseAdminApp(): App {
       }
     }
     const resolvedProjectId = projectId ?? serviceAccount.projectId;
+    const storageBucket =
+      process.env.FIREBASE_STORAGE_BUCKET?.trim() ??
+      (resolvedProjectId ? `${resolvedProjectId}.firebasestorage.app` : undefined);
     return initializeApp({
       credential: cert(serviceAccount),
       projectId: resolvedProjectId,
+      storageBucket,
       databaseURL:
         process.env.FIREBASE_DATABASE_URL?.trim() ??
         (resolvedProjectId

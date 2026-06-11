@@ -232,7 +232,8 @@
   max-width: 260px;
 }
 
-.id-card-svg-wrap svg {
+.id-card-svg-wrap svg,
+.id-card-preview-img {
   display: block;
   width: 100%;
   height: auto;

@@ -12,6 +12,7 @@ import internshipsRouter from "./internships";
 import idCardsRouter from "./id-cards";
 import credentialsRouter from "./credentials";
 import publicVerifyRouter from "./public-verify";
+import idCardPublicRouter from "./id-card-public";
 import financeRouter from "./finance";
 import clientsRouter from "./clients";
 import serviceTicketsRouter from "./service-tickets";
@@ -27,6 +28,7 @@ import aiRouter from "./ai";
 const router: IRouter = Router();
 
 router.use(publicVerifyRouter);
+router.use(idCardPublicRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(meRouter);

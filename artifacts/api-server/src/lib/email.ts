@@ -898,15 +898,10 @@ async function sendViaResendWithAttachments(
 }
 
 export async function sendIdCardEmail(params: IdCardEmailParams): Promise<boolean> {
-  const { prepareIdCardPair, svgToDataUrl } = await import("./id-card");
-  const { idCardPairToPdf } = await import("./credentials/pdf-from-svg");
-  const { employeeCodeFromUser } = await import("./credentials/employee-code");
+  const { publishIdCardForUser } = await import("./id-card/publish-id-card");
   const { isInternJobTitle } = await import("./id-card/is-intern");
-  const pair = await prepareIdCardPair(params.user, params.extras);
-  const employeeCode = employeeCodeFromUser(params.user);
-  const frontDataUrl = svgToDataUrl(pair.frontSvg);
-  const backDataUrl = svgToDataUrl(pair.backSvg);
-  const pdfBytes = await idCardPairToPdf(pair.frontSvg, pair.backSvg);
+  const { assets, pdfBytes } = await publishIdCardForUser(params.user, params.extras);
+  const employeeCode = assets.employeeCode;
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
   const isIntern = isInternJobTitle(params.user.jobTitle);
   const subject = isIntern
@@ -916,39 +911,46 @@ export async function sendIdCardEmail(params: IdCardEmailParams): Promise<boolea
   const text = [
     `Hi ${params.fullName},`,
     "",
-    `Your ${isIntern ? "intern" : "employee"} ID card is attached as a print-ready PDF (front and back).`,
+    `Your ${isIntern ? "intern" : "employee"} ID card is attached as a print-ready PDF.`,
     `Employee code: ${employeeCode}`,
+    `Verify: ${assets.verifyUrl}`,
     "",
-    "Open the PDF and print at 100% scale on card stock for best results.",
-    "You can also view your card anytime from the app.",
+    "Print the PDF at 100% on CR80 card stock. Preview images are in the email body.",
     "",
+    "Ace Digital — Inspiring Youth, Empowering Nation",
     "— Ace Digital HR",
   ].join("\n");
 
   const bodyHtml = `
-    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">
-      Hi ${escapeHtml(params.fullName)}, your ${isIntern ? "<strong style=\"color:#0D9488;\">intern</strong>" : "employee"} ID card is ready to print.
+    <p style="margin:0 0 12px;font-size:15px;color:#2C2B2A;line-height:1.7;">
+      Hi ${escapeHtml(params.fullName)}, your ${isIntern ? "<strong style=\"color:#0D9488;\">intern</strong>" : "employee"} secure ID card is ready.
+    </p>
+    <p style="margin:0 0 20px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#0D9488;">
+      Ace Digital · Inspiring Youth · Empowering Nation
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
       <tr>
-        <td width="50%" style="padding:8px;" align="center">
-          <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Front</p>
-          <img src="${frontDataUrl}" alt="ID card front" width="200" style="max-width:100%;height:auto;border-radius:16px;border:1px solid #CBD5E1;box-shadow:0 12px 32px rgba(11,31,58,0.12);" />
+        <td width="50%" style="padding:8px;vertical-align:top;" align="center">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Front</p>
+          <img src="${escapeHtml(assets.frontPngUrl)}" alt="Ace Digital ID card front for ${escapeHtml(params.fullName)}" width="220" style="display:block;max-width:100%;height:auto;border-radius:18px;border:1px solid #CBD5E1;box-shadow:0 16px 40px rgba(11,31,58,0.14);" />
         </td>
-        <td width="50%" style="padding:8px;" align="center">
-          <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Back</p>
-          <img src="${backDataUrl}" alt="ID card back" width="200" style="max-width:100%;height:auto;border-radius:16px;border:1px solid #CBD5E1;box-shadow:0 12px 32px rgba(11,31,58,0.12);" />
+        <td width="50%" style="padding:8px;vertical-align:top;" align="center">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Back</p>
+          <img src="${escapeHtml(assets.backPngUrl)}" alt="Ace Digital ID card back with verification QR" width="220" style="display:block;max-width:100%;height:auto;border-radius:18px;border:1px solid #CBD5E1;box-shadow:0 16px 40px rgba(11,31,58,0.14);" />
         </td>
       </tr>
     </table>
-    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Code: <strong>${escapeHtml(employeeCode)}</strong></p>
-    <p style="margin:0;font-size:13px;color:#5C554E;">A high-resolution PDF is attached — print at 100% for CR80 card size.</p>
+    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Employee code: <strong>${escapeHtml(employeeCode)}</strong></p>
+    <p style="margin:0 0 16px;font-size:13px;color:#5C554E;line-height:1.6;">
+      A print-ready PDF is attached. Scan the QR on the back to verify at
+      <a href="${escapeHtml(assets.verifyUrl)}" style="color:#0D9488;font-weight:600;">${escapeHtml(assets.verifyUrl)}</a>.
+    </p>
     ${ctaButton(`${APP_URL}${isIntern ? "/interns" : "/employees"}`, "View in app →")}`;
 
   const html = emailShell({
     title: subject,
     headline: isIntern ? "Intern ID Card" : "Employee ID Card",
-    subtitle: "Print-ready PDF attached",
+    subtitle: "Inspiring Youth · Empowering Nation",
     bodyHtml,
   });
 
