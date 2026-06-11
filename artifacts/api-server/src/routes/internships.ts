@@ -23,8 +23,29 @@ const router = Router();
 
 function parseDate(value: unknown): string | null {
   if (value == null || value === "") return null;
-  const d = new Date(String(value));
+  const raw = String(value).trim();
+  const local = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const d = local
+    ? new Date(Number(local[1]), Number(local[2]) - 1, Number(local[3]))
+    : new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function parseOptionalDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const iso = parseDate(value);
+  return iso ? new Date(iso) : undefined;
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function optionalDocument(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  if (value.length > 1_600_000) return null;
+  return value;
 }
 
 router.get(
@@ -127,9 +148,22 @@ router.post(
       passwordMode,
       password,
       avatarUrl,
-      bloodGroup,
+      dob,
+      address,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      country,
+      gender,
+      maritalStatus,
+      nationality,
+      aadhaarNumber,
+      aadhaarDocument,
       emergencyContactName,
       emergencyContactPhone,
+      highestQualification,
+      bloodGroup,
       sendWelcomeEmail = true,
     } = req.body;
 
@@ -159,9 +193,26 @@ router.post(
       return;
     }
 
-    const parsedStart = parseDate(startDate);
+    const parsedStart = parseOptionalDate(startDate);
+    if (startDate !== undefined && startDate !== null && startDate !== "" && parsedStart === undefined) {
+      res.status(400).json({ error: "Invalid start date" });
+      return;
+    }
+
+    const parsedDob = parseOptionalDate(dob);
+    if (dob !== undefined && dob !== null && dob !== "" && parsedDob === undefined) {
+      res.status(400).json({ error: "Invalid date of birth" });
+      return;
+    }
+
+    const parsedEnd = parseOptionalDate(endDate);
+    if (endDate !== undefined && endDate !== null && endDate !== "" && parsedEnd === undefined) {
+      res.status(400).json({ error: "Invalid end date" });
+      return;
+    }
+
     const employeeCode = await allocateEmployeeCode(
-      parsedStart ? new Date(parsedStart) : null,
+      parsedStart instanceof Date ? parsedStart : null,
     );
     const passwordHash = await hashPassword(plainPassword);
 
@@ -172,19 +223,31 @@ router.post(
       role,
       teamId: teamId ?? null,
       jobTitle: "Intern",
-      phone: phone ?? null,
+      phone: optionalText(phone),
       employeeCode,
-      startDate: parsedStart ? new Date(parsedStart) : null,
+      startDate: parsedStart instanceof Date ? parsedStart : null,
       mustChangePassword: true,
       avatarUrl:
         typeof avatarUrl === "string" && avatarUrl.length > 0
           ? avatarUrl
           : defaultMascotForRole(role),
-      bloodGroup: typeof bloodGroup === "string" ? bloodGroup : null,
-      emergencyContactName:
-        typeof emergencyContactName === "string" ? emergencyContactName : null,
-      emergencyContactPhone:
-        typeof emergencyContactPhone === "string" ? emergencyContactPhone : null,
+      dob: parsedDob instanceof Date ? parsedDob : null,
+      address: optionalText(address),
+      addressLine2: optionalText(addressLine2),
+      city: optionalText(city),
+      state: optionalText(state),
+      zipCode: optionalText(zipCode),
+      country: optionalText(country),
+      gender: optionalText(gender),
+      maritalStatus: optionalText(maritalStatus),
+      nationality: optionalText(nationality),
+      aadhaarNumber: optionalText(aadhaarNumber),
+      aadhaarDocument: optionalDocument(aadhaarDocument),
+      emergencyContactName: optionalText(emergencyContactName),
+      emergencyContactPhone: optionalText(emergencyContactPhone),
+      highestQualification: optionalText(highestQualification),
+      bloodGroup: optionalText(bloodGroup),
+      notes: optionalText(notes),
     });
 
     await store.createProfile({ userId: user.id, salaryMode: "monthly" });
@@ -194,9 +257,9 @@ router.post(
       mentorId: mentorId != null ? Number(mentorId) : null,
       university: typeof university === "string" ? university : null,
       program: typeof program === "string" ? program : "Ace Digital Internship",
-      startDate: parsedStart,
-      endDate: parseDate(endDate),
-      notes: typeof notes === "string" ? notes : null,
+      startDate: parsedStart instanceof Date ? parsedStart.toISOString() : null,
+      endDate: parsedEnd instanceof Date ? parsedEnd.toISOString() : null,
+      notes: optionalText(notes),
       createdById: ctx.userId,
       completedSteps: ["application_received", "hr_review"],
       currentStep: "account_created",

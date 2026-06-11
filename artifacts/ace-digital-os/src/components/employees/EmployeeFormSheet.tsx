@@ -26,11 +26,13 @@ import { defaultMascotForRole } from "@/lib/mascots";
 import {
   encodeEmployeeIdentityImages,
   parseEmployeeIdentityImages,
-  resizeImageFile,
 } from "@/lib/avatar";
+import { ProfilePhotoUpload } from "@/components/employees/ProfilePhotoUpload";
+import { FilePickControl } from "@/components/ui/file-pick-control";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, ImagePlus, Trash2 } from "lucide-react";
 
 const ROLES = [
   "employee",
@@ -43,7 +45,6 @@ const ROLES = [
 ] as const;
 
 const MAX_AADHAAR_DOCUMENT_BYTES = 1_000_000;
-const MAX_PROFILE_PHOTO_BYTES = 2_500_000;
 
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -712,83 +713,11 @@ function IdentityFields({
         name="profilePhotoUrl"
         render={({ field }) => (
           <FormItem>
-            <div className="grid gap-4 sm:grid-cols-[10rem_1fr] sm:items-center">
-              <div className="relative mx-auto aspect-[4/5] w-36 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-brand-sm sm:mx-0 sm:w-full">
-                {field.value ? (
-                  <img
-                    src={field.value}
-                    alt={`${fullName} profile`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-muted-foreground">
-                    <Camera size={26} />
-                    <span className="text-xs font-medium">No profile photo</span>
-                  </div>
-                )}
-                <div className="pointer-events-none absolute inset-2 rounded-xl ring-1 ring-background/80" />
-              </div>
-              <div className="space-y-3">
-                <FormLabel>Employee photo</FormLabel>
-                <FormControl>
-                  <Input
-                    type="file"
-                    className="min-h-11 py-2"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      if (file.size > MAX_PROFILE_PHOTO_BYTES) {
-                        field.onChange("");
-                        event.currentTarget.value = "";
-                        return;
-                      }
-                      void resizeImageFile(file, 640)
-                        .then(field.onChange)
-                        .catch(() => {
-                          field.onChange("");
-                          event.currentTarget.value = "";
-                        });
-                    }}
-                  />
-                </FormControl>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-10 gap-2"
-                    onClick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/*";
-                      input.onchange = () => {
-                        const file = input.files?.[0];
-                        if (!file || file.size > MAX_PROFILE_PHOTO_BYTES) return;
-                        void resizeImageFile(file, 640).then(field.onChange);
-                      };
-                      input.click();
-                    }}
-                  >
-                    <ImagePlus size={16} />
-                    Choose photo
-                  </Button>
-                  {field.value && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="min-h-10 gap-2 text-destructive hover:text-destructive"
-                      onClick={() => field.onChange("")}
-                    >
-                      <Trash2 size={16} />
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Stored compressed in the profile record. Use clear headshot-style photos under 2.5 MB.
-                </p>
-              </div>
-            </div>
+            <ProfilePhotoUpload
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              altName={fullName}
+            />
           </FormItem>
         )}
       />
@@ -1207,26 +1136,20 @@ function FormFields({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Aadhaar card copy (optional)</FormLabel>
-            <FormControl>
-              <Input
-                type="file"
-                className="min-h-11 py-2"
-                accept="image/*,.pdf"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) {
-                    field.onChange("");
-                    return;
-                  }
-                  void readEmployeeDocument(file)
-                    .then(field.onChange)
-                    .catch(() => {
-                      field.onChange("");
-                      event.currentTarget.value = "";
-                    });
-                }}
-              />
-            </FormControl>
+            <FilePickControl
+              accept="image/*,.pdf"
+              aria-label="Upload Aadhaar card copy"
+              className="inline-flex w-full sm:w-auto"
+              onFile={(file) => {
+                void readEmployeeDocument(file)
+                  .then(field.onChange)
+                  .catch(() => field.onChange(""));
+              }}
+            >
+              <span className={cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full gap-2 sm:w-auto")}>
+                Choose file
+              </span>
+            </FilePickControl>
             {getDocumentName(field.value) && (
               <p className="text-xs text-muted-foreground">
                 Stored in database: {getDocumentName(field.value)}

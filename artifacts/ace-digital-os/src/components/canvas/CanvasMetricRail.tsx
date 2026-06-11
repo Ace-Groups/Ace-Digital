@@ -18,7 +18,7 @@ export function CanvasMetricRail({ metrics }: CanvasMetricRailProps) {
         const body = (
           <>
             <div className={`dash-metric-icon ${m.iconBg ?? DEFAULT_ICON_BG}`}>
-              <Icon size={16} className={m.iconColor ?? DEFAULT_ICON_COLOR} aria-hidden />
+              <Icon size={14} className={m.iconColor ?? DEFAULT_ICON_COLOR} aria-hidden />
             </div>
             <div className="min-w-0">
               <p className="dash-metric-label">{m.label}</p>

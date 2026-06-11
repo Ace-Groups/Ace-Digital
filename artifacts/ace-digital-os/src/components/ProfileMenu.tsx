@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,9 @@ import { defaultMascotForRole } from "@/lib/mascots";
 import { UserAvatar } from "@/components/UserAvatar";
 import { MascotPicker } from "@/components/MascotPicker";
 import { usePermissions } from "@/hooks/use-permissions";
+import { FilePickControl } from "@/components/ui/file-pick-control";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ProfileMenuProps {
   open: boolean;
@@ -29,7 +32,6 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
   const { can } = usePermissions();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarData, setAvatarData] = useState<string | null>(null);
   const [selectedMascot, setSelectedMascot] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -45,9 +47,7 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
     setShowAvatarEditor(false);
   }, [open, user?.avatarUrl]);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: "File too large", description: "Choose an image under 5MB.", variant: "destructive" });
       return;
@@ -125,9 +125,16 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
           <div className="space-y-4 rounded-lg border border-border p-4">
             <p className="text-sm font-medium">Change avatar</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => fileInputRef.current?.click()}>
-                <Upload size={14} /> Upload photo
-              </Button>
+              <FilePickControl
+                accept="image/*"
+                onFile={(file) => void handleFile(file)}
+                aria-label="Upload profile photo"
+                className="flex-1"
+              >
+                <span className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full gap-2")}>
+                  <Upload size={14} /> Upload photo
+                </span>
+              </FilePickControl>
               <Button
                 variant="ghost"
                 size="sm"
@@ -139,7 +146,6 @@ export function ProfileMenu({ open, onClose }: ProfileMenuProps) {
                 Reset
               </Button>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
             <p className="text-xs text-muted-foreground">Or pick a mascot</p>
             <MascotPicker
               selectedId={selectedMascot}
