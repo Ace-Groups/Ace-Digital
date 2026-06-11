@@ -7,14 +7,15 @@ type VerifyShellProps = {
   children: ReactNode;
 };
 
-export function VerifyShell({ subtitle = "Verified by Ace Digital OS", children }: VerifyShellProps) {
+export function VerifyShell({ subtitle = "Ace Verify", children }: VerifyShellProps) {
   return (
     <div className="verify-page">
-      <header className="verify-header">
+      <div className="verify-page-mesh" aria-hidden />
+      <header className="verify-brand">
         <img src={aceLogo} alt="Ace Digital" />
         <span>{subtitle}</span>
       </header>
-      {children}
+      <main className="verify-main">{children}</main>
     </div>
   );
 }

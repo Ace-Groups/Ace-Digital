@@ -7,9 +7,10 @@ import {
   Mail,
   Phone,
   Linkedin,
-  UserPlus,
   Globe,
   ShieldCheck,
+  BadgeCheck,
+  Building2,
 } from "lucide-react";
 import {
   fetchPublicVerify,
@@ -19,6 +20,7 @@ import {
 import { resolveApiUrl } from "@/lib/api-config";
 import { VerifyShell } from "@/components/verify/VerifyShell";
 import { VerifyCertificatePanel } from "@/components/verify/VerifyCertificatePanel";
+import { AddContactButton } from "@/components/verify/AddContactButton";
 
 function useVerifyQuery(searchKey: string) {
   const [, slugParams] = useRoute("/v/:slug");
@@ -49,118 +51,157 @@ export default function VerifyProfilePage() {
     void request.then(setData).finally(() => setLoading(false));
   }, [slug, employeeCode, searchKey]);
 
+  useEffect(() => {
+    if (!data?.verifyPath || employeeCode || slug === "verification") return;
+    const next = `${data.verifyPath}${searchKey}`;
+    window.history.replaceState(null, "", next);
+  }, [data?.verifyPath, employeeCode, slug, searchKey]);
+
   const scannedLabel = data?.scannedAt ? new Date(data.scannedAt).toLocaleString() : "";
-  const subtitle = data?.certificate ? "Ace Verify · Profile & certificate" : "Ace Digital Secure ID";
   const vcardCode = data?.employeeCode ?? employeeCode;
   const vcardUrl = vcardCode
     ? resolveApiUrl(`/api/v1/public/v/verification/${encodeURIComponent(vcardCode)}.vcf`)
     : null;
   const showPublicLinks =
     data?.status === "active" && data.publicProfile?.enabled && data.mode === "public";
+  const company = data?.companyLegalName ?? "Ace Digital";
 
   return (
-    <VerifyShell subtitle={subtitle}>
+    <VerifyShell>
       {loading ? (
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="verify-loading">
+          <Loader2 className="verify-loading-spinner" />
+          <p>Verifying identity…</p>
+        </div>
       ) : !data || data.status === "not_found" ? (
-        <div className="verify-card p-8 text-center">
-          <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
-          <p className="mt-4 font-semibold">Verification unavailable</p>
-          <p className="mt-1 text-sm text-muted-foreground">This ID could not be verified.</p>
+        <div className="verify-card verify-card--error">
+          <AlertTriangle className="verify-error-icon" />
+          <p className="verify-error-title">Verification unavailable</p>
+          <p className="verify-error-copy">This ID could not be verified. The link may be invalid or expired.</p>
         </div>
       ) : data.status === "disabled" ? (
-        <div className="verify-card p-8 text-center">
-          <p className="font-semibold">Verification disabled</p>
+        <div className="verify-card verify-card--error">
+          <p className="verify-error-title">Verification disabled</p>
         </div>
       ) : (
-        <div className="verify-card">
-          <div className="verify-card-hero">
-            <ShieldCheck className="verify-card-hero-icon" aria-hidden />
-            <span>Official Ace Digital verification</span>
-          </div>
+        <div className="verify-pass">
+          <div className="verify-pass-glow" aria-hidden />
 
-          <div className="flex flex-col items-center gap-4 p-8 text-center">
-            {data.photoUrl ? (
-              <img src={data.photoUrl} alt="" className="verify-photo" />
-            ) : (
-              <div className="verify-photo">
-                {data.fullName
-                  ?.split(" ")
-                  .map((p) => p[0])
-                  .join("")
-                  .slice(0, 2)}
-              </div>
-            )}
+          <header className="verify-pass-header">
+            <ShieldCheck className="verify-pass-header-icon" aria-hidden />
             <div>
-              <h1 className="text-xl font-bold text-foreground">{data.fullName}</h1>
-              <p className="text-sm text-muted-foreground">{data.jobTitle}</p>
-              <p className="mt-2 font-mono text-xs font-semibold tracking-wide text-primary">
-                {data.employeeCode}
-              </p>
+              <p className="verify-pass-kicker">Ace Digital Secure ID</p>
+              <p className="verify-pass-company">{company}</p>
+            </div>
+          </header>
+
+          <div className="verify-pass-body">
+            <div className="verify-pass-photo-wrap">
+              <div className="verify-pass-photo-ring" aria-hidden />
+              {data.photoUrl ? (
+                <img src={data.photoUrl} alt="" className="verify-pass-photo" />
+              ) : (
+                <div className="verify-pass-photo verify-pass-photo--initials">
+                  {data.fullName
+                    ?.split(" ")
+                    .map((p) => p[0])
+                    .join("")
+                    .slice(0, 2)}
+                </div>
+              )}
+            </div>
+
+            <div className="verify-pass-identity">
+              <h1 className="verify-pass-name">{data.fullName}</h1>
+              <p className="verify-pass-title">{data.jobTitle}</p>
+              <div className="verify-pass-code">
+                <BadgeCheck className="verify-pass-code-icon" aria-hidden />
+                <span>{data.employeeCode}</span>
+              </div>
             </div>
 
             {data.status === "active" ? (
-              <div className="verify-badge verify-badge--active">
+              <div className="verify-pass-status verify-pass-status--active">
                 <CheckCircle2 className="h-5 w-5" />
-                {data.variant === "intern" ? "ACTIVE INTERN" : "ACTIVE EMPLOYEE"}
+                {data.variant === "intern" ? "Active intern" : "Active employee"}
               </div>
             ) : (
-              <div className="verify-badge verify-badge--inactive">
+              <div className="verify-pass-status verify-pass-status--inactive">
                 <AlertTriangle className="h-5 w-5" />
-                INACTIVE / RETURN CARD
+                Inactive — return card to HR
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground">Verified at {scannedLabel}</p>
             {data.status === "inactive" && data.inactiveMessage && (
-              <p className="text-sm text-red-700">{data.inactiveMessage}</p>
+              <p className="verify-pass-warning">{data.inactiveMessage}</p>
             )}
-          </div>
 
-          {data.certificate && <VerifyCertificatePanel cert={data.certificate} />}
+            {data.status === "active" && vcardUrl && (
+              <div className="verify-pass-cta">
+                <AddContactButton
+                  vcardUrl={vcardUrl}
+                  filename={`${vcardCode ?? "contact"}.vcf`}
+                  label="Add to Contacts"
+                />
+                <p className="verify-pass-cta-hint">
+                  Saves name, title, email &amp; phone directly to your device.
+                </p>
+              </div>
+            )}
 
-          {data.status === "active" && vcardUrl && (
-            <div className="verify-contact">
-              <p className="verify-contact-title">Save this contact</p>
-              <p className="verify-contact-copy">
-                Add {data.fullName?.split(" ")[0] ?? "this employee"} to your phone in one tap.
-              </p>
-              <a className="verify-contact-btn" href={vcardUrl} download>
-                <UserPlus className="h-5 w-5" />
-                Add to Contacts
-              </a>
-            </div>
-          )}
-
-          {showPublicLinks && (
-            <div className="verify-nexme">
-              {data.publicProfile?.bio && (
-                <p className="text-center text-sm text-muted-foreground">{data.publicProfile.bio}</p>
-              )}
-              <div className="verify-actions">
+            {showPublicLinks && (
+              <div className="verify-pass-links">
                 {data.publicProfile?.publicPhone && (
-                  <a href={`tel:${data.publicProfile.publicPhone}`}>
-                    <Phone className="h-4 w-4" /> Call
+                  <a className="verify-pass-link" href={`tel:${data.publicProfile.publicPhone}`}>
+                    <Phone className="h-4 w-4" />
+                    Call
                   </a>
                 )}
                 {data.publicProfile?.publicEmail && (
-                  <a href={`mailto:${data.publicProfile.publicEmail}`}>
-                    <Mail className="h-4 w-4" /> Email
+                  <a className="verify-pass-link" href={`mailto:${data.publicProfile.publicEmail}`}>
+                    <Mail className="h-4 w-4" />
+                    Email
                   </a>
                 )}
                 {data.publicProfile?.linkedinUrl && (
-                  <a href={data.publicProfile.linkedinUrl} target="_blank" rel="noreferrer">
-                    <Linkedin className="h-4 w-4" /> LinkedIn
+                  <a
+                    className="verify-pass-link"
+                    href={data.publicProfile.linkedinUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Linkedin className="h-4 w-4" />
+                    LinkedIn
                   </a>
                 )}
                 {data.publicProfile?.portfolioUrl && (
-                  <a href={data.publicProfile.portfolioUrl} target="_blank" rel="noreferrer">
-                    <Globe className="h-4 w-4" /> Portfolio
+                  <a
+                    className="verify-pass-link"
+                    href={data.publicProfile.portfolioUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Portfolio
                   </a>
                 )}
               </div>
+            )}
+
+            {data.publicProfile?.bio && showPublicLinks && (
+              <p className="verify-pass-bio">{data.publicProfile.bio}</p>
+            )}
+          </div>
+
+          <footer className="verify-pass-footer">
+            <Building2 className="verify-pass-footer-icon" aria-hidden />
+            <div>
+              <p className="verify-pass-footer-label">Verified by Ace Digital OS</p>
+              <p className="verify-pass-footer-time">{scannedLabel}</p>
             </div>
-          )}
+          </footer>
+
+          {data.certificate && <VerifyCertificatePanel cert={data.certificate} />}
         </div>
       )}
     </VerifyShell>

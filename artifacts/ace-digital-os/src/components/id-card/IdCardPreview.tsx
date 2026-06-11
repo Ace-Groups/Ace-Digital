@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Loader2, Mail, Printer, Download, Copy, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  Printer,
+  Download,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  QrCode,
+  CreditCard,
+} from "lucide-react";
 import { downloadIdCardPdf } from "@/lib/credentials-api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,7 +19,6 @@ import {
   type IdCardResponse,
 } from "@/lib/internships-api";
 import { useToast } from "@/hooks/use-toast";
-import aceLogo from "@/assets/ace-logo.png";
 import "@/styles/id-card.css";
 
 type IdCardPreviewProps = {
@@ -25,6 +34,7 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
   const [side, setSide] = useState<"front" | "back">("front");
   const [emailing, setEmailing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +55,13 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
       cancelled = true;
     };
   }, [employeeId, toast]);
+
+  function switchSide(next: "front" | "back") {
+    if (next === side) return;
+    setAnimating(true);
+    setSide(next);
+    window.setTimeout(() => setAnimating(false), 320);
+  }
 
   function handlePrint() {
     window.print();
@@ -85,8 +102,9 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center py-16", className)}>
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className={cn("id-card-preview id-card-preview--loading", className)}>
+        <Loader2 className="id-card-preview-spinner" />
+        <p>Generating secure ID card…</p>
       </div>
     );
   }
@@ -94,60 +112,83 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
   if (!card) return null;
 
   const svg = side === "front" ? card.frontSvg : card.backSvg;
+  const isPortrait = card.frontSvg.includes('height="856"') || card.frontSvg.includes("height='856'");
 
   return (
     <div className={cn("id-card-preview", className)}>
+      <div className="id-card-preview-meta no-print">
+        <div className="id-card-preview-badge">
+          <ShieldCheck className="h-4 w-4" />
+          <span>{card.variant === "intern" ? "Intern access card" : "Employee secure ID"}</span>
+        </div>
+        <span className="id-card-preview-code">{card.employeeCode}</span>
+      </div>
+
       <div className="id-card-preview-toolbar no-print">
-        <div className="flex rounded-lg border border-border/60 p-0.5">
+        <div className="id-card-side-toggle" role="tablist" aria-label="Card side">
           <button
             type="button"
-            className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-semibold",
-              side === "front" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-            )}
-            onClick={() => setSide("front")}
+            role="tab"
+            aria-selected={side === "front"}
+            className={cn("id-card-side-btn", side === "front" && "id-card-side-btn--active")}
+            onClick={() => switchSide("front")}
           >
+            <CreditCard className="h-3.5 w-3.5" />
             Front
           </button>
           <button
             type="button"
-            className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-semibold",
-              side === "back" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-            )}
-            onClick={() => setSide("back")}
+            role="tab"
+            aria-selected={side === "back"}
+            className={cn("id-card-side-btn", side === "back" && "id-card-side-btn--active")}
+            onClick={() => switchSide("back")}
           >
+            <QrCode className="h-3.5 w-3.5" />
             Back
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="id-card-preview-actions">
           {canEmail && (
-            <Button type="button" size="sm" variant="outline" disabled={emailing} onClick={() => void handleEmail()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="id-card-action-btn"
+              disabled={emailing}
+              onClick={() => void handleEmail()}
+            >
               {emailing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-              <span className="ml-1.5">Email card</span>
+              Email
             </Button>
           )}
-          <Button type="button" size="sm" variant="outline" disabled={downloading} onClick={() => void handleDownloadPdf()}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="id-card-action-btn"
+            disabled={downloading}
+            onClick={() => void handleDownloadPdf()}
+          >
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            <span className="ml-1.5">PDF</span>
+            PDF
           </Button>
-          <Button type="button" size="sm" onClick={handlePrint}>
+          <Button type="button" size="sm" className="id-card-action-btn id-card-action-btn--primary" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
-            <span className="ml-1.5">Print</span>
+            Print
           </Button>
         </div>
       </div>
 
       {card.verifyUrl && (
-        <div className="no-print mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Ace Verify:</span>
-          <a href={card.verifyUrl} target="_blank" rel="noreferrer" className="font-mono text-primary hover:underline truncate max-w-[200px] sm:max-w-none">
+        <div className="id-card-verify-bar no-print">
+          <span className="id-card-verify-label">Ace Verify</span>
+          <a href={card.verifyUrl} target="_blank" rel="noreferrer" className="id-card-verify-url">
             {card.verifyUrl}
           </a>
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={copyVerifyUrl}>
+          <Button type="button" size="icon" variant="ghost" className="id-card-verify-icon" onClick={copyVerifyUrl}>
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7" asChild>
+          <Button type="button" size="icon" variant="ghost" className="id-card-verify-icon" asChild>
             <a href={card.verifyUrl} target="_blank" rel="noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
@@ -156,16 +197,26 @@ export function IdCardPreview({ employeeId, canEmail, className }: IdCardPreview
       )}
 
       <div className="id-card-print-area">
-        <div className="id-card-brand no-print">
-          <img src={aceLogo} alt="" className="h-6 w-auto opacity-80" />
-          <span className="text-xs font-medium text-muted-foreground">
-            {card.variant === "intern" ? "Intern access card" : "Employee ID"} · {card.employeeCode}
-          </span>
+        <div className="id-card-stage no-print">
+          <div className="id-card-stage-glow" aria-hidden />
+          <div
+            className={cn(
+              "id-card-frame",
+              isPortrait && "id-card-frame--portrait",
+              animating && "id-card-frame--animating",
+            )}
+          >
+            <div className="id-card-lanyard" aria-hidden />
+            <div className="id-card-svg-wrap" dangerouslySetInnerHTML={{ __html: svg }} />
+          </div>
+          <p className="id-card-stage-caption">
+            {side === "front" ? "Front · portrait CR80" : "Back · scan QR to verify"}
+          </p>
         </div>
-        <div
-          className="id-card-svg-wrap"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+
+        <div className="id-card-print-only">
+          <div className="id-card-svg-wrap id-card-svg-wrap--print" dangerouslySetInnerHTML={{ __html: svg }} />
+        </div>
       </div>
     </div>
   );
