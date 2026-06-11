@@ -4,7 +4,7 @@ type EmployeeProfilePhotoProps = {
   src: string;
   alt: string;
   className?: string;
-  rounded?: "lg" | "xl" | "2xl" | "full";
+  rounded?: "none" | "lg" | "xl" | "2xl" | "full";
 };
 
 export function EmployeeProfilePhoto({
@@ -14,13 +14,15 @@ export function EmployeeProfilePhoto({
   rounded = "xl",
 }: EmployeeProfilePhotoProps) {
   const radius =
-    rounded === "full"
-      ? "rounded-full"
-      : rounded === "2xl"
-        ? "rounded-2xl"
-        : rounded === "xl"
-          ? "rounded-xl"
-          : "rounded-lg";
+    rounded === "none"
+      ? ""
+      : rounded === "full"
+        ? "rounded-full"
+        : rounded === "2xl"
+          ? "rounded-2xl"
+          : rounded === "xl"
+            ? "rounded-xl"
+            : "rounded-lg";
 
   return (
     <img
