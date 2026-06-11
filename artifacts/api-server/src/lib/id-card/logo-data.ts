@@ -9,6 +9,7 @@ export function aceLogoDataUrl(): string {
   if (cachedLogoDataUrl) return cachedLogoDataUrl;
   const base = dirname(fileURLToPath(import.meta.url));
   const candidates = [
+    join(base, "assets/ace-logo.png"),
     join(base, "../../assets/ace-logo.png"),
     join(base, "../../../assets/ace-logo.png"),
   ];

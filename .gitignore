@@ -13,6 +13,7 @@ coverage/
 .firebase/
 firebase/functions/api-app.mjs
 firebase/functions/api-app.mjs.map
+firebase/functions/assets/
 firebase/functions/lib/
 firebase/functions/node_modules/
 dump.rdb

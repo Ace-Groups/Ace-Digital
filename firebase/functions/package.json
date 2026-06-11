@@ -10,6 +10,7 @@
     "seed": "node lib/seed.js"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.2",
     "express": "^5.2.1",

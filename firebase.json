@@ -81,7 +81,8 @@
       ],
       "predeploy": [
         "pnpm --filter @workspace/api-server run build",
-        "cp \"artifacts/api-server/dist/api-app.mjs\" \"firebase/functions/api-app.mjs\""
+        "cp \"artifacts/api-server/dist/api-app.mjs\" \"firebase/functions/api-app.mjs\"",
+        "rm -rf \"firebase/functions/assets\" && cp -R \"artifacts/api-server/dist/assets\" \"firebase/functions/assets\""
       ]
     }
   ],
