@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import {
   useListReports,
   useGenerateReport,
@@ -20,7 +21,6 @@ import type {
   SalaryPostingRecord,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -730,223 +730,249 @@ export default function ReportsPage() {
       });
   }
 
-  return (
-    <AppLayout title="Reports">
-      <div className="page-stack">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {reports?.length ?? 0} reports generated
-          </p>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="btn-generate-report" className="gap-2">
-                <Plus size={16} /> Generate Report
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>Generate Report</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="mobile-form space-y-4"
-                >
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Report Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
+  const totalReports = reports?.length ?? 0;
+  const reportTypeCount = useMemo(
+    () => new Set(reports?.map((r) => r.type).filter(Boolean)).size,
+    [reports],
+  );
+  const recentReports = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return (
+      reports?.filter((r) => r.generatedAt && new Date(r.generatedAt).getTime() >= cutoff).length ??
+      0
+    );
+  }, [reports]);
+
+  const reportMetrics = useMemo(
+    () => [
+      {
+        key: "total",
+        label: "Total reports",
+        value: totalReports,
+        icon: FileText,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "types",
+        label: "Report types",
+        value: reportTypeCount,
+        icon: BarChart3,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+      {
+        key: "recent",
+        label: "Last 30 days",
+        value: recentReports,
+        icon: TrendingUp,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+    ],
+    [totalReports, reportTypeCount, recentReports],
+  );
+
+  const generateDialog = (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button data-testid="btn-generate-report" size="sm" className="gap-2">
+          <Plus size={16} /> Generate Report
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Generate Report</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Report Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {REPORT_TYPES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="period"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Period</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
                         >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {REPORT_TYPES.map((r) => (
-                              <SelectItem key={r.value} value={r.value}>
-                                {r.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="period"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Period</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "MMMM yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date > new Date() ||
-                                date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    data-testid="btn-submit-report"
-                    type="submit"
-                    className="w-full"
-                    disabled={generateReport.isPending}
-                  >
-                    Generate
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Quick action cards */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {REPORT_TYPES.map(({ value, label, icon: Icon, color, bg }) => (
-            <button
-              key={value}
-              data-testid={`quick-report-${value.toLowerCase()}`}
-              onClick={() => handleQuickGenerate(value, label)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:shadow-brand-md transition-all group"
+                          {field.value ? format(field.value, "MMMM yyyy") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              data-testid="btn-submit-report"
+              type="submit"
+              className="w-full"
+              disabled={generateReport.isPending}
             >
-              <div
-                className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center`}
+              Generate
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Insights"
+        title="Reports"
+        description="Generate and download operational reports across revenue, payroll, and headcount."
+        metrics={reportMetrics}
+        actions={generateDialog}
+      >
+        <CanvasPanel title="Quick generate" icon={BarChart3}>
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {REPORT_TYPES.map(({ value, label, icon: Icon, color, bg }) => (
+              <button
+                key={value}
+                data-testid={`quick-report-${value.toLowerCase()}`}
+                onClick={() => handleQuickGenerate(value, label)}
+                className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 transition-all hover:shadow-brand-md"
               >
-                <Icon size={18} className={color} />
-              </div>
-              <span className="text-xs font-medium text-foreground text-center leading-tight">
-                {label}
-              </span>
-            </button>
-          ))}
-        </div>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg}`}>
+                  <Icon size={18} className={color} />
+                </div>
+                <span className="text-center text-xs font-medium leading-tight text-foreground">
+                  {label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </CanvasPanel>
 
-        {/* Report history */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
-              </div>
-            ) : reports?.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">
-                No reports generated yet
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {reports?.map((report) => {
-                  const meta = getReportMeta(report.type ?? "");
-                  const Icon = meta.icon;
-                  const isDownloading = downloading === report.id;
-                  return (
+        <CanvasPanel title="Report history" icon={FileText} noPadding>
+          {isLoading ? (
+            <div className="space-y-3 p-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </div>
+          ) : reports?.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No reports generated yet
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {reports?.map((report) => {
+                const meta = getReportMeta(report.type ?? "");
+                const Icon = meta.icon;
+                const isDownloading = downloading === report.id;
+                return (
+                  <div
+                    key={report.id}
+                    data-testid={`report-row-${report.id}`}
+                    className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+                  >
                     <div
-                      key={report.id}
-                      data-testid={`report-row-${report.id}`}
-                      className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors"
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${meta.bg}`}
                     >
-                      <div
-                        className={`w-9 h-9 rounded-lg ${meta.bg} flex items-center justify-center shrink-0`}
-                      >
-                        <Icon size={16} className={meta.color} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {report.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Period: {report.period} · Generated{" "}
-                          {formatRelativeTime(report.generatedAt)}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs shrink-0">
-                        {report.type?.replace(/_/g, " ")}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleAiSummary(report)}
-                        disabled={aiNarrative.isPending}
-                        data-testid={`btn-ai-summary-report-${report.id}`}
-                        title="Generate AI Summary"
-                        className="shrink-0"
-                      >
-                        {aiNarrative.isPending ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <Sparkles size={15} />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(report)}
-                        disabled={isDownloading}
-                        data-testid={`btn-download-report-${report.id}`}
-                        title="Download Report"
-                        className="shrink-0"
-                      >
-                        {isDownloading ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <Download size={15} />
-                        )}
-                      </Button>
+                      <Icon size={16} className={meta.color} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{report.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Period: {report.period} · Generated {formatRelativeTime(report.generatedAt)}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 text-xs">
+                      {report.type?.replace(/_/g, " ")}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleAiSummary(report)}
+                      disabled={aiNarrative.isPending}
+                      data-testid={`btn-ai-summary-report-${report.id}`}
+                      title="Generate AI Summary"
+                      className="shrink-0"
+                    >
+                      {aiNarrative.isPending ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={15} />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownload(report)}
+                      disabled={isDownloading}
+                      data-testid={`btn-download-report-${report.id}`}
+                      title="Download Report"
+                      className="shrink-0"
+                    >
+                      {isDownloading ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Download size={15} />
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CanvasPanel>
+      </PageCanvasShell>
 
-        <Dialog open={aiSummaryOpen} onOpenChange={setAiSummaryOpen}>
-          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles size={16} className="text-primary" />
-                AI Summary — {aiSummaryTitle}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="text-sm whitespace-pre-wrap text-foreground">{aiSummaryText}</div>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <Dialog open={aiSummaryOpen} onOpenChange={setAiSummaryOpen}>
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" />
+              AI Summary — {aiSummaryTitle}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap text-sm text-foreground">{aiSummaryText}</div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

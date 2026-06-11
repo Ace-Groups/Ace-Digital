@@ -722,3 +722,301 @@ export async function sendWelcomeEmail(
 ): Promise<boolean> {
   return sendCredentialsEmail({ ...params, kind: "welcome" });
 }
+
+// ---------------------------------------------------------------------------
+// Intern onboarding + ID card delivery
+// ---------------------------------------------------------------------------
+
+function buildInternWelcomeContent(params: {
+  fullName: string;
+  program: string;
+  university?: string;
+  mentorName?: string;
+  startDate?: string;
+  endDate?: string;
+}): EmailContent {
+  const subject = `Welcome to your Ace Digital internship, ${params.fullName}`;
+  const text = [
+    `Dear ${params.fullName},`,
+    "",
+    `Welcome to the ${params.program} internship at Ace Digital.`,
+    params.university ? `Institution: ${params.university}` : "",
+    params.mentorName ? `Your mentor: ${params.mentorName}` : "",
+    params.startDate ? `Start: ${params.startDate}` : "",
+    params.endDate ? `End: ${params.endDate}` : "",
+    "",
+    "Your digital workspace, intern ID card, and login credentials are on the way.",
+    "",
+    "— Ace Digital HR",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const bodyHtml = `
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#1A1A1A;">Dear ${escapeHtml(params.fullName)},</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#2C2B2A;line-height:1.7;">
+      Welcome to the <strong style="color:#0D9488;">${escapeHtml(params.program)}</strong> internship at Ace Digital.
+      We're excited to help you learn, ship real work, and grow with our team.
+    </p>
+    <div style="margin:24px 0;text-align:center;">
+      <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=600" alt="Intern welcome" width="488" style="display:block;width:100%;max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;" />
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:12px;margin-bottom:20px;">
+      <tr><td style="padding:18px 20px;">
+        ${params.university ? `<p style="margin:0 0 8px;font-size:14px;color:#134E4A;"><strong>University:</strong> ${escapeHtml(params.university)}</p>` : ""}
+        ${params.mentorName ? `<p style="margin:0 0 8px;font-size:14px;color:#134E4A;"><strong>Mentor:</strong> ${escapeHtml(params.mentorName)}</p>` : ""}
+        ${params.startDate ? `<p style="margin:0;font-size:14px;color:#134E4A;"><strong>Duration:</strong> ${escapeHtml(params.startDate)}${params.endDate ? ` → ${escapeHtml(params.endDate)}` : ""}</p>` : ""}
+      </td></tr>
+    </table>
+    <p style="margin:0;font-size:15px;color:#2C2B2A;line-height:1.7;">
+      Your intern ID card (front &amp; back), workspace access, and login credentials will arrive in separate emails shortly.
+    </p>`;
+
+  const html = emailShell({
+    title: subject,
+    headline: "Internship begins",
+    subtitle: "Your Ace Digital intern journey starts now",
+    bodyHtml,
+  });
+  return { subject, text, html };
+}
+
+function buildInternGuideContent(fullName: string): EmailContent {
+  const subject = "Your intern workspace guide";
+  const text = [
+    `Hi ${fullName},`,
+    "",
+    "As an intern at Ace Digital you can:",
+    "- View assigned tasks and projects",
+    "- Collaborate in team chat",
+    "- Take notes and share with your mentor",
+    "- Access your intern ID card from the Interns hub",
+    "",
+    "Ask Ace AI in the app if you need help navigating.",
+  ].join("\n");
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">Hi ${escapeHtml(fullName)}, here's what you can do in Ace Digital OS as an intern:</p>
+    <ul style="margin:0 0 20px;padding-left:20px;color:#2C2B2A;font-size:14px;line-height:1.8;">
+      <li>Track tasks and project milestones assigned to you</li>
+      <li>Chat with your team and mentor in real time</li>
+      <li>Collaborate on notes and meeting summaries</li>
+      <li>Download or print your intern ID card anytime</li>
+      <li>Use <strong>Ask Ace</strong> for workspace help</li>
+    </ul>
+    ${ctaButton(APP_URL, "Open Intern Hub →")}`;
+
+  const html = emailShell({
+    title: subject,
+    headline: "Intern quick start",
+    subtitle: "Tools you'll use every day",
+    bodyHtml,
+  });
+  return { subject, text, html };
+}
+
+export async function sendInternOnboardingSequence(params: {
+  to: string;
+  fullName: string;
+  email: string;
+  password: string;
+  program: string;
+  university?: string;
+  mentorName?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<{ welcomeSent: boolean; guideSent: boolean; credentialsSent: boolean }> {
+  log(`Starting intern onboarding sequence for ${params.to}`);
+
+  const welcome = buildInternWelcomeContent(params);
+  const welcomeSent = await sendEmail(params.to, welcome);
+  await delay(600);
+
+  const guide = buildInternGuideContent(params.fullName);
+  const guideSent = await sendEmail(params.to, guide);
+  await delay(600);
+
+  const creds = buildCredentialsContent({
+    to: params.to,
+    fullName: params.fullName,
+    email: params.email,
+    password: params.password,
+    kind: "welcome",
+  });
+  const credentialsSent = await sendEmail(params.to, creds);
+
+  return { welcomeSent, guideSent, credentialsSent };
+}
+
+type IdCardEmailParams = {
+  to: string;
+  fullName: string;
+  user: import("@workspace/db").User;
+  extras?: {
+    teamName?: string | null;
+    university?: string | null;
+    program?: string | null;
+    mentorName?: string | null;
+    endDate?: string | null;
+  };
+};
+
+async function sendViaResendWithAttachments(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments: { filename: string; content: string }[],
+): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return false;
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: DEFAULT_FROM,
+      to,
+      subject,
+      text,
+      html,
+      attachments: attachments.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content, "utf8"),
+      })),
+    });
+    if (error) {
+      warn("Resend attachment email error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    warn("Resend attachment send failed:", err);
+    return false;
+  }
+}
+
+export async function sendIdCardEmail(params: IdCardEmailParams): Promise<boolean> {
+  const { buildIdCardDataFromUser, prepareIdCardPair, svgToDataUrl } = await import(
+    "./id-card"
+  );
+  const pair = await prepareIdCardPair(params.user, params.extras);
+  const cardData = await buildIdCardDataFromUser(params.user, params.extras);
+  const frontDataUrl = svgToDataUrl(pair.frontSvg);
+  const backDataUrl = svgToDataUrl(pair.backSvg);
+  const isIntern = cardData.variant === "intern";
+  const subject = isIntern
+    ? `Your Ace Digital Intern ID Card — ${params.fullName}`
+    : `Your Ace Digital Employee ID Card — ${params.fullName}`;
+
+  const text = [
+    `Hi ${params.fullName},`,
+    "",
+    `Your ${isIntern ? "intern" : "employee"} ID card is attached (front and back SVG files).`,
+    `Employee code: ${cardData.employeeCode}`,
+    "",
+    "You can also view and print your card anytime from the app.",
+    "",
+    "— Ace Digital HR",
+  ].join("\n");
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">
+      Hi ${escapeHtml(params.fullName)}, your ${isIntern ? "<strong style=\"color:#0D9488;\">intern</strong>" : "employee"} ID card is ready.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td width="50%" style="padding:8px;" align="center">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Front</p>
+          <img src="${frontDataUrl}" alt="ID card front" width="240" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;box-shadow:0 8px 24px rgba(0,0,0,0.08);" />
+        </td>
+        <td width="50%" style="padding:8px;" align="center">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Back</p>
+          <img src="${backDataUrl}" alt="ID card back" width="240" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;box-shadow:0 8px 24px rgba(0,0,0,0.08);" />
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Code: <strong>${escapeHtml(cardData.employeeCode)}</strong></p>
+    <p style="margin:0;font-size:13px;color:#5C554E;">SVG attachments included for high-quality printing.</p>
+    ${ctaButton(`${APP_URL}${isIntern ? "/interns" : "/employees"}`, "View in app →")}`;
+
+  const html = emailShell({
+    title: subject,
+    headline: isIntern ? "Intern ID Card" : "Employee ID Card",
+    subtitle: "Front & back — ready to print",
+    bodyHtml,
+  });
+
+  const sent = await sendViaResendWithAttachments(params.to, subject, text, html, [
+    { filename: `${cardData.employeeCode}-front.svg`, content: pair.frontSvg },
+    { filename: `${cardData.employeeCode}-back.svg`, content: pair.backSvg },
+  ]);
+
+  if (sent) return true;
+  return sendEmail(params.to, { subject, text, html });
+}
+
+export type InternshipCertificateEmailParams = {
+  to: string;
+  fullName: string;
+  certificateCode: string;
+  verifyUrl: string;
+  pdfBuffer: Buffer;
+};
+
+export async function sendInternshipCertificateEmail(
+  params: InternshipCertificateEmailParams,
+): Promise<boolean> {
+  const subject = `Your Ace Digital Internship Certificate — ${params.certificateCode}`;
+  const text = [
+    `Hi ${params.fullName},`,
+    "",
+    "Congratulations on completing your internship at Ace Digital.",
+    `Certificate: ${params.certificateCode}`,
+    `Verify: ${params.verifyUrl}`,
+    "",
+    "Your certificate PDF is attached.",
+    "",
+    "— Ace Digital HR",
+  ].join("\n");
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">
+      Hi ${escapeHtml(params.fullName)}, congratulations on completing your internship.
+    </p>
+    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Certificate: <strong>${escapeHtml(params.certificateCode)}</strong></p>
+    ${ctaButton(params.verifyUrl, "Verify certificate →")}
+    <p style="margin:16px 0 0;font-size:13px;color:#5C554E;">PDF attached for your records.</p>`;
+
+  const html = emailShell({
+    title: subject,
+    headline: "Internship Certificate",
+    subtitle: "Official completion document",
+    bodyHtml,
+  });
+
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return false;
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: DEFAULT_FROM,
+      to: params.to,
+      subject,
+      text,
+      html,
+      attachments: [
+        {
+          filename: `${params.certificateCode}.pdf`,
+          content: params.pdfBuffer,
+        },
+      ],
+    });
+    if (error) {
+      warn("Certificate email error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    warn("Certificate email failed:", err);
+    return false;
+  }
+}

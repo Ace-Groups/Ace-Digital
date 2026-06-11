@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import {
   useListEmployees,
   useCreateEmployee,
@@ -16,13 +17,14 @@ import {
 } from "@workspace/api-client-react";
 import { canAssignRole } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Briefcase, IdCard, Mail, Plus, Search, ShieldCheck } from "lucide-react";
+import { Briefcase, IdCard, Mail, Plus, Search, ShieldCheck, Users, UserCheck, Building2 } from "lucide-react";
+import { IdCardPreview } from "@/components/id-card/IdCardPreview";
+import { CertificateList } from "@/components/credentials/CertificateList";
 import { cn, formatCurrency, statusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -110,6 +112,76 @@ export default function EmployeesPage() {
       (e.employeeCode ?? "").toLowerCase().includes(q)
     );
   });
+
+  const totalEmployees = employees?.length ?? 0;
+  const activeEmployees = employees?.filter((e) => e.status !== "inactive").length ?? 0;
+  const teamCount = useMemo(
+    () => new Set(employees?.map((e) => e.teamName ?? "Unassigned")).size,
+    [employees],
+  );
+
+  const employeeMetrics = useMemo(
+    () => [
+      {
+        key: "total",
+        label: "Total employees",
+        value: totalEmployees,
+        icon: Users,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "active",
+        label: "Active",
+        value: activeEmployees,
+        icon: UserCheck,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        key: "teams",
+        label: "Teams",
+        value: teamCount,
+        icon: Building2,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+    ],
+    [totalEmployees, activeEmployees, teamCount],
+  );
+
+  const profileMetrics = useMemo(
+    () =>
+      meProfile
+        ? [
+            {
+              key: "role",
+              label: "Role",
+              value: meProfile.role?.replace(/_/g, " ") ?? "—",
+              icon: Briefcase,
+              iconBg: "bg-primary/10",
+              iconColor: "text-primary",
+            },
+            {
+              key: "team",
+              label: "Team",
+              value: meProfile.teamName ?? "No team",
+              icon: Building2,
+              iconBg: "bg-sky-500/10",
+              iconColor: "text-sky-600 dark:text-sky-400",
+            },
+            {
+              key: "status",
+              label: "Status",
+              value: meProfile.status ?? "active",
+              icon: UserCheck,
+              iconBg: "bg-emerald-500/10",
+              iconColor: "text-emerald-600 dark:text-emerald-400",
+            },
+          ]
+        : [],
+    [meProfile],
+  );
 
   async function handleCreate(data: EmployeeFormSubmitCreate) {
     const employeesKey = getListEmployeesQueryKey();
@@ -327,76 +399,98 @@ export default function EmployeesPage() {
 
   if (isSelfOnly) {
     return (
-      <AppLayout title="My Profile">
-        <SelfProfileView
-          profile={meProfile}
-          loading={meLoading}
-          onSavePhone={async (phone) => {
-            toast({ title: "Profile updated" });
-            void updateMyProfile
-              .mutateAsync({ data: { phone } })
-              .then(() => {
-                void queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
-              })
-              .catch(() => {
-                toast({ title: "Could not save profile", variant: "destructive" });
-              });
-          }}
-        />
+      <AppLayout title="">
+        <PageCanvasShell
+          eyebrow="People"
+          title="My Profile"
+          description="Your work profile, contact details, and account settings."
+          metrics={profileMetrics}
+          showCommandBar={false}
+        >
+          <CanvasPanel title="Profile" icon={IdCard}>
+            <SelfProfileView
+              profile={meProfile}
+              loading={meLoading}
+              onSavePhone={async (phone) => {
+                toast({ title: "Profile updated" });
+                void updateMyProfile
+                  .mutateAsync({ data: { phone } })
+                  .then(() => {
+                    void queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
+                  })
+                  .catch(() => {
+                    toast({ title: "Could not save profile", variant: "destructive" });
+                  });
+              }}
+            />
+          </CanvasPanel>
+        </PageCanvasShell>
       </AppLayout>
     );
   }
 
-  return (
-    <AppLayout title="Employees">
-      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            data-testid="input-search-employees"
-            placeholder="Search employees"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="min-h-11 pl-9"
-          />
-        </div>
-        {canWrite && (
-          <Button
-            data-testid="btn-add-employee"
-            className="hidden min-h-11 gap-2 sm:inline-flex"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus size={16} /> Add employee
-          </Button>
-        )}
-      </div>
+  const employeeSearch = (
+    <div className="relative w-full sm:max-w-xs">
+      <Search
+        size={16}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <Input
+        data-testid="input-search-employees"
+        placeholder="Search employees"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="min-h-11 pl-9"
+      />
+    </div>
+  );
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-44 rounded-xl" />
-            ))
-          : filtered?.map((emp) => (
-              <EmployeeCard
-                key={emp.id}
-                employee={emp}
-                canEdit={canWrite}
-                canDelete={canRemove && emp.id !== user?.id}
-                canResetPassword={canResetPassword && emp.id !== user?.id}
-                canViewSalaries={canViewSalaries}
-                onView={() => setViewing(emp)}
-                onEdit={() => {
-                  setEditing(emp);
-                  setEditOpen(true);
-                }}
-                onDelete={() => setDeleteTarget(emp)}
-                onResetPassword={() => setResetTarget(emp)}
-              />
-            ))}
-      </div>
+  return (
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="People"
+        title="Employees"
+        description="Directory of team members, roles, and HR profiles."
+        metrics={employeeMetrics}
+        actions={
+          canWrite ? (
+            <Button
+              data-testid="btn-add-employee"
+              size="sm"
+              className="hidden min-h-11 gap-2 sm:inline-flex"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus size={16} /> Add employee
+            </Button>
+          ) : undefined
+        }
+      >
+        <CanvasPanel title="Employee directory" icon={Users} headerRight={employeeSearch}>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-44 rounded-xl" />
+                ))
+              : filtered?.map((emp) => (
+                  <EmployeeCard
+                    key={emp.id}
+                    employee={emp}
+                    canEdit={canWrite}
+                    canDelete={canRemove && emp.id !== user?.id}
+                    canResetPassword={canResetPassword && emp.id !== user?.id}
+                    canViewSalaries={canViewSalaries}
+                    onView={() => setViewing(emp)}
+                    onEdit={() => {
+                      setEditing(emp);
+                      setEditOpen(true);
+                    }}
+                    onDelete={() => setDeleteTarget(emp)}
+                    onResetPassword={() => setResetTarget(emp)}
+                  />
+                ))}
+          </div>
+        </CanvasPanel>
+      </PageCanvasShell>
 
       {canWrite && (
         <Button
@@ -660,6 +754,20 @@ function EmployeeDetailDialog({
             <DetailItem label="Aadhaar copy" value={aadhaarDocumentName || "—"} />
             <DetailItem label="Notes" value={formatValue(employee.notes)} />
           </DetailSection>
+
+          <section className="rounded-xl border border-border/70 bg-card/70 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <IdCard size={16} className="text-primary" />
+              Digital ID card
+            </div>
+            <IdCardPreview employeeId={employee.id} canEmail={canEdit} />
+            <div className="mt-4">
+              <CertificateList
+                userId={employee.id}
+                verifySlug={(employee as { verifySlug?: string }).verifySlug}
+              />
+            </div>
+          </section>
         </div>
 
         <div className="sticky bottom-0 -mx-6 -mb-6 mt-2 flex justify-end gap-2 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
@@ -697,8 +805,7 @@ function SelfProfileView({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Card>
-        <CardContent className="space-y-4 p-6">
+      <div className="space-y-4">
           <div className="flex items-center gap-4">
             <UserAvatar
               avatarUrl={profile.avatarUrl}
@@ -746,9 +853,17 @@ function SelfProfileView({
                 Account settings
               </Button>
             </Link>
+            <Link href="/interns" className="flex-1">
+              <Button type="button" variant="outline" className="min-h-11 w-full">
+                Intern hub
+              </Button>
+            </Link>
           </div>
-        </CardContent>
-      </Card>
+          <div className="border-t border-border/60 pt-4">
+            <p className="mb-3 text-sm font-semibold">Your ID card</p>
+            <IdCardPreview employeeId={profile.id} />
+          </div>
+      </div>
     </div>
   );
 }

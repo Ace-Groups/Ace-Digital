@@ -49,6 +49,10 @@ const ChangePasswordPage = lazyWithReload(() => import("@/pages/change-password"
 const SettingsPage = lazyWithReload(() => import("@/pages/settings"));
 const NotificationsPage = lazyWithReload(() => import("@/pages/notifications"));
 const NotesPage = lazyWithReload(() => import("@/pages/notes"));
+const InternsPage = lazyWithReload(() => import("@/pages/interns"));
+const CredentialsPage = lazyWithReload(() => import("@/pages/credentials"));
+const VerifyProfilePage = lazyWithReload(() => import("@/pages/verify-profile"));
+const VerifyCertificateRedirectPage = lazyWithReload(() => import("@/pages/verify-certificate"));
 
 const AUTH_ONLY_PATHS = new Set(["/change-password", "/settings"]);
 
@@ -155,6 +159,8 @@ function AppRouter() {
     <Suspense fallback={<PageFallback />}>
       <Switch>
         <Route path="/login" component={LoginRoute} />
+        <Route path="/v/:slug" component={VerifyProfilePage} />
+        <Route path="/verify/cert/:code" component={VerifyCertificateRedirectPage} />
         <Route
           path="/change-password"
           component={() => <ProtectedRoute component={ChangePasswordPage} />}
@@ -173,6 +179,8 @@ function AppRouter() {
         <Route path="/teams" component={() => <ProtectedRoute component={TeamsPage} />} />
         <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
         <Route path="/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
+        <Route path="/interns" component={() => <ProtectedRoute component={InternsPage} />} />
+        <Route path="/credentials" component={() => <ProtectedRoute component={CredentialsPage} />} />
         <Route path="/finance" component={() => <ProtectedRoute component={FinancePage} />} />
         <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
         <Route path="/service" component={() => <ProtectedRoute component={ServiceDeskPage} />} />

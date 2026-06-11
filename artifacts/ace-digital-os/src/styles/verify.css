@@ -1,0 +1,126 @@
+.verify-page {
+  min-height: 100dvh;
+  background: linear-gradient(165deg, #faf6f0 0%, #e8e4ff 45%, #faf6f0 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+}
+
+.verify-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.verify-header img {
+  height: 28px;
+  width: auto;
+}
+
+.verify-header span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5c554e;
+}
+
+.verify-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid rgba(75, 78, 211, 0.12);
+  box-shadow: 0 20px 50px rgba(26, 26, 46, 0.08);
+  overflow: hidden;
+}
+
+.verify-photo {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e8e4ff;
+  background: #e8e4ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #4b4ed3;
+}
+
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.verify-badge--active {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.verify-badge--inactive {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.verify-nexme {
+  border-top: 1px solid #f0ebe3;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.verify-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.verify-actions a,
+.verify-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #dfd0bc;
+  background: #faf6f0;
+  color: #1a1a1a;
+}
+
+.verify-actions a.primary {
+  background: #4b4ed3;
+  color: #fff;
+  border-color: #4b4ed3;
+}
+
+.verify-cert-panel {
+  border-top: 1px solid #e8e4ff;
+  padding: 20px 24px 24px;
+  text-align: center;
+}
+
+.verify-cert-panel--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #b91c1c;
+}

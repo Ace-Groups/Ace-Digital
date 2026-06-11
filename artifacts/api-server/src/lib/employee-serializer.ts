@@ -46,6 +46,15 @@ export async function employeeWithProfile(user: User, ctx: AccessContext) {
     bloodGroup: user.bloodGroup ?? null,
     aadhaarDocument: user.aadhaarDocument ?? null,
     notes: user.notes ?? null,
+    verifySlug: user.verifySlug ?? null,
+    verifySlugEnabled: user.verifySlugEnabled ?? true,
+    publicProfileEnabled: user.publicProfileEnabled ?? false,
+    linkedinUrl: user.linkedinUrl ?? null,
+    portfolioUrl: user.portfolioUrl ?? null,
+    publicPhone: user.publicPhone ?? null,
+    publicEmail: user.publicEmail ?? null,
+    officeAddress: user.officeAddress ?? null,
+    publicBio: user.publicBio ?? null,
     createdAt: user.createdAt.toISOString(),
   };
 

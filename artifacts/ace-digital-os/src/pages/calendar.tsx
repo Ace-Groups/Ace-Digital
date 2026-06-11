@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -222,6 +223,32 @@ export default function CalendarPage() {
   });
 
   const monthLabel = cursor.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const now = Date.now();
+  const periodEventCount = feed?.length ?? 0;
+  const upcomingCount =
+    feed?.filter((item) => new Date(item.startAt).getTime() >= now).length ?? 0;
+
+  const calendarMetrics = useMemo(
+    () => [
+      {
+        key: "period",
+        label: "Events this period",
+        value: periodEventCount,
+        icon: CalendarDays,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "upcoming",
+        label: "Upcoming",
+        value: upcomingCount,
+        icon: Clock,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+    ],
+    [periodEventCount, upcomingCount],
+  );
 
   const headerLabel =
     view === "week"
@@ -351,111 +378,120 @@ export default function CalendarPage() {
     window.history.replaceState({}, "", url.pathname + url.search);
   }, [feed, isLoading]);
 
-  return (
-    <AppLayout title="Calendar">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => shiftPeriod(-1)}>
-              <ChevronLeft size={18} />
-            </Button>
-            <h2 className="min-w-[10rem] text-center text-lg font-semibold">{headerLabel}</h2>
-            <Button variant="outline" size="icon" onClick={() => shiftPeriod(1)}>
-              <ChevronRight size={18} />
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {canScheduleOthers && employees?.length ? (
-              <select
-                className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                value={viewUserId ?? user?.id ?? ""}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  setViewUserId(id === user?.id ? undefined : id);
-                }}
-              >
-                <option value={user?.id}>{user?.fullName} (me)</option>
-                {employees
-                  ?.filter((e) => e.id !== user?.id)
-                  .map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.fullName}
-                    </option>
-                  ))}
-              </select>
-            ) : null}
-            <div className="flex rounded-lg border border-border p-0.5">
-              {(["month", "week", "agenda"] as ViewMode[]).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setView(v)}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm capitalize",
-                    view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-            {can("calendar:write") && (
-              <Button onClick={openNew}>
-                <Plus size={18} className="mr-1" />
-                New
-              </Button>
+  const periodNav = (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" onClick={() => shiftPeriod(-1)}>
+          <ChevronLeft size={18} />
+        </Button>
+        <span className="min-w-[10rem] text-center text-sm font-semibold">{headerLabel}</span>
+        <Button variant="outline" size="icon" onClick={() => shiftPeriod(1)}>
+          <ChevronRight size={18} />
+        </Button>
+      </div>
+      {canScheduleOthers && employees?.length ? (
+        <select
+          className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+          value={viewUserId ?? user?.id ?? ""}
+          onChange={(e) => {
+            const id = Number(e.target.value);
+            setViewUserId(id === user?.id ? undefined : id);
+          }}
+        >
+          <option value={user?.id}>{user?.fullName} (me)</option>
+          {employees
+            ?.filter((e) => e.id !== user?.id)
+            .map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.fullName}
+              </option>
+            ))}
+        </select>
+      ) : null}
+      <div className="flex gap-1">
+        {(["month", "week", "agenda"] as ViewMode[]).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={cn(
+              "canvas-filter-pill capitalize",
+              view === v ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
             )}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Schedule"
+        title="Calendar"
+        description="Events, tasks, and team availability in one view."
+        metrics={calendarMetrics}
+        actions={
+          can("calendar:write") ? (
+            <Button size="sm" className="gap-2" onClick={openNew}>
+              <Plus size={16} />
+              New event
+            </Button>
+          ) : undefined
+        }
+      >
+        <CanvasPanel title="Schedule" icon={CalendarDays} headerRight={periodNav}>
+          <div className="mb-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            {Object.entries(KIND_COLORS).map(([kind, cls]) => (
+              <span key={kind} className="flex items-center gap-1.5">
+                <span className={cn("h-2 w-2 rounded-full", cls)} />
+                {kind.replace("_", " ")}
+              </span>
+            ))}
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          {Object.entries(KIND_COLORS).map(([kind, cls]) => (
-            <span key={kind} className="flex items-center gap-1.5">
-              <span className={cn("h-2 w-2 rounded-full", cls)} />
-              {kind.replace("_", " ")}
-            </span>
-          ))}
-        </div>
-
-        {isLoading ? (
-          <Skeleton className="h-64 w-full rounded-xl" />
-        ) : view === "month" ? (
-          <CalendarMonthView
-            month={cursor}
-            items={feed ?? []}
-            selectedDate={selectedDate}
-            onSelectDate={(d) => {
-              setSelectedDate(d);
-              setView("agenda");
-            }}
-          />
-        ) : view === "week" ? (
-          <CalendarWeekView
-            weekStart={selectedDate}
-            items={feed ?? []}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            onSelectItem={(it) => void openItem(it)}
-          />
-        ) : null}
-
-        {(view === "agenda" || (view === "month" && !isLoading)) && (
-          <div className="rounded-xl border border-border bg-card/40 p-3">
-            <p className="mb-3 text-sm font-medium">
-              {selectedDate.toLocaleDateString("en-IN", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-            <CalendarAgendaView
+          {isLoading ? (
+            <Skeleton className="h-64 w-full rounded-xl" />
+          ) : view === "month" ? (
+            <CalendarMonthView
+              month={cursor}
               items={feed ?? []}
               selectedDate={selectedDate}
+              onSelectDate={(d) => {
+                setSelectedDate(d);
+                setView("agenda");
+              }}
+            />
+          ) : view === "week" ? (
+            <CalendarWeekView
+              weekStart={selectedDate}
+              items={feed ?? []}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
               onSelectItem={(it) => void openItem(it)}
             />
-          </div>
-        )}
-      </div>
+          ) : null}
+
+          {(view === "agenda" || (view === "month" && !isLoading)) && (
+            <div className="mt-4 rounded-xl border border-border bg-card/40 p-3">
+              <p className="mb-3 text-sm font-medium">
+                {selectedDate.toLocaleDateString("en-IN", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+              <CalendarAgendaView
+                items={feed ?? []}
+                selectedDate={selectedDate}
+                onSelectItem={(it) => void openItem(it)}
+              />
+            </div>
+          )}
+        </CanvasPanel>
+      </PageCanvasShell>
 
       {user && (
         <CalendarEventSheet

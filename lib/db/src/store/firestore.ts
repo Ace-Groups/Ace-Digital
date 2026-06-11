@@ -1976,6 +1976,15 @@ function mapUser(data: FirebaseFirestore.DocumentData, id: string): User {
     bloodGroup: (data.bloodGroup as string) ?? null,
     aadhaarDocument: (data.aadhaarDocument as string) ?? null,
     notes: (data.notes as string) ?? null,
+    verifySlug: (data.verifySlug as string) ?? null,
+    verifySlugEnabled: data.verifySlugEnabled !== false,
+    publicProfileEnabled: data.publicProfileEnabled === true,
+    linkedinUrl: (data.linkedinUrl as string) ?? null,
+    portfolioUrl: (data.portfolioUrl as string) ?? null,
+    publicPhone: (data.publicPhone as string) ?? null,
+    publicEmail: (data.publicEmail as string) ?? null,
+    officeAddress: (data.officeAddress as string) ?? null,
+    publicBio: (data.publicBio as string) ?? null,
     createdAt: toDate(data.createdAt),
   };
 }

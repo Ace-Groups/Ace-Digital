@@ -48,6 +48,13 @@ export const PERMISSIONS = [
   "teams:write",
   "teams:delete",
   "users:register",
+  "credentials:read",
+  "credentials:manage",
+  "credentials:sign_self",
+  "certificates:issue",
+  "certificates:read_self",
+  "verify:manage_kiosk",
+  "verify:edit_public_card",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -55,6 +62,10 @@ export type Permission = (typeof PERMISSIONS)[number];
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   super_admin: PERMISSIONS,
   management: [
+    "credentials:read",
+    "credentials:sign_self",
+    "verify:manage_kiosk",
+    "verify:edit_public_card",
     "dashboard:view",
     "projects:read",
     "projects:write",
@@ -99,6 +110,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "calendar:read_org",
   ],
   finance: [
+    "credentials:sign_self",
+    "verify:edit_public_card",
     "dashboard:view",
     "projects:read",
     "teams:read",
@@ -129,6 +142,11 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "calendar:write",
   ],
   hr: [
+    "credentials:read",
+    "credentials:manage",
+    "credentials:sign_self",
+    "certificates:issue",
+    "verify:edit_public_card",
     "dashboard:view",
     "projects:read",
     "teams:read",
@@ -202,6 +220,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "calendar:read_team",
   ],
   employee: [
+    "certificates:read_self",
+    "verify:edit_public_card",
     "dashboard:view",
     "projects:read",
     "teams:read",

@@ -3,7 +3,7 @@ import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
   Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity, CalendarDays,
-  LogOut, ChevronLeft, ChevronRight, UserCircle, Settings, StickyNote, Users2
+  LogOut, ChevronLeft, ChevronRight, UserCircle, Settings, StickyNote, Users2, GraduationCap, ShieldCheck,
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,8 @@ const NAV_ICONS = {
   calendar: CalendarDays,
   activity: Activity,
   notes: StickyNote,
+  interns: GraduationCap,
+  credentials: ShieldCheck,
 } as const;
 
 export function Sidebar() {
@@ -52,7 +54,12 @@ export function Sidebar() {
   const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
     ...n,
     icon: NAV_ICONS[n.route],
-    label: n.route === "employees" && user?.role === "employee" ? "My Profile" : n.label,
+    label:
+      n.route === "employees" && user?.role === "employee"
+        ? "My Profile"
+        : n.route === "interns" && user?.role === "employee"
+          ? "Intern Hub"
+          : n.label,
   }));
 
   function handleProfileClose() {

@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveSafeHref } from "@/lib/safe-nav";
 import {
@@ -12,7 +14,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Inbox } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { patchList, setList, snapshotList } from "@/lib/optimistic";
@@ -32,6 +34,29 @@ export default function NotificationsPage() {
   const markAllRead = useMarkAllNotificationsRead();
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
+  const readCount = (notifications?.length ?? 0) - unreadCount;
+
+  const metrics = useMemo(
+    () => [
+      {
+        key: "unread",
+        label: "Unread",
+        value: unreadCount,
+        icon: Bell,
+        iconBg: "bg-red-500/10",
+        iconColor: "text-red-600 dark:text-red-400",
+      },
+      {
+        key: "read",
+        label: "Read",
+        value: readCount,
+        icon: Inbox,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+    ],
+    [unreadCount, readCount],
+  );
 
   async function handleMarkAll() {
     try {
@@ -67,64 +92,73 @@ export default function NotificationsPage() {
   }
 
   return (
-    <AppLayout title="Notifications">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up"}
-        </p>
-        {unreadCount > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => void handleMarkAll()}
-          >
-            <CheckCheck size={16} />
-            Mark all read
-          </Button>
-        )}
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-xl" />
-          ))}
-        </div>
-      ) : !notifications?.length ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
-          <Bell size={40} className="opacity-30" />
-          <p>No notifications yet</p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {notifications.map((n) => (
-            <li key={n.id}>
-              <button
-                type="button"
-                onClick={() => void handleTap(n.id, n.link, n.read)}
-                className={cn(
-                  "w-full rounded-xl border px-4 py-3 text-left transition-colors hover:bg-muted/50",
-                  n.read ? "border-border/60 bg-card/30" : "border-primary/20 bg-primary/5",
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className={cn("text-sm font-medium", !n.read && "text-foreground")}>
-                    {n.title}
-                  </p>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatRelativeTime(n.createdAt)}
-                  </span>
-                </div>
-                {n.body ? (
-                  <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{n.body}</p>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Inbox"
+        title="Notifications"
+        description={
+          unreadCount > 0
+            ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"} waiting for you.`
+            : "You're all caught up — no unread notifications."
+        }
+        metrics={metrics}
+        actions={
+          unreadCount > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => void handleMarkAll()}
+            >
+              <CheckCheck size={16} />
+              Mark all read
+            </Button>
+          ) : undefined
+        }
+      >
+        <CanvasPanel title="All notifications" icon={Bell} noPadding>
+          {isLoading ? (
+            <div className="space-y-2 p-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : !notifications?.length ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
+              <Bell size={40} className="opacity-30" />
+              <p>No notifications yet</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {notifications.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => void handleTap(n.id, n.link, n.read)}
+                    className={cn(
+                      "w-full px-5 py-4 text-left transition-colors hover:bg-muted/50",
+                      n.read ? "bg-transparent" : "bg-primary/5",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={cn("text-sm font-medium", !n.read && "text-foreground")}>
+                        {n.title}
+                      </p>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatRelativeTime(n.createdAt)}
+                      </span>
+                    </div>
+                    {n.body ? (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{n.body}</p>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CanvasPanel>
+      </PageCanvasShell>
     </AppLayout>
   );
 }

@@ -8,6 +8,10 @@ import tasksRouter from "./tasks";
 import teamsRouter from "./teams";
 import jobTitlesRouter from "./job-titles";
 import employeesRouter from "./employees";
+import internshipsRouter from "./internships";
+import idCardsRouter from "./id-cards";
+import credentialsRouter from "./credentials";
+import publicVerifyRouter from "./public-verify";
 import financeRouter from "./finance";
 import clientsRouter from "./clients";
 import serviceTicketsRouter from "./service-tickets";
@@ -22,6 +26,7 @@ import aiRouter from "./ai";
 
 const router: IRouter = Router();
 
+router.use(publicVerifyRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(meRouter);
@@ -31,6 +36,9 @@ router.use(tasksRouter);
 router.use(teamsRouter);
 router.use(jobTitlesRouter);
 router.use(employeesRouter);
+router.use(internshipsRouter);
+router.use(idCardsRouter);
+router.use(credentialsRouter);
 router.use(financeRouter);
 router.use(clientsRouter);
 router.use(serviceTicketsRouter);

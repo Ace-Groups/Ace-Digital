@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { CreateServiceTicketSheet } from "@/components/service/CreateServiceTicketSheet";
 import {
   getListServiceTicketsQueryKey,
@@ -18,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Ticket, AlertCircle, Clock } from "lucide-react";
+import { Plus, Ticket, AlertCircle, Clock, CircleDot, Loader2 } from "lucide-react";
 import { cn, formatRelativeTime, priorityColor, statusColor } from "@/lib/utils";
 
 const ALL_STATUS = "__all__";
@@ -68,6 +69,7 @@ export default function ServiceDeskPage() {
   const { data: ticketsRaw, isLoading } = useListServiceTickets(apiListParams, {
     query: { queryKey: getListServiceTicketsQueryKey(apiListParams) },
   });
+  const { data: allTickets } = useListServiceTickets({});
 
   const tickets = useMemo(() => {
     if (assigneeFilter !== NO_ASSIGNEE) return ticketsRaw;
@@ -81,83 +83,118 @@ export default function ServiceDeskPage() {
     },
   });
 
+  const openCount = allTickets?.filter((t) => t.status === "OPEN").length ?? 0;
+  const inProgressCount = allTickets?.filter((t) => t.status === "IN_PROGRESS").length ?? 0;
+  const overdueCount = allTickets?.filter((t) => t.followUpOverdue).length ?? 0;
+
+  const metrics = useMemo(
+    () => [
+      {
+        key: "open",
+        label: "Open",
+        value: openCount,
+        icon: CircleDot,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+      {
+        key: "in-progress",
+        label: "In progress",
+        value: inProgressCount,
+        icon: Loader2,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "overdue",
+        label: "Overdue follow-ups",
+        value: overdueCount,
+        icon: AlertCircle,
+        iconBg: "bg-red-500/10",
+        iconColor: "text-red-600 dark:text-red-400",
+      },
+    ],
+    [openCount, inProgressCount, overdueCount],
+  );
+
   return (
-    <AppLayout title="Service Desk">
-      <div className="page-stack">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              Service Desk
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Client tickets and follow-up timeline
-            </p>
-          </div>
-          {canWrite && (
-            <Button className="min-h-11 shrink-0" onClick={() => setCreateOpen(true)}>
-              <Plus size={18} className="mr-2" />
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Support"
+        title="Service Desk"
+        description="Client tickets and follow-up timeline."
+        metrics={metrics}
+        actions={
+          canWrite ? (
+            <Button size="sm" className="min-h-9 gap-2" onClick={() => setCreateOpen(true)}>
+              <Plus size={16} />
               New ticket
             </Button>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex gap-1 overflow-x-auto pb-1 touch-scroll">
-            {STATUS_TABS.map((tab) => (
-              <Button
-                key={tab.value}
-                type="button"
-                size="sm"
-                variant={statusFilter === tab.value ? "default" : "outline"}
-                className="shrink-0 min-h-9"
-                onClick={() => setStatusFilter(tab.value)}
-              >
-                {tab.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-1 flex-wrap gap-2">
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="min-h-10 w-full sm:w-[11rem]">
-                <SelectValue placeholder="All clients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
-                {(clients ?? []).map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.companyName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {canWrite && (
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          ) : undefined
+        }
+      >
+        <CanvasPanel title="Tickets" icon={Ticket}>
+          <div className="mb-4 flex flex-col gap-3">
+            <div className="flex gap-1 overflow-x-auto pb-1 touch-scroll">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.value)}
+                  className={cn(
+                    "canvas-filter-pill shrink-0",
+                    statusFilter === tab.value
+                      ? "canvas-filter-pill--active"
+                      : "canvas-filter-pill--idle",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-1 flex-wrap gap-2">
+              <Select value={clientFilter} onValueChange={setClientFilter}>
                 <SelectTrigger className="min-h-10 w-full sm:w-[11rem]">
-                  <SelectValue placeholder="All assignees" />
+                  <SelectValue placeholder="All clients" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_ASSIGNEES}>All assignees</SelectItem>
-                  <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
-                  {(assignees ?? []).map((e) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.fullName}
+                  <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
+                  {(clients ?? []).map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.companyName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant={overdueOnly ? "default" : "outline"}
-              className={cn("min-h-10 gap-1.5", overdueOnly && "bg-destructive hover:bg-destructive/90")}
-              onClick={() => setOverdueOnly((v) => !v)}
-            >
-              <AlertCircle size={14} />
-              Overdue follow-ups
-            </Button>
+              {canWrite && (
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="min-h-10 w-full sm:w-[11rem]">
+                    <SelectValue placeholder="All assignees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_ASSIGNEES}>All assignees</SelectItem>
+                    <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
+                    {(assignees ?? []).map((e) => (
+                      <SelectItem key={e.id} value={String(e.id)}>
+                        {e.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <button
+                type="button"
+                onClick={() => setOverdueOnly((v) => !v)}
+                className={cn(
+                  "canvas-filter-pill inline-flex items-center gap-1.5",
+                  overdueOnly ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
+                )}
+              >
+                <AlertCircle size={14} />
+                Overdue follow-ups
+              </button>
+            </div>
           </div>
-        </div>
 
         {isLoading ? (
           <div className="space-y-3">
@@ -227,7 +264,8 @@ export default function ServiceDeskPage() {
             ))}
           </ul>
         )}
-      </div>
+        </CanvasPanel>
+      </PageCanvasShell>
 
       <CreateServiceTicketSheet open={createOpen} onOpenChange={setCreateOpen} />
     </AppLayout>

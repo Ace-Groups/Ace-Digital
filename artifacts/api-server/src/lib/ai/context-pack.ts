@@ -15,6 +15,33 @@ export function formatPageContextLabel(ctx: PageContext | null | undefined): str
   return parts.length ? parts.join(" · ") : null;
 }
 
+/** Add silent hints for the agent based on page context (not shown in chat UI). */
+export function buildAgentPrompt(userMessage: string, ctx: PageContext | null | undefined): string {
+  const hints: string[] = [];
+
+  if (ctx?.noteId != null) {
+    const id = ctx.noteId;
+    const mentionsNote =
+      userMessage.includes(`#${id}`) ||
+      userMessage.includes(`note ${id}`) ||
+      userMessage.includes(`noteId ${id}`);
+    if (!mentionsNote) {
+      hints.push(
+        `User is viewing Note #${id}. Call get_note with noteId "${id}" for questions about "this note" — never ask for the ID.`,
+      );
+    }
+  }
+  if (ctx?.projectId != null) {
+    hints.push(`User is on project #${ctx.projectId}.`);
+  }
+  if (ctx?.channelId != null) {
+    hints.push(`User is in channel #${ctx.channelId}.`);
+  }
+
+  if (!hints.length) return userMessage;
+  return `${userMessage}\n\n[Agent context: ${hints.join(" ")}]`;
+}
+
 export function parsePageContextFromRoute(
   route: string,
   search?: string,

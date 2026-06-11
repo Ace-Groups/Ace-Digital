@@ -37,7 +37,9 @@ export type NavRoute =
   | "channels"
   | "activity"
   | "notes"
-  | "teams";
+  | "teams"
+  | "interns"
+  | "credentials";
 
 export type DashboardWidget =
   | "activeProjects"

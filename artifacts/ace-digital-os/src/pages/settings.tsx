@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import {
   useChangePassword,
   useUpdateMyProfile,
@@ -11,7 +12,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { setLoginNotice } from "@/lib/login-notice";
 import { PasswordChangeForm } from "@/components/account/PasswordChangeForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,9 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Bell, Camera, KeyRound, ShieldCheck, Check, X } from "lucide-react";
+import { Bell, Camera, KeyRound, ShieldCheck, Check, X, User, Palette, BadgeCheck } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PublicCardSettings } from "@/components/credentials/PublicCardSettings";
 import {
   enableWebPushNotifications,
   getNotificationPermission,
@@ -158,6 +160,7 @@ function loadNotifPrefs(): NotificationPrefs {
 
 export default function SettingsPage() {
   const { user, refreshUser, logout } = useAuth();
+  const { can } = usePermissions();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -226,14 +229,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppLayout title="Settings">
-      <div className="mx-auto max-w-2xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>Your name, contact details, and avatar</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Workspace"
+        title="Settings"
+        description="Manage your profile, security, notifications, and appearance."
+      >
+      <div className="mx-auto max-w-2xl space-y-4">
+        <CanvasPanel title="Account" icon={User}>
+          <p className="mb-5 text-sm text-muted-foreground">Your name, contact details, and avatar</p>
+          <div className="space-y-5">
             <div className="flex items-center gap-4">
               <UserAvatar
                 avatarUrl={user?.avatarUrl}
@@ -281,22 +286,25 @@ export default function SettingsPage() {
             >
               {updateProfile.isPending ? "Saving…" : "Save profile"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </CanvasPanel>
+
+        {can("verify:edit_public_card") && (
+          <CanvasPanel title="Ace Verify · Public card" icon={BadgeCheck}>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Control what clients see when they scan the QR on your ID card.
+            </p>
+            <PublicCardSettings />
+          </CanvasPanel>
+        )}
 
         {user?.role && ROLE_CAPABILITIES[user.role] && (
-          <Card className="border-border/80">
-            <CardHeader>
-              <div className="mb-2 flex size-10 items-center justify-center rounded-lg border border-border/80 bg-primary/10">
-                <ShieldCheck className="size-5 text-primary" aria-hidden />
-              </div>
-              <CardTitle>Role & Privileges</CardTitle>
-              <CardDescription>
-                Your assigned role is <span className="font-semibold text-foreground">{ROLE_CAPABILITIES[user.role].title}</span>.
-                Here is a summary of what you can and cannot do:
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CanvasPanel title="Role & Privileges" icon={ShieldCheck}>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Your assigned role is <span className="font-semibold text-foreground">{ROLE_CAPABILITIES[user.role].title}</span>.
+              Here is a summary of what you can and cannot do:
+            </p>
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground italic">
                 "{ROLE_CAPABILITIES[user.role].description}"
               </p>
@@ -326,21 +334,14 @@ export default function SettingsPage() {
                   </ul>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </CanvasPanel>
         )}
 
-        <Card className="border-border/80">
-          <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg border border-border/80 bg-primary/10">
-              <KeyRound className="size-4 text-primary" aria-hidden />
-            </div>
-            <CardTitle>Password</CardTitle>
-            <CardDescription>
-              After updating, you will be signed out and asked to sign in with your new password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <CanvasPanel title="Password" icon={KeyRound}>
+          <p className="mb-4 text-sm text-muted-foreground">
+            After updating, you will be signed out and asked to sign in with your new password.
+          </p>
             <PasswordChangeForm
               showCurrentPassword
               loading={changePassword.isPending}
@@ -348,17 +349,13 @@ export default function SettingsPage() {
               onValidationError={(message) => toast({ title: message, variant: "destructive" })}
               onSubmit={handleChangePassword}
             />
-          </CardContent>
-        </Card>
+        </CanvasPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Push and email preferences for this device
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <CanvasPanel title="Notifications" icon={Bell}>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Push and email preferences for this device
+          </p>
+          <div className="space-y-4">
             {pushAvailable && (
               <>
                 <div className="flex min-h-11 items-center justify-between gap-4">
@@ -445,22 +442,20 @@ export default function SettingsPage() {
                 View in-app notifications
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </CanvasPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-            <CardDescription>Theme for Ace-Digital on this device</CardDescription>
-          </CardHeader>
-          <CardContent className="flex min-h-11 items-center justify-between gap-4">
+        <CanvasPanel title="Appearance" icon={Palette}>
+          <p className="mb-4 text-sm text-muted-foreground">Theme for Ace-Digital on this device</p>
+          <div className="flex min-h-11 items-center justify-between gap-4">
             <p className="text-sm capitalize text-muted-foreground">
               Current: {resolvedTheme === "dark" ? "Dark" : "Light"}
             </p>
             <ThemeToggle className="h-11 w-11" />
-          </CardContent>
-        </Card>
+          </div>
+        </CanvasPanel>
       </div>
+      </PageCanvasShell>
 
       <ProfileDialog open={avatarOpen} onClose={() => setAvatarOpen(false)} />
     </AppLayout>

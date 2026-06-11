@@ -17,11 +17,16 @@ type NoteAiActionsProps = {
   noteId: number;
 };
 
-const ASK_ACE_CHIPS = [
+function askAcePrompt(noteId: number, intent: string): string {
+  return `${intent} (Note #${noteId})`;
+}
+
+const ASK_ACE_INTENTS = [
   "Summarize this note and list any action items.",
   "What are the key decisions in this note?",
   "Draft a follow-up message based on this note.",
-];
+  "Extract a table of tasks or deadlines from this note.",
+] as const;
 
 export function NoteAiActions({ noteId }: NoteAiActionsProps) {
   const { toast } = useToast();
@@ -47,9 +52,9 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
     enrich.mutate({ id: noteId });
   }
 
-  function askAce(prompt: string) {
+  function askAce(intent: string) {
     hapticLight();
-    openWithPrompt(prompt);
+    openWithPrompt(askAcePrompt(noteId, intent));
   }
 
   return (
@@ -76,7 +81,7 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
         variant="ghost"
         size="sm"
         className="h-9 px-2 sm:px-3"
-        onClick={() => askAce(ASK_ACE_CHIPS[0])}
+        onClick={() => askAce(ASK_ACE_INTENTS[0])}
         title="Ask Ace about this note"
       >
         <AceAiAvatar size="xs" className="sm:mr-1.5" />
@@ -108,17 +113,17 @@ export function NoteAiActions({ noteId }: NoteAiActionsProps) {
           <div className="flex flex-col gap-1.5 border-t border-border/50 pt-3">
             <span className="text-xs font-medium text-muted-foreground">Ask Ace</span>
             <div className="flex flex-wrap gap-1.5">
-              {ASK_ACE_CHIPS.map((chip) => (
+              {ASK_ACE_INTENTS.map((intent) => (
                 <button
-                  key={chip}
+                  key={intent}
                   type="button"
                   onClick={() => {
                     setSummaryOpen(false);
-                    askAce(chip);
+                    askAce(intent);
                   }}
                   className="v2-chip hover:bg-primary/10 hover:text-primary"
                 >
-                  {chip}
+                  {intent}
                 </button>
               ))}
             </div>

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -19,7 +19,6 @@ import {
 } from "@workspace/api-client-react";
 import { canDeleteTask, canEditTask, canToggleTaskCompletion } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -515,6 +514,43 @@ export default function TasksPage() {
     return { total: source.length, done, mine, common };
   }, [visibleTasks, user]);
 
+  const taskMetrics = useMemo(
+    () => [
+      {
+        key: "total",
+        label: "Visible tasks",
+        value: stats.total,
+        icon: Layers3,
+        href: "/tasks",
+      },
+      {
+        key: "done",
+        label: "Done",
+        value: stats.done,
+        icon: CheckCircle2,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        key: "mine",
+        label: "Assigned to me",
+        value: stats.mine,
+        icon: UserPlus2,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "common",
+        label: "Unassigned",
+        value: stats.common,
+        icon: Users2,
+        iconBg: "bg-amber-500/10",
+        iconColor: "text-amber-600 dark:text-amber-400",
+      },
+    ],
+    [stats],
+  );
+
   const createForm = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4 sm:space-y-4">
@@ -692,115 +728,77 @@ export default function TasksPage() {
     </Form>
   );
 
-  return (
-    <AppLayout title="Tasks">
-      <StaggerList className="page-stack">
-      <StaggerItem>
-        <div className={cn("grid gap-3", isMobile ? "mobile-stat-scroll" : "grid-cols-2 sm:grid-cols-4")}>
-          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Visible Tasks</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.total}</p>
-          </div>
-          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 size={13} /> Done</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.done}</p>
-          </div>
-          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><UserPlus2 size={13} /> Assigned to me</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.mine}</p>
-          </div>
-          <div className={cn("rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm", isMobile && "min-w-[10.5rem]")}>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users2 size={13} /> Common</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{stats.common}</p>
-          </div>
-        </div>
-      </StaggerItem>
-
-      <StaggerItem>
-      {projectIdFilter && filteredProject && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5 text-sm">
-          <span>
-            Showing tasks for <strong>{filteredProject.name}</strong>
-          </span>
-          <Link href="/tasks">
-            <button type="button" className="text-primary text-xs font-medium hover:underline">
-              Clear filter
-            </button>
-          </Link>
-        </div>
-      )}
-      </StaggerItem>
-      <StaggerItem>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <Filter size={14} className="shrink-0 text-muted-foreground" />
-          <div className="flex gap-1">
-            {["all", ...STATUSES].map((s) => (
-              <button
-                key={s}
-                type="button"
-                data-testid={`filter-${s.toLowerCase()}`}
-                onClick={() => setFilterStatus(s)}
-                className={cn(
-                  "min-h-9 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                  filterStatus === s
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
-                )}
-              >
-                {s === "all" ? "All" : s.replace("_", " ")}
-              </button>
-            ))}
-          </div>
-        </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
-          {OWNERSHIP_FILTERS.map((s) => (
+  const taskFilters = (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Filter size={14} className="shrink-0 text-muted-foreground" />
+        <div className="flex gap-1">
+          {["all", ...STATUSES].map((s) => (
             <button
               key={s}
               type="button"
-              data-testid={`ownership-${s}`}
-              onClick={() => setOwnershipFilter(s)}
+              data-testid={`filter-${s.toLowerCase()}`}
+              onClick={() => setFilterStatus(s)}
               className={cn(
-                "min-h-9 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                ownershipFilter === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+                "canvas-filter-pill",
+                filterStatus === s ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
               )}
             >
-              {s === "all" ? "All tasks" : s === "mine" ? "Assigned to me" : "Common"}
+              {s === "all" ? "All" : s.replace("_", " ")}
             </button>
           ))}
         </div>
-        <Button
-          data-testid="btn-create-task"
-          className="hidden shrink-0 gap-2 sm:inline-flex"
-          onClick={() => setOpen(true)}
-        >
-          <Plus size={16} /> New Task
-        </Button>
-        <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
-          {createForm}
-        </ResponsiveSheet>
-        <ResponsiveSheet
-          open={editOpen}
-          onOpenChange={(v) => {
-            setEditOpen(v);
-            if (!v) setEditingTask(null);
-          }}
-          title="Edit Task"
-        >
-          {editFormContent}
-        </ResponsiveSheet>
-        </div>
       </div>
-      </StaggerItem>
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {OWNERSHIP_FILTERS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            data-testid={`ownership-${s}`}
+            onClick={() => setOwnershipFilter(s)}
+            className={cn(
+              "canvas-filter-pill",
+              ownershipFilter === s ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
+            )}
+          >
+            {s === "all" ? "All tasks" : s === "mine" ? "Assigned to me" : "Common"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-      <StaggerItem>
-      <Card>
-        <CardContent className="p-0">
+  return (
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Work"
+        title="Tasks"
+        description="Track assignments, status, and due dates across your workspace."
+        metrics={taskMetrics}
+        actions={
+          <Button
+            data-testid="btn-create-task"
+            className="hidden shrink-0 gap-2 sm:inline-flex"
+            onClick={() => setOpen(true)}
+          >
+            <Plus size={16} /> New Task
+          </Button>
+        }
+      >
+        {projectIdFilter && filteredProject && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5 text-sm">
+            <span>
+              Showing tasks for <strong>{filteredProject.name}</strong>
+            </span>
+            <Link href="/tasks">
+              <button type="button" className="text-primary text-xs font-medium hover:underline">
+                Clear filter
+              </button>
+            </Link>
+          </div>
+        )}
+
+        <CanvasPanel title="Task list" icon={Layers3} headerRight={taskFilters} noPadding>
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
@@ -924,10 +922,22 @@ export default function TasksPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-      </StaggerItem>
-      </StaggerList>
+        </CanvasPanel>
+      </PageCanvasShell>
+
+      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Create Task">
+        {createForm}
+      </ResponsiveSheet>
+      <ResponsiveSheet
+        open={editOpen}
+        onOpenChange={(v) => {
+          setEditOpen(v);
+          if (!v) setEditingTask(null);
+        }}
+        title="Edit Task"
+      >
+        {editFormContent}
+      </ResponsiveSheet>
 
       <ConfirmDialog
         open={taskToDelete !== null}

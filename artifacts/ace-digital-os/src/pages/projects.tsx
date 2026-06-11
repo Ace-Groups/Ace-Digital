@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { ProjectTimelineView } from "@/components/projects/ProjectTimelineView";
-import { StaggerItem, StaggerList } from "@/components/design";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { ProjectDetailDialog } from "@/components/projects/ProjectDetailDialog";
 import {
@@ -204,12 +204,69 @@ export default function ProjectsPage() {
     return acc;
   }, {} as Record<string, typeof projects>);
   const totalProjects = projects?.length ?? 0;
-  const avgProgress = useMemo(() => {
-    if (!projects || projects.length === 0) return 0;
-    return Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length);
-  }, [projects]);
   const doneProjects = byStatus.DONE?.length ?? 0;
   const inFlightProjects = (byStatus.IN_PROGRESS?.length ?? 0) + (byStatus.REVIEW?.length ?? 0);
+  const completionPct =
+    totalProjects === 0 ? "0%" : `${Math.round((doneProjects / totalProjects) * 100)}%`;
+
+  const projectMetrics = useMemo(
+    () => [
+      {
+        key: "total",
+        label: "Total projects",
+        value: totalProjects,
+        icon: Layers3,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "pipeline",
+        label: "Active pipeline",
+        value: inFlightProjects,
+        icon: Target,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+      {
+        key: "completion",
+        label: "Completion",
+        value: completionPct,
+        icon: CheckCircle2,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+    ],
+    [totalProjects, inFlightProjects, completionPct],
+  );
+
+  const viewToggle = (
+    <div className="flex rounded-xl border border-border bg-muted/20 p-1 shrink-0">
+      <button
+        type="button"
+        onClick={() => setViewMode("board")}
+        className={cn(
+          "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
+          viewMode === "board"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        Board
+      </button>
+      <button
+        type="button"
+        onClick={() => setViewMode("timeline")}
+        className={cn(
+          "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
+          viewMode === "timeline"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        Timeline
+      </button>
+    </div>
+  );
 
   const createForm = (
     <Form {...form}>
@@ -356,89 +413,32 @@ export default function ProjectsPage() {
   );
 
   return (
-    <AppLayout title="Projects">
-      <StaggerList className="page-stack">
-      <StaggerItem>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers3 size={13} /> Total Projects</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{totalProjects}</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Target size={13} /> Active Pipeline</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{inFlightProjects}</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-brand-sm">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 size={13} /> Completion</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{totalProjects === 0 ? "0%" : `${Math.round((doneProjects / totalProjects) * 100)}%`}</p>
-            <p className="text-xs text-muted-foreground">Avg progress {avgProgress}%</p>
-          </div>
-        </div>
-      </StaggerItem>
-
-      <StaggerItem>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {totalProjects} total projects
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/90">
-              {viewMode === "board"
-                ? "Drag a card to move status, or tap any card to edit details."
-                : "Horizontal scheduling timeline and team workload tracking."}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex rounded-xl border border-border bg-muted/20 p-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewMode("board")}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
-                  viewMode === "board"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Board View
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("timeline")}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer",
-                  viewMode === "timeline"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Timeline View
-              </button>
-            </div>
-            <Button
-              data-testid="btn-create-project"
-              className="hidden shrink-0 gap-2 sm:inline-flex active:scale-[0.98]"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus size={16} /> New Project
-            </Button>
-          </div>
-          <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
-            {createForm}
-          </ResponsiveSheet>
-        </div>
-      </StaggerItem>
-
-      <ProjectDetailDialog
-        project={selectedProject}
-        open={detailOpen}
-        onOpenChange={handleDetailOpenChange}
-        teams={teams}
-        clients={clients?.map((c) => ({ id: c.id, companyName: c.companyName }))}
-        onDuplicate={handleDuplicate}
-      />
-
-      <StaggerItem>
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Delivery"
+        title="Projects"
+        description={
+          viewMode === "board"
+            ? "Drag cards to move status, or tap any card to edit details."
+            : "Horizontal scheduling timeline and team workload tracking."
+        }
+        metrics={projectMetrics}
+        actions={
+          <Button
+            data-testid="btn-create-project"
+            size="sm"
+            className="hidden shrink-0 gap-2 sm:inline-flex active:scale-[0.98]"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus size={16} /> New Project
+          </Button>
+        }
+      >
+        <CanvasPanel
+          title={viewMode === "board" ? "Kanban board" : "Timeline"}
+          icon={Layers3}
+          headerRight={viewToggle}
+        >
         {!isLoading && totalProjects === 0 && (
           <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
             <h3 className="text-base font-semibold">No projects yet</h3>
@@ -593,20 +593,31 @@ export default function ProjectsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </StaggerItem>
+        </CanvasPanel>
+      </PageCanvasShell>
 
-      <StaggerItem>
-        <Button
-          data-testid="btn-create-project-mobile"
-          size="lg"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md active:scale-[0.98] sm:hidden"
-          onClick={() => setCreateOpen(true)}
-          aria-label="New project"
-        >
-          <Plus size={22} />
-        </Button>
-      </StaggerItem>
-      </StaggerList>
+      <ResponsiveSheet open={createOpen} onOpenChange={setCreateOpen} title="Create Project">
+        {createForm}
+      </ResponsiveSheet>
+
+      <ProjectDetailDialog
+        project={selectedProject}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+        teams={teams}
+        clients={clients?.map((c) => ({ id: c.id, companyName: c.companyName }))}
+        onDuplicate={handleDuplicate}
+      />
+
+      <Button
+        data-testid="btn-create-project-mobile"
+        size="lg"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 h-14 w-14 rounded-full p-0 shadow-brand-md active:scale-[0.98] sm:hidden"
+        onClick={() => setCreateOpen(true)}
+        aria-label="New project"
+      >
+        <Plus size={22} />
+      </Button>
     </AppLayout>
   );
 }

@@ -34,6 +34,15 @@ export const usersTable = pgTable("users", {
   bloodGroup: text("blood_group"),
   aadhaarDocument: text("aadhaar_document"),
   notes: text("notes"),
+  verifySlug: text("verify_slug").unique(),
+  verifySlugEnabled: boolean("verify_slug_enabled").notNull().default(true),
+  publicProfileEnabled: boolean("public_profile_enabled").notNull().default(false),
+  linkedinUrl: text("linkedin_url"),
+  portfolioUrl: text("portfolio_url"),
+  publicPhone: text("public_phone"),
+  publicEmail: text("public_email"),
+  officeAddress: text("office_address"),
+  publicBio: text("public_bio"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

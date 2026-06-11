@@ -5,6 +5,7 @@ import { getAccessContext, getAccessContextFresh } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import {
   runAgent,
+  buildAgentPrompt,
   executeTool,
   assertNoteAccess,
   checkAiRateLimit,
@@ -79,11 +80,12 @@ router.post("/v1/ai/chat", requireAuth, async (req, res): Promise<void> => {
     parts: [{ text: m.content }],
   }));
 
-  await appendAiMessage(ctx.userId, convId, "user", message.trim(), null);
+  const userText = message.trim();
+  await appendAiMessage(ctx.userId, convId, "user", userText, null);
 
   const result = await runAgent({
     ctx,
-    prompt: message.trim(),
+    prompt: buildAgentPrompt(userText, safeContext),
     pageContext: safeContext,
     history: geminiHistory,
     endpoint: "chat",
@@ -187,7 +189,7 @@ router.post("/v1/ai/chat/stream", requireAuth, async (req, res): Promise<void> =
   try {
     const result = await runAgent({
       ctx,
-      prompt: message.trim(),
+      prompt: buildAgentPrompt(message.trim(), safeContext),
       pageContext: safeContext,
       history: geminiHistory,
       endpoint: "chat/stream",

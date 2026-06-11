@@ -11,7 +11,7 @@ interface V2PageCanvasProps {
 /** Unified v2 page wrapper — consistent spacing, motion, max-width. */
 export function V2PageCanvas({ children, className, stagger = false }: V2PageCanvasProps) {
   const content = (
-    <div className={cn("v2-page", className)}>
+    <div className={cn("v2-page dash-canvas-root", className)}>
       {children}
     </div>
   );

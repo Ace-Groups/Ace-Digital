@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
-import { useListTeams, Team } from "@workspace/api-client-react";
+import { useMemo, useState, useEffect } from "react";
+import { useListTeams } from "@workspace/api-client-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, Users2 } from "lucide-react";
+import { Plus, Users2, Building2, UserCircle2 } from "lucide-react";
 import { TeamCard } from "@/components/teams/TeamCard";
 import { TeamDetailPanel } from "@/components/teams/TeamDetailPanel";
 import { TeamCreateDialog } from "@/components/teams/TeamCreateDialog";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasCommandBar, CanvasMetricRail } from "@/components/canvas";
 
 export default function TeamsPage() {
   const { can } = usePermissions();
@@ -45,6 +46,36 @@ export default function TeamsPage() {
 
   const selectedTeam = visibleTeams.find((t) => t.id === selectedTeamId) || null;
 
+  const teamMetrics = useMemo(
+    () => [
+      {
+        key: "teams",
+        label: visibleTeams.length === 1 ? "Team" : "Teams",
+        value: visibleTeams.length,
+        icon: Building2,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "selected",
+        label: "Selected",
+        value: selectedTeam?.name ?? "—",
+        icon: Users2,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        key: "role",
+        label: "Your role",
+        value: role.replace(/_/g, " "),
+        icon: UserCircle2,
+        iconBg: "bg-amber-500/10",
+        iconColor: "text-amber-600 dark:text-amber-400",
+      },
+    ],
+    [visibleTeams.length, selectedTeam?.name, role],
+  );
+
   // RBAC checks
   const canCreate = can("teams:write");
   const canEdit = can("teams:write");
@@ -54,7 +85,7 @@ export default function TeamsPage() {
 
   if (isLoading) {
     return (
-      <AppLayout title="Teams">
+      <AppLayout title="">
         <div className="flex-1 flex items-center justify-center h-full">
           <div className="animate-pulse flex flex-col items-center gap-4 text-muted-foreground">
             <Users2 className="h-8 w-8" />
@@ -66,13 +97,38 @@ export default function TeamsPage() {
   }
 
   return (
-    <AppLayout title="Teams" fillViewport>
-      <div className="flex h-full flex-col overflow-hidden bg-background">
-      
-      <div className="flex flex-1 overflow-hidden">
+    <AppLayout title="" fillViewport>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+        <div className="shrink-0 space-y-3 border-b border-border/50 px-3 py-3 sm:px-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              People
+            </p>
+            <h1 className="dash-greeting-inline mt-0.5">Teams</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {visibleTeams.length === 1
+                ? "Your team workspace and members."
+                : "Browse teams, members, and linked projects."}
+            </p>
+          </div>
+          <CanvasCommandBar
+            pageTitle="Teams"
+            actions={
+              canCreate ? (
+                <Button size="sm" className="gap-2" onClick={() => setIsCreateOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  New team
+                </Button>
+              ) : undefined
+            }
+          />
+          <CanvasMetricRail metrics={teamMetrics} />
+        </div>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Sidebar (Team List) */}
-        <div className="w-80 flex-none border-r bg-muted/10 flex flex-col hidden md:flex">
-          <div className="p-4 border-b flex items-center justify-between bg-background/50 backdrop-blur-sm z-10">
+        <div className="w-80 flex-none border-r border-border/50 bg-muted/10 flex flex-col hidden md:flex">
+          <div className="p-4 border-b border-border/50 flex items-center justify-between bg-card/80 backdrop-blur-sm z-10">
             <h3 className="font-semibold text-sm text-muted-foreground">All Teams</h3>
             {canCreate && (
               <Button size="icon" variant="ghost" onClick={() => setIsCreateOpen(true)} className="h-8 w-8">

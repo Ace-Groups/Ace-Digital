@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useLocation } from "wouter";
@@ -28,6 +29,25 @@ type AceAssistantContextValue = {
 export type { AceAssistantContextValue };
 
 const AceAssistantContext = createContext<AceAssistantContextValue | null>(null);
+
+function getBrowserSearch(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.search;
+}
+
+function subscribeToBrowserUrl(onChange: () => void): () => void {
+  window.addEventListener("popstate", onChange);
+  const wrap = (method: "pushState" | "replaceState") => {
+    const original = history[method].bind(history);
+    history[method] = (...args: Parameters<History["pushState"]>) => {
+      original(...args);
+      onChange();
+    };
+  };
+  wrap("pushState");
+  wrap("replaceState");
+  return () => window.removeEventListener("popstate", onChange);
+}
 
 function buildPageContext(route: string, search: string): AiPageContext {
   const ctx: AiPageContext = { route };
@@ -60,10 +80,15 @@ export function AceAssistantProvider({ children }: { children: ReactNode }) {
     return [location.slice(0, q), location.slice(q)] as const;
   }, [location]);
 
-  const pageContext = useMemo(
-    () => buildPageContext(routePath, routeSearch),
-    [routePath, routeSearch],
-  );
+  const browserSearch = useSyncExternalStore(subscribeToBrowserUrl, getBrowserSearch, () => "");
+
+  const pageContext = useMemo(() => {
+    const search =
+      typeof window !== "undefined" && window.location.pathname === routePath
+        ? browserSearch || routeSearch
+        : routeSearch;
+    return buildPageContext(routePath, search);
+  }, [routePath, routeSearch, browserSearch]);
 
   const toggle = useCallback(() => setOpen((v) => !v), []);
 

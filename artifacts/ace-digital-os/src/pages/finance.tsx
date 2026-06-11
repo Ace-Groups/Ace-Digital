@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { StaggerList } from "@/components/design";
-import { FinanceKpiGrid } from "@/components/finance/FinanceKpiGrid";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { FinanceSalariesTab } from "@/components/finance/FinanceSalariesTab";
 import { FinanceExpensesTab } from "@/components/finance/FinanceExpensesTab";
 import { FinancePayrollTab } from "@/components/finance/FinancePayrollTab";
@@ -29,12 +28,11 @@ import {
   type SalaryPostingRecord,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Users, Wallet, BadgeCheck } from "lucide-react";
 import { statusColor, cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -284,23 +282,95 @@ export default function FinancePage() {
     }
   }
 
+  const payslipMetrics = useMemo(
+    () =>
+      myPayslip
+        ? [
+            {
+              key: "total-pay",
+              label: "Total pay",
+              value: formatCurrency(myPayslip.totalPay),
+              icon: Wallet,
+              iconBg: "bg-emerald-500/10",
+              iconColor: "text-emerald-600 dark:text-emerald-400",
+            },
+            {
+              key: "status",
+              label: "Payroll status",
+              value: myPayslip.payrollStatus,
+              icon: BadgeCheck,
+              iconBg: "bg-primary/10",
+              iconColor: "text-primary",
+            },
+          ]
+        : [],
+    [myPayslip],
+  );
+
+  const financeMetrics = useMemo(
+    () =>
+      canSummary
+        ? [
+            {
+              key: "revenue",
+              label: "Total revenue",
+              value: formatCurrency(summary?.totalRevenue ?? 0),
+              icon: TrendingUp,
+              iconBg: "bg-emerald-500/10",
+              iconColor: "text-emerald-600 dark:text-emerald-400",
+            },
+            {
+              key: "expenses",
+              label: "Total expenses",
+              value: formatCurrency(summary?.totalExpenses ?? 0),
+              icon: TrendingDown,
+              iconBg: "bg-red-500/10",
+              iconColor: "text-red-600 dark:text-red-400",
+            },
+            {
+              key: "profit",
+              label: "Net profit",
+              value: formatCurrency(summary?.netProfit ?? 0),
+              icon: DollarSign,
+              iconBg: "bg-primary/10",
+              iconColor: "text-primary",
+            },
+            {
+              key: "payroll",
+              label: "Monthly payroll",
+              value: formatCurrency(summary?.totalPayroll ?? 0),
+              icon: Users,
+              iconBg: "bg-amber-500/10",
+              iconColor: "text-amber-600 dark:text-amber-400",
+            },
+          ]
+        : [],
+    [canSummary, summary],
+  );
+
   if (payslipOnly) {
     return (
-      <AppLayout title="My Payslip">
-        <div className="page-stack max-w-md">
-          {payslipLoading ? (
-            <Skeleton className="h-48 w-full rounded-xl" />
-          ) : myPayslip ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{myPayslip.fullName}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p className="text-muted-foreground">
-                  {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
-                </p>
-                
-                <div className="flex items-center gap-2 mt-1 mb-3">
+      <AppLayout title="">
+        <PageCanvasShell
+          eyebrow="Compensation"
+          title="My Payslip"
+          description="Your current pay breakdown and payroll status."
+          metrics={payslipMetrics}
+          showCommandBar={false}
+        >
+          <CanvasPanel title="Payslip details" icon={Wallet}>
+            {payslipLoading ? (
+              <Skeleton className="h-48 w-full rounded-xl" />
+            ) : myPayslip ? (
+              <div className="max-w-md space-y-3 text-sm">
+                <div>
+                  <p className="text-lg font-semibold">{myPayslip.fullName}</p>
+                  <p className="text-muted-foreground">
+                    {myPayslip.jobTitle ?? "—"} · {myPayslip.teamName ?? "—"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="capitalize text-xs">
                     {myPayslip.salaryMode === "project_based" ? "Project-Based Pay" : "Monthly Salaried"}
                   </Badge>
@@ -318,33 +388,39 @@ export default function FinancePage() {
                     <span className="text-muted-foreground">Bonus:</span>
                     <span>{formatCurrency(myPayslip.bonus)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-base font-semibold border-t border-border/60 pt-2">
+                  <div className="flex items-center justify-between border-t border-border/60 pt-2 text-base font-semibold">
                     <span>Total pay:</span>
                     <span>{formatCurrency(myPayslip.totalPay)}</span>
                   </div>
                 </div>
 
                 {myPayslip.salaryMode === "project_based" && (
-                  <div className="mt-4 pt-3 border-t border-border/60">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Project Payout Breakdown</p>
+                  <div className="mt-4 border-t border-border/60 pt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Project payout breakdown
+                    </p>
                     {myPayslip.projectBreakdown && myPayslip.projectBreakdown.length > 0 ? (
                       <div className="space-y-2 rounded-lg bg-muted/40 p-2.5">
-                        {myPayslip.projectBreakdown.map((proj: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center text-xs">
-                            <span className="text-muted-foreground font-medium">{proj.projectName || "Unnamed Project"}</span>
+                        {myPayslip.projectBreakdown.map((proj, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-muted-foreground">
+                              {proj.projectName || "Unnamed Project"}
+                            </span>
                             <span className="font-semibold text-foreground">{formatCurrency(proj.amount)}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground italic bg-muted/40 rounded-lg p-2.5 text-center">No project allocations recorded for this month.</p>
+                      <p className="rounded-lg bg-muted/40 p-2.5 text-center text-xs italic text-muted-foreground">
+                        No project allocations recorded for this month.
+                      </p>
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
+              </div>
+            ) : null}
+          </CanvasPanel>
+        </PageCanvasShell>
       </AppLayout>
     );
   }
@@ -407,32 +483,59 @@ export default function FinancePage() {
     });
   };
 
-  return (
-    <AppLayout title="Finance & Payroll">
-      <StaggerList className="page-stack pb-24 sm:pb-8">
-        {canSummary && <FinanceKpiGrid summary={summary} isLoading={summaryLoading} />}
+  const financeTabs = (
+    <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
+      {canSalaries && (
+        <button
+          type="button"
+          onClick={() => setActiveTab("salaries")}
+          className={cn(
+            "canvas-filter-pill shrink-0",
+            activeTab === "salaries" ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
+          )}
+        >
+          Salaries
+        </button>
+      )}
+      {canExpenses && (
+        <button
+          type="button"
+          onClick={() => setActiveTab("expenses")}
+          className={cn(
+            "canvas-filter-pill shrink-0",
+            activeTab === "expenses" ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
+          )}
+        >
+          Expenses
+        </button>
+      )}
+      {canPayroll && (
+        <button
+          type="button"
+          onClick={() => setActiveTab("payroll")}
+          className={cn(
+            "canvas-filter-pill shrink-0",
+            activeTab === "payroll" ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
+          )}
+        >
+          Payroll runs
+        </button>
+      )}
+    </div>
+  );
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className="h-auto w-full justify-start overflow-x-auto p-1 sm:w-auto">
-              {canSalaries && (
-                <TabsTrigger value="salaries" className="min-h-11 shrink-0 px-4">
-                  Salaries
-                </TabsTrigger>
-              )}
-              {canExpenses && (
-                <TabsTrigger value="expenses" className="min-h-11 shrink-0 px-4">
-                  Expenses
-                </TabsTrigger>
-              )}
-              {canPayroll && (
-                <TabsTrigger value="payroll" className="min-h-11 shrink-0 px-4">
-                  Payroll Runs
-                </TabsTrigger>
-              )}
-            </TabsList>
-            {tabActions}
-          </div>
+  return (
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Operations"
+        title="Finance & Payroll"
+        description="Salaries, expenses, and payroll runs across the organization."
+        metrics={financeMetrics}
+        actions={tabActions}
+      >
+        <CanvasPanel title="Finance workspace" icon={DollarSign}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            {financeTabs}
 
           {canSalaries && (
             <TabsContent value="salaries" className="mt-0">
@@ -478,7 +581,8 @@ export default function FinancePage() {
             </TabsContent>
           )}
         </Tabs>
-      </StaggerList>
+        </CanvasPanel>
+      </PageCanvasShell>
 
       {canPayroll && activeTab === "salaries" && (
         <Button

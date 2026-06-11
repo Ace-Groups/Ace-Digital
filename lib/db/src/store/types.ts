@@ -173,6 +173,15 @@ export type UpdateUserInput = Partial<{
   bloodGroup: string | null;
   aadhaarDocument: string | null;
   notes: string | null;
+  verifySlug: string | null;
+  verifySlugEnabled: boolean;
+  publicProfileEnabled: boolean;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  publicPhone: string | null;
+  publicEmail: string | null;
+  officeAddress: string | null;
+  publicBio: string | null;
 }>;
 
 export type CreateNotificationInput = {

@@ -7,7 +7,7 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
 
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title="">
       {isMobile ? <DashboardMobile /> : <DashboardDesktop />}
     </AppLayout>
   );

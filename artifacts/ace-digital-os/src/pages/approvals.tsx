@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import {
@@ -18,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, CheckCircle2, XCircle, Clock, ClipboardCheck } from "lucide-react";
 import { statusColor, cn, formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -49,6 +50,7 @@ export default function ApprovalsPage() {
   const listParams = filterStatus !== "all" ? { status: filterStatus } : {};
   const approvalsKey = getListApprovalsQueryKey(listParams);
   const { data: approvals, isLoading } = useListApprovals(listParams);
+  const { data: allApprovals } = useListApprovals({});
   const createApproval = useCreateApproval();
   const approveApproval = useApproveApproval();
   const rejectApproval = useRejectApproval();
@@ -154,84 +156,77 @@ export default function ApprovalsPage() {
     }
   }
 
-  const pending = approvals?.filter((a) => a.status === "PENDING").length ?? 0;
+  const pendingCount = allApprovals?.filter((a) => a.status === "PENDING").length ?? 0;
+  const approvedCount = allApprovals?.filter((a) => a.status === "APPROVED").length ?? 0;
+  const rejectedCount = allApprovals?.filter((a) => a.status === "REJECTED").length ?? 0;
+
+  const metrics = useMemo(
+    () => [
+      {
+        key: "pending",
+        label: "Pending",
+        value: pendingCount,
+        icon: Clock,
+        iconBg: "bg-amber-500/10",
+        iconColor: "text-amber-600 dark:text-amber-400",
+      },
+      {
+        key: "approved",
+        label: "Approved",
+        value: approvedCount,
+        icon: CheckCircle2,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        key: "rejected",
+        label: "Rejected",
+        value: rejectedCount,
+        icon: XCircle,
+        iconBg: "bg-red-500/10",
+        iconColor: "text-red-600 dark:text-red-400",
+      },
+    ],
+    [pendingCount, approvedCount, rejectedCount],
+  );
 
   return (
-    <AppLayout title="Approvals">
-      <div className="page-stack">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          {pending > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-              <Clock size={14} className="text-amber-600" />
-              <span className="text-sm font-medium text-amber-700">{pending} pending</span>
-            </div>
-          )}
-          <div className="flex gap-1">
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Workflow"
+        title="Approvals"
+        description="Submit and review leave, expense, hiring, and budget requests."
+        metrics={metrics}
+        actions={
+          <Button
+            data-testid="btn-create-approval"
+            size="sm"
+            className="hidden gap-2 sm:inline-flex"
+            onClick={() => setOpen(true)}
+          >
+            <Plus size={16} /> New Request
+          </Button>
+        }
+      >
+        <CanvasPanel title="Requests" icon={ClipboardCheck}>
+          <div className="mb-4 flex flex-wrap gap-1">
             {["all", "PENDING", "APPROVED", "REJECTED"].map((s) => (
               <button
                 key={s}
+                type="button"
                 data-testid={`filter-approval-${s.toLowerCase()}`}
                 onClick={() => setFilterStatus(s)}
                 className={cn(
-                  "px-3 py-1.5 text-xs rounded-full font-medium transition-colors",
-                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  "canvas-filter-pill",
+                  filterStatus === s ? "canvas-filter-pill--active" : "canvas-filter-pill--idle",
                 )}
               >
                 {s === "all" ? "All" : s}
               </button>
             ))}
           </div>
-        </div>
-        <Button
-          data-testid="btn-create-approval"
-          className="hidden gap-2 sm:inline-flex"
-          onClick={() => setOpen(true)}
-        >
-          <Plus size={16} /> New Request
-        </Button>
-        <ResponsiveSheet open={open} onOpenChange={setOpen} title="Submit Approval Request">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4">
-                <FormField control={form.control} name="type" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Request Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {TYPES.map((t) => <SelectItem key={t} value={t}>{t.replace("_", " ")}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl><Input data-testid="input-approval-title" placeholder="Brief title..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea data-testid="input-approval-desc" rows={3} placeholder="Details..." {...field} /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="amount" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount (₹) — if applicable</FormLabel>
-                    <FormControl><Input data-testid="input-approval-amount" type="number" {...field} /></FormControl>
-                  </FormItem>
-                )} />
-                <Button data-testid="btn-submit-approval" type="submit" className="w-full" disabled={createApproval.isPending}>
-                  Submit Request
-                </Button>
-              </form>
-            </Form>
-        </ResponsiveSheet>
-      </div>
 
-      <div className="space-y-3">
+          <div className="space-y-3">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : approvals?.length === 0 ? (
@@ -307,7 +302,49 @@ export default function ApprovalsPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+          </div>
+        </CanvasPanel>
+      </PageCanvasShell>
+
+      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Submit Approval Request">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mobile-form space-y-4">
+            <FormField control={form.control} name="type" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Request Type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {TYPES.map((t) => <SelectItem key={t} value={t}>{t.replace("_", " ")}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="title" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl><Input data-testid="input-approval-title" placeholder="Brief title..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl><Textarea data-testid="input-approval-desc" rows={3} placeholder="Details..." {...field} /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="amount" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Amount (₹) — if applicable</FormLabel>
+                <FormControl><Input data-testid="input-approval-amount" type="number" {...field} /></FormControl>
+              </FormItem>
+            )} />
+            <Button data-testid="btn-submit-approval" type="submit" className="w-full" disabled={createApproval.isPending}>
+              Submit Request
+            </Button>
+          </form>
+        </Form>
+      </ResponsiveSheet>
 
       {isMobile && (
         <Button
@@ -320,7 +357,6 @@ export default function ApprovalsPage() {
           <Plus size={22} />
         </Button>
       )}
-      </div>
     </AppLayout>
   );
 }

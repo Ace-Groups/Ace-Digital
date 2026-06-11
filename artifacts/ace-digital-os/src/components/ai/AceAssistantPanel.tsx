@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
 import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
@@ -16,6 +16,7 @@ import {
   formatContextLabel,
 } from "@/contexts/AceAssistantContext";
 import { AiMessageContent } from "@/components/ai/AiMessageContent";
+import { AiMarkdownBody } from "@/components/ai/AiMarkdownBody";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { streamAiChat } from "@/lib/ai-stream";
@@ -43,6 +44,7 @@ export function AceAssistantPanel() {
   const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sendInFlightRef = useRef(false);
   const quickPrompts = getProactiveInsights(pageContext);
 
   const convIdForQuery = conversationId ?? 0;
@@ -60,7 +62,8 @@ export function AceAssistantPanel() {
   const handleSend = useCallback(
     async (text?: string) => {
       const msg = (text ?? input).trim();
-      if (!msg || isStreaming) return;
+      if (!msg || isStreaming || sendInFlightRef.current) return;
+      sendInFlightRef.current = true;
       hapticLight();
       setInput("");
       setPendingUserMsg(msg);
@@ -118,6 +121,7 @@ export function AceAssistantPanel() {
         });
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
+        sendInFlightRef.current = false;
         setPendingUserMsg(null);
         setStreamingText("");
         setIsStreaming(false);
@@ -127,13 +131,20 @@ export function AceAssistantPanel() {
   );
 
   // Consume a queued prompt (e.g. from a suggestion chip elsewhere) once open.
+  const pendingPromptSentRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (open && pendingPrompt && !isStreaming) {
-      const prompt = pendingPrompt;
-      consumePendingPrompt();
-      void handleSend(prompt);
-    }
+    if (!open || !pendingPrompt || isStreaming) return;
+    if (pendingPromptSentRef.current === pendingPrompt) return;
+    pendingPromptSentRef.current = pendingPrompt;
+    const prompt = pendingPrompt;
+    consumePendingPrompt();
+    void handleSend(prompt);
   }, [open, pendingPrompt, isStreaming, consumePendingPrompt, handleSend]);
+
+  useEffect(() => {
+    if (!open) pendingPromptSentRef.current = null;
+  }, [open]);
 
   // Abort any in-flight stream when the panel closes.
   useEffect(() => {
@@ -142,6 +153,8 @@ export function AceAssistantPanel() {
 
   function handleNewChat() {
     abortRef.current?.abort();
+    sendInFlightRef.current = false;
+    pendingPromptSentRef.current = null;
     setConversationId(null);
     setInput("");
     setPendingUserMsg(null);
@@ -151,6 +164,41 @@ export function AceAssistantPanel() {
 
   const contextLabel = formatContextLabel(pageContext);
   const messages = conversation?.messages ?? [];
+
+  const displayMessages = useMemo(() => {
+    let list = messages;
+    if (pendingUserMsg) {
+      const pending = pendingUserMsg.trim();
+      list = list.filter(
+        (m) => !(m.role === "user" && m.content?.trim() === pending),
+      );
+    }
+    return list.filter((m, i) => {
+      if (m.role !== "user" || i === 0) return true;
+      const prev = list[i - 1];
+      return !(
+        prev?.role === "user" &&
+        prev.content?.trim() === m.content?.trim()
+      );
+    });
+  }, [messages, pendingUserMsg]);
+
+  function renderAssistantBody(content: string | null | undefined, metadata: typeof messages[0]["metadata"]) {
+    if (metadata?.layout === "table" || metadata?.layout === "action_confirmation") {
+      return <AiMessageContent body={content} metadata={metadata} conversationId={conversationId ?? undefined} />;
+    }
+    if (metadata?.layout === "service_error" || metadata?.layout === "permission_denied") {
+      return (
+        <>
+          {content && metadata.layout === "service_error" ? null : (
+            content && <AiMarkdownBody text={formatAiDisplayText(content)} />
+          )}
+          <AiMessageContent body={content} metadata={metadata} conversationId={conversationId ?? undefined} />
+        </>
+      );
+    }
+    return <AiMarkdownBody text={formatAiDisplayText(content)} />;
+  }
 
   return (
     <AnimatePresence>
@@ -205,7 +253,7 @@ export function AceAssistantPanel() {
             </GlassContainer>
 
             <ScrollArea className="flex-1 px-4 py-3">
-              {messages.length === 0 && !pendingUserMsg && (
+              {displayMessages.length === 0 && !pendingUserMsg && (
                 <div className="mb-4 space-y-3">
                   <div className="flex items-center gap-2.5">
                     <AceAiAvatar size="sm" />
@@ -232,19 +280,12 @@ export function AceAssistantPanel() {
               )}
 
               <div className="space-y-3 pb-4">
-                {messages.map((m) =>
+                {displayMessages.map((m) =>
                   m.role === "assistant" ? (
                     <div key={m.id} className="flex gap-2 mr-2">
                       <AceAiAvatar size="sm" className="mt-0.5" />
                       <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
-                        {m.content && m.metadata?.layout !== "service_error" && (
-                          <p className="whitespace-pre-wrap">{formatAiDisplayText(m.content)}</p>
-                        )}
-                        <AiMessageContent
-                          body={m.content}
-                          metadata={m.metadata}
-                          conversationId={conversationId ?? undefined}
-                        />
+                        {renderAssistantBody(m.content, m.metadata)}
                       </div>
                     </div>
                   ) : (
@@ -266,7 +307,7 @@ export function AceAssistantPanel() {
                     <AceAiAvatar size="sm" className="mt-0.5" />
                     <div className="min-w-0 flex-1 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground">
                       {streamingText ? (
-                        <p className="whitespace-pre-wrap">{formatAiDisplayText(streamingText)}</p>
+                        <AiMarkdownBody text={formatAiDisplayText(streamingText)} />
                       ) : (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Loader2 size={14} className="animate-spin" />
@@ -281,7 +322,7 @@ export function AceAssistantPanel() {
             </ScrollArea>
 
             <div className="shrink-0 border-t border-border/50 p-3">
-              {messages.length > 0 && !isStreaming && quickPrompts.length > 0 && (
+              {displayMessages.length > 0 && !isStreaming && quickPrompts.length > 0 && (
                 <div className="mb-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border">
                   {quickPrompts.map((p) => (
                     <button

@@ -6,7 +6,10 @@ import { getAccessContext } from "../lib/access";
 import { requirePermission } from "../lib/rbac-middleware";
 import { employeeWithProfile } from "../lib/employee-serializer";
 import { generateTemporaryPassword } from "../lib/password";
-import { sendCredentialsEmail, sendOnboardingSequence } from "../lib/email";
+import { sendCredentialsEmail, sendOnboardingSequence, sendIdCardEmail } from "../lib/email";
+import { isInternJobTitle } from "../lib/id-card/is-intern";
+import { createInternship } from "../lib/internship-store";
+import { runInternshipPipeline } from "../lib/internship-pipeline";
 import {
   allocateEmployeeCode,
   peekNextEmployeeCode,
@@ -225,7 +228,32 @@ router.post(
     }
 
     let emailSent = false;
-    if (shouldSendEmail !== false) {
+    let idCardSent = false;
+    const intern = isInternJobTitle(jobTitle);
+
+    if (intern) {
+      const internship = await createInternship({
+        userId: user.id,
+        mentorId: null,
+        university: null,
+        program: "Ace Digital Internship",
+        startDate: parsedStart?.toISOString() ?? null,
+        endDate: null,
+        notes: optionalText(notes),
+        createdById: ctx.userId,
+        completedSteps: ["application_received", "hr_review"],
+        currentStep: "account_created",
+      });
+
+      if (shouldSendEmail !== false) {
+        const pipeline = await runInternshipPipeline(internship.id, {
+          password: plainPassword,
+          isIntern: true,
+        });
+        emailSent = pipeline.onboardingEmailed;
+        idCardSent = pipeline.idCardEmailed;
+      }
+    } else if (shouldSendEmail !== false) {
       const result = await sendOnboardingSequence({
         to: email.toLowerCase(),
         fullName,
@@ -233,11 +261,24 @@ router.post(
         password: plainPassword,
       });
       emailSent = result.welcomeSent && result.guideSent && result.credentialsSent;
+
+      const refreshedUser = (await store.findUserById(user.id))!;
+      idCardSent = await sendIdCardEmail({
+        to: email.toLowerCase(),
+        fullName,
+        user: refreshedUser,
+        extras: {
+          teamName:
+            user.teamId != null
+              ? (await store.findTeamById(user.teamId))?.name ?? null
+              : null,
+        },
+      });
     }
 
     const refreshed = (await store.findUserById(user.id))!;
     const profile = await employeeWithProfile(refreshed, ctx);
-    res.status(201).json({ ...profile, emailSent });
+    res.status(201).json({ ...profile, emailSent, idCardSent });
   },
 );
 

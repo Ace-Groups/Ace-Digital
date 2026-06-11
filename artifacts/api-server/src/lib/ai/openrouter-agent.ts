@@ -26,24 +26,39 @@ function isPendingConfirmation(output: unknown): output is {
 async function prefetchWorkspaceContext(
   ctx: AccessContext,
   prompt: string,
+  pageContext: PageContext | null | undefined,
   availableToolNames: string[],
 ): Promise<{ note: string; tools: string[] }> {
   const tools: string[] = [];
-  if (!availableToolNames.includes("get_dashboard_snapshot")) {
-    return { note: "", tools };
-  }
-  if (!/\b(dashboard|kpi|kpis|needs my attention|summarize my)\b/i.test(prompt)) {
-    return { note: "", tools };
+  const notes: string[] = [];
+
+  if (pageContext?.noteId != null && availableToolNames.includes("get_note")) {
+    const noteResult = await executeTool(ctx, "get_note", {
+      noteId: String(pageContext.noteId),
+    });
+    if (noteResult.ok) {
+      tools.push("get_note");
+      notes.push(
+        `Live note content for Note #${pageContext.noteId} (already fetched — summarize or answer from this):\n${JSON.stringify(noteResult.output)}`,
+      );
+    }
   }
 
-  const result = await executeTool(ctx, "get_dashboard_snapshot", {});
-  if (!result.ok) {
-    return { note: "", tools };
+  if (
+    availableToolNames.includes("get_dashboard_snapshot") &&
+    /\b(dashboard|kpi|kpis|needs my attention|summarize my)\b/i.test(prompt)
+  ) {
+    const result = await executeTool(ctx, "get_dashboard_snapshot", {});
+    if (result.ok) {
+      tools.push("get_dashboard_snapshot");
+      notes.push(
+        `Live dashboard snapshot for this user (already fetched — use these numbers in your answer):\n${JSON.stringify(result.output)}`,
+      );
+    }
   }
 
-  tools.push("get_dashboard_snapshot");
   return {
-    note: `\n\nLive dashboard snapshot for this user (already fetched — use these numbers in your answer):\n${JSON.stringify(result.output)}`,
+    note: notes.length ? `\n\n${notes.join("\n\n")}` : "",
     tools,
   };
 }
@@ -109,7 +124,7 @@ export async function runOpenRouterAgent(options: {
     prompt,
   );
 
-  const prefetch = await prefetchWorkspaceContext(ctx, prompt, availableToolNames);
+  const prefetch = await prefetchWorkspaceContext(ctx, prompt, pageContext, availableToolNames);
   if (prefetch.note) {
     const system = messages[0];
     if (system?.role === "system") {

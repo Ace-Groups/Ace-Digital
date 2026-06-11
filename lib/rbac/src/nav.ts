@@ -16,6 +16,8 @@ const ROUTE_PERMISSIONS: Record<NavRoute, string> = {
   activity: "activity:read",
   notes: "notes:read",
   teams: "teams:read",
+  interns: "employees:read",
+  credentials: "credentials:read",
 };
 
 /** Nav href paths */
@@ -34,6 +36,8 @@ export const NAV_ROUTES: { route: NavRoute; href: string; label: string }[] = [
   { route: "activity", href: "/activity", label: "Activity" },
   { route: "notes", href: "/notes", label: "Notes" },
   { route: "teams", href: "/teams", label: "Teams" },
+  { route: "interns", href: "/interns", label: "Interns" },
+  { route: "credentials", href: "/credentials", label: "Credentials" },
 ];
 
 export function getNavRoutesForRole(role: string): NavRoute[] {
@@ -47,6 +51,10 @@ export function getNavRoutesForRole(role: string): NavRoute[] {
     }
     if (route === "finance" && role === "employee") {
       if (perms.has("finance:salaries_self")) routes.push(route);
+      continue;
+    }
+    if (route === "interns" && role === "employee") {
+      if (perms.has("employees:read_self")) routes.push(route);
       continue;
     }
     if (perms.has(perm as never)) routes.push(route);

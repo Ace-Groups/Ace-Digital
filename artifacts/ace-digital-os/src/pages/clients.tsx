@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { useListClients } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Mail, Phone, Calendar, Building2 } from "lucide-react";
+import { Plus, Mail, Phone, Calendar, Building2, DollarSign, Users } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { formatContactName } from "@/lib/clients";
 import { ClientFormSheet } from "@/components/clients/ClientFormSheet";
@@ -21,6 +22,36 @@ export default function ClientsPage() {
 
   const activeClients = clients?.filter((c) => c.status === "ACTIVE") ?? [];
   const totalValue = activeClients.reduce((s, c) => s + (c.contractValue ?? 0), 0);
+
+  const metrics = useMemo(
+    () => [
+      {
+        key: "active",
+        label: "Active clients",
+        value: activeClients.length,
+        icon: Building2,
+        iconBg: "bg-primary/10",
+        iconColor: "text-primary",
+      },
+      {
+        key: "value",
+        label: "Contract value",
+        value: formatCurrency(totalValue),
+        icon: DollarSign,
+        iconBg: "bg-emerald-500/10",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        key: "total",
+        label: "All clients",
+        value: clients?.length ?? 0,
+        icon: Users,
+        iconBg: "bg-sky-500/10",
+        iconColor: "text-sky-600 dark:text-sky-400",
+      },
+    ],
+    [activeClients.length, totalValue, clients?.length],
+  );
 
   function openAdd() {
     setEditing(null);
@@ -38,111 +69,119 @@ export default function ClientsPage() {
   }
 
   return (
-    <AppLayout title="Clients">
-      <div className="page-stack">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{activeClients.length}</span> active clients
-            {" · "}
-            <span className="font-semibold text-emerald-600">{formatCurrency(totalValue)}</span> total contracts
-          </div>
-          <Button data-testid="btn-add-client" className="gap-2" onClick={openAdd}>
-            <Plus size={16} /> Add Client
+    <AppLayout title="">
+      <PageCanvasShell
+        eyebrow="Relationships"
+        title="Clients"
+        description="Manage accounts, contracts, and meeting schedules for your portfolio."
+        metrics={metrics}
+        actions={
+          <Button data-testid="btn-add-client" size="sm" className="gap-2" onClick={openAdd}>
+            <Plus size={16} />
+            Add client
           </Button>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)
-          ) : clients?.map((client) => {
-            const contact = formatContactName(client.salutation, client.contactName);
-            const customFields = (client.customFields ?? []) as { key: string; value: string }[];
-            return (
-              <Card
-                key={client.id}
-                data-testid={`client-card-${client.id}`}
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => openDetail(client)}
-              >
-                <CardContent className="p-5">
-                  <div className="mb-3 flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Building2 size={18} className="text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{client.companyName}</p>
-                        <p className="text-xs text-muted-foreground">{contact}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className={cn("shrink-0 text-xs", statusColor(client.status ?? ""))}>
-                      {client.status}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1.5 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Mail size={11} />
-                      <span className="truncate">{client.email}</span>
-                    </div>
-                    {client.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone size={11} />
-                        <span>{client.phone}</span>
-                      </div>
-                    )}
-                    {client.nextMeetingAt && (
-                      <div className="flex items-center gap-2">
-                        <Calendar size={11} />
-                        <span>
-                          Meeting:{" "}
-                          {new Date(client.nextMeetingAt).toLocaleDateString("en-IN", {
-                            day: "numeric", month: "short",
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    {client.notes && (
-                      <p className="line-clamp-2 pt-1 text-foreground/70">{client.notes}</p>
-                    )}
-                  </div>
-                  {customFields.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {customFields.slice(0, 3).map((f) => (
-                        <Badge key={f.key} variant="secondary" className="text-[10px] font-normal">
-                          {f.key}
+        }
+      >
+        <CanvasPanel title="Client directory" icon={Building2}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-xl" />
+              ))
+            ) : (
+              clients?.map((client) => {
+                const contact = formatContactName(client.salutation, client.contactName);
+                const customFields = (client.customFields ?? []) as { key: string; value: string }[];
+                return (
+                  <Card
+                    key={client.id}
+                    data-testid={`client-card-${client.id}`}
+                    className="cursor-pointer transition-shadow hover:shadow-md"
+                    onClick={() => openDetail(client)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <Building2 size={18} className="text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{client.companyName}</p>
+                            <p className="text-xs text-muted-foreground">{contact}</p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn("shrink-0 text-xs", statusColor(client.status ?? ""))}
+                        >
+                          {client.status}
                         </Badge>
-                      ))}
-                      {customFields.length > 3 && (
-                        <Badge variant="secondary" className="text-[10px] font-normal">
-                          +{customFields.length - 3}
-                        </Badge>
+                      </div>
+                      <div className="space-y-1.5 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Mail size={11} />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                        {client.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={11} />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                        {client.nextMeetingAt && (
+                          <div className="flex items-center gap-2">
+                            <Calendar size={11} />
+                            <span>
+                              Meeting:{" "}
+                              {new Date(client.nextMeetingAt).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {client.notes && (
+                          <p className="line-clamp-2 pt-1 text-foreground/70">{client.notes}</p>
+                        )}
+                      </div>
+                      {customFields.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {customFields.slice(0, 3).map((f) => (
+                            <Badge key={f.key} variant="secondary" className="text-[10px] font-normal">
+                              {f.key}
+                            </Badge>
+                          ))}
+                          {customFields.length > 3 && (
+                            <Badge variant="secondary" className="text-[10px] font-normal">
+                              +{customFields.length - 3}
+                            </Badge>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Assigned to</p>
-                      <p className="text-sm font-medium">{client.assignedTeamName ?? "—"}</p>
-                    </div>
-                    {client.contractValue != null && (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Contract</p>
-                        <p className="text-sm font-bold text-primary">{formatCurrency(client.contractValue)}</p>
+                      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Assigned to</p>
+                          <p className="text-sm font-medium">{client.assignedTeamName ?? "—"}</p>
+                        </div>
+                        {client.contractValue != null && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Contract</p>
+                            <p className="text-sm font-bold text-primary">
+                              {formatCurrency(client.contractValue)}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </CanvasPanel>
+      </PageCanvasShell>
 
-      <ClientFormSheet
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        client={editing}
-      />
+      <ClientFormSheet open={formOpen} onOpenChange={setFormOpen} client={editing} />
       <ClientDetailSheet
         open={detailOpen}
         onOpenChange={setDetailOpen}

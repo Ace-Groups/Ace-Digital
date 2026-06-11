@@ -13,7 +13,7 @@ interface AppLayoutProps {
 export function AppLayout({ children, title, fillViewport }: AppLayoutProps) {
   return (
     <AdaptiveLayout title={title} fillViewport={fillViewport}>
-      {fillViewport ? children : <V2PageCanvas stagger>{children}</V2PageCanvas>}
+      {fillViewport ? children : <V2PageCanvas>{children}</V2PageCanvas>}
     </AdaptiveLayout>
   );
 }
