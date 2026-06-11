@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
 import { parseEmployeeIdentityImages } from "@/lib/avatar";
+import { EmployeeProfilePhoto } from "@/components/employees/EmployeeProfilePhoto";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,28 +47,29 @@ export function EmployeeCard({
       className="overflow-hidden transition-shadow hover:shadow-md"
     >
       <CardContent className="p-0">
-        <div className="relative h-36 bg-muted sm:h-40">
-          {identity.profilePhotoUrl ? (
-            <img
-              src={identity.profilePhotoUrl}
-              alt={`${employee.fullName} profile`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted/70 text-sm font-medium text-muted-foreground">
-              Profile photo pending
-            </div>
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/85 to-transparent" />
-          <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full border border-border/80 bg-background/90 px-2 py-1 shadow-brand-sm backdrop-blur-sm">
+        <div className="relative flex flex-col items-center border-b border-border/60 bg-gradient-to-b from-muted/50 to-background px-4 pb-4 pt-5">
+          <div className="relative h-28 w-28 overflow-hidden rounded-2xl border-2 border-background bg-muted shadow-brand-md sm:h-32 sm:w-32">
+            {identity.profilePhotoUrl ? (
+              <EmployeeProfilePhoto
+                src={identity.profilePhotoUrl}
+                alt={`${employee.fullName} profile`}
+                rounded="2xl"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center px-3 text-center text-[11px] font-medium leading-tight text-muted-foreground">
+                Profile photo pending
+              </div>
+            )}
+          </div>
+          <div className="mt-3 flex items-center gap-2 rounded-full border border-border/80 bg-background/90 px-2.5 py-1 shadow-brand-sm">
             <UserAvatar
               avatarUrl={employee.avatarUrl}
               fullName={employee.fullName}
-              className="h-8 w-8 shrink-0"
+              className="h-7 w-7 shrink-0"
               fallbackClassName="bg-primary/15 text-primary font-semibold"
-              iconSize={16}
+              iconSize={14}
             />
-            <span className="text-[11px] font-medium text-muted-foreground">Avatar</span>
+            <span className="text-[11px] font-medium text-muted-foreground">App avatar</span>
           </div>
         </div>
         <div className="p-4 sm:p-5">

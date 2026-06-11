@@ -57,6 +57,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { parseEmployeeIdentityImages } from "@/lib/avatar";
+import { EmployeeProfilePhoto } from "@/components/employees/EmployeeProfilePhoto";
 
 export default function EmployeesPage() {
   const { user } = useAuth();
@@ -677,12 +678,12 @@ function EmployeeDetailDialog({
       <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start">
-            <div className="relative mx-auto aspect-[4/5] w-32 shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-brand-sm sm:mx-0">
+            <div className="relative mx-auto aspect-square w-32 shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-brand-sm sm:mx-0">
               {identity.profilePhotoUrl ? (
-                <img
+                <EmployeeProfilePhoto
                   src={identity.profilePhotoUrl}
                   alt={`${employee.fullName} profile`}
-                  className="h-full w-full object-cover"
+                  rounded="2xl"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-medium text-muted-foreground">
