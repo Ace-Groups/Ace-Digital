@@ -11,6 +11,7 @@ import {
 } from "../lib/id-card";
 import { idCardPairToPdf } from "../lib/credentials/pdf-from-svg";
 import { buildVerifyUrl, getOrgCredentialSettings } from "../lib/credentials/org-settings";
+import { employeeCodeFromUser } from "../lib/credentials/employee-code";
 import { ensureUserVerifySlug } from "../lib/credentials/slug";
 import { sendIdCardEmail } from "../lib/email";
 import { resolveIdCardExtras } from "../lib/id-card/resolve-extras";
@@ -44,6 +45,7 @@ router.get(
     const cardData = await buildIdCardDataFromUser(resolved.user, resolved.extras);
     const slug = await ensureUserVerifySlug(resolved.user);
     const org = await getOrgCredentialSettings();
+    const code = employeeCodeFromUser(resolved.user);
 
     res.json({
       variant: pair.variant,
@@ -54,7 +56,7 @@ router.get(
       frontDataUrl: svgToDataUrl(pair.frontSvg),
       backDataUrl: svgToDataUrl(pair.backSvg),
       verifySlug: slug,
-      verifyUrl: buildVerifyUrl(org.verifyBaseUrl, slug),
+      verifyUrl: buildVerifyUrl(org.verifyBaseUrl, code),
     });
   },
 );

@@ -34,6 +34,7 @@ export async function buildIdCardDataFromUser(
     signatoryName?: string | null;
     signatoryDesignation?: string | null;
     signatorySignatureDataUrl?: string | null;
+    companyLegalName?: string | null;
   },
 ): Promise<IdCardData> {
   const team =
@@ -65,5 +66,19 @@ export async function buildIdCardDataFromUser(
     signatoryName: extras?.signatoryName ?? null,
     signatoryDesignation: extras?.signatoryDesignation ?? null,
     signatorySignatureDataUrl: extras?.signatorySignatureDataUrl ?? null,
+    dob: user.dob?.toISOString() ?? null,
+    companyLegalName: extras?.companyLegalName ?? "Ace Digital Private Limited",
+    expirationLabel: formatExpiration(extras?.endDate ?? user.startDate?.toISOString() ?? null),
   };
+}
+
+function formatExpiration(iso: string | null): string {
+  if (!iso) {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 3);
+    return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "DEC 2026";
+  return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
 }

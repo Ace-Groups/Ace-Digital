@@ -1,6 +1,7 @@
 import type { OrgCredentialSettings } from "./types";
 import { DEFAULT_ORG_CREDENTIAL_SETTINGS } from "./types";
 import { fs, useFirestore } from "./firestore-util";
+import { normalizeEmployeeCode } from "./employee-code";
 
 const DOC = "org_credential_settings/default";
 let memory: OrgCredentialSettings = { ...DEFAULT_ORG_CREDENTIAL_SETTINGS };
@@ -31,7 +32,20 @@ export async function updateOrgCredentialSettings(
   return updated;
 }
 
-export function buildVerifyUrl(baseUrl: string, slug: string): string {
+/** Public Ace Verify URL — uses employee ID, not display name slug. */
+export function buildVerifyUrl(baseUrl: string, employeeCode: string): string {
+  const base = baseUrl.replace(/\/$/, "");
+  const code = encodeURIComponent(normalizeEmployeeCode(employeeCode));
+  return `${base}/v/verification/${code}`;
+}
+
+export function buildVerifyPath(employeeCode: string): string {
+  const code = encodeURIComponent(normalizeEmployeeCode(employeeCode));
+  return `/v/verification/${code}`;
+}
+
+/** @deprecated Legacy slug URLs — kept for old printed cards. */
+export function buildLegacySlugVerifyUrl(baseUrl: string, slug: string): string {
   const base = baseUrl.replace(/\/$/, "");
   return `${base}/v/${slug}`;
 }

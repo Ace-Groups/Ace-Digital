@@ -866,7 +866,7 @@ async function sendViaResendWithAttachments(
   subject: string,
   text: string,
   html: string,
-  attachments: { filename: string; content: string }[],
+  attachments: { filename: string; content: string; encoding?: "utf8" | "base64" }[],
 ): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return false;
@@ -880,7 +880,10 @@ async function sendViaResendWithAttachments(
       html,
       attachments: attachments.map((a) => ({
         filename: a.filename,
-        content: Buffer.from(a.content, "utf8"),
+        content:
+          a.encoding === "base64"
+            ? Buffer.from(a.content, "base64")
+            : Buffer.from(a.content, "utf8"),
       })),
     });
     if (error) {
@@ -895,14 +898,17 @@ async function sendViaResendWithAttachments(
 }
 
 export async function sendIdCardEmail(params: IdCardEmailParams): Promise<boolean> {
-  const { buildIdCardDataFromUser, prepareIdCardPair, svgToDataUrl } = await import(
-    "./id-card"
-  );
+  const { prepareIdCardPair, svgToDataUrl } = await import("./id-card");
+  const { idCardPairToPdf } = await import("./credentials/pdf-from-svg");
+  const { employeeCodeFromUser } = await import("./credentials/employee-code");
+  const { isInternJobTitle } = await import("./id-card/is-intern");
   const pair = await prepareIdCardPair(params.user, params.extras);
-  const cardData = await buildIdCardDataFromUser(params.user, params.extras);
+  const employeeCode = employeeCodeFromUser(params.user);
   const frontDataUrl = svgToDataUrl(pair.frontSvg);
   const backDataUrl = svgToDataUrl(pair.backSvg);
-  const isIntern = cardData.variant === "intern";
+  const pdfBytes = await idCardPairToPdf(pair.frontSvg, pair.backSvg);
+  const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
+  const isIntern = isInternJobTitle(params.user.jobTitle);
   const subject = isIntern
     ? `Your Ace Digital Intern ID Card — ${params.fullName}`
     : `Your Ace Digital Employee ID Card — ${params.fullName}`;
@@ -910,44 +916,48 @@ export async function sendIdCardEmail(params: IdCardEmailParams): Promise<boolea
   const text = [
     `Hi ${params.fullName},`,
     "",
-    `Your ${isIntern ? "intern" : "employee"} ID card is attached (front and back SVG files).`,
-    `Employee code: ${cardData.employeeCode}`,
+    `Your ${isIntern ? "intern" : "employee"} ID card is attached as a print-ready PDF (front and back).`,
+    `Employee code: ${employeeCode}`,
     "",
-    "You can also view and print your card anytime from the app.",
+    "Open the PDF and print at 100% scale on card stock for best results.",
+    "You can also view your card anytime from the app.",
     "",
     "— Ace Digital HR",
   ].join("\n");
 
   const bodyHtml = `
     <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">
-      Hi ${escapeHtml(params.fullName)}, your ${isIntern ? "<strong style=\"color:#0D9488;\">intern</strong>" : "employee"} ID card is ready.
+      Hi ${escapeHtml(params.fullName)}, your ${isIntern ? "<strong style=\"color:#0D9488;\">intern</strong>" : "employee"} ID card is ready to print.
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
       <tr>
         <td width="50%" style="padding:8px;" align="center">
           <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Front</p>
-          <img src="${frontDataUrl}" alt="ID card front" width="240" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;box-shadow:0 8px 24px rgba(0,0,0,0.08);" />
+          <img src="${frontDataUrl}" alt="ID card front" width="200" style="max-width:100%;height:auto;border-radius:16px;border:1px solid #CBD5E1;box-shadow:0 12px 32px rgba(11,31,58,0.12);" />
         </td>
         <td width="50%" style="padding:8px;" align="center">
           <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Back</p>
-          <img src="${backDataUrl}" alt="ID card back" width="240" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;box-shadow:0 8px 24px rgba(0,0,0,0.08);" />
+          <img src="${backDataUrl}" alt="ID card back" width="200" style="max-width:100%;height:auto;border-radius:16px;border:1px solid #CBD5E1;box-shadow:0 12px 32px rgba(11,31,58,0.12);" />
         </td>
       </tr>
     </table>
-    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Code: <strong>${escapeHtml(cardData.employeeCode)}</strong></p>
-    <p style="margin:0;font-size:13px;color:#5C554E;">SVG attachments included for high-quality printing.</p>
+    <p style="margin:0 0 8px;font-size:14px;color:#2C2B2A;">Code: <strong>${escapeHtml(employeeCode)}</strong></p>
+    <p style="margin:0;font-size:13px;color:#5C554E;">A high-resolution PDF is attached — print at 100% for CR80 card size.</p>
     ${ctaButton(`${APP_URL}${isIntern ? "/interns" : "/employees"}`, "View in app →")}`;
 
   const html = emailShell({
     title: subject,
     headline: isIntern ? "Intern ID Card" : "Employee ID Card",
-    subtitle: "Front & back — ready to print",
+    subtitle: "Print-ready PDF attached",
     bodyHtml,
   });
 
   const sent = await sendViaResendWithAttachments(params.to, subject, text, html, [
-    { filename: `${cardData.employeeCode}-front.svg`, content: pair.frontSvg },
-    { filename: `${cardData.employeeCode}-back.svg`, content: pair.backSvg },
+    {
+      filename: `${employeeCode}-id-card.pdf`,
+      content: pdfBase64,
+      encoding: "base64",
+    },
   ]);
 
   if (sent) return true;

@@ -1,6 +1,6 @@
 .verify-page {
   min-height: 100dvh;
-  background: linear-gradient(165deg, #faf6f0 0%, #e8e4ff 45%, #faf6f0 100%);
+  background: linear-gradient(165deg, #f8fafc 0%, #e0f2fe 40%, #f0fdfa 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -32,24 +32,44 @@
   max-width: 420px;
   background: #fff;
   border-radius: 20px;
-  border: 1px solid rgba(75, 78, 211, 0.12);
-  box-shadow: 0 20px 50px rgba(26, 26, 46, 0.08);
+  border: 1px solid rgba(11, 31, 58, 0.1);
+  box-shadow: 0 24px 60px rgba(11, 31, 58, 0.1);
   overflow: hidden;
 }
 
+.verify-card-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #0b1f3a 0%, #163a5f 100%);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.verify-card-hero-icon {
+  width: 16px;
+  height: 16px;
+  color: #14b8a6;
+}
+
 .verify-photo {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
+  width: 104px;
+  height: 104px;
+  border-radius: 18px;
   object-fit: cover;
-  border: 3px solid #e8e4ff;
-  background: #e8e4ff;
+  border: 3px solid #0b1f3a;
+  background: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   font-weight: 700;
-  color: #4b4ed3;
+  color: #0b1f3a;
 }
 
 .verify-badge {
@@ -106,9 +126,46 @@
 }
 
 .verify-actions a.primary {
-  background: #4b4ed3;
+  background: #0b1f3a;
   color: #fff;
-  border-color: #4b4ed3;
+  border-color: #0b1f3a;
+}
+
+.verify-contact {
+  border-top: 1px solid #e2e8f0;
+  padding: 24px 20px;
+  text-align: center;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.verify-contact-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0b1f3a;
+}
+
+.verify-contact-copy {
+  margin: 6px 0 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.verify-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 280px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, #0d9488 0%, #0b1f3a 100%);
+  box-shadow: 0 10px 24px rgba(13, 148, 136, 0.28);
 }
 
 .verify-cert-panel {

@@ -159,6 +159,7 @@ function AppRouter() {
     <Suspense fallback={<PageFallback />}>
       <Switch>
         <Route path="/login" component={LoginRoute} />
+        <Route path="/v/verification/:employeeCode" component={VerifyProfilePage} />
         <Route path="/v/:slug" component={VerifyProfilePage} />
         <Route path="/verify/cert/:code" component={VerifyCertificateRedirectPage} />
         <Route

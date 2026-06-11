@@ -5,7 +5,7 @@ import {
   buildCertificateVerifyPath,
 } from "../credentials/verification";
 import { getOrgCredentialSettings } from "../credentials/org-settings";
-import { ensureUserVerifySlug } from "../credentials/slug";
+import { employeeCodeFromUser } from "../credentials/employee-code";
 import { getIssuerDisplay } from "./resolve-verify";
 
 export type CertificateVerifyPayload = {
@@ -48,9 +48,11 @@ export async function resolveCertificateVerification(
   const issuer = await getIssuerDisplay(cert.issuerUserId);
   const org = await getOrgCredentialSettings();
   const user = await store.findUserById(cert.userId);
-  const slug = user ? await ensureUserVerifySlug(user) : null;
+  const employeeCode = user ? employeeCodeFromUser(user) : null;
   const profileVerifyPath =
-    slug != null ? buildCertificateVerifyPath(slug, cert.certificateCode) : null;
+    employeeCode != null
+      ? buildCertificateVerifyPath(employeeCode, cert.certificateCode)
+      : null;
 
   return {
     valid: cert.status === "active",
@@ -67,7 +69,7 @@ export async function resolveCertificateVerification(
     companyLegalName: org.companyLegalName,
     revokedAt: cert.revokedAt,
     revokeReason: cert.revokeReason,
-    profileSlug: slug,
+    profileSlug: user?.verifySlug ?? null,
     profileVerifyPath,
   };
 }

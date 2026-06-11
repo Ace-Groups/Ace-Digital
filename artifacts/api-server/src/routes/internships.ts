@@ -337,7 +337,14 @@ router.patch(
       startDate: startDate !== undefined ? parseDate(startDate) : undefined,
       endDate: endDate !== undefined ? parseDate(endDate) : undefined,
       notes: typeof notes === "string" ? notes : undefined,
-      status: typeof status === "string" ? status : undefined,
+      status:
+        typeof status === "string" &&
+        (status === "completed" ||
+          status === "pipeline" ||
+          status === "active" ||
+          status === "withdrawn")
+          ? status
+          : undefined,
     });
     if (!updated) {
       res.status(404).json({ error: "Internship not found" });

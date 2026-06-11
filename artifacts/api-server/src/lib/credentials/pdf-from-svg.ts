@@ -1,8 +1,10 @@
 import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 
-const CR80_W = 242.77;
-const CR80_H = 153.07;
+/** Portrait CR80 (54 × 86 mm) in PDF points. */
+const CR80_W = 153.07;
+const CR80_H = 242.77;
+const CARD_RENDER_WIDTH = 540;
 const A4_W = 595.28;
 const A4_H = 841.89;
 
@@ -16,8 +18,8 @@ export async function svgToPngBytes(svg: string, width: number): Promise<Uint8Ar
 
 export async function idCardPairToPdf(frontSvg: string, backSvg: string): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const frontPng = await svgToPngBytes(frontSvg, 856);
-  const backPng = await svgToPngBytes(backSvg, 856);
+  const frontPng = await svgToPngBytes(frontSvg, CARD_RENDER_WIDTH);
+  const backPng = await svgToPngBytes(backSvg, CARD_RENDER_WIDTH);
   const frontImg = await pdf.embedPng(frontPng);
   const backImg = await pdf.embedPng(backPng);
 

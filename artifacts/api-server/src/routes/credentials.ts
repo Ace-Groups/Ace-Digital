@@ -25,6 +25,7 @@ import {
   isValidVerifySlug,
   isVerifySlugTaken,
 } from "../lib/credentials";
+import { employeeCodeFromUser } from "../lib/credentials/employee-code";
 import { findInternshipById } from "../lib/internship-store";
 import { getIssuerDisplay } from "../lib/verify/resolve-verify";
 import { sendInternshipCertificateEmail } from "../lib/email";
@@ -269,8 +270,12 @@ router.post(
       certificatePrefix: org.certificatePrefix,
     });
 
-    const internSlug = await ensureUserVerifySlug(intern);
-    const verifyUrl = buildCertificateVerifyUrl(org.verifyBaseUrl, internSlug, cert.certificateCode);
+    await ensureUserVerifySlug(intern);
+    const verifyUrl = buildCertificateVerifyUrl(
+      org.verifyBaseUrl,
+      employeeCodeFromUser(intern),
+      cert.certificateCode,
+    );
     const svg = await renderCertificateSvg({
       recipientName: cert.recipientName,
       program: cert.program,
@@ -341,8 +346,11 @@ router.get("/v1/certificates/:id.pdf", requireAuth, async (req, res): Promise<vo
   const org = await getOrgCredentialSettings();
   const issuer = await getIssuerDisplay(cert.issuerUserId);
   const certUser = await store.findUserById(cert.userId);
-  const internSlug = certUser ? await ensureUserVerifySlug(certUser) : "unknown";
-  const verifyUrl = buildCertificateVerifyUrl(org.verifyBaseUrl, internSlug, cert.certificateCode);
+  const verifyUrl = buildCertificateVerifyUrl(
+    org.verifyBaseUrl,
+    certUser ? employeeCodeFromUser(certUser) : "UNKNOWN",
+    cert.certificateCode,
+  );
   const svg = await renderCertificateSvg({
     recipientName: cert.recipientName,
     program: cert.program,
@@ -445,7 +453,11 @@ router.post("/v1/employees/:id/ensure-verify-slug", requireAuth, async (req, res
   }
   const slug = await ensureUserVerifySlug(user);
   const org = await getOrgCredentialSettings();
-  res.json({ verifySlug: slug, verifyUrl: buildVerifyUrl(org.verifyBaseUrl, slug) });
+  res.json({
+    verifySlug: slug,
+    employeeCode: employeeCodeFromUser(user),
+    verifyUrl: buildVerifyUrl(org.verifyBaseUrl, employeeCodeFromUser(user)),
+  });
 });
 
 export default router;

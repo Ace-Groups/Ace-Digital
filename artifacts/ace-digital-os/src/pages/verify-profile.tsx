@@ -7,37 +7,56 @@ import {
   Mail,
   Phone,
   Linkedin,
-  Download,
+  UserPlus,
   Globe,
+  ShieldCheck,
 } from "lucide-react";
-import { fetchPublicVerify, type VerifyEmployeeResponse } from "@/lib/credentials-api";
+import {
+  fetchPublicVerify,
+  fetchPublicVerifyByCode,
+  type VerifyEmployeeResponse,
+} from "@/lib/credentials-api";
 import { resolveApiUrl } from "@/lib/api-config";
 import { VerifyShell } from "@/components/verify/VerifyShell";
 import { VerifyCertificatePanel } from "@/components/verify/VerifyCertificatePanel";
 
+function useVerifyQuery(searchKey: string) {
+  const [, slugParams] = useRoute("/v/:slug");
+  const [, codeParams] = useRoute("/v/verification/:employeeCode");
+  const slug = slugParams?.slug ?? "";
+  const employeeCode = codeParams?.employeeCode ?? "";
+  return { slug, employeeCode, searchKey };
+}
+
 export default function VerifyProfilePage() {
-  const [, params] = useRoute("/v/:slug");
-  const slug = params?.slug ?? "";
+  const searchKey = typeof window !== "undefined" ? window.location.search : "";
+  const { slug, employeeCode } = useVerifyQuery(searchKey);
   const [data, setData] = useState<VerifyEmployeeResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const searchKey = typeof window !== "undefined" ? window.location.search : "";
-
   useEffect(() => {
-    if (!slug) return;
+    if (!slug && !employeeCode) return;
     const q = new URLSearchParams(searchKey);
-    setLoading(true);
-    void fetchPublicVerify(slug, {
+    const opts = {
       kiosk: q.get("kiosk") ?? undefined,
       cert: q.get("cert") ?? undefined,
       certSig: q.get("s") ?? undefined,
-    })
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, [slug, searchKey]);
+    };
+    setLoading(true);
+    const request = employeeCode
+      ? fetchPublicVerifyByCode(employeeCode, opts)
+      : fetchPublicVerify(slug, opts);
+    void request.then(setData).finally(() => setLoading(false));
+  }, [slug, employeeCode, searchKey]);
 
   const scannedLabel = data?.scannedAt ? new Date(data.scannedAt).toLocaleString() : "";
-  const subtitle = data?.certificate ? "Ace Verify · Profile & certificate" : "Verified by Ace Digital OS";
+  const subtitle = data?.certificate ? "Ace Verify · Profile & certificate" : "Ace Digital Secure ID";
+  const vcardCode = data?.employeeCode ?? employeeCode;
+  const vcardUrl = vcardCode
+    ? resolveApiUrl(`/api/v1/public/v/verification/${encodeURIComponent(vcardCode)}.vcf`)
+    : null;
+  const showPublicLinks =
+    data?.status === "active" && data.publicProfile?.enabled && data.mode === "public";
 
   return (
     <VerifyShell subtitle={subtitle}>
@@ -47,7 +66,7 @@ export default function VerifyProfilePage() {
         <div className="verify-card p-8 text-center">
           <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
           <p className="mt-4 font-semibold">Verification unavailable</p>
-          <p className="mt-1 text-sm text-muted-foreground">This link is not recognized.</p>
+          <p className="mt-1 text-sm text-muted-foreground">This ID could not be verified.</p>
         </div>
       ) : data.status === "disabled" ? (
         <div className="verify-card p-8 text-center">
@@ -55,18 +74,29 @@ export default function VerifyProfilePage() {
         </div>
       ) : (
         <div className="verify-card">
+          <div className="verify-card-hero">
+            <ShieldCheck className="verify-card-hero-icon" aria-hidden />
+            <span>Official Ace Digital verification</span>
+          </div>
+
           <div className="flex flex-col items-center gap-4 p-8 text-center">
             {data.photoUrl ? (
               <img src={data.photoUrl} alt="" className="verify-photo" />
             ) : (
               <div className="verify-photo">
-                {data.fullName?.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                {data.fullName
+                  ?.split(" ")
+                  .map((p) => p[0])
+                  .join("")
+                  .slice(0, 2)}
               </div>
             )}
             <div>
               <h1 className="text-xl font-bold text-foreground">{data.fullName}</h1>
               <p className="text-sm text-muted-foreground">{data.jobTitle}</p>
-              <p className="mt-1 font-mono text-xs text-primary">{data.employeeCode}</p>
+              <p className="mt-2 font-mono text-xs font-semibold tracking-wide text-primary">
+                {data.employeeCode}
+              </p>
             </div>
 
             {data.status === "active" ? (
@@ -89,39 +119,45 @@ export default function VerifyProfilePage() {
 
           {data.certificate && <VerifyCertificatePanel cert={data.certificate} />}
 
-          {data.status === "active" && data.publicProfile?.enabled && data.mode === "public" && (
+          {data.status === "active" && vcardUrl && (
+            <div className="verify-contact">
+              <p className="verify-contact-title">Save this contact</p>
+              <p className="verify-contact-copy">
+                Add {data.fullName?.split(" ")[0] ?? "this employee"} to your phone in one tap.
+              </p>
+              <a className="verify-contact-btn" href={vcardUrl} download>
+                <UserPlus className="h-5 w-5" />
+                Add to Contacts
+              </a>
+            </div>
+          )}
+
+          {showPublicLinks && (
             <div className="verify-nexme">
-              {data.publicProfile.bio && (
+              {data.publicProfile?.bio && (
                 <p className="text-center text-sm text-muted-foreground">{data.publicProfile.bio}</p>
               )}
               <div className="verify-actions">
-                {data.publicProfile.publicPhone && (
+                {data.publicProfile?.publicPhone && (
                   <a href={`tel:${data.publicProfile.publicPhone}`}>
                     <Phone className="h-4 w-4" /> Call
                   </a>
                 )}
-                {data.publicProfile.publicEmail && (
+                {data.publicProfile?.publicEmail && (
                   <a href={`mailto:${data.publicProfile.publicEmail}`}>
                     <Mail className="h-4 w-4" /> Email
                   </a>
                 )}
-                {data.publicProfile.linkedinUrl && (
+                {data.publicProfile?.linkedinUrl && (
                   <a href={data.publicProfile.linkedinUrl} target="_blank" rel="noreferrer">
                     <Linkedin className="h-4 w-4" /> LinkedIn
                   </a>
                 )}
-                {data.publicProfile.portfolioUrl && (
+                {data.publicProfile?.portfolioUrl && (
                   <a href={data.publicProfile.portfolioUrl} target="_blank" rel="noreferrer">
                     <Globe className="h-4 w-4" /> Portfolio
                   </a>
                 )}
-                <a
-                  className="primary col-span-2"
-                  href={resolveApiUrl(`/api/v1/public/v/${slug}.vcf`)}
-                  download
-                >
-                  <Download className="h-4 w-4" /> Save to Contacts
-                </a>
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@ import { store } from "@workspace/db";
 import type { User } from "@workspace/db";
 import { isInternJobTitle } from "../id-card/is-intern";
 import { findUserByVerifySlug } from "../credentials/slug";
+import { findUserByEmployeeCode, employeeCodeFromUser } from "../credentials/employee-code";
 import { getOrgCredentialSettings } from "../credentials/org-settings";
 import { logVerifyScan, type ScanContext } from "./scan-log";
 import { resolveKioskFromQuery } from "./kiosk-store";
@@ -48,6 +49,7 @@ export type VerifyEmployeeResponse = {
   };
   certificate?: CertificateVerifyPayload | null;
   verifySlug?: string;
+  verifyPath?: string;
 };
 
 async function fireKioskWebhook(
@@ -65,20 +67,33 @@ async function fireKioskWebhook(
   }
 }
 
-export async function resolveEmployeeVerification(input: {
-  slug: string;
-  kioskToken?: string;
-  certCode?: string;
-  certSig?: string;
-  ip?: string;
-}): Promise<VerifyEmployeeResponse> {
+function buildBase(user: User, companyLegalName: string, scannedAt: string) {
+  const code = employeeCodeFromUser(user);
+  return {
+    fullName: user.fullName,
+    jobTitle: user.jobTitle,
+    photoUrl: parsePhotoUrl(user.avatarUrl),
+    employeeCode: code,
+    variant: isInternJobTitle(user.jobTitle) ? ("intern" as const) : ("employee" as const),
+    scannedAt,
+    companyLegalName,
+    verifyPath: `/v/verification/${encodeURIComponent(code)}`,
+    verifySlug: user.verifySlug ?? undefined,
+  };
+}
+
+async function resolveForUser(
+  user: User,
+  input: {
+    scanKey: string;
+    kioskToken?: string;
+    certCode?: string;
+    certSig?: string;
+    ip?: string;
+  },
+): Promise<VerifyEmployeeResponse> {
   const scannedAt = new Date().toISOString();
   const org = await getOrgCredentialSettings();
-  const user = await findUserByVerifySlug(input.slug);
-
-  if (!user) {
-    return { status: "not_found", scannedAt };
-  }
 
   if (user.verifySlugEnabled === false) {
     return { status: "disabled", scannedAt, companyLegalName: org.companyLegalName };
@@ -88,7 +103,7 @@ export async function resolveEmployeeVerification(input: {
   const context: ScanContext = kiosk ? "kiosk" : "public";
 
   await logVerifyScan({
-    slug: input.slug,
+    slug: input.scanKey,
     userId: user.id,
     context,
     deviceId: kiosk?.id ?? null,
@@ -107,7 +122,6 @@ export async function resolveEmployeeVerification(input: {
       status: "inactive",
       inactiveMessage: org.verifyInactiveMessage,
       mode: "security",
-      verifySlug: input.slug,
       certificate,
     };
   }
@@ -117,7 +131,7 @@ export async function resolveEmployeeVerification(input: {
       void fireKioskWebhook(kiosk.webhookUrl, {
         event: "verify.success",
         userId: user.id,
-        slug: input.slug,
+        employeeCode: base.employeeCode,
         deviceId: kiosk.id,
         timestamp: scannedAt,
         actions: kiosk.actions,
@@ -128,7 +142,6 @@ export async function resolveEmployeeVerification(input: {
       status: "active",
       mode: "kiosk",
       publicProfile: undefined,
-      verifySlug: input.slug,
       certificate,
     };
   }
@@ -137,7 +150,6 @@ export async function resolveEmployeeVerification(input: {
     ...base,
     status: "active",
     mode: user.publicProfileEnabled ? "public" : "security",
-    verifySlug: input.slug,
     certificate,
     publicProfile: user.publicProfileEnabled
       ? {
@@ -149,20 +161,49 @@ export async function resolveEmployeeVerification(input: {
           publicEmail: user.publicEmail ?? user.email,
           officeAddress: user.officeAddress ?? null,
         }
-      : { enabled: false, bio: null, linkedinUrl: null, portfolioUrl: null, publicPhone: null, publicEmail: null, officeAddress: null },
+      : {
+          enabled: false,
+          bio: null,
+          linkedinUrl: null,
+          portfolioUrl: null,
+          publicPhone: null,
+          publicEmail: null,
+          officeAddress: null,
+        },
   };
 }
 
-function buildBase(user: User, companyLegalName: string, scannedAt: string) {
-  return {
-    fullName: user.fullName,
-    jobTitle: user.jobTitle,
-    photoUrl: parsePhotoUrl(user.avatarUrl),
-    employeeCode: user.employeeCode ?? `ACE${user.id}`,
-    variant: isInternJobTitle(user.jobTitle) ? ("intern" as const) : ("employee" as const),
-    scannedAt,
-    companyLegalName,
-  };
+export async function resolveEmployeeVerification(input: {
+  slug: string;
+  kioskToken?: string;
+  certCode?: string;
+  certSig?: string;
+  ip?: string;
+}): Promise<VerifyEmployeeResponse> {
+  const scannedAt = new Date().toISOString();
+  const user = await findUserByVerifySlug(input.slug);
+  if (!user) {
+    return { status: "not_found", scannedAt };
+  }
+  return resolveForUser(user, { ...input, scanKey: input.slug });
+}
+
+export async function resolveEmployeeVerificationByCode(input: {
+  employeeCode: string;
+  kioskToken?: string;
+  certCode?: string;
+  certSig?: string;
+  ip?: string;
+}): Promise<VerifyEmployeeResponse> {
+  const scannedAt = new Date().toISOString();
+  const user = await findUserByEmployeeCode(input.employeeCode);
+  if (!user) {
+    return { status: "not_found", scannedAt };
+  }
+  return resolveForUser(user, {
+    ...input,
+    scanKey: employeeCodeFromUser(user),
+  });
 }
 
 export async function getIssuerDisplay(userId: number): Promise<{

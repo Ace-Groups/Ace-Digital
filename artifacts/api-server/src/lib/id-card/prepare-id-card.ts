@@ -1,6 +1,6 @@
 import type { User } from "@workspace/db";
 import { store } from "@workspace/db";
-import { ensureUserVerifySlug } from "../credentials/slug";
+import { employeeCodeFromUser } from "../credentials/employee-code";
 import { getOrgCredentialSettings, buildVerifyUrl } from "../credentials/org-settings";
 import { getSignatoryProfile } from "../credentials/signatory-store";
 import { generateQrSvg } from "../credentials/qr-svg";
@@ -18,9 +18,8 @@ export async function prepareIdCardPair(
     endDate?: string | null;
   },
 ): Promise<IdCardPair> {
-  const slug = await ensureUserVerifySlug(user);
   const org = await getOrgCredentialSettings();
-  const verifyUrl = buildVerifyUrl(org.verifyBaseUrl, slug);
+  const verifyUrl = buildVerifyUrl(org.verifyBaseUrl, employeeCodeFromUser(user));
 
   let signatoryName: string | null = null;
   let signatoryDesignation: string | null = null;
@@ -44,6 +43,7 @@ export async function prepareIdCardPair(
     signatoryName,
     signatoryDesignation,
     signatorySignatureDataUrl,
+    companyLegalName: org.companyLegalName,
   });
   return renderIdCardPair(cardData);
 }

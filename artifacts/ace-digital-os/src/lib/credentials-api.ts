@@ -78,6 +78,7 @@ export type VerifyEmployeeResponse = {
   inactiveMessage?: string;
   mode?: "security" | "kiosk" | "public";
   verifySlug?: string;
+  verifyPath?: string;
   certificate?: CertificateVerifyPayload | null;
   publicProfile?: {
     enabled: boolean;
@@ -215,6 +216,23 @@ export async function fetchPublicVerify(
   return res.json() as Promise<VerifyEmployeeResponse>;
 }
 
+export async function fetchPublicVerifyByCode(
+  employeeCode: string,
+  opts?: { kiosk?: string; cert?: string; certSig?: string },
+): Promise<VerifyEmployeeResponse> {
+  const q = new URLSearchParams();
+  if (opts?.kiosk) q.set("kiosk", opts.kiosk);
+  if (opts?.cert) q.set("cert", opts.cert);
+  if (opts?.certSig) q.set("s", opts.certSig);
+  const qs = q.toString();
+  const res = await fetch(
+    resolveApiUrl(
+      `/api/v1/public/v/verification/${encodeURIComponent(employeeCode)}${qs ? `?${qs}` : ""}`,
+    ),
+  );
+  return res.json() as Promise<VerifyEmployeeResponse>;
+}
+
 export async function fetchCertificateVerify(
   code: string,
   sig?: string,
@@ -232,6 +250,16 @@ export function buildProfileCertificatePath(
   const q = new URLSearchParams({ cert: certificateCode });
   if (sig) q.set("s", sig);
   return `/v/${slug}?${q.toString()}`;
+}
+
+export function buildProfileCertificatePathByCode(
+  employeeCode: string,
+  certificateCode: string,
+  sig?: string,
+): string {
+  const q = new URLSearchParams({ cert: certificateCode });
+  if (sig) q.set("s", sig);
+  return `/v/verification/${encodeURIComponent(employeeCode)}?${q.toString()}`;
 }
 
 export function downloadIdCardPdf(employeeId: number) {

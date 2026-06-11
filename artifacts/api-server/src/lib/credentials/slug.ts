@@ -27,7 +27,7 @@ export async function findUserByVerifySlug(slug: string): Promise<User | null> {
     return store.findUserById(Number(doc.id));
   }
   try {
-    const db = getPgDb();
+    const { db } = getPgDb();
     const [u] = await db.select().from(usersTable).where(eq(usersTable.verifySlug, slug));
     return u ?? null;
   } catch {

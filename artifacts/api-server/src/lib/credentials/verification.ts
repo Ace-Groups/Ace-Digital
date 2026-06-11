@@ -17,18 +17,21 @@ export function signCertificateCode(certificateCode: string): string {
   return createHmac("sha256", secret()).update(certificateCode).digest("base64url").slice(0, 16);
 }
 
+import { normalizeEmployeeCode } from "./employee-code";
+
 /** Profile-based verify URL used on certificate QR codes. */
-export function buildCertificateVerifyPath(slug: string, certificateCode: string): string {
+export function buildCertificateVerifyPath(employeeCode: string, certificateCode: string): string {
   const sig = signCertificateCode(certificateCode);
-  return `/v/${slug}?cert=${encodeURIComponent(certificateCode)}&s=${sig}`;
+  const code = encodeURIComponent(normalizeEmployeeCode(employeeCode));
+  return `/v/verification/${code}?cert=${encodeURIComponent(certificateCode)}&s=${sig}`;
 }
 
 export function buildCertificateVerifyUrl(
   baseUrl: string,
-  slug: string,
+  employeeCode: string,
   certificateCode: string,
 ): string {
-  return `${baseUrl.replace(/\/$/, "")}${buildCertificateVerifyPath(slug, certificateCode)}`;
+  return `${baseUrl.replace(/\/$/, "")}${buildCertificateVerifyPath(employeeCode, certificateCode)}`;
 }
 
 /** Legacy path — redirects to profile-based verify. */

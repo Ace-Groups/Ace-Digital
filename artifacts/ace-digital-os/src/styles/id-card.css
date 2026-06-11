@@ -27,10 +27,11 @@
 
 .id-card-svg-wrap {
   width: 100%;
-  max-width: 428px;
-  border-radius: 16px;
+  max-width: 300px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 12px 40px hsl(var(--foreground) / 0.12);
+  box-shadow: 0 16px 48px rgba(11, 31, 58, 0.14);
+  border: 1px solid rgba(11, 31, 58, 0.08);
 }
 
 .id-card-svg-wrap svg {
