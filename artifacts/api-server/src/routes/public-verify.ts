@@ -7,7 +7,8 @@ import {
 import { buildVcard } from "../lib/verify/vcard";
 import { findUserByVerifySlug } from "../lib/credentials/slug";
 import { findUserByEmployeeCode, normalizeEmployeeCode } from "../lib/credentials/employee-code";
-import { getOrgCredentialSettings } from "../lib/credentials/org-settings";
+import { buildVerifyUrl, getOrgCredentialSettings } from "../lib/credentials/org-settings";
+import { employeeCodeFromUser } from "../lib/credentials/employee-code";
 import { resolveCertificateVerification } from "../lib/verify/resolve-certificate";
 
 const router = Router();
@@ -53,12 +54,17 @@ router.get(
       return;
     }
     const org = await getOrgCredentialSettings();
-    const vcard = buildVcard(user, org.companyLegalName);
+    const code = employeeCodeFromUser(user);
+    const vcard = buildVcard({
+      user,
+      orgName: org.companyLegalName,
+      employeeCode: code,
+      companyWebsite: org.verifyBaseUrl,
+      verifyUrl: buildVerifyUrl(org.verifyBaseUrl, code),
+    });
     res.setHeader("Content-Type", "text/vcard; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${employeeCode}.vcf"`,
-    );
+    res.setHeader("Content-Disposition", `inline; filename="${code}.vcf"`);
+    res.setHeader("Cache-Control", "no-cache");
     res.send(vcard);
   },
 );
@@ -90,9 +96,17 @@ router.get("/v1/public/v/:slug.vcf", publicLimiter, async (req, res): Promise<vo
     return;
   }
   const org = await getOrgCredentialSettings();
-  const vcard = buildVcard(user, org.companyLegalName);
+  const code = employeeCodeFromUser(user);
+  const vcard = buildVcard({
+    user,
+    orgName: org.companyLegalName,
+    employeeCode: code,
+    companyWebsite: org.verifyBaseUrl,
+    verifyUrl: buildVerifyUrl(org.verifyBaseUrl, code),
+  });
   res.setHeader("Content-Type", "text/vcard; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="${slug}.vcf"`);
+  res.setHeader("Content-Disposition", `inline; filename="${code}.vcf"`);
+  res.setHeader("Cache-Control", "no-cache");
   res.send(vcard);
 });
 

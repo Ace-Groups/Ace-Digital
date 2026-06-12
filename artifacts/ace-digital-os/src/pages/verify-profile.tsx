@@ -144,7 +144,7 @@ export default function VerifyProfilePage() {
                   label="Add to Contacts"
                 />
                 <p className="verify-pass-cta-hint">
-                  Saves name, title, email &amp; phone directly to your device.
+                  Opens your phone&apos;s contact app with name, phone, email, company address, employee ID, and website.
                 </p>
               </div>
             )}
