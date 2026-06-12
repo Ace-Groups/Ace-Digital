@@ -197,7 +197,7 @@ function buildWelcomeLetter(): { subject: string; html: string } {
       <strong style="color:#1A1A1A;">excellence</strong>.
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#2C2B2A;line-height:1.7;">
-      We've built <strong style="color:#4B4ED3;">Ace Digital OS</strong> to be your
+      We've built <strong style="color:#4B4ED3;">Ace Digital</strong> to be your
       all-in-one workspace — a place where you can manage projects, collaborate
       with your team, track your progress, and grow together. I'm confident you'll
       find it both powerful and intuitive.
@@ -271,7 +271,7 @@ function buildAppGuide(): { subject: string; html: string } {
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#2C2B2A;line-height:1.6;">
       Here's a quick tour of everything you can do with
-      <strong style="color:#4B4ED3;">Ace Digital OS</strong> — your all-in-one workspace.
+      <strong style="color:#4B4ED3;">Ace Digital</strong> — your all-in-one workspace.
     </p>
     
     <div style="margin:24px 0;text-align:center;">
@@ -319,7 +319,7 @@ function buildAppGuide(): { subject: string; html: string } {
   const html = emailShell({
     title: subject,
     headline: "Getting Started",
-    subtitle: "Your guide to Ace Digital OS",
+    subtitle: "Your guide to Ace Digital",
     bodyHtml,
   });
 

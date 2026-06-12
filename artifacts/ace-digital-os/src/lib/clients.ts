@@ -5,9 +5,9 @@ export type ClientCustomField = { key: string; value: string };
 
 export function formatContactName(
   salutation: string | null | undefined,
-  contactName: string,
+  contactName: string | null | undefined,
 ): string {
-  const name = contactName.trim();
+  const name = (contactName ?? "").trim();
   if (!name) return "";
   const sal = salutation?.trim();
   return sal ? `${sal} ${name}` : name;
@@ -15,7 +15,7 @@ export function formatContactName(
 
 export function formatClientLabel(
   salutation: string | null | undefined,
-  contactName: string,
+  contactName: string | null | undefined,
   companyName: string,
 ): string {
   const contact = formatContactName(salutation, contactName);

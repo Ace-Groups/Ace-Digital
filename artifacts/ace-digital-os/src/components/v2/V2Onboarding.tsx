@@ -15,7 +15,7 @@ const SLIDES: {
 }[] = [
   {
     icon: Sparkles,
-    title: "Welcome to Ace OS v2",
+    title: "Welcome to Ace Digital",
     description: "A complete redesign built for speed, clarity, and delight — on every device.",
   },
   {

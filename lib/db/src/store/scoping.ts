@@ -10,8 +10,9 @@ import type { Approval, Project, Task } from "../schema";
 export type { AccessContext };
 
 export function scopeProjectList(ctx: AccessContext, projects: Project[]): Project[] {
+  if (ctx.role === "employee") return [];
   if (canAccessOrgData(ctx) || ctx.role === "client_manager") return projects;
-  if (ctx.role === "team_lead" || ctx.role === "employee") {
+  if (ctx.role === "team_lead") {
     if (ctx.teamId == null) return [];
     return projects.filter((p) => p.teamId === ctx.teamId);
   }

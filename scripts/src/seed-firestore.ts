@@ -133,7 +133,7 @@ async function seed() {
   await setDoc("messages", 1, {
     channelId: 1,
     senderId: 1,
-    body: "Welcome to Ace Digital OS! Our internal platform is live.",
+    body: "Welcome to Ace Digital! Our internal platform is live.",
     createdAt: now,
   });
 

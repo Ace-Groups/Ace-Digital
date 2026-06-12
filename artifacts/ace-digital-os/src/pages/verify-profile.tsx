@@ -196,7 +196,7 @@ export default function VerifyProfilePage() {
           <footer className="verify-pass-footer">
             <Building2 className="verify-pass-footer-icon" aria-hidden />
             <div>
-              <p className="verify-pass-footer-label">Verified by Ace Digital OS</p>
+              <p className="verify-pass-footer-label">Verified by Ace Digital</p>
               <p className="verify-pass-footer-time">{scannedLabel}</p>
             </div>
           </footer>

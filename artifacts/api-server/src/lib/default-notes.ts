@@ -15,7 +15,7 @@ function getRoleDisplay(role: string): string {
 
 function generateWelcomeContent(fullName: string, role: string): string {
   const roleDisplay = getRoleDisplay(role);
-  return `<h2>Welcome to Ace Digital OS, ${fullName}!</h2>
+  return `<h2>Welcome to Ace Digital, ${fullName}!</h2>
 <p>We are excited to have you on board. This platform is your central hub for everything happening at Ace Digital.</p>
 <p>Here are a few quick tips to help you get started:</p>
 <ul>
@@ -34,7 +34,7 @@ function generateGuideContent(role: string): string {
   switch (role) {
     case "super_admin":
       permissionsContent = `<h2>Super Admin Clearance Level</h2>
-<p>You have full, unrestricted clearance to all modules in Ace Digital OS.</p>
+<p>You have full, unrestricted clearance to all modules in Ace Digital.</p>
 <h3>Allowed Operations:</h3>
 <ul>
   <li><strong>System Administration:</strong> Add, edit, or remove user profiles, customize job titles, and alter security clearances.</li>
@@ -146,7 +146,7 @@ function generateGuideContent(role: string): string {
   }
 
   return `<h2>App Guide: ${roleDisplay} Permissions</h2>
-<p>This role-specific guide outlines your capabilities and boundaries within the Ace Digital OS workspace.</p>
+<p>This role-specific guide outlines your capabilities and boundaries within the Ace Digital workspace.</p>
 <hr />
 ${permissionsContent}
 <hr />
@@ -163,7 +163,7 @@ export async function ensureDefaultNotes(userId: number) {
   // Fetch all notes for this user
   const userNotes = await store.listNotes(userId);
 
-  const welcomeTitle = "👋 Welcome to Ace Digital OS";
+  const welcomeTitle = "👋 Welcome to Ace Digital";
   const guideTitlePrefix = "📖 App Guide:";
   const expectedGuideTitle = `📖 App Guide: ${getRoleDisplay(role)} Capabilities`;
 
@@ -180,7 +180,7 @@ export async function ensureDefaultNotes(userId: number) {
       sharedUserIds: [],
     });
   } else {
-    const expectedHeader = `Welcome to Ace Digital OS, ${fullName}!`;
+    const expectedHeader = `Welcome to Ace Digital, ${fullName}!`;
     if (!welcomeNote.content.includes(expectedHeader)) {
       await store.updateNote(welcomeNote.id, {
         content: welcomeContent,

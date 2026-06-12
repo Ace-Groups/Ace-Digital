@@ -6,6 +6,7 @@ export const PERMISSIONS = [
   "projects:read",
   "projects:write",
   "projects:delete",
+  "projects:budget",
   "tasks:read",
   "tasks:write",
   "tasks:delete",
@@ -114,6 +115,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "verify:edit_public_card",
     "dashboard:view",
     "projects:read",
+    "projects:budget",
     "teams:read",
     "tasks:read",
     "employees:read",
@@ -223,7 +225,6 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "certificates:read_self",
     "verify:edit_public_card",
     "dashboard:view",
-    "projects:read",
     "teams:read",
     "tasks:read",
     "tasks:write",
@@ -282,6 +283,14 @@ export function canViewEmployeeDirectory(ctx: AccessContext): boolean {
 
 export function canViewSalaries(ctx: AccessContext): boolean {
   return hasPermission(ctx, "finance:salaries_all");
+}
+
+export function canViewProjectBudget(ctx: AccessContext): boolean {
+  return hasPermission(ctx, "projects:budget");
+}
+
+export function stripProjectBudget<T extends { budget?: unknown }>(row: T): T {
+  return { ...row, budget: null };
 }
 
 export function stripSalaryFields<T extends Record<string, unknown>>(row: T): T {

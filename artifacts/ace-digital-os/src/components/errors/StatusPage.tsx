@@ -79,7 +79,7 @@ export function StatusPage({
             <span
               className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${styles.badge}`}
             >
-              Ace Digital OS
+              Ace Digital
             </span>
           </div>
 

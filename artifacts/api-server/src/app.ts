@@ -54,7 +54,7 @@ const WEB_APP_URL = "https://ace-digital-os.web.app";
 
 function sendServiceRoot(_req: express.Request, res: express.Response): void {
   res.json({
-    service: "Ace Digital OS API",
+    service: "Ace Digital API",
     status: "ok",
     webApp: WEB_APP_URL,
     health: "/api/healthz",

@@ -48,9 +48,12 @@ test("management has dashboard:view for snapshot tool", () => {
   assert.equal(checkToolPermission(management, "get_dashboard_snapshot"), null);
 });
 
-test("finance tool permissions declared as any-of", () => {
-  const perms = getToolRequiredPermissions("check_project_budgets_and_expenses");
-  assert.ok(perms.includes("finance:summary") || perms.includes("finance:expenses_read"));
+test("budget tool requires projects:budget", () => {
+  assert.deepEqual(getToolRequiredPermissions("check_project_budgets_and_expenses"), ["projects:budget"]);
+});
+
+test("management denied budget tool", () => {
+  assert.equal(checkToolPermission(management, "check_project_budgets_and_expenses")?.ok, false);
 });
 
 test("list_clients requires clients:read", () => {

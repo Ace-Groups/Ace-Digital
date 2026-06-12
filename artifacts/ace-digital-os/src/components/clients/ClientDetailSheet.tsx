@@ -1,28 +1,34 @@
+import { useState } from "react";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  useDeleteClient, getListClientsQueryKey,
+  useDeleteClient,
+  useListTeams,
+  useUpdateClient,
+  getListClientsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@workspace/api-client-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { formatContactName } from "@/lib/clients";
-import { Mail, Phone, Calendar, Building2, Pencil, Trash2 } from "lucide-react";
+import { Mail, Phone, Calendar, Building2, Pencil, Trash2, Loader2, UserMinus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { removeListItem, setList, snapshotList } from "@/lib/optimistic";
+import { removeListItem, replaceListItem, setList, snapshotList } from "@/lib/optimistic";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ClientDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   client: Client | null;
   onEdit: (client: Client) => void;
+  onClientChange?: (client: Client) => void;
 }
 
 export function ClientDetailSheet({
@@ -30,13 +36,59 @@ export function ClientDetailSheet({
   onOpenChange,
   client,
   onEdit,
+  onClientChange,
 }: ClientDetailSheetProps) {
   const deleteClient = useDeleteClient();
+  const updateClient = useUpdateClient();
+  const { data: teams } = useListTeams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const clientsKey = getListClientsQueryKey();
+  const [teamSaving, setTeamSaving] = useState(false);
 
   if (!client) return null;
+
+  const contact = formatContactName(client.salutation, client.contactName);
+  const fields = (client.customFields ?? []) as { key: string; value: string }[];
+  const teamSelectValue = client.assignedTeamId ? String(client.assignedTeamId) : "__none__";
+
+  async function applyTeamChange(assignedTeamId: number | null) {
+    if (assignedTeamId === client!.assignedTeamId) return;
+
+    setTeamSaving(true);
+    try {
+      const updated = await runOptimistic({
+        apply: () => {
+          const prev = snapshotList<Client>(queryClient, clientsKey);
+          const teamName =
+            assignedTeamId != null
+              ? teams?.find((t) => t.id === assignedTeamId)?.name ?? client!.assignedTeamName
+              : null;
+          replaceListItem(queryClient, clientsKey, client!.id, {
+            ...client!,
+            assignedTeamId,
+            assignedTeamName: teamName,
+          });
+          return prev;
+        },
+        rollback: (prev) => setList(queryClient, clientsKey, prev),
+        commit: () =>
+          updateClient.mutateAsync({
+            id: client!.id,
+            data: { assignedTeamId },
+          }),
+        reconcile: () => void queryClient.invalidateQueries({ queryKey: clientsKey }),
+      });
+      onClientChange?.(updated);
+      toast({
+        title: assignedTeamId == null ? "Team unassigned" : "Team assigned",
+      });
+    } catch {
+      toast({ title: "Could not update team", variant: "destructive" });
+    } finally {
+      setTeamSaving(false);
+    }
+  }
 
   async function handleDelete() {
     try {
@@ -57,9 +109,6 @@ export function ClientDetailSheet({
     }
   }
 
-  const contact = formatContactName(client.salutation, client.contactName);
-  const fields = (client.customFields ?? []) as { key: string; value: string }[];
-
   return (
     <ResponsiveSheet
       open={open}
@@ -74,7 +123,11 @@ export function ClientDetailSheet({
               <Building2 size={20} className="text-primary" />
             </div>
             <div>
-              <p className="font-semibold">{contact}</p>
+              {contact ? (
+                <p className="font-semibold">{contact}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">No contact name</p>
+              )}
               <Badge variant="outline" className={cn("mt-1 text-xs", statusColor(client.status ?? ""))}>
                 {client.status}
               </Badge>
@@ -83,9 +136,11 @@ export function ClientDetailSheet({
         </div>
 
         <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Mail size={14} /><span>{client.email}</span>
-          </div>
+          {client.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail size={14} /><span>{client.email}</span>
+            </div>
+          )}
           {client.phone && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Phone size={14} /><span>{client.phone}</span>
@@ -105,11 +160,44 @@ export function ClientDetailSheet({
         </div>
 
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3 text-sm">
-          <div>
+          <div className="col-span-2 space-y-2">
             <p className="text-xs text-muted-foreground">Assigned team</p>
-            <p className="font-medium">{client.assignedTeamName ?? "—"}</p>
+            <div className="flex items-center gap-2">
+              <Select
+                value={teamSelectValue}
+                disabled={teamSaving}
+                onValueChange={(value) => {
+                  void applyTeamChange(value === "__none__" ? null : Number(value));
+                }}
+              >
+                <SelectTrigger className="h-9 flex-1">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Unassigned</SelectItem>
+                  {teams?.map((team) => (
+                    <SelectItem key={team.id} value={String(team.id)}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {client.assignedTeamId != null && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={teamSaving}
+                  title="Unassign from team"
+                  onClick={() => void applyTeamChange(null)}
+                >
+                  {teamSaving ? <Loader2 size={16} className="animate-spin" /> : <UserMinus size={16} />}
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="text-right">
+          <div className="col-span-2 text-right sm:col-span-1 sm:text-left">
             <p className="text-xs text-muted-foreground">Contract value</p>
             <p className="font-bold text-primary">
               {client.contractValue ? formatCurrency(client.contractValue) : "—"}

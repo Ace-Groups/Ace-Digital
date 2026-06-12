@@ -241,7 +241,7 @@ function buildWelcomeLetterContent(fullName: string): EmailContent {
     "great things happen when talented people come together with a shared vision.",
     "You are now part of a team that values innovation, collaboration, and excellence.",
     "",
-    "We've built Ace Digital OS to be your all-in-one workspace — a place where you",
+    "We've built Ace Digital to be your all-in-one workspace — a place where you",
     "can manage projects, collaborate with your team, track your progress, and grow",
     "together. I'm confident you'll find it both powerful and intuitive.",
     "",
@@ -275,7 +275,7 @@ function buildWelcomeLetterContent(fullName: string): EmailContent {
       <strong style="color:#1A1A1A;">excellence</strong>.
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#2C2B2A;line-height:1.7;">
-      We've built <strong style="color:#4B4ED3;">Ace Digital OS</strong> to be your
+      We've built <strong style="color:#4B4ED3;">Ace Digital</strong> to be your
       all-in-one workspace — a place where you can manage projects, collaborate
       with your team, track your progress, and grow together. I'm confident you'll
       find it both powerful and intuitive.
@@ -354,7 +354,7 @@ function buildAppGuideContent(fullName: string): EmailContent {
   const text = [
     `Hi ${fullName},`,
     "",
-    "Here's a quick tour of everything you can do with Ace Digital OS:",
+    "Here's a quick tour of everything you can do with Ace Digital:",
     "",
     ...APP_FEATURES.map((f) => `• ${f.title}: ${f.desc}`),
     "",
@@ -373,7 +373,7 @@ function buildAppGuideContent(fullName: string): EmailContent {
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#2C2B2A;line-height:1.6;">
       Here's a quick tour of everything you can do with
-      <strong style="color:#4B4ED3;">Ace Digital OS</strong> — your all-in-one workspace.
+      <strong style="color:#4B4ED3;">Ace Digital</strong> — your all-in-one workspace.
     </p>
 
     <div style="margin:24px 0;text-align:center;">
@@ -416,7 +416,7 @@ function buildAppGuideContent(fullName: string): EmailContent {
   const html = emailShell({
     title: subject,
     headline: "Getting Started",
-    subtitle: "Your guide to Ace Digital OS",
+    subtitle: "Your guide to Ace Digital",
     bodyHtml,
   });
 
@@ -796,7 +796,7 @@ function buildInternGuideContent(fullName: string): EmailContent {
   ].join("\n");
 
   const bodyHtml = `
-    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">Hi ${escapeHtml(fullName)}, here's what you can do in Ace Digital OS as an intern:</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#2C2B2A;line-height:1.7;">Hi ${escapeHtml(fullName)}, here's what you can do in Ace Digital as an intern:</p>
     <ul style="margin:0 0 20px;padding-left:20px;color:#2C2B2A;font-size:14px;line-height:1.8;">
       <li>Track tasks and project milestones assigned to you</li>
       <li>Chat with your team and mentor in real time</li>

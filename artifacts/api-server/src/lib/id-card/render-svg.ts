@@ -10,11 +10,11 @@ const TEAL = "#0D9488";
 const TEAL_LINE = "#14B8A6";
 const INK = "#1E293B";
 const MUTED = "#64748B";
-const HQ =
-  "Ace Digital HQ, Coimbatore, Tamil Nadu 641004";
+const BORDER = "#E2E8F0";
+const MARGIN = 56;
 const HR_EMAIL = "hr@mybexo.com";
 const HR_PHONE = "+91 90871 72072";
-const WEB = "www.ace-digital-os.web.app";
+const WEBSITE = "www.ace-digital.web.app";
 
 function esc(s: string): string {
   return s
@@ -39,191 +39,229 @@ function formatDob(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return "—";
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}-${mm}-${d.getFullYear()}`;
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-function defs(id: string): string {
+function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return ["—"];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 3);
+}
+
+function cardShell(id: string, fill = "#FFFFFF"): string {
   return `
-    <pattern id="${id}Net" width="52" height="52" patternUnits="userSpaceOnUse">
-      <circle cx="8" cy="8" r="2.5" fill="${NAVY}" opacity="0.22"/>
-      <circle cx="44" cy="44" r="2.5" fill="${NAVY}" opacity="0.22"/>
-      <path d="M8 8 L44 44" stroke="${NAVY}" stroke-width="0.65" opacity="0.12"/>
-      <path d="M44 8 L8 44" stroke="${NAVY}" stroke-width="0.65" opacity="0.1"/>
-    </pattern>
-    <linearGradient id="${id}Holo" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#5EEAD4"/>
-      <stop offset="35%" stop-color="#818CF8"/>
-      <stop offset="70%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#34D399"/>
-    </linearGradient>
-    <linearGradient id="${id}Footer" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="${NAVY}"/>
-      <stop offset="100%" stop-color="#123456"/>
-    </linearGradient>`;
+    <defs>
+      <linearGradient id="${id}Footer" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="${NAVY}"/>
+        <stop offset="100%" stop-color="#123456"/>
+      </linearGradient>
+      <linearGradient id="${id}Accent" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="${TEAL_LINE}" stop-opacity="0"/>
+        <stop offset="50%" stop-color="${TEAL_LINE}"/>
+        <stop offset="100%" stop-color="${TEAL_LINE}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="${W}" height="${H}" rx="24" fill="${fill}"/>
+    <rect x="0" y="0" width="${W}" height="6" fill="url(#${id}Accent)"/>
+    <rect x="0" y="${H - 6}" width="${W}" height="6" fill="url(#${id}Accent)"/>`;
 }
 
-function lanyard(): string {
-  return `<rect x="${W / 2 - 38}" y="14" width="76" height="14" rx="7" fill="#E8EDF4" stroke="#C5D0DE" stroke-width="1"/>`;
-}
-
-function edgePattern(netId: string): string {
+function brandHeader(y: number, compact = false): string {
+  const logoW = compact ? 88 : 104;
+  const logoH = compact ? 38 : 44;
+  const logoX = W / 2 - logoW / 2;
+  const titleSize = compact ? 14 : 15;
+  const tagSize = compact ? 8 : 8.5;
   return `
-    <rect x="0" y="0" width="78" height="${H}" fill="url(#${netId})" opacity="0.55"/>
-    <rect x="${W - 78}" y="0" width="78" height="${H}" fill="url(#${netId})" opacity="0.55"/>`;
+    <image href="${LOGO}" x="${logoX}" y="${y}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet"/>
+    <text x="${W / 2}" y="${y + logoH + 18}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${titleSize}" font-weight="800" letter-spacing="3.2" fill="${NAVY}">ACE DIGITAL</text>
+    <text x="${W / 2}" y="${y + logoH + 34}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${tagSize}" font-weight="700" letter-spacing="1.8" fill="${TEAL}">INSPIRING YOUTH · EMPOWERING NATION</text>
+    <line x1="${MARGIN}" y1="${y + logoH + 44}" x2="${W - MARGIN}" y2="${y + logoH + 44}" stroke="${TEAL_LINE}" stroke-width="2" stroke-linecap="round"/>`;
 }
 
-function brandBlock(y: number): string {
-  return `
-    ${lanyard()}
-    <image href="${LOGO}" x="${W / 2 - 56}" y="${y}" width="112" height="48" preserveAspectRatio="xMidYMid meet"/>
-    <text x="${W / 2}" y="${y + 68}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="16" font-weight="800" letter-spacing="4" fill="${NAVY}">ACE DIGITAL</text>
-    <text x="${W / 2}" y="${y + 90}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="2.2" fill="${TEAL}">INSPIRING YOUTH</text>
-    <text x="${W / 2}" y="${y + 106}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="2.2" fill="${TEAL}">EMPOWERING NATION</text>
-    <line x1="110" y1="${y + 118}" x2="${W - 110}" y2="${y + 118}" stroke="${TEAL_LINE}" stroke-width="2.5" stroke-linecap="round"/>`;
-}
-
-function photoWithHolo(data: IdCardData, y: number, size: number): string {
-  const cx = W / 2;
-  const x = cx - size / 2;
+function portraitPhoto(data: IdCardData, y: number, w: number, h: number): string {
+  const x = (W - w) / 2;
   const clip = `ph-${data.employeeCode.replace(/\W/g, "")}`;
   const inner = data.photoDataUrl?.startsWith("data:image")
-    ? `<image href="${data.photoDataUrl}" x="${x}" y="${y}" width="${size}" height="${size}" clip-path="url(#${clip})" preserveAspectRatio="xMidYMid slice"/>`
-    : `<text x="${cx}" y="${y + size / 2 + 12}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${size * 0.24}" font-weight="800" fill="${NAVY}">${esc(initials(data.fullName))}</text>`;
-  const holoX = x + size - 22;
-  const holoY = y + 14;
+    ? `<image href="${data.photoDataUrl}" x="${x}" y="${y}" width="${w}" height="${h}" clip-path="url(#${clip})" preserveAspectRatio="xMidYMid slice"/>`
+    : `<text x="${W / 2}" y="${y + h / 2 + 10}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${Math.round(h * 0.22)}" font-weight="800" fill="${NAVY}">${esc(initials(data.fullName))}</text>`;
   return `
-    <defs><clipPath id="${clip}"><rect x="${x}" y="${y}" width="${size}" height="${size}" rx="14"/></clipPath></defs>
-    <rect x="${x}" y="${y}" width="${size}" height="${size}" rx="14" fill="#F8FAFC" stroke="${NAVY}" stroke-width="2.5"/>
-    ${inner}
-    <rect x="${holoX}" y="${holoY}" width="36" height="36" rx="8" fill="url(#frontHolo)" stroke="#fff" stroke-width="2"/>
-    <circle cx="${holoX + 18}" cy="${holoY + 18}" r="11" fill="none" stroke="#fff" stroke-width="0.9" opacity="0.75"/>
-    <ellipse cx="${holoX + 18}" cy="${holoY + 18}" rx="11" ry="6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.55"/>`;
+    <defs><clipPath id="${clip}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/></clipPath></defs>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#F8FAFC" stroke="${NAVY}" stroke-width="2"/>
+    ${inner}`;
 }
 
-function infoLine(label: string, value: string, y: number): string {
+/** Label left, value right — single baseline alignment */
+function dataRow(label: string, value: string, y: number): string {
   return `
-    <text x="${W / 2}" y="${y}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="1.8" fill="${MUTED}">${esc(label)}</text>
-    <text x="${W / 2}" y="${y + 24}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="800" fill="${INK}">${esc(value)}</text>`;
+    <text x="${MARGIN}" y="${y}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="1.4" fill="${MUTED}">${esc(label)}</text>
+    <text x="${W - MARGIN}" y="${y}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${esc(value)}</text>
+    <line x1="${MARGIN}" y1="${y + 10}" x2="${W - MARGIN}" y2="${y + 10}" stroke="${BORDER}" stroke-width="1"/>`;
 }
 
-function qrPanel(data: IdCardData, x: number, y: number, size: number): string {
+const LABEL_COL_W = 84;
+const VALUE_X = MARGIN + LABEL_COL_W + 6;
+
+function backField(label: string, lines: string[], startY: number): { svg: string; height: number } {
+  const labelY = startY + 12;
+  let valueSvg = `<text x="${VALUE_X}" y="${labelY}" font-family="'Segoe UI',system-ui,sans-serif" font-size="10.5" font-weight="600" fill="${INK}">${esc(lines[0] ?? "—")}</text>`;
+  lines.slice(1).forEach((line, i) => {
+    valueSvg += `<text x="${VALUE_X}" y="${labelY + (i + 1) * 14}" font-family="'Segoe UI',system-ui,sans-serif" font-size="10.5" font-weight="600" fill="${INK}">${esc(line)}</text>`;
+  });
+  const height = Math.max(30, 18 + lines.length * 14);
+  const ruleY = startY + height - 4;
+  return {
+    height,
+    svg: `
+    <text x="${MARGIN}" y="${labelY}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="800" letter-spacing="1.2" fill="${NAVY}">${esc(label)}</text>
+    ${valueSvg}
+    <line x1="${MARGIN}" y1="${ruleY}" x2="${W - MARGIN}" y2="${ruleY}" stroke="${BORDER}" stroke-width="0.75"/>`,
+  };
+}
+
+function formatPhone(phone: string | null | undefined): string {
+  const p = phone?.trim();
+  if (!p) return HR_PHONE;
+  return p;
+}
+
+function qrBlock(data: IdCardData, size: number, y: number): string {
+  const pad = 12;
+  const box = size + pad * 2;
+  const x = (W - box) / 2;
   if (!data.qrSvg) {
-    return `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="8" fill="#fff" stroke="#CBD5E1"/>`;
+    return `<rect x="${x}" y="${y}" width="${box}" height="${box}" rx="12" fill="#fff" stroke="${BORDER}"/>`;
   }
   const inner = data.qrSvg.replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "");
   return `
-    <rect x="${x - 10}" y="${y - 10}" width="${size + 20}" height="${size + 20}" rx="14" fill="#fff" stroke="${TEAL_LINE}" stroke-width="2"/>
-    <svg x="${x}" y="${y}" width="${size}" height="${size}">${inner}</svg>`;
+    <rect x="${x}" y="${y}" width="${box}" height="${box}" rx="14" fill="#FFFFFF" stroke="${TEAL_LINE}" stroke-width="2"/>
+    <svg x="${x + pad}" y="${y + pad}" width="${size}" height="${size}" viewBox="0 0 100 100">${inner}</svg>`;
 }
 
-function microPrint(y: number): string {
-  const text = "ACE DIGITAL SECURE ID · ";
-  let out = "";
-  for (let i = 0; i < 14; i++) {
-    out += `<text x="${40 + i * 36}" y="${y}" font-family="'Segoe UI',system-ui,sans-serif" font-size="7" font-weight="600" fill="${NAVY}" opacity="0.12">${text}</text>`;
-  }
-  return out;
+function footerBar(text: string, gradId: string): string {
+  return `
+    <rect y="${H - 52}" width="${W}" height="3" fill="${TEAL_LINE}"/>
+    <rect y="${H - 49}" width="${W}" height="49" fill="url(#${gradId}Footer)"/>
+    <text x="${W / 2}" y="${H - 20}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="2" fill="#FFFFFF">${esc(text)}</text>`;
 }
 
 function employeeFront(data: IdCardData): string {
   const dept = (data.teamName ?? "Operations").toUpperCase();
+  const photoY = 118;
+  const photoW = 164;
+  const photoH = 196;
+  const infoStart = photoY + photoH + 36;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>${defs("front")}</defs>
-  <rect width="${W}" height="${H}" rx="26" fill="#FFFFFF"/>
-  ${edgePattern("frontNet")}
-  ${brandBlock(28)}
-  ${photoWithHolo(data, 148, 172)}
-  <text x="${W / 2}" y="352" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="24" font-weight="800" letter-spacing="2" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="382" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="12" font-weight="700" letter-spacing="2.5" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
-  ${infoLine("EMPLOYEE ID", data.employeeCode, 408)}
-  ${infoLine("DOB", formatDob(data.dob), 456)}
-  ${infoLine("BLOOD GROUP", data.bloodGroup ?? "—", 504)}
-  ${infoLine("DEPARTMENT", dept, 552)}
-  <rect y="${H - 58}" width="${W}" height="4" fill="${TEAL_LINE}"/>
-  <rect y="${H - 54}" width="${W}" height="54" fill="url(#frontFooter)"/>
-  <text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="#FFFFFF">EXPIRATION DATE: ${esc(data.expirationLabel ?? "DEC 2026")}</text>
+  ${cardShell("front")}
+  ${brandHeader(20)}
+  ${portraitPhoto(data, photoY, photoW, photoH)}
+  <text x="${W / 2}" y="${infoStart}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="21" font-weight="800" letter-spacing="1.5" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="${infoStart + 26}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
+  <line x1="${MARGIN}" y1="${infoStart + 38}" x2="${W - MARGIN}" y2="${infoStart + 38}" stroke="${BORDER}" stroke-width="1"/>
+  ${dataRow("EMPLOYEE ID", data.employeeCode, infoStart + 62)}
+  ${dataRow("DATE OF BIRTH", formatDob(data.dob), infoStart + 96)}
+  ${dataRow("BLOOD GROUP", data.bloodGroup ?? "—", infoStart + 130)}
+  ${dataRow("DEPARTMENT", dept, infoStart + 164)}
+  ${footerBar(`EXPIRATION DATE: ${data.expirationLabel ?? "DEC 2026"}`, "front")}
 </svg>`;
 }
 
 function employeeBack(data: IdCardData): string {
   const company = data.companyLegalName ?? "Ace Digital Private Limited";
-  const phone = data.phone ?? HR_PHONE;
-  const qr = 216;
-  const qrX = (W - qr) / 2;
+  const phone = formatPhone(data.phone);
+  const email = data.email?.trim() || HR_EMAIL;
+  const addressLines = data.addressLine?.trim()
+    ? wrapText(data.addressLine, 40)
+    : ["—"];
+  const qrSize = 176;
+  const sigY = 662;
+  const issueYear = data.issuedYear ?? String(new Date().getFullYear());
+
+  let y = 112;
+  const fields = [
+    { label: "DOB", lines: [formatDob(data.dob)] },
+    { label: "ADDRESS", lines: addressLines },
+    { label: "PHONE", lines: [phone] },
+    { label: "EMAIL", lines: [email] },
+    { label: "WEBSITE", lines: [WEBSITE] },
+  ];
+
+  let fieldsSvg = "";
+  for (const field of fields) {
+    const block = backField(field.label, field.lines, y);
+    fieldsSvg += block.svg;
+    y += block.height;
+  }
+  const qrY = y + 14;
+
   const sig = data.signatorySignatureDataUrl
-    ? `<image href="${data.signatorySignatureDataUrl}" x="52" y="668" width="120" height="38" preserveAspectRatio="xMidYMid meet"/>`
-    : `<path d="M60 692 Q100 672 140 690 T200 682" fill="none" stroke="${NAVY}" stroke-width="1.2" opacity="0.45"/>`;
+    ? `<image href="${data.signatorySignatureDataUrl}" x="${MARGIN}" y="${sigY - 8}" width="128" height="40" preserveAspectRatio="xMidYMid meet"/>`
+    : `<path d="M${MARGIN + 4} ${sigY + 22} Q${MARGIN + 44} ${sigY + 6} ${MARGIN + 84} ${sigY + 18} T${MARGIN + 124} ${sigY + 14}" fill="none" stroke="${NAVY}" stroke-width="1.1" opacity="0.5"/>`;
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>${defs("back")}</defs>
-  <rect width="${W}" height="${H}" rx="26" fill="#FFFFFF"/>
-  ${edgePattern("backNet")}
-  ${lanyard()}
-  <image href="${LOGO}" x="48" y="44" width="72" height="32" preserveAspectRatio="xMidYMid meet"/>
-  <text x="48" y="92" font-family="'Segoe UI',system-ui,sans-serif" font-size="13" font-weight="800" letter-spacing="2" fill="${NAVY}">ACE DIGITAL</text>
-  <text x="48" y="110" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="600" letter-spacing="1.5" fill="${TEAL}">INSPIRING YOUTH · EMPOWERING NATION</text>
-  <text x="48" y="148" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" fill="${NAVY}">HQ:</text>
-  <text x="48" y="166" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="${INK}">${esc(HQ)}</text>
-  <text x="48" y="194" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" fill="${NAVY}">PHONE:</text>
-  <text x="48" y="212" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="${INK}">${esc(phone)}</text>
-  <text x="48" y="240" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" fill="${NAVY}">EMAIL:</text>
-  <text x="48" y="258" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="${INK}">${esc(HR_EMAIL)}</text>
-  <text x="48" y="286" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" fill="${NAVY}">WEBSITE:</text>
-  <text x="48" y="304" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="${TEAL}">${esc(WEB)}</text>
-  ${microPrint(330)}
-  ${qrPanel(data, qrX, 348, qr)}
-  <text x="${W / 2}" y="592" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="8.5" fill="${MUTED}">
+  ${cardShell("back")}
+  ${brandHeader(24, true)}
+  ${fieldsSvg}
+  ${qrBlock(data, qrSize, qrY)}
+  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="8.5" fill="${MUTED}">
     <tspan x="${W / 2}" dy="0">This card remains the property of ${esc(company)} and must be</tspan>
-    <tspan x="${W / 2}" dy="14">returned upon termination. If found, return to HR at the address above.</tspan>
+    <tspan x="${W / 2}" dy="13">returned upon termination. If found, return to HR at the address above.</tspan>
   </text>
   ${sig}
-  <line x1="52" y1="714" x2="200" y2="714" stroke="${NAVY}" stroke-width="1" opacity="0.35"/>
-  <text x="52" y="730" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="1.2" fill="${MUTED}">AUTHORISED SIGNATURE</text>
-  ${data.signatoryName ? `<text x="52" y="746" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" fill="${NAVY}">${esc(data.signatoryName)}</text>` : ""}
-  <text x="${W - 52}" y="730" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="1.2" fill="${MUTED}">DATE</text>
-  <line x1="${W - 180}" y1="714" x2="${W - 52}" y2="714" stroke="${NAVY}" stroke-width="1" opacity="0.35"/>
-  <rect y="${H - 50}" width="${W}" height="50" fill="url(#backFooter)"/>
-  <text x="${W / 2}" y="${H - 20}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="3.5" fill="#FFFFFF">ACE DIGITAL SECURE ID</text>
+  <line x1="${MARGIN}" y1="${sigY + 38}" x2="${MARGIN + 148}" y2="${sigY + 38}" stroke="${NAVY}" stroke-width="0.9" opacity="0.35"/>
+  <text x="${MARGIN}" y="${sigY + 52}" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">AUTHORIZED SIGNATURE</text>
+  ${data.signatoryName ? `<text x="${MARGIN}" y="${sigY + 66}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9.5" font-weight="700" fill="${NAVY}">${esc(data.signatoryName)}</text>` : ""}
+  <line x1="${W - MARGIN - 100}" y1="${sigY + 38}" x2="${W - MARGIN}" y2="${sigY + 38}" stroke="${NAVY}" stroke-width="0.9" opacity="0.35"/>
+  <text x="${W - MARGIN - 100}" y="${sigY + 52}" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">DATE</text>
+  <text x="${W - MARGIN}" y="${sigY + 52}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" fill="${INK}">${esc(issueYear)}</text>
+  ${footerBar("ACE DIGITAL SECURE ID", "back")}
 </svg>`;
 }
 
 function internFront(data: IdCardData): string {
   const dept = (data.program ?? "Internship Program").toUpperCase();
+  const photoY = 128;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>${defs("front")}</defs>
-  <rect width="${W}" height="${H}" rx="26" fill="#F0FDFA"/>
-  ${edgePattern("frontNet")}
-  <rect x="36" y="36" width="110" height="28" rx="14" fill="${TEAL}"/>
-  <text x="91" y="55" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="2.5" fill="#fff">INTERN</text>
-  ${brandBlock(36)}
-  ${photoWithHolo(data, 156, 160)}
-  <text x="${W / 2}" y="348" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="22" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="376" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
-  ${infoLine("INTERN ID", data.employeeCode, 404)}
-  ${infoLine("MENTOR", data.mentorName ?? "ASSIGNED", 452)}
-  ${infoLine("UNIVERSITY", data.university ?? "—", 500)}
-  <rect y="${H - 58}" width="${W}" height="4" fill="${TEAL_LINE}"/>
-  <rect y="${H - 54}" width="${W}" height="54" fill="${NAVY}"/>
-  <text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="1.8" fill="#FFFFFF">VALID UNTIL ${esc(data.expirationLabel ?? "PROGRAM END")}</text>
+  ${cardShell("front", "#F0FDFA")}
+  <rect x="${MARGIN}" y="28" width="96" height="26" rx="13" fill="${TEAL}"/>
+  <text x="${MARGIN + 48}" y="46" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="2" fill="#fff">INTERN</text>
+  ${brandHeader(36)}
+  ${portraitPhoto(data, photoY, 156, 188)}
+  <text x="${W / 2}" y="340" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="20" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="364" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
+  ${dataRow("INTERN ID", data.employeeCode, 388)}
+  ${dataRow("MENTOR", data.mentorName ?? "ASSIGNED", 422)}
+  ${dataRow("UNIVERSITY", data.university ?? "—", 456)}
+  ${footerBar(`VALID UNTIL ${data.expirationLabel ?? "PROGRAM END"}`, "front")}
 </svg>`;
 }
 
 function internBack(data: IdCardData): string {
   const company = data.companyLegalName ?? "Ace Digital Private Limited";
-  const qr = 200;
-  const qrX = (W - qr) / 2;
+  const qrSize = 180;
+  const qrY = 168;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>${defs("back")}</defs>
-  <rect width="${W}" height="${H}" rx="26" fill="#042F2E"/>
-  <rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="20" fill="#0C3D38" stroke="${TEAL_LINE}" stroke-width="1.5"/>
-  ${lanyard()}
-  <image href="${LOGO}" x="${W / 2 - 44}" y="52" width="88" height="36" preserveAspectRatio="xMidYMid meet"/>
-  <text x="${W / 2}" y="104" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="2" fill="#99F6E4">INTERN ACCESS · ACE DIGITAL</text>
-  <text x="${W / 2}" y="128" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#6EE7B7">${esc(company)}</text>
-  ${qrPanel(data, qrX, 160, qr)}
-  <text x="${W / 2}" y="392" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#99F6E4">Scan to verify intern status</text>
-  <text x="52" y="430" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="#99F6E4">Emergency: ${esc(data.emergencyContactName ?? "—")} · ${esc(data.emergencyContactPhone ?? "—")}</text>
-  <rect y="${H - 46}" width="${W}" height="46" fill="${TEAL}"/>
-  <text x="${W / 2}" y="${H - 18}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="2.5" fill="#042F2E">ACE DIGITAL INTERN ID</text>
+  ${cardShell("back", "#042F2E")}
+  <rect x="20" y="20" width="${W - 40}" height="${H - 40}" rx="18" fill="#0C3D38" stroke="${TEAL_LINE}" stroke-width="1.5"/>
+  <image href="${LOGO}" x="${W / 2 - 44}" y="48" width="88" height="36" preserveAspectRatio="xMidYMid meet"/>
+  <text x="${W / 2}" y="100" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="2" fill="#99F6E4">INTERN ACCESS · ACE DIGITAL</text>
+  <text x="${W / 2}" y="120" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#6EE7B7">${esc(company)}</text>
+  ${qrBlock(data, qrSize, qrY)}
+  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#99F6E4">Scan to verify intern status</text>
+  <text x="${MARGIN}" y="430" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="#99F6E4">Emergency: ${esc(data.emergencyContactName ?? "—")} · ${esc(data.emergencyContactPhone ?? "—")}</text>
+  ${footerBar("ACE DIGITAL INTERN ID", "back")}
 </svg>`;
 }
 

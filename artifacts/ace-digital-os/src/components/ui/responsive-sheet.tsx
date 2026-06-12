@@ -59,8 +59,13 @@ export function ResponsiveSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[min(92dvh,720px)] max-w-md overflow-y-auto", className)}>
-        <DialogHeader>
+      <DialogContent
+        className={cn(
+          "flex max-h-[min(92dvh,720px)] max-w-md flex-col gap-0 overflow-hidden p-0",
+          className,
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4 text-left">
           <DialogTitle>{title}</DialogTitle>
           {description ? (
             <DialogDescription>{description}</DialogDescription>
@@ -68,7 +73,9 @@ export function ResponsiveSheet({
             <DialogDescription className="sr-only">{title}</DialogDescription>
           )}
         </DialogHeader>
-        <div className="mobile-form">{children}</div>
+        <div className="mobile-form min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );

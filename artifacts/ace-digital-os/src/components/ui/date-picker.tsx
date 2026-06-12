@@ -1,8 +1,13 @@
 import * as React from "react";
 import { CalendarIcon } from "lucide-react";
-import { cn, formatDateLabel, normalizeDateInput, parseDateInput, toDateInputValue } from "@/lib/utils";
+import { cn, formatDateLabel, parseDateInput, toDateInputValue } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -18,9 +23,8 @@ export interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  /** Sheet header label on mobile. */
   sheetTitle?: string;
-  /** Kept for API compatibility; mobile always uses a full-screen sheet. */
+  /** Use dialog calendar — required inside modals/sheets so the picker is not clipped. */
   inModal?: boolean;
   "data-testid"?: string;
   id?: string;
@@ -37,7 +41,8 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       placeholder = "Pick a date",
       disabled,
       className,
-      sheetTitle = "Date",
+      sheetTitle = "Select date",
+      inModal = false,
       "data-testid": dataTestId,
       id,
       fromYear,
@@ -48,6 +53,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     const isMobile = useIsMobile();
     const [open, setOpen] = React.useState(false);
     const [draft, setDraft] = React.useState<Date | undefined>(parseDateInput(value));
+    const useDialog = inModal || isMobile;
     const calendarSize = isMobile ? "large" : "default";
 
     React.useEffect(() => {
@@ -63,6 +69,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     const handleSelect = (date: Date | undefined) => {
       setDraft(date);
       onChange?.(toDateInputValue(date));
+      if (useDialog) close();
     };
 
     const handleClear = () => {
@@ -76,6 +83,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       today.setHours(0, 0, 0, 0);
       setDraft(today);
       onChange?.(toDateInputValue(today));
+      if (useDialog) close();
     };
 
     const displayDate = open ? draft : parseDateInput(value);
@@ -88,7 +96,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
         onClear={handleClear}
         onToday={handleToday}
         size={calendarSize}
-        useLabelCaption={isMobile}
+        useLabelCaption={useDialog}
         fromYear={fromYear}
         toYear={toYear}
       />
@@ -105,7 +113,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => {
-          if (!disabled) setOpen(true);
+          if (!disabled && useDialog) setOpen(true);
         }}
         className={cn(
           "h-11 w-full touch-manipulation justify-between gap-2 px-3 text-base font-normal shadow-xs md:h-10 md:text-sm",
@@ -119,24 +127,25 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       </Button>
     );
 
-    if (isMobile) {
+    if (useDialog) {
       return (
-        <Input
-          id={id}
-          value={value}
-          disabled={disabled}
-          data-testid={dataTestId}
-          placeholder={placeholder === "Pick a date" ? "DD-MM-YYYY" : placeholder}
-          inputMode="numeric"
-          autoComplete="off"
-          onChange={(event) => onChange?.(event.target.value)}
-          onBlur={() => {
-            const normalized = normalizeDateInput(value);
-            if (normalized) onChange?.(normalized);
-            onBlur?.();
-          }}
-          className={cn("h-11 text-base", className)}
-        />
+        <>
+          {trigger}
+          <Dialog
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (!next) onBlur?.();
+            }}
+          >
+            <DialogContent className="max-h-[min(92dvh,640px)] w-[min(100vw-1.5rem,24rem)] gap-0 overflow-hidden p-0">
+              <DialogHeader className="border-b border-border/60 px-4 py-3 text-left">
+                <DialogTitle className="text-base">{sheetTitle}</DialogTitle>
+              </DialogHeader>
+              <div className="overflow-y-auto p-2">{panel}</div>
+            </DialogContent>
+          </Dialog>
+        </>
       );
     }
 

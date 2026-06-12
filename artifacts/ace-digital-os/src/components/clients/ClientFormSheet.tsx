@@ -25,9 +25,12 @@ import { Loader2 } from "lucide-react";
 
 const schema = z.object({
   salutation: z.string().optional(),
-  contactName: z.string().min(1, "Contact name required"),
+  contactName: z.string().optional(),
   companyName: z.string().min(1, "Company name required"),
-  email: z.string().email("Invalid email"),
+  email: z
+    .string()
+    .optional()
+    .refine((v) => !v?.trim() || z.string().email().safeParse(v.trim()).success, "Invalid email"),
   phone: z.string().optional(),
   assignedTeamId: z.string().optional(),
   status: z.string(),
@@ -66,9 +69,9 @@ function toCreatePayload(data: FormValues): ClientInput {
   const fields = buildCustomFields(data);
   return {
     salutation: data.salutation?.trim() || undefined,
-    contactName: data.contactName,
-    companyName: data.companyName,
-    email: data.email,
+    contactName: data.contactName?.trim() || undefined,
+    companyName: data.companyName.trim(),
+    email: data.email?.trim() || undefined,
     phone: data.phone?.trim() || undefined,
     assignedTeamId: data.assignedTeamId ? Number(data.assignedTeamId) : undefined,
     status: data.status,
@@ -83,9 +86,9 @@ function toUpdatePayload(data: FormValues): ClientUpdate {
   const fields = buildCustomFields(data);
   return {
     salutation: data.salutation?.trim() || null,
-    contactName: data.contactName,
-    companyName: data.companyName,
-    email: data.email,
+    contactName: data.contactName?.trim() || null,
+    companyName: data.companyName.trim(),
+    email: data.email?.trim() || null,
     phone: data.phone?.trim() || undefined,
     assignedTeamId: data.assignedTeamId ? Number(data.assignedTeamId) : undefined,
     status: data.status,

@@ -11,8 +11,7 @@ export const TOOL_PERMISSIONS: Record<string, ToolPermissionDef> = {
   query_pending_tasks: { requiredPermissions: ["tasks:read"] },
   summarize_client_tickets: { requiredPermissions: ["service_tickets:read"] },
   check_project_budgets_and_expenses: {
-    requiredPermissions: ["finance:summary", "finance:expenses_read"],
-    anyOf: true,
+    requiredPermissions: ["projects:budget"],
   },
   list_projects: { requiredPermissions: ["projects:read"] },
   list_tasks: { requiredPermissions: ["tasks:read"] },

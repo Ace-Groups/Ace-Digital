@@ -459,10 +459,7 @@ export default function CalendarPage() {
               month={cursor}
               items={feed ?? []}
               selectedDate={selectedDate}
-              onSelectDate={(d) => {
-                setSelectedDate(d);
-                setView("agenda");
-              }}
+              onSelectDate={setSelectedDate}
             />
           ) : view === "week" ? (
             <CalendarWeekView
@@ -474,7 +471,7 @@ export default function CalendarPage() {
             />
           ) : null}
 
-          {(view === "agenda" || (view === "month" && !isLoading)) && (
+          {!isLoading && (view === "agenda" || view === "month" || view === "week") && (
             <div className="mt-4 rounded-xl border border-border bg-card/40 p-3">
               <p className="mb-3 text-sm font-medium">
                 {selectedDate.toLocaleDateString("en-IN", {

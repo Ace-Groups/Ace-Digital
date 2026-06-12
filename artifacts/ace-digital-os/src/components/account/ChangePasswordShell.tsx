@@ -20,7 +20,7 @@ export function ChangePasswordShell({ title, description, children }: ChangePass
         <div className="flex flex-col items-center gap-2">
           <img src={aceLogo} alt="" className="size-11 object-contain" />
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Ace Digital OS
+            Ace Digital
           </p>
         </div>
 

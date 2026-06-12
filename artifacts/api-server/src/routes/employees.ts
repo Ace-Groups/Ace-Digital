@@ -19,8 +19,51 @@ import {
 } from "../lib/employee-code";
 import { defaultMascotForRole, isRoleDefaultMascot } from "../lib/mascots";
 import { parseBankDetails } from "../lib/bank-details";
+import { logActivity } from "../lib/activity-log";
 
 const router = Router();
+
+const EMPLOYEE_UPDATE_LOG_FIELDS = [
+  "fullName",
+  "email",
+  "role",
+  "teamId",
+  "jobTitle",
+  "phone",
+  "employeeCode",
+  "startDate",
+  "baseSalary",
+  "bonus",
+  "salaryMode",
+  "status",
+  "payrollStatus",
+  "avatarUrl",
+  "dob",
+  "address",
+  "addressLine2",
+  "city",
+  "state",
+  "zipCode",
+  "country",
+  "gender",
+  "maritalStatus",
+  "nationality",
+  "aadhaarNumber",
+  "emergencyContactName",
+  "emergencyContactRelationship",
+  "emergencyContactPhone",
+  "highestQualification",
+  "bloodGroup",
+  "aadhaarDocument",
+  "notes",
+  "workType",
+] as const;
+
+function loggedEmployeeFields(body: Record<string, unknown>, bankFieldsProvided: boolean): string[] {
+  const fields: string[] = EMPLOYEE_UPDATE_LOG_FIELDS.filter((key) => body[key] !== undefined);
+  if (bankFieldsProvided) fields.push("bankDetails");
+  return fields;
+}
 
 function parseStartDate(value: unknown): Date | null | undefined {
   if (value === undefined) return undefined;
@@ -316,6 +359,13 @@ router.post(
     }
 
     const refreshed = (await store.findUserById(user.id))!;
+    await logActivity(
+      ctx.userId,
+      intern ? "added intern" : "added employee",
+      "employee",
+      user.id,
+      { fullName: refreshed.fullName, email: refreshed.email, role: refreshed.role },
+    );
     const profile = await employeeWithProfile(refreshed, ctx);
     res.status(201).json({ ...profile, emailSent, idCardSent });
   },
@@ -557,6 +607,14 @@ router.patch(
     let idCardSent = false;
     if (idCardUserSnapshot(existingUser) !== idCardUserSnapshot(user)) {
       idCardSent = await emailIdCardForUser(id);
+    }
+
+    const updatedFields = loggedEmployeeFields(req.body ?? {}, bankFieldsProvided);
+    if (updatedFields.length > 0) {
+      await logActivity(ctx.userId, "updated employee", "employee", id, {
+        fullName: user.fullName,
+        fields: updatedFields,
+      });
     }
 
     res.json({ ...(await employeeWithProfile(user, ctx)), idCardSent });

@@ -24,8 +24,10 @@ export type IdCardData = {
   signatoryDesignation?: string | null;
   signatorySignatureDataUrl?: string | null;
   dob?: string | null;
+  addressLine?: string | null;
   companyLegalName?: string | null;
   expirationLabel?: string | null;
+  issuedYear?: string | null;
 };
 
 export type IdCardPair = {

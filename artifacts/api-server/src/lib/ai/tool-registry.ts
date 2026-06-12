@@ -4,6 +4,7 @@ import {
   hasPermission,
   canEditTask,
   canPostInChannel,
+  canViewProjectBudget,
   type Permission,
 } from "@workspace/rbac";
 import type { ToolExecutionResult } from "./types";
@@ -115,8 +116,7 @@ const TOOLS: Record<string, ToolDef> = {
       description: "Retrieve projects with budgets and expense claims.",
       parameters: { type: SchemaType.OBJECT, properties: {} },
     },
-    requiredPermissions: ["finance:summary", "finance:expenses_read"],
-    anyOf: true,
+    requiredPermissions: ["projects:budget"],
     execute: async (ctx) => {
       const projects = await store.listProjectsForAccess(ctx);
       const canExpenses = hasPermission(ctx, "finance:expenses_read");
@@ -127,7 +127,7 @@ const TOOLS: Record<string, ToolDef> = {
           projects.map((p) => ({
             id: p.id,
             name: p.name,
-            budget: p.budget,
+            ...(canViewProjectBudget(ctx) ? { budget: p.budget } : {}),
             status: p.status,
           })),
         ),
@@ -168,7 +168,7 @@ const TOOLS: Record<string, ToolDef> = {
             id: p.id,
             name: p.name,
             status: p.status,
-            budget: p.budget,
+            ...(canViewProjectBudget(ctx) ? { budget: p.budget } : {}),
             deadline: iso(p.deadline),
           })),
         ),
@@ -1076,7 +1076,12 @@ const TOOLS: Record<string, ToolDef> = {
           employeeCount: employees.length,
         },
         projects: truncate(
-          projects.map((p) => ({ id: p.id, name: p.name, status: p.status, budget: p.budget })),
+          projects.map((p) => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            ...(canViewProjectBudget(ctx) ? { budget: p.budget } : {}),
+          })),
           20,
         ),
       };

@@ -4,6 +4,7 @@ import {
   canApproveApproval,
   canAssignRole,
   canDeleteMessage,
+  canViewProjectBudget,
   getNavRoutesForRole,
   getPermissionsForRole,
   hasPermission,
@@ -26,6 +27,10 @@ describe("hasPermission", () => {
   it("employee can create channels", () => {
     assert.equal(hasPermission(employee, "channels:write"), true);
     assert.equal(hasPermission(employee, "channels:post"), true);
+  });
+  it("employee cannot read projects or budgets", () => {
+    assert.equal(hasPermission(employee, "projects:read"), false);
+    assert.equal(hasPermission(employee, "projects:budget"), false);
   });
   it("management can read salaries and payroll but not approve expenses", () => {
     assert.equal(hasPermission(management, "finance:salaries_all"), true);
@@ -73,7 +78,18 @@ describe("nav", () => {
     const routes = getNavRoutesForRole("employee");
     assert.ok(routes.includes("dashboard"));
     assert.ok(!routes.includes("clients"));
+    assert.ok(!routes.includes("projects"));
     assert.ok(routes.includes("employees"));
+  });
+});
+
+describe("project budget visibility", () => {
+  it("only super_admin and finance can view project budgets", () => {
+    assert.equal(canViewProjectBudget(superAdmin), true);
+    assert.equal(canViewProjectBudget(finance), true);
+    assert.equal(canViewProjectBudget(management), false);
+    assert.equal(canViewProjectBudget(teamLead), false);
+    assert.equal(canViewProjectBudget(employee), false);
   });
 });
 

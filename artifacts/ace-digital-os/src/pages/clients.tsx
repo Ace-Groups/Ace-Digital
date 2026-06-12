@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Mail, Phone, Calendar, Building2, DollarSign, Users } from "lucide-react";
+import { Plus, Mail, Phone, Calendar, Building2, DollarSign, Users, Eye } from "lucide-react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { formatContactName } from "@/lib/clients";
 import { ClientFormSheet } from "@/components/clients/ClientFormSheet";
@@ -100,28 +100,48 @@ export default function ClientsPage() {
                     onClick={() => openDetail(client)}
                   >
                     <CardContent className="p-5">
-                      <div className="mb-3 flex items-start justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                             <Building2 size={18} className="text-primary" />
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{client.companyName}</p>
-                            <p className="text-xs text-muted-foreground">{contact}</p>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{client.companyName}</p>
+                            {contact ? (
+                              <p className="truncate text-xs text-muted-foreground">{contact}</p>
+                            ) : null}
                           </div>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={cn("shrink-0 text-xs", statusColor(client.status ?? ""))}
-                        >
-                          {client.status}
-                        </Badge>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-xs", statusColor(client.status ?? ""))}
+                          >
+                            {client.status}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 border-primary/40 text-primary"
+                            data-testid={`btn-view-client-${client.id}`}
+                            aria-label={`View ${client.companyName}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDetail(client);
+                            }}
+                          >
+                            <Eye size={17} />
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-1.5 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Mail size={11} />
-                          <span className="truncate">{client.email}</span>
-                        </div>
+                        {client.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail size={11} />
+                            <span className="truncate">{client.email}</span>
+                          </div>
+                        )}
                         {client.phone && (
                           <div className="flex items-center gap-2">
                             <Phone size={11} />
@@ -187,6 +207,7 @@ export default function ClientsPage() {
         onOpenChange={setDetailOpen}
         client={selected}
         onEdit={openEdit}
+        onClientChange={setSelected}
       />
     </AppLayout>
   );

@@ -6,9 +6,9 @@ import { teamsTable } from "./teams";
 export const clientsTable = pgTable("clients", {
   id: serial("id").primaryKey(),
   salutation: text("salutation"),
-  contactName: text("contact_name").notNull(),
+  contactName: text("contact_name"),
   companyName: text("company_name").notNull(),
-  email: text("email").notNull(),
+  email: text("email"),
   phone: text("phone"),
   assignedTeamId: integer("assigned_team_id").references(() => teamsTable.id),
   status: text("status").notNull().default("ACTIVE"),

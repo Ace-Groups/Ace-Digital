@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, decimal, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, decimal, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { teamsTable } from "./teams";
@@ -15,6 +15,8 @@ export const projectsTable = pgTable("projects", {
   deadline: timestamp("deadline", { withTimezone: true }),
   budget: decimal("budget", { precision: 14, scale: 2 }),
   clientId: integer("client_id"),
+  githubUrl: text("github_url"),
+  customFields: jsonb("custom_fields").$type<{ key: string; value: string }[]>(),
   createdById: integer("created_by_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

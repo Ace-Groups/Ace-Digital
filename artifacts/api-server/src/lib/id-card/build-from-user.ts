@@ -3,6 +3,14 @@ import type { User } from "@workspace/db";
 import type { IdCardData } from "./types";
 import { isInternJobTitle } from "./is-intern";
 
+function formatAddress(user: User): string | null {
+  const cityLine = [user.city, user.state, user.zipCode].filter(Boolean).join(", ");
+  const parts = [user.address, user.addressLine2, cityLine, user.country].filter(
+    (p) => typeof p === "string" && p.trim(),
+  );
+  return parts.length ? parts.join(", ") : null;
+}
+
 function parseIdentityPhoto(avatarUrl: string | null | undefined): string | null {
   if (!avatarUrl) return null;
   if (avatarUrl.startsWith("identity:")) {
@@ -67,8 +75,10 @@ export async function buildIdCardDataFromUser(
     signatoryDesignation: extras?.signatoryDesignation ?? null,
     signatorySignatureDataUrl: extras?.signatorySignatureDataUrl ?? null,
     dob: user.dob?.toISOString() ?? null,
+    addressLine: formatAddress(user),
     companyLegalName: extras?.companyLegalName ?? "Ace Digital Private Limited",
     expirationLabel: formatExpiration(extras?.endDate ?? user.startDate?.toISOString() ?? null),
+    issuedYear: String(new Date().getFullYear()),
   };
 }
 

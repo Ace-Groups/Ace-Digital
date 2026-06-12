@@ -38,7 +38,10 @@ import {
   Trash2,
   Building2,
   Users,
+  Github,
 } from "lucide-react";
+import { CustomFieldsEditor } from "@/components/forms/CustomFieldsEditor";
+import type { ClientCustomField } from "@/lib/clients";
 import { formatCurrency, priorityColor, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -67,7 +70,27 @@ const editSchema = z.object({
   progress: z.coerce.number().min(0).max(100),
   deadline: z.string().optional(),
   budget: z.string().optional(),
+  githubUrl: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v?.trim() || /^https?:\/\/(www\.)?github\.com\//i.test(v.trim()) || /^github\.com\//i.test(v.trim()),
+      "Enter a valid GitHub repository URL",
+    ),
+  customFields: z.array(z.object({ key: z.string(), value: z.string() })),
 });
+
+function buildCustomFields(data: EditForm) {
+  return data.customFields
+    .map((f) => ({ key: f.key.trim(), value: f.value.trim() }))
+    .filter((f) => f.key);
+}
+
+function normalizeGithubInput(url?: string) {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+}
 type EditForm = z.infer<typeof editSchema>;
 
 type Team = { id: number; name: string };
@@ -79,6 +102,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   teams?: Team[];
   clients?: Client[];
+  canViewBudget?: boolean;
   onDeleted?: () => void;
   onDuplicate?: (project: Project) => void;
 };
@@ -94,6 +118,8 @@ function toFormValues(project: Project): EditForm {
     progress: project.progress ?? 0,
     deadline: project.deadline ? project.deadline.slice(0, 10) : "",
     budget: project.budget != null ? String(project.budget) : "",
+    githubUrl: project.githubUrl ?? "",
+    customFields: (project.customFields as ClientCustomField[] | null) ?? [],
   };
 }
 
@@ -103,6 +129,7 @@ export function ProjectDetailDialog({
   onOpenChange,
   teams,
   clients,
+  canViewBudget = false,
   onDeleted,
   onDuplicate,
 }: Props) {
@@ -157,7 +184,9 @@ export function ProjectDetailDialog({
             status: data.status,
             progress: data.progress,
             deadline: data.deadline || null,
-            budget: data.budget ? Number(data.budget) : null,
+            budget: canViewBudget && data.budget ? Number(data.budget) : p.budget,
+            githubUrl: normalizeGithubInput(data.githubUrl),
+            customFields: buildCustomFields(data),
           }));
           return prev;
         },
@@ -174,7 +203,11 @@ export function ProjectDetailDialog({
               status: data.status,
               progress: data.progress,
               deadline: data.deadline || undefined,
-              budget: data.budget ? Number(data.budget) : undefined,
+              ...(canViewBudget && data.budget
+                ? { budget: Number(data.budget) }
+                : {}),
+              githubUrl: normalizeGithubInput(data.githubUrl),
+              customFields: buildCustomFields(data),
             } as Parameters<typeof updateProject.mutateAsync>[0]["data"],
           }),
         reconcile: (updated) =>
@@ -451,7 +484,7 @@ export function ProjectDetailDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className={cn("grid gap-4", canViewBudget ? "grid-cols-2" : "grid-cols-1")}>
                 <FormField
                   control={form.control}
                   name="deadline"
@@ -463,6 +496,7 @@ export function ProjectDetailDialog({
                       <FormControl>
                         <DatePicker
                           inModal
+                          sheetTitle="Project deadline"
                           data-testid="edit-project-deadline"
                           value={field.value}
                           onChange={field.onChange}
@@ -473,27 +507,62 @@ export function ProjectDetailDialog({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="budget"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1">
-                        <IndianRupee size={14} /> Budget
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="number" data-testid="edit-project-budget" placeholder="0" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                {canViewBudget && (
+                  <FormField
+                    control={form.control}
+                    name="budget"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          <IndianRupee size={14} /> Budget
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="number" data-testid="edit-project-budget" placeholder="0" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
-              {project.budget != null && Number(form.watch("budget") || 0) > 500000 && (
+              {canViewBudget && project.budget != null && Number(form.watch("budget") || 0) > 500000 && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                   Budgets over ₹5,00,000 may require management approval.
                 </p>
               )}
+
+              <FormField
+                control={form.control}
+                name="githubUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1">
+                      <Github size={14} /> GitHub repository
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        data-testid="edit-project-github"
+                        placeholder="https://github.com/org/repo"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="customFields"
+                render={({ field }) => (
+                  <FormItem>
+                    <CustomFieldsEditor
+                      value={field.value as ClientCustomField[]}
+                      onChange={field.onChange}
+                    />
+                  </FormItem>
+                )}
+              />
 
               <Separator />
 

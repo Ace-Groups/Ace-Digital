@@ -161,6 +161,8 @@ export async function createProjectAction(
     deadline: input.deadline ? new Date(input.deadline) : null,
     budget: null,
     clientId: input.clientId ?? null,
+    githubUrl: null,
+    customFields: null,
     createdById: ctx.userId,
   });
 

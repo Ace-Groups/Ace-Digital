@@ -3,7 +3,7 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: Ace Digital OS API specification
+  description: Ace Digital API specification
 servers:
   - url: /api
     description: Base API path
@@ -2685,6 +2685,12 @@ components:
           type: ["integer", "null"]
         clientName:
           type: ["string", "null"]
+        githubUrl:
+          type: ["string", "null"]
+        customFields:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
         createdById:
           type: ["integer", "null"]
         createdAt:
@@ -2711,6 +2717,12 @@ components:
           type: number
         clientId:
           type: integer
+        githubUrl:
+          type: string
+        customFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
 
     ProjectUpdate:
       type: object
@@ -2733,6 +2745,12 @@ components:
           type: number
         clientId:
           type: integer
+        githubUrl:
+          type: ["string", "null"]
+        customFields:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/ClientCustomField"
 
     ProjectStatusUpdate:
       type: object
@@ -3743,18 +3761,18 @@ components:
 
     Client:
       type: object
-      required: [id, contactName, companyName, email, status]
+      required: [id, companyName, status]
       properties:
         id:
           type: integer
         salutation:
           type: ["string", "null"]
         contactName:
-          type: string
+          type: ["string", "null"]
         companyName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
         phone:
           type: ["string", "null"]
         assignedTeamId:
@@ -3778,7 +3796,7 @@ components:
 
     ClientInput:
       type: object
-      required: [contactName, companyName, email]
+      required: [companyName]
       properties:
         salutation:
           type: string
@@ -3811,15 +3829,15 @@ components:
         salutation:
           type: ["string", "null"]
         contactName:
-          type: string
+          type: ["string", "null"]
         companyName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
         phone:
           type: string
         assignedTeamId:
-          type: integer
+          type: ["integer", "null"]
         status:
           type: string
         contractValue:

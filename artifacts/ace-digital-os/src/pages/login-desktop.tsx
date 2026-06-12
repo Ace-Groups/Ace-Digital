@@ -163,7 +163,7 @@ export default function LoginDesktopLayout({
         <div className="hidden flex-1 flex-col items-center justify-center px-6 lg:flex lg:pl-12 lg:pr-6 xl:pl-16">
           <div className="flex w-full max-w-2xl flex-col items-center justify-center text-center">
             <div className="mb-10 inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/[0.06] px-6 py-2.5 text-sm font-semibold tracking-widest uppercase text-[hsl(203_100%_90%)]">
-              Ace Digital OS v2
+              Ace Digital
             </div>
             <div className="relative flex w-full items-center justify-center">
               <div
@@ -196,7 +196,7 @@ export default function LoginDesktopLayout({
           <div className="w-full max-w-[420px] rounded-2xl border border-white/[0.1] bg-[hsl(218_40%_12%/0.55)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
             <div className="mb-8">
               <h2 className="text-2xl font-semibold tracking-tight text-white">Welcome back</h2>
-              <p className="mt-1.5 text-sm text-white/50">Sign in to Ace Digital OS v2</p>
+              <p className="mt-1.5 text-sm text-white/50">Sign in to Ace Digital</p>
             </div>
             <LoginDesktopForm
               form={form}

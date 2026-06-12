@@ -49,6 +49,9 @@ import {
   snapshotList,
 } from "@/lib/optimistic";
 import { runOptimistic } from "@/lib/optimistic/run-optimistic";
+import { usePermissions } from "@/hooks/use-permissions";
+import { CustomFieldsEditor } from "@/components/forms/CustomFieldsEditor";
+import type { ClientCustomField } from "@/lib/clients";
 
 const STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -84,10 +87,32 @@ const createSchema = z.object({
   priority: z.string(),
   deadline: z.string().optional(),
   budget: z.string().optional(),
+  githubUrl: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v?.trim() || /^https?:\/\/(www\.)?github\.com\//i.test(v.trim()) || /^github\.com\//i.test(v.trim()),
+      "Enter a valid GitHub repository URL",
+    ),
+  customFields: z.array(z.object({ key: z.string(), value: z.string() })),
 });
+
+function buildProjectCustomFields(data: CreateForm) {
+  return data.customFields
+    .map((f) => ({ key: f.key.trim(), value: f.value.trim() }))
+    .filter((f) => f.key);
+}
+
+function normalizeGithubInput(url?: string) {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+}
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function ProjectsPage() {
+  const { can } = usePermissions();
+  const canViewBudget = can("projects:budget");
   const { data: projects, isLoading } = useListProjects();
   const { data: teams } = useListTeams();
   const { data: clients } = useListClients();
@@ -103,7 +128,7 @@ export default function ProjectsPage() {
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", description: "", priority: "MEDIUM" },
+    defaultValues: { name: "", description: "", priority: "MEDIUM", githubUrl: "", customFields: [] },
   });
 
   async function onSubmit(data: CreateForm) {
@@ -119,7 +144,7 @@ export default function ProjectsPage() {
       status: "TODO",
       progress: 0,
       deadline: data.deadline || null,
-      budget: data.budget ? Number(data.budget) : null,
+      budget: canViewBudget && data.budget ? Number(data.budget) : null,
     };
     setCreateOpen(false);
     form.reset();
@@ -141,7 +166,9 @@ export default function ProjectsPage() {
               priority: data.priority,
               status: "TODO",
               deadline: data.deadline || undefined,
-              budget: data.budget ? Number(data.budget) : undefined,
+              budget: canViewBudget && data.budget ? Number(data.budget) : undefined,
+              githubUrl: normalizeGithubInput(data.githubUrl),
+              customFields: buildProjectCustomFields(data),
             },
           }),
         reconcile: (created) => replaceListItem(queryClient, projectsKey, tempId, created),
@@ -186,7 +213,7 @@ export default function ProjectsPage() {
         priority: source.priority,
         status: "TODO",
         deadline: source.deadline ?? undefined,
-        budget: source.budget ?? undefined,
+        budget: canViewBudget ? source.budget ?? undefined : undefined,
       },
     });
     queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
@@ -296,7 +323,7 @@ export default function ProjectsPage() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="teamId"
@@ -367,26 +394,27 @@ export default function ProjectsPage() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="deadline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Deadline</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            inModal
-                            data-testid="input-project-deadline"
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            placeholder="Select deadline"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="deadline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deadline</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          inModal
+                          sheetTitle="Project deadline"
+                          data-testid="input-project-deadline"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Select deadline"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {canViewBudget && (
                   <FormField
                     control={form.control}
                     name="budget"
@@ -399,7 +427,36 @@ export default function ProjectsPage() {
                       </FormItem>
                     )}
                   />
-                </div>
+                )}
+                <FormField
+                  control={form.control}
+                  name="githubUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GitHub repository</FormLabel>
+                      <FormControl>
+                        <Input
+                          data-testid="input-project-github"
+                          placeholder="https://github.com/org/repo"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customFields"
+                  render={({ field }) => (
+                    <FormItem>
+                      <CustomFieldsEditor
+                        value={field.value as ClientCustomField[]}
+                        onChange={field.onChange}
+                      />
+                    </FormItem>
+                  )}
+                />
                 <Button
                   data-testid="btn-submit-project"
                   type="submit"
@@ -549,7 +606,7 @@ export default function ProjectsPage() {
                                     })}
                                   </span>
                                 )}
-                                {project.budget != null && (
+                                {canViewBudget && project.budget != null && (
                                   <span className="ml-auto flex items-center gap-1 tabular-nums">
                                     <IndianRupee size={10} />
                                     {formatCurrency(project.budget)}
@@ -606,6 +663,7 @@ export default function ProjectsPage() {
         onOpenChange={handleDetailOpenChange}
         teams={teams}
         clients={clients?.map((c) => ({ id: c.id, companyName: c.companyName }))}
+        canViewBudget={canViewBudget}
         onDuplicate={handleDuplicate}
       />
 

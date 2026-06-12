@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Ace Digital OS"
+title = "Ace Digital"
 version = "1.0.0"
 id = "artifacts/ace-digital-os"
 router = "path"

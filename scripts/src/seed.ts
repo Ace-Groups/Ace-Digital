@@ -220,7 +220,7 @@ async function seed() {
   await db
     .insert(schema.messagesTable)
     .values([
-      { channelId: cm["general"], senderId: um["admin@acedigital.com"], body: "Welcome to Ace Digital OS! Our new internal platform is live 🎉" },
+      { channelId: cm["general"], senderId: um["admin@acedigital.com"], body: "Welcome to Ace Digital! Our new internal platform is live 🎉" },
       { channelId: cm["general"], senderId: um["priya.management@acedigital.com"], body: "Great work everyone on the Q2 deliverables! Team performance review next week." },
       { channelId: cm["general"], senderId: um["admin@acedigital.com"], body: "Reminder: All expense reports for May must be submitted by June 5th." },
       { channelId: cm["engineering"], senderId: um["rahul.eng@acedigital.com"], body: "TechVision API integration is at 65%. On track for August delivery." },

@@ -54,7 +54,7 @@ export function MobileLoginScreen({
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-7 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
         <div className="flex flex-col items-center gap-2">
           <img src={aceLogo} alt="" className="size-11 object-contain" />
-          <p className="v2-stat-label">Ace Digital OS v2</p>
+          <p className="v2-stat-label">Ace Digital</p>
         </div>
 
         <section className="rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-brand-sm">

@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Calendar, IndianRupee, Clock, ArrowRight, FilterX } from "lucide-react";
-import { formatCurrency, priorityColor, cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, Calendar, FilterX } from "lucide-react";
+import { priorityColor, cn } from "@/lib/utils";
 import type { Project } from "@workspace/api-client-react";
 
 interface ProjectTimelineViewProps {
@@ -20,7 +19,6 @@ export function ProjectTimelineView({
   const [scaleMode, setScaleMode] = useState<ScaleMode>("month");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedTeams, setSelectedTeams] = useState<Set<number>>(() => new Set());
-  const [hoveredProjectId, setHoveredProjectId] = useState<number | null>(null);
 
   // Team mapping for quick color and name retrieval
   const teamMap = useMemo(() => {
@@ -130,8 +128,9 @@ export function ProjectTimelineView({
   // Helper to project start/end dates onto the timeline grid as percentage left & width
   const calculateBarPosition = (proj: Project) => {
     const projCreated = proj.createdAt ? new Date(proj.createdAt) : new Date();
-    // Default deadline to 30 days after creation if missing
-    const projDeadline = proj.deadline ? new Date(proj.deadline) : new Date(projCreated.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const projDeadline = proj.deadline
+      ? new Date(proj.deadline)
+      : new Date(dateRange.end);
 
     const timelineStart = dateRange.start.getTime();
     const timelineEnd = dateRange.end.getTime();
@@ -276,8 +275,8 @@ export function ProjectTimelineView({
       )}
 
       {/* Main Timeline Board container */}
-      <div className="relative rounded-2xl border border-border/60 bg-card/30 dark:bg-black/20 shadow-2xl overflow-hidden backdrop-blur-xl">
-        <div className="min-w-[760px] overflow-x-auto">
+      <div className="relative rounded-2xl border border-border/60 bg-card/30 dark:bg-black/20 shadow-2xl backdrop-blur-xl">
+        <div className="min-w-[760px] overflow-x-auto overflow-y-visible">
           {/* Timeline Grid Header */}
           <div className="flex border-b border-border/40">
             {/* Left Header Corner */}
@@ -306,18 +305,7 @@ export function ProjectTimelineView({
           </div>
 
           {/* Timeline Scrollable Grid Rows */}
-          <div className="relative divide-y divide-border/20">
-            {/* Running Today Indicator line */}
-            {todayPosition && (
-              <div
-                style={{ left: `calc(240px + ${todayPosition})` }}
-                className="absolute top-0 bottom-0 z-10 w-[2px] bg-red-500/80 pointer-events-none shadow-[0_0_10px_rgba(239,68,68,0.7)]"
-                title="Today"
-              >
-                <div className="absolute -top-1.5 -left-1 h-3.5 w-3.5 rounded-full bg-red-500 ring-4 ring-red-500/20" />
-              </div>
-            )}
-
+          <div className="divide-y divide-border/20">
             {filteredProjects.length === 0 ? (
               <div className="py-20 text-center">
                 <Calendar className="mx-auto text-muted-foreground/45 mb-2" size={36} />
@@ -361,7 +349,14 @@ export function ProjectTimelineView({
                     </div>
 
                     {/* Timeline row cells */}
-                    <div className="relative flex-1 h-full min-h-[58px] flex items-center">
+                    <div className="relative flex-1 h-full min-h-[58px] flex items-center overflow-visible">
+                      {todayPosition && (
+                        <div
+                          style={{ left: todayPosition }}
+                          className="pointer-events-none absolute top-0 bottom-0 z-[5] w-0.5 bg-red-500/70"
+                          title="Today"
+                        />
+                      )}
                       {/* Grid background divider lines */}
                       <div className="absolute inset-0 flex pointer-events-none">
                         {timelineColumns.map((_, idx) => (
@@ -376,17 +371,13 @@ export function ProjectTimelineView({
                           className="absolute px-1 z-10"
                         >
                           <div
-                            onMouseEnter={() => setHoveredProjectId(project.id)}
-                            onMouseLeave={() => setHoveredProjectId(null)}
                             onClick={() => onSelectProject(project)}
+                            title={`${project.name} · ${project.progress}% · ${team?.name ?? "No team"}`}
                             style={{
                               borderColor: team && team.color ? `${team.color}45` : undefined,
-                              boxShadow: hoveredProjectId === project.id && team && team.color
-                                ? `0 0 16px ${team.color}20`
-                                : undefined,
                             }}
                             className={cn(
-                              "relative h-7 rounded-lg glass-panel flex items-center px-2.5 overflow-hidden cursor-pointer select-none border animate-hover-card",
+                              "relative h-7 rounded-lg glass-panel flex items-center px-2.5 overflow-hidden cursor-pointer select-none border animate-hover-card hover:ring-2 hover:ring-primary/20",
                               pos.isStartCut && "rounded-l-none border-l-dashed border-l-primary/30",
                               pos.isEndCut && "rounded-r-none border-r-dashed border-r-primary/30"
                             )}
@@ -427,81 +418,6 @@ export function ProjectTimelineView({
                               </span>
                             </div>
                           </div>
-
-                          {/* Beautiful Interactive Tooltip on Hover */}
-                          <AnimatePresence>
-                            {hoveredProjectId === project.id && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                                animate={{ opacity: 1, y: -4, scale: 1 }}
-                                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                                transition={{ duration: 0.15 }}
-                                className="absolute bottom-full left-1/2 -translate-x-1/2 z-30 mb-2 w-72 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-md p-4 shadow-2xl text-xs space-y-3 pointer-events-none"
-                              >
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <span
-                                      className={cn(
-                                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border",
-                                        priorityColor(project.priority)
-                                      )}
-                                    >
-                                      {project.priority} Priority
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground capitalize">
-                                      {project.status.replace("_", " ")}
-                                    </span>
-                                  </div>
-                                  <h5 className="font-semibold text-foreground text-sm leading-tight">
-                                    {project.name}
-                                  </h5>
-                                  {project.description && (
-                                    <p className="text-muted-foreground leading-normal line-clamp-2 mt-1">
-                                      {project.description}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-border/40">
-                                  <div>
-                                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-medium">
-                                      Schedule
-                                    </span>
-                                    <p className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
-                                      <Calendar size={11} className="text-muted-foreground" />
-                                      {pos.actualStart.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                                      <ArrowRight size={10} className="text-muted-foreground" />
-                                      {pos.actualEnd.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                                    </p>
-                                  </div>
-                                  {project.budget != null && (
-                                    <div>
-                                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-medium">
-                                        Budget
-                                      </span>
-                                      <p className="font-semibold text-foreground flex items-center gap-0.5 mt-0.5">
-                                        <IndianRupee size={11} className="text-muted-foreground" />
-                                        {formatCurrency(project.budget)}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[10px]">
-                                  <div className="flex items-center gap-1.5">
-                                    {team && team.color && (
-                                      <span
-                                        style={{ backgroundColor: team.color || undefined }}
-                                        className="h-2 w-2 rounded-full"
-                                      />
-                                    )}
-                                    <span className="font-medium text-muted-foreground">{team?.name ?? "No Team"}</span>
-                                  </div>
-                                  <span className="font-bold text-primary">{project.progress}% Done</span>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                       )}
                     </div>
