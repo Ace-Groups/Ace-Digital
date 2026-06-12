@@ -45,7 +45,6 @@
     "@tailwindcss/oxide-darwin-arm64": "^4.3.0",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "catalog:",
-    "@tanstack/react-query": "catalog:",
     "@tiptap/core": "^3.26.0",
     "@tiptap/extension-color": "^3.26.0",
     "@tiptap/extension-highlight": "^3.26.0",
@@ -93,6 +92,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@tanstack/react-query": "catalog:",
     "@tanstack/query-sync-storage-persister": "^5.90.21",
     "@tanstack/react-query-persist-client": "^5.90.21",
     "@tanstack/react-virtual": "^3.14.1",
