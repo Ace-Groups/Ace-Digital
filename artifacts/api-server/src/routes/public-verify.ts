@@ -21,29 +21,6 @@ const publicLimiter = rateLimit({
 });
 
 router.get(
-  "/v1/public/v/verification/:employeeCode",
-  publicLimiter,
-  async (req, res): Promise<void> => {
-    const employeeCode = normalizeEmployeeCode(String(req.params.employeeCode));
-    const kiosk = typeof req.query.kiosk === "string" ? req.query.kiosk : undefined;
-    const certCode = typeof req.query.cert === "string" ? req.query.cert : undefined;
-    const certSig = typeof req.query.s === "string" ? req.query.s : undefined;
-    const result = await resolveEmployeeVerificationByCode({
-      employeeCode,
-      kioskToken: kiosk,
-      certCode,
-      certSig,
-      ip: req.ip,
-    });
-    if (result.status === "not_found") {
-      res.status(404).json(result);
-      return;
-    }
-    res.json(result);
-  },
-);
-
-router.get(
   "/v1/public/v/verification/:employeeCode.vcf",
   publicLimiter,
   async (req, res): Promise<void> => {
@@ -69,24 +46,28 @@ router.get(
   },
 );
 
-router.get("/v1/public/v/:slug", publicLimiter, async (req, res): Promise<void> => {
-  const slug = String(req.params.slug).toLowerCase();
-  const kiosk = typeof req.query.kiosk === "string" ? req.query.kiosk : undefined;
-  const certCode = typeof req.query.cert === "string" ? req.query.cert : undefined;
-  const certSig = typeof req.query.s === "string" ? req.query.s : undefined;
-  const result = await resolveEmployeeVerification({
-    slug,
-    kioskToken: kiosk,
-    certCode,
-    certSig,
-    ip: req.ip,
-  });
-  if (result.status === "not_found") {
-    res.status(404).json(result);
-    return;
-  }
-  res.json(result);
-});
+router.get(
+  "/v1/public/v/verification/:employeeCode",
+  publicLimiter,
+  async (req, res): Promise<void> => {
+    const employeeCode = normalizeEmployeeCode(String(req.params.employeeCode));
+    const kiosk = typeof req.query.kiosk === "string" ? req.query.kiosk : undefined;
+    const certCode = typeof req.query.cert === "string" ? req.query.cert : undefined;
+    const certSig = typeof req.query.s === "string" ? req.query.s : undefined;
+    const result = await resolveEmployeeVerificationByCode({
+      employeeCode,
+      kioskToken: kiosk,
+      certCode,
+      certSig,
+      ip: req.ip,
+    });
+    if (result.status === "not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
 
 router.get("/v1/public/v/:slug.vcf", publicLimiter, async (req, res): Promise<void> => {
   const slug = String(req.params.slug).toLowerCase();
@@ -108,6 +89,25 @@ router.get("/v1/public/v/:slug.vcf", publicLimiter, async (req, res): Promise<vo
   res.setHeader("Content-Disposition", `inline; filename="${code}.vcf"`);
   res.setHeader("Cache-Control", "no-cache");
   res.send(vcard);
+});
+
+router.get("/v1/public/v/:slug", publicLimiter, async (req, res): Promise<void> => {
+  const slug = String(req.params.slug).toLowerCase();
+  const kiosk = typeof req.query.kiosk === "string" ? req.query.kiosk : undefined;
+  const certCode = typeof req.query.cert === "string" ? req.query.cert : undefined;
+  const certSig = typeof req.query.s === "string" ? req.query.s : undefined;
+  const result = await resolveEmployeeVerification({
+    slug,
+    kioskToken: kiosk,
+    certCode,
+    certSig,
+    ip: req.ip,
+  });
+  if (result.status === "not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
 });
 
 router.get("/v1/public/verify/cert/:code", publicLimiter, async (req, res): Promise<void> => {
