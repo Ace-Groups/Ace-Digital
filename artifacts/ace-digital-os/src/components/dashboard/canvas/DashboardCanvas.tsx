@@ -15,7 +15,6 @@ import {
   Sparkles,
   TrendingUp,
   Users,
-  X,
   Zap,
 } from "lucide-react";
 import {
@@ -35,7 +34,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStandaloneMode } from "@/hooks/use-standalone-mode";
 import { formatUnreadBadge } from "@/lib/chat-display";
 import { formatCurrency, formatRelativeTime, getInitials } from "@/lib/utils";
 import { formatScheduleLabel } from "@/lib/calendar-core";
@@ -43,8 +41,6 @@ import { getGreeting, useDashboardPage } from "../useDashboardPage";
 import { ChatWidget } from "../ChatWidget";
 import { HomeScreenWidgets } from "@/components/pwa/HomeScreenWidgets";
 import "@/styles/dashboard-canvas.css";
-
-const SPOTLIGHT_KEY = "ace-dashboard-spotlight-dismissed";
 
 const DONUT_COLORS = [
   "hsl(var(--primary))",
@@ -218,47 +214,6 @@ function DashboardCommandBar({
         </button>
       </div>
     </header>
-  );
-}
-
-function DashboardSpotlight() {
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(SPOTLIGHT_KEY) === "1",
-  );
-  const isStandalone = useStandaloneMode();
-
-  if (dismissed) return null;
-
-  return (
-    <div className="dash-spotlight" role="region" aria-label="What's new">
-      <div className="dash-spotlight-icon">
-        <Zap size={18} aria-hidden />
-      </div>
-      <div className="dash-spotlight-body">
-        <p className="dash-spotlight-title">
-          {isStandalone ? "You're on the home screen app" : "New dashboard experience"}
-        </p>
-        <p className="dash-spotlight-text">
-          {isStandalone
-            ? "Long-press the Ace icon for shortcuts to Tasks, Chat, Calendar, and Notes. Your live widgets update in real time below."
-            : "Install Ace Digital for home-screen widgets, unread badges on the app icon, and one-tap shortcuts to your workspace."}
-        </p>
-        <Link href={isStandalone ? "/notes" : "/settings"} className="dash-spotlight-cta">
-          {isStandalone ? "Open Notes" : "Explore settings"}
-        </Link>
-      </div>
-      <button
-        type="button"
-        className="dash-spotlight-close"
-        aria-label="Dismiss"
-        onClick={() => {
-          localStorage.setItem(SPOTLIGHT_KEY, "1");
-          setDismissed(true);
-        }}
-      >
-        <X size={16} />
-      </button>
-    </div>
   );
 }
 
@@ -670,10 +625,6 @@ export function DashboardCanvas() {
           progress={setupProgress}
           onAskAce={() => openWithPrompt("What needs my attention today?")}
         />
-      </StaggerItem>
-
-      <StaggerItem>
-        <DashboardSpotlight />
       </StaggerItem>
 
       <StaggerItem>
