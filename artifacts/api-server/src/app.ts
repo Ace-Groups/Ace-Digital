@@ -32,7 +32,7 @@ app.use(
 );
 app.use(cors(getCorsOptions()));
 // Chat messages may include compressed inline attachments (see MAX_ATTACHMENT_DATA_URL_LENGTH).
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 const apiLimiter = rateLimit({

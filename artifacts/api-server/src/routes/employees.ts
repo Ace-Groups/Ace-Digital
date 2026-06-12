@@ -18,6 +18,7 @@ import {
   validateEmployeeCode,
 } from "../lib/employee-code";
 import { defaultMascotForRole, isRoleDefaultMascot } from "../lib/mascots";
+import { parseBankDetails } from "../lib/bank-details";
 
 const router = Router();
 
@@ -125,11 +126,21 @@ router.post(
       nationality,
       aadhaarNumber,
       emergencyContactName,
+      emergencyContactRelationship,
       emergencyContactPhone,
       highestQualification,
       bloodGroup,
       aadhaarDocument,
       notes,
+      workType,
+      bankAccountNumber,
+      confirmBankAccountNumber,
+      bankIfscCode,
+      bankName,
+      bankAccountHolderName,
+      panNumber,
+      bankAccountType,
+      upiId,
     } = req.body;
 
     if (!fullName || !email || !role) {
@@ -138,6 +149,21 @@ router.post(
     }
     if (!canAssignRole(ctx.role, role)) {
       res.status(403).json({ error: "Cannot assign this role" });
+      return;
+    }
+
+    const bankDetails = parseBankDetails({
+      bankAccountNumber,
+      confirmBankAccountNumber,
+      bankIfscCode,
+      bankName,
+      bankAccountHolderName,
+      panNumber,
+      bankAccountType,
+      upiId,
+    });
+    if (!bankDetails.ok) {
+      res.status(400).json({ error: bankDetails.error });
       return;
     }
 
@@ -208,12 +234,23 @@ router.post(
       gender: optionalText(gender),
       maritalStatus: optionalText(maritalStatus),
       nationality: optionalText(nationality),
-      aadhaarNumber: optionalText(aadhaarNumber),
+      aadhaarNumber: optionalText(
+        typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\s/g, "") : aadhaarNumber,
+      ),
       emergencyContactName: optionalText(emergencyContactName),
+      emergencyContactRelationship: optionalText(emergencyContactRelationship),
       emergencyContactPhone: optionalText(emergencyContactPhone),
       highestQualification: optionalText(highestQualification),
       bloodGroup: optionalText(bloodGroup),
       aadhaarDocument: optionalDocument(aadhaarDocument),
+      bankAccountNumber: bankDetails.bankAccountNumber,
+      bankIfscCode: bankDetails.bankIfscCode,
+      bankName: bankDetails.bankName,
+      bankAccountHolderName: bankDetails.bankAccountHolderName,
+      panNumber: bankDetails.panNumber,
+      bankAccountType: bankDetails.bankAccountType,
+      upiId: bankDetails.upiId,
+      workType: optionalText(workType) ?? "permanent",
       notes: optionalText(notes),
     });
     await store.updateUser(user.id, { status: status ?? "active" });
@@ -334,11 +371,21 @@ router.patch(
       nationality,
       aadhaarNumber,
       emergencyContactName,
+      emergencyContactRelationship,
       emergencyContactPhone,
       highestQualification,
       bloodGroup,
       aadhaarDocument,
       notes,
+      workType,
+      bankAccountNumber,
+      confirmBankAccountNumber,
+      bankIfscCode,
+      bankName,
+      bankAccountHolderName,
+      panNumber,
+      bankAccountType,
+      upiId,
     } = req.body;
 
     const parsedStart = parseStartDate(startDate);
@@ -351,6 +398,44 @@ router.patch(
     if (dob !== undefined && dob !== null && dob !== "" && parsedDob === undefined) {
       res.status(400).json({ error: "Invalid date of birth" });
       return;
+    }
+
+    const bankFieldsProvided =
+      bankAccountNumber !== undefined ||
+      confirmBankAccountNumber !== undefined ||
+      bankIfscCode !== undefined ||
+      bankName !== undefined ||
+      bankAccountHolderName !== undefined ||
+      panNumber !== undefined ||
+      bankAccountType !== undefined ||
+      upiId !== undefined;
+    let parsedBank:
+      | {
+          bankAccountNumber: string | null;
+          bankIfscCode: string | null;
+          bankName: string | null;
+          bankAccountHolderName: string | null;
+          panNumber: string | null;
+          bankAccountType: string | null;
+          upiId: string | null;
+        }
+      | undefined;
+    if (bankFieldsProvided) {
+      const bankDetails = parseBankDetails({
+        bankAccountNumber,
+        confirmBankAccountNumber,
+        bankIfscCode,
+        bankName,
+        bankAccountHolderName,
+        panNumber,
+        bankAccountType,
+        upiId,
+      });
+      if (!bankDetails.ok) {
+        res.status(400).json({ error: bankDetails.error });
+        return;
+      }
+      parsedBank = bankDetails;
     }
 
     const existingUser = await store.findUserById(id);
@@ -423,14 +508,32 @@ router.patch(
       ...(emergencyContactName !== undefined && {
         emergencyContactName: optionalText(emergencyContactName),
       }),
+      ...(emergencyContactRelationship !== undefined && {
+        emergencyContactRelationship: optionalText(emergencyContactRelationship),
+      }),
       ...(emergencyContactPhone !== undefined && {
         emergencyContactPhone: optionalText(emergencyContactPhone),
       }),
+      ...(workType !== undefined && { workType: optionalText(workType) }),
       ...(highestQualification !== undefined && {
         highestQualification: optionalText(highestQualification),
       }),
       ...(bloodGroup !== undefined && { bloodGroup: optionalText(bloodGroup) }),
       ...(aadhaarDocument !== undefined && { aadhaarDocument: optionalDocument(aadhaarDocument) }),
+      ...(parsedBank && {
+        bankAccountNumber: parsedBank.bankAccountNumber,
+        bankIfscCode: parsedBank.bankIfscCode,
+        bankName: parsedBank.bankName,
+        bankAccountHolderName: parsedBank.bankAccountHolderName,
+        panNumber: parsedBank.panNumber,
+        bankAccountType: parsedBank.bankAccountType,
+        upiId: parsedBank.upiId,
+      }),
+      ...(aadhaarNumber !== undefined && {
+        aadhaarNumber: optionalText(
+          typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\s/g, "") : aadhaarNumber,
+        ),
+      }),
       ...(notes !== undefined && { notes: notes || null }),
       ...(status !== undefined && { status }),
       ...avatarPatch,

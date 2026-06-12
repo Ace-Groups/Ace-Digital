@@ -26,5 +26,11 @@ service firebase.storage {
       allow read: if true;
       allow write: if false;
     }
+
+    /** HR onboarding documents — writes via Admin SDK only. */
+    match /hr-documents/{uploadId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
   }
 }

@@ -45,6 +45,8 @@ export interface Employee {
   /** @nullable */
   emergencyContactName?: string | null;
   /** @nullable */
+  emergencyContactRelationship?: string | null;
+  /** @nullable */
   emergencyContactPhone?: string | null;
   /** @nullable */
   highestQualification?: string | null;
@@ -52,6 +54,25 @@ export interface Employee {
   bloodGroup?: string | null;
   /** @nullable */
   aadhaarDocument?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankIfscCode?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /**
+     * Name as per bank records
+     * @nullable
+     */
+  bankAccountHolderName?: string | null;
+  /** @nullable */
+  panNumber?: string | null;
+  /** @nullable */
+  bankAccountType?: string | null;
+  /** @nullable */
+  upiId?: string | null;
+  /** @nullable */
+  workType?: string | null;
   /** @nullable */
   notes?: string | null;
   /** @nullable */

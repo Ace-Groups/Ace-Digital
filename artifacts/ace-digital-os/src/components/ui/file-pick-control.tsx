@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 
 type FilePickControlProps = {
   accept: string;
-  onFile: (file: File) => void;
+  onFile?: (file: File) => void;
+  onFiles?: (files: File[]) => void;
   children: ReactNode;
   className?: string;
   disabled?: boolean;
@@ -19,6 +20,7 @@ type FilePickControlProps = {
 export function FilePickControl({
   accept,
   onFile,
+  onFiles,
   children,
   className,
   disabled,
@@ -39,9 +41,15 @@ export function FilePickControl({
         aria-label={ariaLabel}
         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
         onChange={(event) => {
-          const file = event.target.files?.[0];
+          const list = event.target.files;
           event.currentTarget.value = "";
-          if (file) onFile(file);
+          if (!list?.length) return;
+          if (multiple && onFiles) {
+            onFiles(Array.from(list));
+            return;
+          }
+          const file = list[0];
+          if (file) onFile?.(file);
         }}
       />
     </div>

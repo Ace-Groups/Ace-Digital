@@ -24,9 +24,8 @@ export function PushPermissionPrompt() {
     void (async () => {
       if (!(await isWebPushAvailable())) return;
       const permission = getNotificationPermission();
-      if (permission !== "default") return;
-      if (sessionStorage.getItem(DISMISS_KEY) === "1") return;
-      setVisible(true);
+      if (permission !== "granted") return;
+      setVisible(false);
     })();
   }, [isSessionVerified, user]);
 

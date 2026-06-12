@@ -28,11 +28,14 @@ import {
   parseEmployeeIdentityImages,
 } from "@/lib/avatar";
 import { ProfilePhotoUpload } from "@/components/employees/ProfilePhotoUpload";
-import { FilePickControl } from "@/components/ui/file-pick-control";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
+import { AadhaarMultiUpload } from "@/components/employees/AadhaarMultiUpload";
 import { Textarea } from "@/components/ui/textarea";
+import { BankDetailsFormSection } from "@/components/employees/BankDetailsFormSection";
+import {
+  normalizeAadhaarNumber,
+  resolveEmergencyRelationship,
+  validateHrOnboarding,
+} from "@/lib/employee-onboarding";
 
 const ROLES = [
   "employee",
@@ -43,8 +46,6 @@ const ROLES = [
   "client_manager",
   "super_admin",
 ] as const;
-
-const MAX_AADHAAR_DOCUMENT_BYTES = 1_000_000;
 
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -116,15 +117,34 @@ const createSchema = z
     nationality: z.string().optional(),
     aadhaarNumber: z.string().optional(),
     emergencyContactName: z.string().optional(),
+    emergencyContactRelationship: z.string().optional(),
+    emergencyContactRelationshipOther: z.string().optional(),
     emergencyContactPhone: z.string().optional(),
     highestQualification: z.string().optional(),
     bloodGroup: z.string().optional(),
     aadhaarDocument: z.string().optional(),
+    workType: z.string().optional(),
+    bankAccountNumber: z.string().optional(),
+    confirmBankAccountNumber: z.string().optional(),
+    bankIfscCode: z.string().optional(),
+    bankName: z.string().optional(),
+    bankAccountHolderName: z.string().optional(),
+    panNumber: z.string().optional(),
+    bankAccountType: z.string().optional(),
+    upiId: z.string().optional(),
     notes: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.passwordMode === "manual" && (!data.password || data.password.length < 6)) {
       ctx.addIssue({ code: "custom", message: "Min 6 characters", path: ["password"] });
+    }
+    const hrErrors = validateHrOnboarding({ ...data, workType: data.workType ?? "permanent" });
+    for (const [field, message] of Object.entries(hrErrors)) {
+      ctx.addIssue({
+        code: "custom",
+        message,
+        path: [field as keyof typeof data],
+      });
     }
   });
 
@@ -159,49 +179,37 @@ const editSchema = z.object({
   nationality: z.string().optional(),
   aadhaarNumber: z.string().optional(),
   emergencyContactName: z.string().optional(),
+  emergencyContactRelationship: z.string().optional(),
+  emergencyContactRelationshipOther: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   highestQualification: z.string().optional(),
   bloodGroup: z.string().optional(),
   aadhaarDocument: z.string().optional(),
+  workType: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  confirmBankAccountNumber: z.string().optional(),
+  bankIfscCode: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAccountHolderName: z.string().optional(),
+  panNumber: z.string().optional(),
+  bankAccountType: z.string().optional(),
+  upiId: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const hrErrors = validateHrOnboarding({ ...data, workType: data.workType ?? "permanent" }, {
+    required: false,
+  });
+  for (const [field, message] of Object.entries(hrErrors)) {
+    ctx.addIssue({
+      code: "custom",
+      message,
+      path: [field as keyof typeof data],
+    });
+  }
 });
 
 type CreateForm = z.infer<typeof createSchema>;
 type EditForm = z.infer<typeof editSchema>;
-
-function readEmployeeDocument(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (file.size > MAX_AADHAAR_DOCUMENT_BYTES) {
-      reject(new Error("Use a file under 1 MB"));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read file"));
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : "";
-      resolve(
-        JSON.stringify({
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          size: file.size,
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-        }),
-      );
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function getDocumentName(value?: string | null) {
-  if (!value) return "";
-  try {
-    const parsed = JSON.parse(value) as { name?: string };
-    return parsed.name ?? "";
-  } catch {
-    return "";
-  }
-}
 
 export type EmployeeFormSubmitCreate = {
   fullName: string;
@@ -232,10 +240,20 @@ export type EmployeeFormSubmitCreate = {
   nationality?: string | null;
   aadhaarNumber?: string | null;
   emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
   emergencyContactPhone?: string | null;
   highestQualification?: string | null;
   bloodGroup?: string | null;
   aadhaarDocument?: string | null;
+  workType?: string | null;
+  bankAccountNumber?: string | null;
+  confirmBankAccountNumber?: string | null;
+  bankIfscCode?: string | null;
+  bankName?: string | null;
+  bankAccountHolderName?: string | null;
+  panNumber?: string | null;
+  bankAccountType?: string | null;
+  upiId?: string | null;
   notes?: string | null;
 };
 
@@ -266,10 +284,20 @@ export type EmployeeFormSubmitEdit = {
   nationality?: string | null;
   aadhaarNumber?: string | null;
   emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
   emergencyContactPhone?: string | null;
   highestQualification?: string | null;
   bloodGroup?: string | null;
   aadhaarDocument?: string | null;
+  workType?: string | null;
+  bankAccountNumber?: string | null;
+  confirmBankAccountNumber?: string | null;
+  bankIfscCode?: string | null;
+  bankName?: string | null;
+  bankAccountHolderName?: string | null;
+  panNumber?: string | null;
+  bankAccountType?: string | null;
+  upiId?: string | null;
   notes?: string | null;
 };
 
@@ -321,10 +349,21 @@ export function EmployeeFormSheet({
       nationality: "Indian",
       aadhaarNumber: "",
       emergencyContactName: "",
+      emergencyContactRelationship: "",
+      emergencyContactRelationshipOther: "",
       emergencyContactPhone: "",
       highestQualification: "",
       bloodGroup: "",
       aadhaarDocument: "",
+      workType: "permanent",
+      bankAccountNumber: "",
+      confirmBankAccountNumber: "",
+      bankIfscCode: "",
+      bankName: "",
+      bankAccountHolderName: "",
+      panNumber: "",
+      bankAccountType: "",
+      upiId: "",
       notes: "",
       profilePhotoUrl: "",
     },
@@ -351,10 +390,21 @@ export function EmployeeFormSheet({
       nationality: "Indian",
       aadhaarNumber: "",
       emergencyContactName: "",
+      emergencyContactRelationship: "",
+      emergencyContactRelationshipOther: "",
       emergencyContactPhone: "",
       highestQualification: "",
       bloodGroup: "",
       aadhaarDocument: "",
+      workType: "permanent",
+      bankAccountNumber: "",
+      confirmBankAccountNumber: "",
+      bankIfscCode: "",
+      bankName: "",
+      bankAccountHolderName: "",
+      panNumber: "",
+      bankAccountType: "",
+      upiId: "",
       notes: "",
       profilePhotoUrl: "",
     },
@@ -432,10 +482,21 @@ export function EmployeeFormSheet({
       nationality: employee.nationality ?? "",
       aadhaarNumber: employee.aadhaarNumber ?? "",
       emergencyContactName: employee.emergencyContactName ?? "",
+      emergencyContactRelationship: employee.emergencyContactRelationship?.toLowerCase() ?? "",
+      emergencyContactRelationshipOther: "",
       emergencyContactPhone: employee.emergencyContactPhone ?? "",
       highestQualification: employee.highestQualification ?? "",
       bloodGroup: employee.bloodGroup ?? "",
       aadhaarDocument: employee.aadhaarDocument ?? "",
+      workType: employee.workType ?? "permanent",
+      bankAccountNumber: employee.bankAccountNumber ?? "",
+      confirmBankAccountNumber: employee.bankAccountNumber ?? "",
+      bankIfscCode: employee.bankIfscCode ?? "",
+      bankName: employee.bankName ?? "",
+      bankAccountHolderName: employee.bankAccountHolderName ?? "",
+      panNumber: employee.panNumber ?? "",
+      bankAccountType: employee.bankAccountType ?? "",
+      upiId: employee.upiId ?? "",
       notes: employee.notes ?? "",
       profilePhotoUrl: parsed.profilePhotoUrl ?? "",
     });
@@ -466,10 +527,21 @@ export function EmployeeFormSheet({
       nationality: "Indian",
       aadhaarNumber: "",
       emergencyContactName: "",
+      emergencyContactRelationship: "",
+      emergencyContactRelationshipOther: "",
       emergencyContactPhone: "",
       highestQualification: "",
       bloodGroup: "",
       aadhaarDocument: "",
+      workType: "permanent",
+      bankAccountNumber: "",
+      confirmBankAccountNumber: "",
+      bankIfscCode: "",
+      bankName: "",
+      bankAccountHolderName: "",
+      panNumber: "",
+      bankAccountType: "",
+      upiId: "",
       notes: "",
       profilePhotoUrl: "",
     });
@@ -507,10 +579,21 @@ export function EmployeeFormSheet({
       nationality?: string;
       aadhaarNumber?: string;
       emergencyContactName?: string;
+      emergencyContactRelationship?: string;
+      emergencyContactRelationshipOther?: string;
       emergencyContactPhone?: string;
       highestQualification?: string;
       bloodGroup?: string;
       aadhaarDocument?: string;
+      workType?: string;
+      bankAccountNumber?: string;
+      confirmBankAccountNumber?: string;
+      bankIfscCode?: string;
+      bankName?: string;
+      bankAccountHolderName?: string;
+      panNumber?: string;
+      bankAccountType?: string;
+      upiId?: string;
       notes?: string;
       profilePhotoUrl?: string;
     },
@@ -539,12 +622,22 @@ export function EmployeeFormSheet({
       gender: optional(data.gender),
       maritalStatus: optional(data.maritalStatus),
       nationality: optional(data.nationality),
-      aadhaarNumber: optional(data.aadhaarNumber),
+      aadhaarNumber: normalizeAadhaarNumber(data.aadhaarNumber),
       emergencyContactName: optional(data.emergencyContactName),
+      emergencyContactRelationship: resolveEmergencyRelationship(data),
       emergencyContactPhone: optional(data.emergencyContactPhone),
       highestQualification: optional(data.highestQualification),
       bloodGroup: optional(data.bloodGroup),
       aadhaarDocument: data.aadhaarDocument || null,
+      workType: optional(data.workType) ?? "permanent",
+      bankAccountNumber: optional(data.bankAccountNumber),
+      confirmBankAccountNumber: optional(data.confirmBankAccountNumber),
+      bankIfscCode: optional(data.bankIfscCode)?.toUpperCase() ?? null,
+      bankName: optional(data.bankName),
+      bankAccountHolderName: optional(data.bankAccountHolderName),
+      panNumber: optional(data.panNumber)?.toUpperCase() ?? null,
+      bankAccountType: optional(data.bankAccountType)?.toLowerCase() ?? null,
+      upiId: optional(data.upiId)?.toLowerCase() ?? null,
       notes: optional(data.notes),
       ...(canViewSalaries && {
         baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
@@ -705,7 +798,7 @@ function IdentityFields({
       <div>
         <p className="text-sm font-semibold text-foreground">Profile identity</p>
         <p className="text-xs text-muted-foreground">
-          Upload the employee photo for their profile. The selected bird remains their app avatar.
+          Professional photo required for ID card and profile. The selected bird remains their app avatar.
         </p>
       </div>
       <FormField
@@ -773,7 +866,7 @@ function FormFields({
         name="fullName"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Full name</FormLabel>
+            <FormLabel>Full name (as per official documents)</FormLabel>
             <FormControl>
               <Input className="min-h-11" {...field} />
             </FormControl>
@@ -1072,22 +1165,62 @@ function FormFields({
               <FormControl>
                 <Input className="min-h-11" {...field} />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="emergencyContactPhone"
+          name="emergencyContactRelationship"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Emergency contact phone</FormLabel>
-              <FormControl>
-                <Input className="min-h-11" inputMode="tel" {...field} />
-              </FormControl>
+              <FormLabel>Emergency contact relationship</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <FormControl>
+                  <SelectTrigger className="min-h-11">
+                    <SelectValue placeholder="Select relationship" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="mother">Mother</SelectItem>
+                  <SelectItem value="brother">Brother</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
             </FormItem>
           )}
         />
       </div>
+      {form.watch("emergencyContactRelationship") === "other" ? (
+        <FormField
+          control={form.control}
+          name="emergencyContactRelationshipOther"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Specify relationship</FormLabel>
+              <FormControl>
+                <Input className="min-h-11" placeholder="e.g. Spouse, Guardian" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ) : null}
+      <FormField
+        control={form.control}
+        name="emergencyContactPhone"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Emergency contact phone</FormLabel>
+            <FormControl>
+              <Input className="min-h-11" inputMode="tel" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           control={form.control}
@@ -1135,26 +1268,29 @@ function FormFields({
         name="aadhaarDocument"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Aadhaar card copy (optional)</FormLabel>
-            <FilePickControl
-              accept="image/*,.pdf"
-              aria-label="Upload Aadhaar card copy"
-              className="inline-flex w-full sm:w-auto"
-              onFile={(file) => {
-                void readEmployeeDocument(file)
-                  .then(field.onChange)
-                  .catch(() => field.onChange(""));
-              }}
-            >
-              <span className={cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full gap-2 sm:w-auto")}>
-                Choose file
-              </span>
-            </FilePickControl>
-            {getDocumentName(field.value) && (
-              <p className="text-xs text-muted-foreground">
-                Stored in database: {getDocumentName(field.value)}
-              </p>
-            )}
+            <FormLabel>Aadhaar card copy</FormLabel>
+            <AadhaarMultiUpload value={field.value} onChange={field.onChange} />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="workType"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Work type</FormLabel>
+            <Select value={field.value ?? "permanent"} disabled>
+              <FormControl>
+                <SelectTrigger className="min-h-11">
+                  <SelectValue />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="permanent">Permanent</SelectItem>
+              </SelectContent>
+            </Select>
+            <input type="hidden" {...field} value="permanent" />
           </FormItem>
         )}
       />
@@ -1174,6 +1310,7 @@ function FormFields({
           </FormItem>
         )}
       />
+      <BankDetailsFormSection form={form} />
       <Separator />
       <p className="text-sm font-medium text-muted-foreground">Role & team</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

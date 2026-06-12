@@ -257,7 +257,7 @@ export function ClientFormSheet({ open, onOpenChange, client, onSaved }: ClientF
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {["ACTIVE", "PROSPECT", "INACTIVE"].map((s) => (
+                    {["ACTIVE", "LEAD", "PROSPECT", "INACTIVE"].map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>

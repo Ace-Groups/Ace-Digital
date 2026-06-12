@@ -213,10 +213,19 @@ export default function EmployeesPage() {
             nationality: data.nationality ?? null,
             aadhaarNumber: data.aadhaarNumber ?? null,
             emergencyContactName: data.emergencyContactName ?? null,
+            emergencyContactRelationship: data.emergencyContactRelationship ?? null,
             emergencyContactPhone: data.emergencyContactPhone ?? null,
             highestQualification: data.highestQualification ?? null,
             bloodGroup: data.bloodGroup ?? null,
             aadhaarDocument: data.aadhaarDocument ?? null,
+            workType: data.workType ?? null,
+            bankAccountNumber: data.bankAccountNumber ?? null,
+            bankIfscCode: data.bankIfscCode ?? null,
+            bankName: data.bankName ?? null,
+            bankAccountHolderName: data.bankAccountHolderName ?? null,
+            panNumber: data.panNumber ?? null,
+            bankAccountType: data.bankAccountType ?? null,
+            upiId: data.upiId ?? null,
             notes: data.notes ?? null,
             createdAt: new Date().toISOString(),
           } as Employee);
@@ -254,10 +263,20 @@ export default function EmployeesPage() {
               nationality: data.nationality ?? undefined,
               aadhaarNumber: data.aadhaarNumber ?? undefined,
               emergencyContactName: data.emergencyContactName ?? undefined,
+              emergencyContactRelationship: data.emergencyContactRelationship ?? undefined,
               emergencyContactPhone: data.emergencyContactPhone ?? undefined,
               highestQualification: data.highestQualification ?? undefined,
               bloodGroup: data.bloodGroup ?? undefined,
               aadhaarDocument: data.aadhaarDocument ?? undefined,
+              workType: data.workType ?? undefined,
+              bankAccountNumber: data.bankAccountNumber ?? undefined,
+              confirmBankAccountNumber: data.confirmBankAccountNumber ?? undefined,
+              bankIfscCode: data.bankIfscCode ?? undefined,
+              bankName: data.bankName ?? undefined,
+              bankAccountHolderName: data.bankAccountHolderName ?? undefined,
+              panNumber: data.panNumber ?? undefined,
+              bankAccountType: data.bankAccountType ?? undefined,
+              upiId: data.upiId ?? undefined,
               notes: data.notes ?? undefined,
             },
           }),
@@ -306,10 +325,20 @@ export default function EmployeesPage() {
       nationality: data.nationality,
       aadhaarNumber: data.aadhaarNumber,
       emergencyContactName: data.emergencyContactName,
+      emergencyContactRelationship: data.emergencyContactRelationship,
       emergencyContactPhone: data.emergencyContactPhone,
       highestQualification: data.highestQualification,
       bloodGroup: data.bloodGroup,
       aadhaarDocument: data.aadhaarDocument,
+      workType: data.workType,
+      bankAccountNumber: data.bankAccountNumber,
+      confirmBankAccountNumber: data.confirmBankAccountNumber,
+      bankIfscCode: data.bankIfscCode,
+      bankName: data.bankName,
+      bankAccountHolderName: data.bankAccountHolderName,
+      panNumber: data.panNumber,
+      bankAccountType: data.bankAccountType,
+      upiId: data.upiId,
       notes: data.notes,
     };
     const employeesKey = getListEmployeesQueryKey();
@@ -757,9 +786,27 @@ function EmployeeDetailDialog({
 
           <DetailSection title="Emergency and documents" icon={ShieldCheck}>
             <DetailItem label="Emergency contact" value={formatValue(employee.emergencyContactName)} />
+            <DetailItem
+              label="Emergency relationship"
+              value={formatValue(employee.emergencyContactRelationship)}
+            />
             <DetailItem label="Emergency phone" value={formatValue(employee.emergencyContactPhone)} />
             <DetailItem label="Aadhaar copy" value={aadhaarDocumentName || "—"} />
             <DetailItem label="Notes" value={formatValue(employee.notes)} />
+          </DetailSection>
+
+          <DetailSection title="Bank details" icon={ShieldCheck}>
+            <DetailItem label="Account number" value={formatValue(employee.bankAccountNumber)} />
+            <DetailItem label="IFSC code" value={formatValue(employee.bankIfscCode)} />
+            <DetailItem label="Bank name" value={formatValue(employee.bankName)} />
+            <DetailItem
+              label="Name as per bank records"
+              value={formatValue(employee.bankAccountHolderName)}
+            />
+            <DetailItem label="PAN number" value={formatValue(employee.panNumber)} />
+            <DetailItem label="Account type" value={formatValue(employee.bankAccountType)} />
+            <DetailItem label="UPI ID" value={formatValue(employee.upiId)} />
+            <DetailItem label="Work type" value={formatValue(employee.workType)} />
           </DetailSection>
 
           <section className="rounded-xl border border-border/70 bg-card/70 p-4">

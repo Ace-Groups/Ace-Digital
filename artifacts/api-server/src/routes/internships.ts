@@ -8,6 +8,7 @@ import { employeeWithProfile } from "../lib/employee-serializer";
 import { generateTemporaryPassword } from "../lib/password";
 import { allocateEmployeeCode } from "../lib/employee-code";
 import { defaultMascotForRole } from "../lib/mascots";
+import { parseBankDetails } from "../lib/bank-details";
 import { isInternJobTitle } from "../lib/id-card/is-intern";
 import {
   createInternship,
@@ -163,14 +164,39 @@ router.post(
       aadhaarNumber,
       aadhaarDocument,
       emergencyContactName,
+      emergencyContactRelationship,
       emergencyContactPhone,
       highestQualification,
       bloodGroup,
       sendWelcomeEmail = true,
+      workType,
+      bankAccountNumber,
+      confirmBankAccountNumber,
+      bankIfscCode,
+      bankName,
+      bankAccountHolderName,
+      panNumber,
+      bankAccountType,
+      upiId,
     } = req.body;
 
     if (!fullName || !email) {
       res.status(400).json({ error: "fullName and email are required" });
+      return;
+    }
+
+    const bankDetails = parseBankDetails({
+      bankAccountNumber,
+      confirmBankAccountNumber,
+      bankIfscCode,
+      bankName,
+      bankAccountHolderName,
+      panNumber,
+      bankAccountType,
+      upiId,
+    });
+    if (!bankDetails.ok) {
+      res.status(400).json({ error: bankDetails.error });
       return;
     }
 
@@ -243,12 +269,23 @@ router.post(
       gender: optionalText(gender),
       maritalStatus: optionalText(maritalStatus),
       nationality: optionalText(nationality),
-      aadhaarNumber: optionalText(aadhaarNumber),
+      aadhaarNumber: optionalText(
+        typeof aadhaarNumber === "string" ? aadhaarNumber.replace(/\s/g, "") : aadhaarNumber,
+      ),
       aadhaarDocument: optionalDocument(aadhaarDocument),
       emergencyContactName: optionalText(emergencyContactName),
+      emergencyContactRelationship: optionalText(emergencyContactRelationship),
       emergencyContactPhone: optionalText(emergencyContactPhone),
       highestQualification: optionalText(highestQualification),
       bloodGroup: optionalText(bloodGroup),
+      bankAccountNumber: bankDetails.bankAccountNumber,
+      bankIfscCode: bankDetails.bankIfscCode,
+      bankName: bankDetails.bankName,
+      bankAccountHolderName: bankDetails.bankAccountHolderName,
+      panNumber: bankDetails.panNumber,
+      bankAccountType: bankDetails.bankAccountType,
+      upiId: bankDetails.upiId,
+      workType: optionalText(workType) ?? "internship",
       notes: optionalText(notes),
     });
 

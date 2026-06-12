@@ -15,15 +15,12 @@ import { usePwaAppBadge } from "@/hooks/use-pwa-app-badge";
 import { MobileChromeProvider } from "@/contexts/MobileChromeContext";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { InstallPrompt } from "@/components/InstallPrompt";
-import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FormEnterNavigation } from "@/components/FormEnterNavigation";
 import { FluidAppShell } from "@/components/layout/FluidAppShell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { AceAssistantProvider } from "@/contexts/AceAssistantContext";
 import { AceAssistantPanel } from "@/components/ai/AceAssistantPanel";
-import { V2Onboarding } from "@/components/v2/V2Onboarding";
 import { KeyboardShortcutsSheet } from "@/components/v2/KeyboardShortcutsSheet";
 import { QuickCreateFab } from "@/components/v2/QuickCreateFab";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
@@ -224,11 +221,8 @@ function App() {
                   <AppRouter />
                 </FluidAppShell>
                 <AceAssistantPanel />
-                <InstallPrompt />
-                <PushPermissionPrompt />
                 <CommandPalette />
                 <KeyboardShortcutsSheet />
-                <V2Onboarding />
                 <QuickCreateFab />
               </WouterRouter>
               <Toaster />

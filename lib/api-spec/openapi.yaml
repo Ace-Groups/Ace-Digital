@@ -3306,6 +3306,8 @@ components:
           type: ["string", "null"]
         emergencyContactName:
           type: ["string", "null"]
+        emergencyContactRelationship:
+          type: ["string", "null"]
         emergencyContactPhone:
           type: ["string", "null"]
         highestQualification:
@@ -3313,6 +3315,23 @@ components:
         bloodGroup:
           type: ["string", "null"]
         aadhaarDocument:
+          type: ["string", "null"]
+        bankAccountNumber:
+          type: ["string", "null"]
+        bankIfscCode:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankAccountHolderName:
+          type: ["string", "null"]
+          description: Name as per bank records
+        panNumber:
+          type: ["string", "null"]
+        bankAccountType:
+          type: ["string", "null"]
+        upiId:
+          type: ["string", "null"]
+        workType:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
@@ -3406,6 +3425,30 @@ components:
         aadhaarDocument:
           type: string
           description: JSON-encoded file metadata and data URL for optional Aadhaar copy
+        bankAccountNumber:
+          type: string
+        confirmBankAccountNumber:
+          type: string
+          description: Must match bankAccountNumber; not stored
+        bankIfscCode:
+          type: string
+        bankName:
+          type: string
+        bankAccountHolderName:
+          type: string
+          description: Name as per bank records
+        panNumber:
+          type: string
+        bankAccountType:
+          type: string
+          enum: [savings, current, salary]
+        upiId:
+          type: string
+        workType:
+          type: string
+          enum: [permanent, internship, other]
+        emergencyContactRelationship:
+          type: string
         notes:
           type: string
 
@@ -3508,6 +3551,28 @@ components:
         aadhaarDocument:
           type: ["string", "null"]
           description: JSON-encoded file metadata and data URL for optional Aadhaar copy
+        bankAccountNumber:
+          type: ["string", "null"]
+        confirmBankAccountNumber:
+          type: ["string", "null"]
+          description: Must match bankAccountNumber when provided; not stored
+        bankIfscCode:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankAccountHolderName:
+          type: ["string", "null"]
+          description: Name as per bank records
+        panNumber:
+          type: ["string", "null"]
+        bankAccountType:
+          type: ["string", "null"]
+        upiId:
+          type: ["string", "null"]
+        workType:
+          type: ["string", "null"]
+        emergencyContactRelationship:
+          type: ["string", "null"]
         notes:
           type: ["string", "null"]
 

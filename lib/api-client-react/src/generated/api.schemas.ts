@@ -621,6 +621,8 @@ export interface Employee {
   /** @nullable */
   emergencyContactName?: string | null;
   /** @nullable */
+  emergencyContactRelationship?: string | null;
+  /** @nullable */
   emergencyContactPhone?: string | null;
   /** @nullable */
   highestQualification?: string | null;
@@ -628,6 +630,25 @@ export interface Employee {
   bloodGroup?: string | null;
   /** @nullable */
   aadhaarDocument?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankIfscCode?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /**
+     * Name as per bank records
+     * @nullable
+     */
+  bankAccountHolderName?: string | null;
+  /** @nullable */
+  panNumber?: string | null;
+  /** @nullable */
+  bankAccountType?: string | null;
+  /** @nullable */
+  upiId?: string | null;
+  /** @nullable */
+  workType?: string | null;
   /** @nullable */
   notes?: string | null;
   /** @nullable */
@@ -654,6 +675,24 @@ export type EmployeeInputPasswordMode = typeof EmployeeInputPasswordMode[keyof t
 export const EmployeeInputPasswordMode = {
   auto: 'auto',
   manual: 'manual',
+} as const;
+
+export type EmployeeInputBankAccountType = typeof EmployeeInputBankAccountType[keyof typeof EmployeeInputBankAccountType];
+
+
+export const EmployeeInputBankAccountType = {
+  savings: 'savings',
+  current: 'current',
+  salary: 'salary',
+} as const;
+
+export type EmployeeInputWorkType = typeof EmployeeInputWorkType[keyof typeof EmployeeInputWorkType];
+
+
+export const EmployeeInputWorkType = {
+  permanent: 'permanent',
+  internship: 'internship',
+  other: 'other',
 } as const;
 
 export interface EmployeeInput {
@@ -691,6 +730,18 @@ export interface EmployeeInput {
   bloodGroup?: string;
   /** JSON-encoded file metadata and data URL for optional Aadhaar copy */
   aadhaarDocument?: string;
+  bankAccountNumber?: string;
+  /** Must match bankAccountNumber; not stored */
+  confirmBankAccountNumber?: string;
+  bankIfscCode?: string;
+  bankName?: string;
+  /** Name as per bank records */
+  bankAccountHolderName?: string;
+  panNumber?: string;
+  bankAccountType?: EmployeeInputBankAccountType;
+  upiId?: string;
+  workType?: EmployeeInputWorkType;
+  emergencyContactRelationship?: string;
   notes?: string;
 }
 
@@ -779,6 +830,32 @@ export interface EmployeeUpdate {
      * @nullable
      */
   aadhaarDocument?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /**
+     * Must match bankAccountNumber when provided; not stored
+     * @nullable
+     */
+  confirmBankAccountNumber?: string | null;
+  /** @nullable */
+  bankIfscCode?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /**
+     * Name as per bank records
+     * @nullable
+     */
+  bankAccountHolderName?: string | null;
+  /** @nullable */
+  panNumber?: string | null;
+  /** @nullable */
+  bankAccountType?: string | null;
+  /** @nullable */
+  upiId?: string | null;
+  /** @nullable */
+  workType?: string | null;
+  /** @nullable */
+  emergencyContactRelationship?: string | null;
   /** @nullable */
   notes?: string | null;
 }

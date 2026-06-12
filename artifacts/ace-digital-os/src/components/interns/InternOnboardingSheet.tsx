@@ -19,11 +19,14 @@ import { createInternship } from "@/lib/internships-api";
 import { useToast } from "@/hooks/use-toast";
 import { encodeEmployeeIdentityImages } from "@/lib/avatar";
 import { defaultMascotForRole } from "@/lib/mascots";
-import { getDocumentName, readEmployeeDocument } from "@/lib/employee-documents";
 import { ProfilePhotoUpload } from "@/components/employees/ProfilePhotoUpload";
-import { FilePickControl } from "@/components/ui/file-pick-control";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { AadhaarMultiUpload } from "@/components/employees/AadhaarMultiUpload";
+import { bankDetailsApiPayload } from "@/lib/bank-details";
+import {
+  normalizeAadhaarNumber,
+  resolveEmergencyRelationship,
+  validateHrOnboarding,
+} from "@/lib/employee-onboarding";
 
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -81,9 +84,20 @@ const INITIAL_FORM = {
   aadhaarNumber: "",
   aadhaarDocument: "",
   emergencyContactName: "",
+  emergencyContactRelationship: "",
+  emergencyContactRelationshipOther: "",
   emergencyContactPhone: "",
   bloodGroup: "",
   highestQualification: "",
+  workType: "internship",
+  bankAccountNumber: "",
+  confirmBankAccountNumber: "",
+  bankIfscCode: "",
+  bankName: "",
+  bankAccountHolderName: "",
+  panNumber: "",
+  bankAccountType: "",
+  upiId: "",
   university: "",
   program: "Ace Digital Internship",
   teamId: "",
@@ -123,6 +137,7 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
   const { data: teams } = useListTeams();
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function setField<K extends keyof typeof INITIAL_FORM>(key: K, value: (typeof INITIAL_FORM)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -130,11 +145,23 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
 
   function resetForm() {
     setForm(INITIAL_FORM);
+    setFieldErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.fullName.trim() || !form.email.trim()) return;
+
+    const nextErrors = validateHrOnboarding({ ...form, workType: "internship" });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast({
+        title: "Complete required fields",
+        description: "Fix the highlighted items before launching onboarding.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const mascotId = defaultMascotForRole("employee").replace("mascot:", "");
@@ -161,18 +188,21 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
         state: optional(form.state),
         zipCode: optional(form.zipCode),
         country: optional(form.country),
-        aadhaarNumber: optional(form.aadhaarNumber),
+        aadhaarNumber: normalizeAadhaarNumber(form.aadhaarNumber) ?? undefined,
         aadhaarDocument: form.aadhaarDocument || undefined,
         emergencyContactName: optional(form.emergencyContactName),
+        emergencyContactRelationship: resolveEmergencyRelationship(form) ?? undefined,
         emergencyContactPhone: optional(form.emergencyContactPhone),
         bloodGroup: optional(form.bloodGroup),
         highestQualification: optional(form.highestQualification),
+        workType: "internship",
         university: optional(form.university),
         program: optional(form.program),
         teamId: form.teamId ? Number(form.teamId) : undefined,
         startDate: optional(form.startDate),
         endDate: optional(form.endDate),
         notes: optional(form.notes),
+        ...bankDetailsApiPayload(form),
         sendWelcomeEmail: true,
       });
       toast({
@@ -194,7 +224,7 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
     }
   }
 
-  const aadhaarFileName = getDocumentName(form.aadhaarDocument);
+  const err = (key: string) => fieldErrors[key];
 
   return (
     <ResponsiveSheet open={open} onOpenChange={onOpenChange} title="Start intern onboarding">
@@ -205,8 +235,8 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
         </p>
 
         <FormSection
-          title="Profile photo"
-          description="Used on the intern ID card and employee profile. Recommended before launching the pipeline."
+          title="Professional photo"
+          description="Required for the intern ID card and profile before launching the pipeline."
         >
           <ProfilePhotoUpload
             value={form.profilePhotoUrl}
@@ -214,11 +244,14 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
             label="Intern photo"
             altName={form.fullName || "Intern"}
           />
+          {err("profilePhotoUrl") ? (
+            <p className="text-xs text-destructive">{err("profilePhotoUrl")}</p>
+          ) : null}
         </FormSection>
 
         <FormSection title="Personal details">
           <div className="space-y-2">
-            <Label htmlFor="intern-name">Full name</Label>
+            <Label htmlFor="intern-name">Full name (as per official documents)</Label>
             <Input
               id="intern-name"
               className="min-h-11"
@@ -376,44 +409,25 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
         </FormSection>
 
         <FormSection title="Identity documents" description="Aadhaar is stored securely for HR records.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="intern-aadhaar">Aadhaar number</Label>
-              <Input
-                id="intern-aadhaar"
-                className="min-h-11"
-                inputMode="numeric"
-                placeholder="XXXX XXXX XXXX"
-                value={form.aadhaarNumber}
-                onChange={(e) => setField("aadhaarNumber", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Aadhaar card copy</Label>
-              <FilePickControl
-                accept="image/*,.pdf"
-                aria-label="Upload Aadhaar card copy"
-                className="inline-flex w-full"
-                onFile={(file) => {
-                  void readEmployeeDocument(file)
-                    .then((doc) => setField("aadhaarDocument", doc))
-                    .catch((err) => {
-                      toast({
-                        title: "Could not read Aadhaar file",
-                        description: err instanceof Error ? err.message : "Try a smaller file",
-                        variant: "destructive",
-                      });
-                    });
-                }}
-              >
-                <span className={cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full gap-2")}>
-                  Choose file
-                </span>
-              </FilePickControl>
-              {aadhaarFileName ? (
-                <p className="text-xs text-muted-foreground">Attached: {aadhaarFileName}</p>
-              ) : null}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="intern-aadhaar">Aadhaar number (12 digits)</Label>
+            <Input
+              id="intern-aadhaar"
+              className="min-h-11"
+              inputMode="numeric"
+              placeholder="XXXX XXXX XXXX"
+              value={form.aadhaarNumber}
+              onChange={(e) => setField("aadhaarNumber", e.target.value)}
+            />
+            {err("aadhaarNumber") ? <p className="text-xs text-destructive">{err("aadhaarNumber")}</p> : null}
+          </div>
+          <div className="space-y-2">
+            <Label>Aadhaar card copy</Label>
+            <AadhaarMultiUpload
+              value={form.aadhaarDocument}
+              onChange={(value) => setField("aadhaarDocument", value)}
+              error={err("aadhaarDocument")}
+            />
           </div>
         </FormSection>
 
@@ -427,17 +441,57 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
                 value={form.emergencyContactName}
                 onChange={(e) => setField("emergencyContactName", e.target.value)}
               />
+              {err("emergencyContactName") ? (
+                <p className="text-xs text-destructive">{err("emergencyContactName")}</p>
+              ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="intern-emergency-phone">Emergency contact phone</Label>
-              <Input
-                id="intern-emergency-phone"
-                className="min-h-11"
-                inputMode="tel"
-                value={form.emergencyContactPhone}
-                onChange={(e) => setField("emergencyContactPhone", e.target.value)}
-              />
+              <Label>Emergency contact relationship</Label>
+              <Select
+                value={form.emergencyContactRelationship}
+                onValueChange={(v) => setField("emergencyContactRelationship", v)}
+              >
+                <SelectTrigger className="min-h-11">
+                  <SelectValue placeholder="Select relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="mother">Mother</SelectItem>
+                  <SelectItem value="brother">Brother</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {err("emergencyContactRelationship") ? (
+                <p className="text-xs text-destructive">{err("emergencyContactRelationship")}</p>
+              ) : null}
             </div>
+          </div>
+          {form.emergencyContactRelationship === "other" ? (
+            <div className="space-y-2">
+              <Label htmlFor="intern-emergency-rel-other">Specify relationship</Label>
+              <Input
+                id="intern-emergency-rel-other"
+                className="min-h-11"
+                value={form.emergencyContactRelationshipOther}
+                onChange={(e) => setField("emergencyContactRelationshipOther", e.target.value)}
+              />
+              {err("emergencyContactRelationshipOther") ? (
+                <p className="text-xs text-destructive">{err("emergencyContactRelationshipOther")}</p>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="intern-emergency-phone">Emergency contact phone</Label>
+            <Input
+              id="intern-emergency-phone"
+              className="min-h-11"
+              inputMode="tel"
+              value={form.emergencyContactPhone}
+              onChange={(e) => setField("emergencyContactPhone", e.target.value)}
+            />
+            {err("emergencyContactPhone") ? (
+              <p className="text-xs text-destructive">{err("emergencyContactPhone")}</p>
+            ) : null}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -466,6 +520,138 @@ export function InternOnboardingSheet({ open, onOpenChange }: InternOnboardingSh
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Bank details for payroll"
+          description="Enter the account number twice to confirm. Used for stipend transfers."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="intern-bank-account">Account number</Label>
+              <Input
+                id="intern-bank-account"
+                className="min-h-11 font-mono"
+                inputMode="numeric"
+                autoComplete="off"
+                value={form.bankAccountNumber}
+                onChange={(e) => setField("bankAccountNumber", e.target.value)}
+              />
+              {err("bankAccountNumber") ? (
+                <p className="text-xs text-destructive">{err("bankAccountNumber")}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="intern-bank-account-confirm">Confirm account number</Label>
+              <Input
+                id="intern-bank-account-confirm"
+                className="min-h-11 font-mono"
+                inputMode="numeric"
+                autoComplete="off"
+                value={form.confirmBankAccountNumber}
+                onChange={(e) => setField("confirmBankAccountNumber", e.target.value)}
+              />
+              {err("confirmBankAccountNumber") ? (
+                <p className="text-xs text-destructive">{err("confirmBankAccountNumber")}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="intern-bank-ifsc">IFSC code</Label>
+              <Input
+                id="intern-bank-ifsc"
+                className="min-h-11 font-mono uppercase"
+                autoComplete="off"
+                placeholder="e.g. HDFC0001234"
+                value={form.bankIfscCode}
+                onChange={(e) => setField("bankIfscCode", e.target.value.toUpperCase())}
+              />
+              {err("bankIfscCode") ? (
+                <p className="text-xs text-destructive">{err("bankIfscCode")}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="intern-bank-name">Bank name</Label>
+              <Input
+                id="intern-bank-name"
+                className="min-h-11"
+                placeholder="e.g. HDFC Bank"
+                value={form.bankName}
+                onChange={(e) => setField("bankName", e.target.value)}
+              />
+              {err("bankName") ? (
+                <p className="text-xs text-destructive">{err("bankName")}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="intern-bank-holder">Name as per bank records</Label>
+            <Input
+              id="intern-bank-holder"
+              className="min-h-11"
+              placeholder="Exactly as on passbook / cheque"
+              value={form.bankAccountHolderName}
+              onChange={(e) => setField("bankAccountHolderName", e.target.value)}
+            />
+            {err("bankAccountHolderName") ? (
+              <p className="text-xs text-destructive">{err("bankAccountHolderName")}</p>
+            ) : null}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="intern-pan">PAN number</Label>
+              <Input
+                id="intern-pan"
+                className="min-h-11 font-mono uppercase"
+                placeholder="ABCDE1234F"
+                value={form.panNumber}
+                onChange={(e) => setField("panNumber", e.target.value.toUpperCase())}
+              />
+              {err("panNumber") ? <p className="text-xs text-destructive">{err("panNumber")}</p> : null}
+            </div>
+            <div className="space-y-2">
+              <Label>Account type</Label>
+              <Select value={form.bankAccountType} onValueChange={(v) => setField("bankAccountType", v)}>
+                <SelectTrigger className="min-h-11">
+                  <SelectValue placeholder="Select account type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="savings">Savings account</SelectItem>
+                  <SelectItem value="current">Current account</SelectItem>
+                  <SelectItem value="salary">Salary account</SelectItem>
+                </SelectContent>
+              </Select>
+              {err("bankAccountType") ? (
+                <p className="text-xs text-destructive">{err("bankAccountType")}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="intern-upi">UPI ID</Label>
+            <Input
+              id="intern-upi"
+              className="min-h-11"
+              placeholder="name@bank"
+              value={form.upiId}
+              onChange={(e) => setField("upiId", e.target.value)}
+            />
+            {err("upiId") ? <p className="text-xs text-destructive">{err("upiId")}</p> : null}
+          </div>
+        </FormSection>
+
+        <FormSection title="Work type">
+          <div className="space-y-2">
+            <Label>Work type</Label>
+            <Select value="internship" disabled>
+              <SelectTrigger className="min-h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="internship">Internship</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </FormSection>
 

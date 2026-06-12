@@ -56,5 +56,31 @@ export interface EmployeeUpdate {
      */
   aadhaarDocument?: string | null;
   /** @nullable */
+  bankAccountNumber?: string | null;
+  /**
+     * Must match bankAccountNumber when provided; not stored
+     * @nullable
+     */
+  confirmBankAccountNumber?: string | null;
+  /** @nullable */
+  bankIfscCode?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /**
+     * Name as per bank records
+     * @nullable
+     */
+  bankAccountHolderName?: string | null;
+  /** @nullable */
+  panNumber?: string | null;
+  /** @nullable */
+  bankAccountType?: string | null;
+  /** @nullable */
+  upiId?: string | null;
+  /** @nullable */
+  workType?: string | null;
+  /** @nullable */
+  emergencyContactRelationship?: string | null;
+  /** @nullable */
   notes?: string | null;
 }

@@ -5,7 +5,9 @@
  * Ace Digital OS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EmployeeInputBankAccountType } from './employeeInputBankAccountType';
 import type { EmployeeInputPasswordMode } from './employeeInputPasswordMode';
+import type { EmployeeInputWorkType } from './employeeInputWorkType';
 
 export interface EmployeeInput {
   fullName: string;
@@ -42,5 +44,17 @@ export interface EmployeeInput {
   bloodGroup?: string;
   /** JSON-encoded file metadata and data URL for optional Aadhaar copy */
   aadhaarDocument?: string;
+  bankAccountNumber?: string;
+  /** Must match bankAccountNumber; not stored */
+  confirmBankAccountNumber?: string;
+  bankIfscCode?: string;
+  bankName?: string;
+  /** Name as per bank records */
+  bankAccountHolderName?: string;
+  panNumber?: string;
+  bankAccountType?: EmployeeInputBankAccountType;
+  upiId?: string;
+  workType?: EmployeeInputWorkType;
+  emergencyContactRelationship?: string;
   notes?: string;
 }
