@@ -46,16 +46,31 @@ router.get(
 
 router.get("/v1/notifications", requireAuth, async (req, res): Promise<void> => {
   const notifications = await store.listNotificationsByUser(req.user!.userId, 50);
+  const users = await store.listUsers();
+  const userMap = new Map(users.map((u) => [u.id, u.fullName]));
   res.json(
-    notifications.map((n) => ({
-      id: n.id,
-      userId: n.userId,
-      title: n.title,
-      body: n.body,
-      read: n.read === "true",
-      link: n.link,
-      createdAt: n.createdAt.toISOString(),
-    })),
+    notifications.map((n) => {
+      let title = n.title;
+      const dmMatch = title.match(/^#?dm-(\d+)-(\d+)$/);
+      if (dmMatch) {
+        const u1 = Number(dmMatch[1]);
+        const u2 = Number(dmMatch[2]);
+        const peerId = u1 === req.user!.userId ? u2 : u1;
+        const peerName = userMap.get(peerId);
+        if (peerName) {
+          title = peerName;
+        }
+      }
+      return {
+        id: n.id,
+        userId: n.userId,
+        title,
+        body: n.body,
+        read: n.read === "true",
+        link: n.link,
+        createdAt: n.createdAt.toISOString(),
+      };
+    }),
   );
 });
 

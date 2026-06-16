@@ -10,16 +10,19 @@
   flex-direction: column;
   width: 100%;
   flex-shrink: 0;
-  border-right: 1px solid hsl(var(--border) / 0.6);
-  background: hsl(var(--card) / 0.55);
+  border-right: 1px solid hsl(var(--border) / 0.45);
+  background: linear-gradient(180deg, hsl(var(--card) / 0.4) 0%, hsl(var(--background) / 0.6) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   min-height: 0;
+  transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {
   .notes-list-panel {
-    width: 320px;
-    min-width: 280px;
-    max-width: 360px;
+    width: 330px;
+    min-width: 290px;
+    max-width: 370px;
   }
 }
 
@@ -37,10 +40,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid hsl(var(--border) / 0.55);
-  background: hsl(var(--card) / 0.92);
-  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -48,7 +52,7 @@
 
 @media (max-width: 767px) {
   .notes-list-header {
-    padding-top: max(14px, env(safe-area-inset-top));
+    padding-top: max(18px, env(safe-area-inset-top));
   }
 }
 
@@ -61,10 +65,8 @@
 
 .notes-list-title {
   font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 750;
+  letter-spacing: -0.025em;
   color: hsl(var(--foreground));
   line-height: 1.2;
 }
@@ -77,16 +79,26 @@
 
 .notes-list-search {
   height: 36px;
-  border-radius: 10px;
-  background: hsl(var(--background) / 0.7);
+  border-radius: 8px;
+  background: hsl(var(--background) / 0.6);
+  border: 1px solid hsl(var(--border) / 0.6);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notes-list-search:focus-visible {
+  background: hsl(var(--background));
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1);
+  outline: none;
 }
 
 .notes-list-tabs {
   display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 10px;
-  background: hsl(var(--muted) / 0.7);
+  gap: 2px;
+  padding: 2.5px;
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.55);
+  border: 1px solid hsl(var(--border) / 0.2);
 }
 
 .notes-list-tab {
@@ -95,26 +107,27 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 10px;
+  padding: 6px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   font-size: 0.75rem;
   font-weight: 600;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: manipulation;
 }
 
 .notes-list-tab:hover {
   color: hsl(var(--foreground));
+  background: hsl(var(--background) / 0.35);
 }
 
 .notes-list-tab.is-active {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.05), 0 1px 2px hsl(var(--foreground) / 0.02);
 }
 
 .notes-editor-panel {
@@ -698,56 +711,78 @@
 .note-list-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px 12px 12px;
-  border-radius: 10px;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  border: 1px solid transparent;
+  background: hsl(var(--card) / 0.3);
+  border: 1px solid hsl(var(--border) / 0.3);
   border-left: 3px solid transparent;
+  margin: 6px 8px;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: manipulation;
 }
 
 .note-list-item:hover {
-  background: hsl(var(--accent));
+  background: hsl(var(--card) / 0.75);
+  border-color: hsl(var(--border) / 0.6);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px -2px hsl(var(--foreground) / 0.06), 0 2px 4px -1px hsl(var(--foreground) / 0.03);
 }
 
 .note-list-item.is-selected {
-  background: hsl(var(--primary) / 0.08);
-  border-color: hsl(var(--primary) / 0.15);
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--primary) / 0.03) 100%);
+  border-color: hsl(var(--primary) / 0.2);
   border-left-color: hsl(var(--primary));
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  box-shadow: 
+    0 4px 16px -3px hsl(var(--primary) / 0.12),
+    0 2px 6px -2px hsl(var(--primary) / 0.05);
 }
 
 .note-list-item-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: hsl(var(--foreground));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.note-list-item:hover .note-list-item-title {
+  color: hsl(var(--primary));
+}
+
+.note-list-item.is-selected .note-list-item-title {
+  color: hsl(var(--primary));
 }
 
 .note-list-item-preview {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
+  line-height: 1.45;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0.85;
 }
 
 .note-list-item-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed hsl(var(--border) / 0.25);
 }
 
 .note-list-item-date {
-  font-size: 11px;
-  color: hsl(var(--muted-foreground) / 0.7);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground) / 0.65);
 }
 
 .note-shared-avatars {
@@ -756,19 +791,26 @@
 }
 
 .note-shared-avatars .avatar-circle {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid hsl(var(--card));
-  margin-left: -4px;
+  border: 1.5px solid hsl(var(--card));
+  margin-left: -5px;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+.note-shared-avatars .avatar-circle:hover {
+  transform: translateY(-1px);
+  z-index: 10;
 }
 
 .note-shared-avatars .avatar-circle:first-child {
@@ -781,22 +823,29 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 1.5px 6px;
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
 }
 
 .note-badge-personal {
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.8);
+  color: hsl(var(--muted-foreground) / 0.85);
+  border: 1px solid hsl(var(--border) / 0.35);
 }
 
 .note-badge-shared {
-  background: hsl(var(--primary) / 0.12);
+  background: hsl(var(--primary) / 0.08);
   color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary) / 0.15);
+}
+
+.note-list-item:hover .note-badge-shared {
+  background: hsl(var(--primary) / 0.12);
 }
 
 /* ─── Checklist progress ─── */
@@ -804,24 +853,26 @@
 .note-checklist-progress {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: hsl(var(--muted-foreground));
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground) / 0.8);
 }
 
 .note-checklist-bar {
-  width: 40px;
+  width: 32px;
   height: 4px;
   border-radius: 2px;
-  background: hsl(var(--muted));
+  background: hsl(var(--muted) / 0.6);
   overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.15);
 }
 
 .note-checklist-bar-fill {
   height: 100%;
   border-radius: 2px;
   background: hsl(var(--primary));
-  transition: width 0.3s ease;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ─── Collaborative editor ─── */

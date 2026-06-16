@@ -24,6 +24,7 @@ import {
   Users,
   ChevronLeft,
   MoreHorizontal,
+  Cloud,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -489,7 +490,13 @@ export default function NotesPage() {
           <div className="notes-list-header">
             <div className="notes-list-header-top">
               <div className="min-w-0">
-                <h2 className="notes-list-title">Notes</h2>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h2 className="notes-list-title">Notes</h2>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium border border-emerald-500/20 select-none animate-fade-in shrink-0">
+                    <Cloud className="h-2.5 w-2.5 animate-pulse" />
+                    <span>acedigital.cc sync</span>
+                  </div>
+                </div>
                 {!isLoading && (
                   <p className="notes-list-subtitle">
                     {filteredNotes.length}{" "}

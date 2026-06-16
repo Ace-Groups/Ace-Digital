@@ -14,11 +14,17 @@ export async function notifyChannelMembers(
     const set = new Set(onlyUserIds);
     targets = targets.filter((m) => set.has(m.userId));
   }
+  const channel = await store.findChannelById(channelId);
+  const sender = members.find((m) => m.userId === senderId);
+
   await Promise.all(
     targets.map(async (m) => {
+      const title = channel?.type === "DM"
+        ? (sender?.fullName ?? "Direct Message")
+        : `#${channelName}`;
       await createNotificationWithPush({
         userId: m.userId,
-        title: `#${channelName}`,
+        title,
         body: preview,
         link: `/channels?channel=${channelId}`,
       });

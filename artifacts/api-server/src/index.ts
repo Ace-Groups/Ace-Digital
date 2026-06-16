@@ -6,6 +6,7 @@ import { closeMessageQueue } from "./lib/message-queue";
 import { startMessageWorker, stopMessageWorker } from "./lib/message-worker";
 import { closeRedis, getRedisConnection } from "./lib/redis";
 import { closeSocketServer, initSocketServer } from "./lib/socket-server";
+import { startCleanupScheduler } from "./lib/cleanup";
 
 warmupFirestoreChatMirror();
 
@@ -26,6 +27,7 @@ if (Number.isNaN(port) || port <= 0) {
 const httpServer = createServer(app);
 initSocketServer(httpServer);
 startMessageWorker();
+startCleanupScheduler();
 
 void getRedisConnection()
   .connect()
