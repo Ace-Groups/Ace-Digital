@@ -42,13 +42,14 @@ export function FilePickControl({
         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
         onChange={(event) => {
           const list = event.target.files;
-          event.currentTarget.value = "";
           if (!list?.length) return;
+          const filesArray = Array.from(list);
+          event.currentTarget.value = "";
           if (multiple && onFiles) {
-            onFiles(Array.from(list));
+            onFiles(filesArray);
             return;
           }
-          const file = list[0];
+          const file = filesArray[0];
           if (file) onFile?.(file);
         }}
       />
