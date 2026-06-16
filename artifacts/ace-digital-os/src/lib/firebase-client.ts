@@ -118,20 +118,30 @@ export async function ensureFirebaseAuth(): Promise<boolean> {
     }
 
     try {
+      console.log("[firebase-client] Fetching custom token...");
       const res = await fetch("/api/v1/auth/firebase-custom-token", {
         credentials: "include",
         headers: authHeader(),
       });
       if (!res.ok) {
+        console.error("[firebase-client] Failed to fetch custom token:", res.status, res.statusText);
         if (res.status === 404 || res.status === 503) {
           firebaseAuthUnavailable = true;
         }
         return false;
       }
-      const { token } = (await res.json()) as { token: string };
+      const data = await res.json() as { token?: string; customToken?: string };
+      const token = data.token || data.customToken;
+      if (!token) {
+        console.error("[firebase-client] No token found in response:", data);
+        return false;
+      }
+      console.log("[firebase-client] Signing in with custom token...");
       await signInWithCustomToken(a, token);
+      console.log("[firebase-client] Successfully authenticated with Firebase!");
       return true;
-    } catch {
+    } catch (err) {
+      console.error("[firebase-client] Error during token exchange:", err);
       firebaseAuthUnavailable = true;
       return false;
     } finally {
