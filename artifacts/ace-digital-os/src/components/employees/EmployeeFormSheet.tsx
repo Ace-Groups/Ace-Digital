@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { isRole } from "@workspace/rbac";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import type { Employee } from "@workspace/api-client-react";
 import {
@@ -326,6 +327,7 @@ export function EmployeeFormSheet({
   onCreateSubmit,
   onEditSubmit,
 }: EmployeeFormSheetProps) {
+  const { toast } = useToast();
   const createForm = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
     defaultValues: {
@@ -654,19 +656,33 @@ export function EmployeeFormSheet({
       {mode === "create" ? (
         <Form {...createForm}>
           <form
-            onSubmit={createForm.handleSubmit((data) => {
-              void onCreateSubmit({
-                ...mapCommon(data),
-                passwordMode: data.passwordMode,
-                password: data.passwordMode === "manual" ? data.password : undefined,
-                sendWelcomeEmail: data.sendWelcomeEmail,
-                avatarUrl:
-                  encodeEmployeeIdentityImages({
-                    profilePhotoUrl: data.profilePhotoUrl || null,
-                    mascotId: data.mascotId ?? defaultMascotForRole(data.role).replace("mascot:", ""),
-                  }) ?? undefined,
-              });
-            })}
+            onSubmit={createForm.handleSubmit(
+              (data) => {
+                void onCreateSubmit({
+                  ...mapCommon(data),
+                  passwordMode: data.passwordMode,
+                  password: data.passwordMode === "manual" ? data.password : undefined,
+                  sendWelcomeEmail: data.sendWelcomeEmail,
+                  avatarUrl:
+                    encodeEmployeeIdentityImages({
+                      profilePhotoUrl: data.profilePhotoUrl || null,
+                      mascotId: data.mascotId ?? defaultMascotForRole(data.role).replace("mascot:", ""),
+                    }) ?? undefined,
+                });
+              },
+              (errors) => {
+                console.error("Form validation errors:", errors);
+                const errorList = Object.entries(errors).map(([field, err]) => {
+                  const label = field.replace(/([A-Z])/g, " $1").toLowerCase();
+                  return `${label}: ${err?.message || "Invalid value"}`;
+                });
+                toast({
+                  title: "Required Fields Missing",
+                  description: errorList.slice(0, 3).join(", ") + (errorList.length > 3 ? "..." : ""),
+                  variant: "destructive",
+                });
+              }
+            )}
             className="mobile-form space-y-5"
           >
             <FormFields
@@ -739,17 +755,31 @@ export function EmployeeFormSheet({
       ) : (
         <Form {...editForm}>
           <form
-            onSubmit={editForm.handleSubmit((data) => {
-              void onEditSubmit({
-                ...mapCommon(data),
-                payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
-                avatarUrl:
-                  encodeEmployeeIdentityImages({
-                    profilePhotoUrl: data.profilePhotoUrl || null,
-                    mascotId: data.mascotId ?? null,
-                  }) ?? undefined,
-              });
-            })}
+            onSubmit={editForm.handleSubmit(
+              (data) => {
+                void onEditSubmit({
+                  ...mapCommon(data),
+                  payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
+                  avatarUrl:
+                    encodeEmployeeIdentityImages({
+                      profilePhotoUrl: data.profilePhotoUrl || null,
+                      mascotId: data.mascotId ?? null,
+                    }) ?? undefined,
+                });
+              },
+              (errors) => {
+                console.error("Form validation errors:", errors);
+                const errorList = Object.entries(errors).map(([field, err]) => {
+                  const label = field.replace(/([A-Z])/g, " $1").toLowerCase();
+                  return `${label}: ${err?.message || "Invalid value"}`;
+                });
+                toast({
+                  title: "Validation Error",
+                  description: errorList.slice(0, 3).join(", ") + (errorList.length > 3 ? "..." : ""),
+                  variant: "destructive",
+                });
+              }
+            )}
             className="mobile-form space-y-5"
           >
             <FormFields
