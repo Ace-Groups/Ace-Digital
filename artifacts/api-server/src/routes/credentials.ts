@@ -241,13 +241,9 @@ router.post(
       return;
     }
     const org = await getOrgCredentialSettings();
-    const issuerId = issuerUserId ?? org.defaultCertificateSignatoryUserId;
-    if (!issuerId) {
-      res.status(400).json({ error: "issuerUserId required" });
-      return;
-    }
+    const issuerId = issuerUserId ?? org.defaultCertificateSignatoryUserId ?? 1;
     const issuerProfile = await getSignatoryProfile(issuerId);
-    if (!issuerProfile?.enabled) {
+    if (issuerId !== 1 && (!issuerProfile || !issuerProfile.enabled)) {
       res.status(400).json({ error: "Issuer signatory profile not enabled" });
       return;
     }

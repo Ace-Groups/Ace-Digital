@@ -77,18 +77,26 @@ export async function buildIdCardDataFromUser(
     dob: user.dob?.toISOString() ?? null,
     addressLine: formatAddress(user),
     companyLegalName: extras?.companyLegalName ?? "Ace Digital Private Limited",
-    expirationLabel: formatExpiration(extras?.endDate ?? user.startDate?.toISOString() ?? null),
+    expirationLabel: formatExpiration(extras?.endDate ?? null, user.startDate?.toISOString() ?? null),
     issuedYear: String(new Date().getFullYear()),
   };
 }
 
-function formatExpiration(iso: string | null): string {
-  if (!iso) {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 3);
-    return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
+function formatExpiration(endDateIso: string | null, fallbackIso: string | null): string {
+  if (endDateIso) {
+    const d = new Date(endDateIso);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
+    }
   }
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "DEC 2026";
+
+  const baseIso = fallbackIso || new Date().toISOString();
+  const d = new Date(baseIso);
+  if (Number.isNaN(d.getTime())) {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() + 3);
+    return today.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
+  }
+  d.setFullYear(d.getFullYear() + 3);
   return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }).toUpperCase();
 }

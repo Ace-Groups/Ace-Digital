@@ -7,6 +7,7 @@ import { generateQrSvg } from "../credentials/qr-svg";
 import { buildIdCardDataFromUser } from "./build-from-user";
 import { renderIdCardPair } from "./render-svg";
 import type { IdCardPair } from "./types";
+import { DEFAULT_SIGNATURE_DATA_URL } from "../credentials/default-signature";
 
 export async function prepareIdCardPair(
   user: User,
@@ -25,14 +26,18 @@ export async function prepareIdCardPair(
   let signatoryDesignation: string | null = null;
   let signatorySignatureDataUrl: string | null = null;
 
-  if (org.defaultIdCardSignatoryUserId != null) {
-    const signatoryUser = await store.findUserById(org.defaultIdCardSignatoryUserId);
-    const profile = await getSignatoryProfile(org.defaultIdCardSignatoryUserId);
-    if (signatoryUser) {
-      signatoryName = signatoryUser.fullName;
-      signatoryDesignation = profile?.documentDesignation ?? signatoryUser.jobTitle ?? null;
-      signatorySignatureDataUrl = profile?.signatureDataUrl ?? null;
-    }
+  const signatoryUserId = org.defaultIdCardSignatoryUserId ?? 1;
+  const signatoryUser = await store.findUserById(signatoryUserId);
+  const profile = await getSignatoryProfile(signatoryUserId);
+
+  if (signatoryUser) {
+    signatoryName = signatoryUser.fullName;
+    signatoryDesignation = profile?.documentDesignation ?? signatoryUser.jobTitle ?? "Managing Director";
+    signatorySignatureDataUrl = profile?.signatureDataUrl ?? DEFAULT_SIGNATURE_DATA_URL;
+  } else {
+    signatoryName = "Kavin Balaji";
+    signatoryDesignation = "Managing Director";
+    signatorySignatureDataUrl = DEFAULT_SIGNATURE_DATA_URL;
   }
 
   const qrSvg = await generateQrSvg(verifyUrl, 200);
@@ -47,3 +52,4 @@ export async function prepareIdCardPair(
   });
   return renderIdCardPair(cardData);
 }
+

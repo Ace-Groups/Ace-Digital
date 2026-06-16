@@ -126,7 +126,8 @@ router.get(
   requireAuth,
   requirePermission("employees:read"),
   async (req, res): Promise<void> => {
-    const { uploadId, fileName } = req.params;
+    const uploadId = req.params.uploadId as string;
+    const fileName = req.params.fileName as string;
     const path = `hr-documents/${uploadId}/${fileName}`;
     try {
       const fsLib = await import("fs/promises");

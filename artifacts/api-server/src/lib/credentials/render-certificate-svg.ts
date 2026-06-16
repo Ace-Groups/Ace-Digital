@@ -42,6 +42,8 @@ export async function renderCertificateSvg(data: CertificateRenderData): Promise
     color: { dark: "#1A1A2E", light: "#FFFFFF" },
   });
   const qrInner = qrSvg.replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "");
+  const viewBoxMatch = qrSvg.match(/viewBox="([^"]+)"/);
+  const viewBox = viewBoxMatch ? viewBoxMatch[1] : "0 0 37 37";
 
   const sealBlock = data.companySealDataUrl
     ? `<image href="${data.companySealDataUrl}" x="100" y="${H - 320}" width="140" height="140" preserveAspectRatio="xMidYMid meet"/>`
@@ -87,7 +89,7 @@ export async function renderCertificateSvg(data: CertificateRenderData): Promise
   <text x="${W - 250}" y="${H - 160}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#7C7267">${esc(data.companyLegalName)}</text>
   <text x="${W - 250}" y="${H - 130}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#7C7267">Issued ${esc(formatDate(data.issuedAt))}</text>
   <rect x="100" y="${H - 180}" width="160" height="160" fill="#FFFFFF"/>
-  <svg x="100" y="${H - 180}" width="140" height="140">${qrInner}</svg>
+  <svg x="100" y="${H - 180}" width="140" height="140" viewBox="${viewBox}">${qrInner}</svg>
   <text x="180" y="${H - 20}" text-anchor="middle" font-family="Consolas,monospace" font-size="13" fill="#4B4ED3">${esc(data.certificateCode)}</text>
   <text x="${W / 2}" y="${H - 50}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#9CA3AF">Verify at ${esc(data.verifyUrl)}</text>
 </svg>`;

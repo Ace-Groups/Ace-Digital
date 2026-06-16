@@ -145,9 +145,11 @@ function qrBlock(data: IdCardData, size: number, y: number): string {
     return `<rect x="${x}" y="${y}" width="${box}" height="${box}" rx="12" fill="#fff" stroke="${BORDER}"/>`;
   }
   const inner = data.qrSvg.replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "");
+  const viewBoxMatch = data.qrSvg.match(/viewBox="([^"]+)"/);
+  const viewBox = viewBoxMatch ? viewBoxMatch[1] : "0 0 37 37";
   return `
     <rect x="${x}" y="${y}" width="${box}" height="${box}" rx="14" fill="#FFFFFF" stroke="${TEAL_LINE}" stroke-width="2"/>
-    <svg x="${x + pad}" y="${y + pad}" width="${size}" height="${size}" viewBox="0 0 100 100">${inner}</svg>`;
+    <svg x="${x + pad}" y="${y + pad}" width="${size}" height="${size}" viewBox="${viewBox}">${inner}</svg>`;
 }
 
 function footerBar(text: string, gradId: string): string {
@@ -225,7 +227,7 @@ function employeeBack(data: IdCardData): string {
   ${data.signatoryName ? `<text x="${MARGIN}" y="${sigY + 66}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9.5" font-weight="700" fill="${NAVY}">${esc(data.signatoryName)}</text>` : ""}
   <line x1="${W - MARGIN - 100}" y1="${sigY + 38}" x2="${W - MARGIN}" y2="${sigY + 38}" stroke="${NAVY}" stroke-width="0.9" opacity="0.35"/>
   <text x="${W - MARGIN - 100}" y="${sigY + 52}" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">DATE</text>
-  <text x="${W - MARGIN}" y="${sigY + 52}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" fill="${INK}">${esc(issueYear)}</text>
+  <text x="${W - MARGIN}" y="${sigY + 66}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" fill="${INK}">${esc(issueYear)}</text>
   ${footerBar("ACE DIGITAL SECURE ID", "back")}
 </svg>`;
 }

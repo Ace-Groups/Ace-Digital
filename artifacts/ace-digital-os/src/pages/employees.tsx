@@ -58,6 +58,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { parseEmployeeIdentityImages } from "@/lib/avatar";
 import { EmployeeProfilePhoto } from "@/components/employees/EmployeeProfilePhoto";

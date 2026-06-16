@@ -212,12 +212,23 @@ export async function getIssuerDisplay(userId: number): Promise<{
   signatureDataUrl: string | null;
 } | null> {
   const user = await store.findUserById(userId);
-  if (!user) return null;
+  const { DEFAULT_SIGNATURE_DATA_URL } = await import("../credentials/default-signature");
+  if (!user) {
+    if (userId === 1) {
+      return {
+        fullName: "Kavin Balaji",
+        designation: "Managing Director",
+        signatureDataUrl: DEFAULT_SIGNATURE_DATA_URL,
+      };
+    }
+    return null;
+  }
   const { getSignatoryProfile } = await import("../credentials/signatory-store");
   const profile = await getSignatoryProfile(userId);
   return {
     fullName: user.fullName,
     designation: profile?.documentDesignation ?? user.jobTitle ?? "",
-    signatureDataUrl: profile?.signatureDataUrl ?? null,
+    signatureDataUrl: profile?.signatureDataUrl ?? DEFAULT_SIGNATURE_DATA_URL,
   };
 }
+
