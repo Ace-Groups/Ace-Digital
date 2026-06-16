@@ -31,7 +31,7 @@ export function FilePickControl({
 
   return (
     <div className={cn("relative", className)}>
-      <div className="pointer-events-none">{children}</div>
+      <div>{children}</div>
       <input
         id={inputId}
         type="file"
