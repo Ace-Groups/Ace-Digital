@@ -15,6 +15,7 @@ const MARGIN = 56;
 const HR_EMAIL = "hr@acedigital.cc";
 const HR_PHONE = "+91 90871 72072";
 const WEBSITE = "acedigital.cc";
+const FONT = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 function esc(s: string): string {
   return s
@@ -63,6 +64,9 @@ function wrapText(text: string, maxChars: number): string[] {
 function cardShell(id: string, fill = "#FFFFFF"): string {
   return `
     <defs>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap');
+      </style>
       <linearGradient id="${id}Footer" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%" stop-color="${NAVY}"/>
         <stop offset="100%" stop-color="#123456"/>
@@ -86,8 +90,8 @@ function brandHeader(y: number, compact = false): string {
   const tagSize = compact ? 8 : 8.5;
   return `
     <image href="${LOGO}" x="${logoX}" y="${y}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet"/>
-    <text x="${W / 2}" y="${y + logoH + 18}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${titleSize}" font-weight="800" letter-spacing="3.2" fill="${NAVY}">ACE DIGITAL</text>
-    <text x="${W / 2}" y="${y + logoH + 34}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${tagSize}" font-weight="700" letter-spacing="1.8" fill="${TEAL}">INSPIRING YOUTH · EMPOWERING NATION</text>
+    <text x="${W / 2}" y="${y + logoH + 18}" text-anchor="middle" font-family="${FONT}" font-size="${titleSize}" font-weight="800" letter-spacing="3.2" fill="${NAVY}">ACE DIGITAL</text>
+    <text x="${W / 2}" y="${y + logoH + 34}" text-anchor="middle" font-family="${FONT}" font-size="${tagSize}" font-weight="700" letter-spacing="1.8" fill="${TEAL}">INSPIRING YOUTH · EMPOWERING NATION</text>
     <line x1="${MARGIN}" y1="${y + logoH + 44}" x2="${W - MARGIN}" y2="${y + logoH + 44}" stroke="${TEAL_LINE}" stroke-width="2" stroke-linecap="round"/>`;
 }
 
@@ -96,7 +100,7 @@ function portraitPhoto(data: IdCardData, y: number, w: number, h: number): strin
   const clip = `ph-${data.employeeCode.replace(/\W/g, "")}`;
   const inner = data.photoDataUrl?.startsWith("data:image")
     ? `<image href="${data.photoDataUrl}" x="${x}" y="${y}" width="${w}" height="${h}" clip-path="url(#${clip})" preserveAspectRatio="xMidYMid slice"/>`
-    : `<text x="${W / 2}" y="${y + h / 2 + 10}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="${Math.round(h * 0.22)}" font-weight="800" fill="${NAVY}">${esc(initials(data.fullName))}</text>`;
+    : `<text x="${W / 2}" y="${y + h / 2 + 10}" text-anchor="middle" font-family="${FONT}" font-size="${Math.round(h * 0.22)}" font-weight="800" fill="${NAVY}">${esc(initials(data.fullName))}</text>`;
   return `
     <defs><clipPath id="${clip}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/></clipPath></defs>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#F8FAFC" stroke="${NAVY}" stroke-width="2"/>
@@ -106,8 +110,8 @@ function portraitPhoto(data: IdCardData, y: number, w: number, h: number): strin
 /** Label left, value right — single baseline alignment */
 function dataRow(label: string, value: string, y: number): string {
   return `
-    <text x="${MARGIN}" y="${y}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="1.4" fill="${MUTED}">${esc(label)}</text>
-    <text x="${W - MARGIN}" y="${y}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="12" font-weight="700" fill="${INK}">${esc(value)}</text>
+    <text x="${MARGIN}" y="${y}" font-family="${FONT}" font-size="9" font-weight="700" letter-spacing="1.4" fill="${MUTED}">${esc(label)}</text>
+    <text x="${W - MARGIN}" y="${y}" text-anchor="end" font-family="${FONT}" font-size="12" font-weight="700" fill="${INK}">${esc(value)}</text>
     <line x1="${MARGIN}" y1="${y + 10}" x2="${W - MARGIN}" y2="${y + 10}" stroke="${BORDER}" stroke-width="1"/>`;
 }
 
@@ -116,16 +120,16 @@ const VALUE_X = MARGIN + LABEL_COL_W + 6;
 
 function backField(label: string, lines: string[], startY: number): { svg: string; height: number } {
   const labelY = startY + 12;
-  let valueSvg = `<text x="${VALUE_X}" y="${labelY}" font-family="'Segoe UI',system-ui,sans-serif" font-size="10.5" font-weight="600" fill="${INK}">${esc(lines[0] ?? "—")}</text>`;
+  let valueSvg = `<text x="${VALUE_X}" y="${labelY}" font-family="${FONT}" font-size="10.5" font-weight="600" fill="${INK}">${esc(lines[0] ?? "—")}</text>`;
   lines.slice(1).forEach((line, i) => {
-    valueSvg += `<text x="${VALUE_X}" y="${labelY + (i + 1) * 14}" font-family="'Segoe UI',system-ui,sans-serif" font-size="10.5" font-weight="600" fill="${INK}">${esc(line)}</text>`;
+    valueSvg += `<text x="${VALUE_X}" y="${labelY + (i + 1) * 14}" font-family="${FONT}" font-size="10.5" font-weight="600" fill="${INK}">${esc(line)}</text>`;
   });
   const height = Math.max(30, 18 + lines.length * 14);
   const ruleY = startY + height - 4;
   return {
     height,
     svg: `
-    <text x="${MARGIN}" y="${labelY}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="800" letter-spacing="1.2" fill="${NAVY}">${esc(label)}</text>
+    <text x="${MARGIN}" y="${labelY}" font-family="${FONT}" font-size="9" font-weight="800" letter-spacing="1.2" fill="${NAVY}">${esc(label)}</text>
     ${valueSvg}
     <line x1="${MARGIN}" y1="${ruleY}" x2="${W - MARGIN}" y2="${ruleY}" stroke="${BORDER}" stroke-width="0.75"/>`,
   };
@@ -156,26 +160,26 @@ function footerBar(text: string, gradId: string): string {
   return `
     <rect y="${H - 52}" width="${W}" height="3" fill="${TEAL_LINE}"/>
     <rect y="${H - 49}" width="${W}" height="49" fill="url(#${gradId}Footer)"/>
-    <text x="${W / 2}" y="${H - 20}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="2" fill="#FFFFFF">${esc(text)}</text>`;
+    <text x="${W / 2}" y="${H - 20}" text-anchor="middle" font-family="${FONT}" font-size="10" font-weight="700" letter-spacing="2" fill="#FFFFFF">${esc(text)}</text>`;
 }
 
 function employeeFront(data: IdCardData): string {
   const dept = (data.teamName ?? "Operations").toUpperCase();
-  const photoY = 118;
-  const photoW = 164;
-  const photoH = 196;
-  const infoStart = photoY + photoH + 36;
+  const photoY = 142; // Shifted down for balance
+  const photoW = 176; // Made photo wider
+  const photoH = 212; // Made photo taller
+  const infoStart = photoY + photoH + 36; // 142 + 212 + 36 = 390
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   ${cardShell("front")}
-  ${brandHeader(20)}
+  ${brandHeader(24)}
   ${portraitPhoto(data, photoY, photoW, photoH)}
-  <text x="${W / 2}" y="${infoStart}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="21" font-weight="800" letter-spacing="1.5" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="${infoStart + 26}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
-  <line x1="${MARGIN}" y1="${infoStart + 38}" x2="${W - MARGIN}" y2="${infoStart + 38}" stroke="${BORDER}" stroke-width="1"/>
-  ${dataRow("EMPLOYEE ID", data.employeeCode, infoStart + 62)}
-  ${dataRow("DATE OF BIRTH", formatDob(data.dob), infoStart + 96)}
-  ${dataRow("BLOOD GROUP", data.bloodGroup ?? "—", infoStart + 130)}
-  ${dataRow("DEPARTMENT", dept, infoStart + 164)}
+  <text x="${W / 2}" y="${infoStart}" text-anchor="middle" font-family="${FONT}" font-size="22" font-weight="800" letter-spacing="1.5" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="${infoStart + 28}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
+  <line x1="${MARGIN}" y1="${infoStart + 42}" x2="${W - MARGIN}" y2="${infoStart + 42}" stroke="${BORDER}" stroke-width="1"/>
+  ${dataRow("EMPLOYEE ID", data.employeeCode, infoStart + 72)}
+  ${dataRow("DATE OF BIRTH", formatDob(data.dob), infoStart + 112)}
+  ${dataRow("BLOOD GROUP", data.bloodGroup ?? "—", infoStart + 152)}
+  ${dataRow("DEPARTMENT", dept, infoStart + 192)}
   ${footerBar(`EXPIRATION DATE: ${data.expirationLabel ?? "DEC 2026"}`, "front")}
 </svg>`;
 }
@@ -217,35 +221,39 @@ function employeeBack(data: IdCardData): string {
   ${brandHeader(24, true)}
   ${fieldsSvg}
   ${qrBlock(data, qrSize, qrY)}
-  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="8.5" fill="${MUTED}">
+  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="${FONT}" font-size="8.5" fill="${MUTED}">
     <tspan x="${W / 2}" dy="0">This card remains the property of ${esc(company)} and must be</tspan>
     <tspan x="${W / 2}" dy="13">returned upon termination. If found, return to HR at the address above.</tspan>
   </text>
   ${sig}
   <line x1="${MARGIN}" y1="${sigY + 38}" x2="${MARGIN + 148}" y2="${sigY + 38}" stroke="${NAVY}" stroke-width="0.9" opacity="0.35"/>
-  <text x="${MARGIN}" y="${sigY + 52}" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">AUTHORIZED SIGNATURE</text>
-  ${data.signatoryName ? `<text x="${MARGIN}" y="${sigY + 66}" font-family="'Segoe UI',system-ui,sans-serif" font-size="9.5" font-weight="700" fill="${NAVY}">${esc(data.signatoryName)}</text>` : ""}
+  <text x="${MARGIN}" y="${sigY + 52}" font-family="${FONT}" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">AUTHORIZED SIGNATURE</text>
+  ${data.signatoryName ? `<text x="${MARGIN}" y="${sigY + 66}" font-family="${FONT}" font-size="9.5" font-weight="700" fill="${NAVY}">${esc(data.signatoryName)}</text>` : ""}
   <line x1="${W - MARGIN - 100}" y1="${sigY + 38}" x2="${W - MARGIN}" y2="${sigY + 38}" stroke="${NAVY}" stroke-width="0.9" opacity="0.35"/>
-  <text x="${W - MARGIN - 100}" y="${sigY + 52}" font-family="'Segoe UI',system-ui,sans-serif" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">DATE</text>
-  <text x="${W - MARGIN}" y="${sigY + 66}" text-anchor="end" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" fill="${INK}">${esc(issueYear)}</text>
+  <text x="${W - MARGIN - 100}" y="${sigY + 52}" font-family="${FONT}" font-size="8" font-weight="700" letter-spacing="1.1" fill="${MUTED}">DATE</text>
+  <text x="${W - MARGIN}" y="${sigY + 66}" text-anchor="end" font-family="${FONT}" font-size="10" font-weight="700" fill="${INK}">${esc(issueYear)}</text>
   ${footerBar("ACE DIGITAL SECURE ID", "back")}
 </svg>`;
 }
 
 function internFront(data: IdCardData): string {
   const dept = (data.program ?? "Internship Program").toUpperCase();
-  const photoY = 128;
+  const photoY = 152; // Shifted down for balance
+  const photoW = 176; // Made photo wider
+  const photoH = 212; // Made photo taller
+  const infoStart = photoY + photoH + 36; // 152 + 212 + 36 = 400
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   ${cardShell("front", "#F0FDFA")}
   <rect x="${MARGIN}" y="28" width="96" height="26" rx="13" fill="${TEAL}"/>
-  <text x="${MARGIN + 48}" y="46" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="2" fill="#fff">INTERN</text>
+  <text x="${MARGIN + 48}" y="46" text-anchor="middle" font-family="${FONT}" font-size="10" font-weight="800" letter-spacing="2" fill="#fff">INTERN</text>
   ${brandHeader(36)}
-  ${portraitPhoto(data, photoY, 156, 188)}
-  <text x="${W / 2}" y="340" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="20" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="364" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
-  ${dataRow("INTERN ID", data.employeeCode, 388)}
-  ${dataRow("MENTOR", data.mentorName ?? "ASSIGNED", 422)}
-  ${dataRow("UNIVERSITY", data.university ?? "—", 456)}
+  ${portraitPhoto(data, photoY, photoW, photoH)}
+  <text x="${W / 2}" y="${infoStart}" text-anchor="middle" font-family="${FONT}" font-size="22" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="${infoStart + 26}" text-anchor="middle" font-family="${FONT}" font-size="10.5" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
+  <line x1="${MARGIN}" y1="${infoStart + 38}" x2="${W - MARGIN}" y2="${infoStart + 38}" stroke="${BORDER}" stroke-width="1"/>
+  ${dataRow("INTERN ID", data.employeeCode, infoStart + 74)}
+  ${dataRow("MENTOR", data.mentorName ?? "ASSIGNED", infoStart + 120)}
+  ${dataRow("UNIVERSITY", data.university ?? "—", infoStart + 166)}
   ${footerBar(`VALID UNTIL ${data.expirationLabel ?? "PROGRAM END"}`, "front")}
 </svg>`;
 }
@@ -258,11 +266,11 @@ function internBack(data: IdCardData): string {
   ${cardShell("back", "#042F2E")}
   <rect x="20" y="20" width="${W - 40}" height="${H - 40}" rx="18" fill="#0C3D38" stroke="${TEAL_LINE}" stroke-width="1.5"/>
   <image href="${LOGO}" x="${W / 2 - 44}" y="48" width="88" height="36" preserveAspectRatio="xMidYMid meet"/>
-  <text x="${W / 2}" y="100" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="2" fill="#99F6E4">INTERN ACCESS · ACE DIGITAL</text>
-  <text x="${W / 2}" y="120" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#6EE7B7">${esc(company)}</text>
+  <text x="${W / 2}" y="100" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="800" letter-spacing="2" fill="#99F6E4">INTERN ACCESS · ACE DIGITAL</text>
+  <text x="${W / 2}" y="120" text-anchor="middle" font-family="${FONT}" font-size="9" fill="#6EE7B7">${esc(company)}</text>
   ${qrBlock(data, qrSize, qrY)}
-  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" fill="#99F6E4">Scan to verify intern status</text>
-  <text x="${MARGIN}" y="430" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="#99F6E4">Emergency: ${esc(data.emergencyContactName ?? "—")} · ${esc(data.emergencyContactPhone ?? "—")}</text>
+  <text x="${W / 2}" y="${qrY + qrSize + 36}" text-anchor="middle" font-family="${FONT}" font-size="9" fill="#99F6E4">Scan to verify intern status</text>
+  <text x="${MARGIN}" y="430" font-family="${FONT}" font-size="10" fill="#99F6E4">Emergency: ${esc(data.emergencyContactName ?? "—")} · ${esc(data.emergencyContactPhone ?? "—")}</text>
   ${footerBar("ACE DIGITAL INTERN ID", "back")}
 </svg>`;
 }
