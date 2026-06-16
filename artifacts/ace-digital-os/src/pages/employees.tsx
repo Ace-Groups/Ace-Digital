@@ -57,6 +57,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { parseEmployeeIdentityImages } from "@/lib/avatar";
 import { EmployeeProfilePhoto } from "@/components/employees/EmployeeProfilePhoto";
@@ -793,7 +794,91 @@ function EmployeeDetailDialog({
               value={formatValue(employee.emergencyContactRelationship)}
             />
             <DetailItem label="Emergency phone" value={formatValue(employee.emergencyContactPhone)} />
-            <DetailItem label="Aadhaar copy" value={aadhaarDocumentName || "—"} />
+            <DetailItem
+              label="Aadhaar copy"
+              value={(() => {
+                const docs = (() => {
+                  if (!employee.aadhaarDocument) return [];
+                  try {
+                    const parsed = JSON.parse(employee.aadhaarDocument);
+                    if (Array.isArray(parsed)) return parsed;
+                    if (parsed && typeof parsed === "object" && parsed.url) return [parsed];
+                  } catch {}
+                  return [];
+                })();
+
+                if (!docs.length) return "—";
+
+                return (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {docs.map((doc: any, i: number) => {
+                      const resolvedUrl = (() => {
+                        const url = doc.url || "";
+                        if (url.startsWith("http") || url.startsWith("data:")) return url;
+                        // Append token for relative endpoints
+                        const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+                        const cleanBase = apiBase.replace(/\/$/, "");
+                        const token = localStorage.getItem("ace_token");
+                        const sep = url.includes("?") ? "&" : "?";
+                        return `${cleanBase}${url}${token ? `${sep}token=${encodeURIComponent(token)}` : ""}`;
+                      })();
+
+                      const isPdf = doc.type === "application/pdf" || doc.name?.toLowerCase().endsWith(".pdf");
+
+                      return (
+                        <Dialog key={i}>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs gap-1.5 border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                            >
+                              <span className="truncate max-w-[150px]">{doc.name || "Aadhaar Card"}</span>
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-4 gap-3 bg-card/95 border border-border/60 shadow-v2-lg backdrop-blur-xl rounded-2xl">
+                            <DialogHeader className="shrink-0 pb-2 border-b">
+                              <DialogTitle className="text-base font-semibold truncate">
+                                {doc.name || "Aadhaar Document"}
+                              </DialogTitle>
+                              <DialogDescription className="text-xs">
+                                Secured HR Document Copy ({(doc.size / (1024 * 1024)).toFixed(2)} MB)
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex-1 min-h-0 w-full bg-muted/40 rounded-xl overflow-hidden border border-border/40 relative flex items-center justify-center">
+                              {isPdf ? (
+                                <iframe
+                                  src={resolvedUrl}
+                                  className="w-full h-full border-none"
+                                  title={doc.name}
+                                />
+                              ) : (
+                                <img
+                                  src={resolvedUrl}
+                                  alt={doc.name || "Aadhaar Card"}
+                                  className="max-w-full max-h-full object-contain rounded-lg p-2"
+                                />
+                              )}
+                            </div>
+                            <DialogFooter className="shrink-0 pt-2 border-t flex gap-2 justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(resolvedUrl, "_blank")}
+                              >
+                                Open in new tab
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            />
             <DetailItem label="Notes" value={formatValue(employee.notes)} />
           </DetailSection>
 
