@@ -1,5 +1,5 @@
 import { resolveApiUrl } from "@/lib/api-config";
-import { authHeader } from "@/lib/api";
+import { authHeader, getAuthToken } from "@/lib/api";
 
 export const MAX_AADHAAR_DOCUMENT_BYTES = 10_000_000;
 export const MAX_AADHAAR_FILES = 5;
@@ -110,5 +110,14 @@ export function resolveDocumentUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
     return url;
   }
-  return resolveApiUrl(url);
+  // For API-relative paths (e.g. /api/v1/hr-documents/...),
+  // append the auth token so the document can be viewed in a new tab
+  // where custom Authorization headers are not sent.
+  const resolved = resolveApiUrl(url);
+  const token = getAuthToken();
+  if (token && url.startsWith("/api/")) {
+    const sep = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${sep}token=${encodeURIComponent(token)}`;
+  }
+  return resolved;
 }

@@ -1,5 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { createNoteEditorExtensions } from "@/components/notes/note-editor-extensions";
 import { NoteEditorToolbar } from "@/components/notes/NoteEditorToolbar";
 
@@ -21,8 +21,13 @@ export function NoteEditor({
 
   const lastSentContentRef = useRef(content);
 
+  const extensions = useMemo(
+    () => createNoteEditorExtensions({ placeholder }),
+    [placeholder],
+  );
+
   const editor = useEditor({
-    extensions: createNoteEditorExtensions({ placeholder }),
+    extensions,
     content,
     editable,
     onUpdate: ({ editor: e }) => {

@@ -10,15 +10,21 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 function storageBucket() {
   ensureFirebaseAdminApp();
+  if (process.env.FIREBASE_STORAGE_BUCKET?.trim()) {
+    return getStorage().bucket(process.env.FIREBASE_STORAGE_BUCKET.trim());
+  }
+  try {
+    const bucket = getStorage().bucket();
+    if (bucket && bucket.name) return bucket;
+  } catch (err) {
+    logger.debug({ err }, "No default bucket, using project-based resolution");
+  }
   const projectId =
     process.env.GCLOUD_PROJECT ??
     process.env.FIREBASE_PROJECT_ID ??
     process.env.GOOGLE_CLOUD_PROJECT ??
     "ace-digital-os";
-  const name =
-    process.env.FIREBASE_STORAGE_BUCKET?.trim() ??
-    `${projectId}.firebasestorage.app`;
-  return getStorage().bucket(name);
+  return getStorage().bucket(`${projectId}.firebasestorage.app`);
 }
 
 router.post(
@@ -64,15 +70,39 @@ router.post(
     const path = `hr-documents/${uploadId}/${safeName}`;
 
     try {
-      const bucket = storageBucket();
-      const file = bucket.file(path);
-      await file.save(buffer, {
-        resumable: false,
-        metadata: {
-          contentType: mime,
-          cacheControl: "private, max-age=3600",
-        },
-      });
+      let uploadedToGcs = false;
+      // Attempt GCS upload in production, or if service account JSON is set, or in Cloud Functions
+      const attemptGcs =
+        !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim() ||
+        !!process.env.FIREBASE_CONFIG ||
+        process.env.NODE_ENV === "production";
+
+      if (attemptGcs) {
+        try {
+          const bucket = storageBucket();
+          const file = bucket.file(path);
+          await file.save(buffer, {
+            resumable: false,
+            metadata: {
+              contentType: mime,
+              cacheControl: "private, max-age=3600",
+            },
+          });
+          uploadedToGcs = true;
+        } catch (err) {
+          logger.warn({ err, path }, "HR document GCS upload failed, falling back to local file storage");
+        }
+      }
+
+      if (!uploadedToGcs) {
+        // Fallback: save to local disk
+        const fsLib = await import("fs/promises");
+        const pathLib = await import("path");
+        const dir = pathLib.join(process.cwd(), "uploads", "hr-documents", uploadId);
+        await fsLib.mkdir(dir, { recursive: true });
+        await fsLib.writeFile(pathLib.join(dir, safeName), buffer);
+        logger.info({ path: pathLib.join(dir, safeName) }, "Saved HR document to local file storage");
+      }
 
       const url = `/api/v1/hr-documents/${uploadId}/${safeName}`;
 
@@ -99,6 +129,36 @@ router.get(
     const { uploadId, fileName } = req.params;
     const path = `hr-documents/${uploadId}/${fileName}`;
     try {
+      const fsLib = await import("fs/promises");
+      const pathLib = await import("path");
+      const localFilePath = pathLib.join(process.cwd(), "uploads", "hr-documents", uploadId, fileName);
+      
+      let localExists = false;
+      try {
+        await fsLib.access(localFilePath);
+        localExists = true;
+      } catch {
+        // local file doesn't exist
+      }
+
+      if (localExists) {
+        const ext = fileName.split(".").pop()?.toLowerCase();
+        let contentType = "application/octet-stream";
+        if (ext === "pdf") contentType = "application/pdf";
+        else if (ext === "png") contentType = "image/png";
+        else if (ext === "jpg" || ext === "jpeg") contentType = "image/jpeg";
+        else if (ext === "gif") contentType = "image/gif";
+        else if (ext === "webp") contentType = "image/webp";
+
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+        
+        const fs = await import("fs");
+        fs.createReadStream(localFilePath).pipe(res);
+        return;
+      }
+
+      // Fallback: Stream from Firebase Storage
       const bucket = storageBucket();
       const file = bucket.file(path);
       const [exists] = await file.exists();
