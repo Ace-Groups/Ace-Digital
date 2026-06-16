@@ -10,10 +10,10 @@ process.env.GOOGLE_CLOUD_PROJECT = "ace-digital-os";
 // We need to directly use Resend since the email module is in the api-server
 import { Resend } from "resend";
 
-const TO = "dev@mybexo.com";
+const TO = "dev@acedigital.cc";
 const NAME = "KAVINBALAJI S K";
-const FROM = process.env.EMAIL_FROM ?? "Ace-Digital <itdep@mybexo.com>";
-const APP_URL = "https://ace-digital-os.web.app";
+const FROM = process.env.EMAIL_FROM ?? "Ace-Digital <itdep@acedigital.cc>";
+const APP_URL = "https://acedigital.cc";
 
 function escapeHtml(value: string): string {
   return value
@@ -61,7 +61,7 @@ function emailShell(opts: {
                   
                   <!-- Center Branding -->
                   <td align="center" valign="middle" style="padding:40px 0 20px;">
-                    <img src="https://ace-digital-os.web.app/ace-logo.png" alt="Ace Digital Logo" height="32" style="display:inline-block;height:32px;width:auto;" />
+                    <img src="https://acedigital.cc/ace-logo.png" alt="Ace Digital Logo" height="32" style="display:inline-block;height:32px;width:auto;" />
                   </td>
 
                   <!-- Decorative Right Blue Accent -->
@@ -137,7 +137,7 @@ function emailShell(opts: {
                       Feel free to get in touch with our HR team:
                     </p>
                     <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1A1A1A;">
-                      <a href="mailto:hr@mybexo.com" style="color:#1A1A1A;text-decoration:none;">hr@mybexo.com</a>
+                      <a href="mailto:hr@acedigital.cc" style="color:#1A1A1A;text-decoration:none;">hr@acedigital.cc</a>
                     </p>
                     <p style="margin:0 0 4px;font-size:13px;color:#5C554E;">
                       +91 90871 72072
@@ -155,7 +155,7 @@ function emailShell(opts: {
                   <td>
                     ${opts.footerExtra ?? ""}
                     <p style="margin:0 0 6px;font-size:12px;color:#7C7267;">
-                      © 2026 <strong style="color:#2C2B2A;">Ace Digital</strong>. All rights reserved. <a href="https://mybexo.com" target="_blank" style="color:#2C2B2A;text-decoration:underline;">mybexo.com</a>
+                      © 2026 <strong style="color:#2C2B2A;">Ace Digital</strong>. All rights reserved. <a href="https://acedigital.cc" target="_blank" style="color:#2C2B2A;text-decoration:underline;">acedigital.cc</a>
                     </p>
                     <p style="margin:0;font-size:11px;color:#9C9287;">
                       If you prefer not to receive emails like this, you may unsubscribe <a href="#" style="color:#7C7267;text-decoration:underline;">here</a>.

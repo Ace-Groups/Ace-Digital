@@ -23,6 +23,6 @@ export function aceLogoDataUrl(): string {
     }
   }
   cachedLogoDataUrl =
-    "https://ace-digital-os.web.app/ace-logo.png";
+    "https://acedigital.cc/ace-logo.png";
   return cachedLogoDataUrl;
 }

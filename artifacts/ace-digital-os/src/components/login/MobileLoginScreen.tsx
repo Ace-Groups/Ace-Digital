@@ -92,7 +92,7 @@ export function MobileLoginScreen({
                           autoCapitalize="none"
                           autoCorrect="off"
                           autoComplete="username"
-                          placeholder="you@acedigital.com"
+                          placeholder="you@acedigital.cc"
                           className={fieldClass}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {

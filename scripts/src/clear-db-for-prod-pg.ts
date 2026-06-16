@@ -1,7 +1,7 @@
 /**
  * Prepares the PostgreSQL database for production.
  * Deletes all projects, tasks, clients, approvals, expenses, messages, and other users.
- * Keeps ONLY the user kavin@acedigital.com as the active super_admin.
+ * Keeps ONLY the user kavin@acedigital.cc as the active super_admin.
  *
  * Run: DATABASE_URL=<production_url> npx tsx scripts/src/clear-db-for-prod-pg.ts
  */
@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs";
 import * as schema from "../../lib/db/src/index";
 import { getPgDb, closePgPool } from "../../lib/db/src/pg";
 
-const EMAIL = "kavin@acedigital.com";
+const EMAIL = "kavin@acedigital.cc";
 const PASSWORD = "Kavin@2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";

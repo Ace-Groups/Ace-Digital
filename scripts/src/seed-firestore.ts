@@ -30,18 +30,18 @@ async function seed() {
   const emp123 = await bcrypt.hash("Emp@123", 10);
 
   const users = [
-    { id: 1, email: "admin@acedigital.com", passwordHash: hash, fullName: "Arjun Sharma", role: "super_admin", teamId: 1, jobTitle: "CEO & Founder", status: "active", avatarUrl: null, createdAt: now },
-    { id: 2, email: "priya.management@acedigital.com", passwordHash: emp123, fullName: "Priya Menon", role: "management", teamId: 5, jobTitle: "COO", status: "active", avatarUrl: null, createdAt: now },
-    { id: 3, email: "rahul.eng@acedigital.com", passwordHash: emp123, fullName: "Rahul Verma", role: "team_lead", teamId: 1, jobTitle: "Lead Engineer", status: "active", avatarUrl: null, createdAt: now },
-    { id: 4, email: "anita.design@acedigital.com", passwordHash: emp123, fullName: "Anita Nair", role: "team_lead", teamId: 2, jobTitle: "Lead Designer", status: "active", avatarUrl: null, createdAt: now },
-    { id: 5, email: "vikram.sales@acedigital.com", passwordHash: emp123, fullName: "Vikram Patel", role: "team_lead", teamId: 3, jobTitle: "Sales Manager", status: "active", avatarUrl: null, createdAt: now },
-    { id: 6, email: "sunita.finance@acedigital.com", passwordHash: emp123, fullName: "Sunita Rao", role: "finance", teamId: 4, jobTitle: "Finance Head", status: "active", avatarUrl: null, createdAt: now },
-    { id: 7, email: "amit.eng@acedigital.com", passwordHash: emp123, fullName: "Amit Kumar", role: "employee", teamId: 1, jobTitle: "Backend Engineer", status: "active", avatarUrl: null, createdAt: now },
-    { id: 8, email: "deepa.design@acedigital.com", passwordHash: emp123, fullName: "Deepa Singh", role: "employee", teamId: 2, jobTitle: "UI/UX Designer", status: "active", avatarUrl: null, createdAt: now },
-    { id: 9, email: "rohan.sales@acedigital.com", passwordHash: emp123, fullName: "Rohan Gupta", role: "employee", teamId: 3, jobTitle: "Business Developer", status: "active", avatarUrl: null, createdAt: now },
-    { id: 10, email: "kavya.hr@acedigital.com", passwordHash: emp123, fullName: "Kavya Reddy", role: "hr", teamId: 6, jobTitle: "HR Manager", status: "active", avatarUrl: null, createdAt: now },
-    { id: 11, email: "sanjay.ops@acedigital.com", passwordHash: emp123, fullName: "Sanjay Iyer", role: "employee", teamId: 5, jobTitle: "IT Operations", status: "active", avatarUrl: null, createdAt: now },
-    { id: 12, email: "meera.finance@acedigital.com", passwordHash: emp123, fullName: "Meera Joshi", role: "employee", teamId: 4, jobTitle: "Accountant", status: "active", avatarUrl: null, createdAt: now },
+    { id: 1, email: "admin@acedigital.cc", passwordHash: hash, fullName: "Arjun Sharma", role: "super_admin", teamId: 1, jobTitle: "CEO & Founder", status: "active", avatarUrl: null, createdAt: now },
+    { id: 2, email: "priya.management@acedigital.cc", passwordHash: emp123, fullName: "Priya Menon", role: "management", teamId: 5, jobTitle: "COO", status: "active", avatarUrl: null, createdAt: now },
+    { id: 3, email: "rahul.eng@acedigital.cc", passwordHash: emp123, fullName: "Rahul Verma", role: "team_lead", teamId: 1, jobTitle: "Lead Engineer", status: "active", avatarUrl: null, createdAt: now },
+    { id: 4, email: "anita.design@acedigital.cc", passwordHash: emp123, fullName: "Anita Nair", role: "team_lead", teamId: 2, jobTitle: "Lead Designer", status: "active", avatarUrl: null, createdAt: now },
+    { id: 5, email: "vikram.sales@acedigital.cc", passwordHash: emp123, fullName: "Vikram Patel", role: "team_lead", teamId: 3, jobTitle: "Sales Manager", status: "active", avatarUrl: null, createdAt: now },
+    { id: 6, email: "sunita.finance@acedigital.cc", passwordHash: emp123, fullName: "Sunita Rao", role: "finance", teamId: 4, jobTitle: "Finance Head", status: "active", avatarUrl: null, createdAt: now },
+    { id: 7, email: "amit.eng@acedigital.cc", passwordHash: emp123, fullName: "Amit Kumar", role: "employee", teamId: 1, jobTitle: "Backend Engineer", status: "active", avatarUrl: null, createdAt: now },
+    { id: 8, email: "deepa.design@acedigital.cc", passwordHash: emp123, fullName: "Deepa Singh", role: "employee", teamId: 2, jobTitle: "UI/UX Designer", status: "active", avatarUrl: null, createdAt: now },
+    { id: 9, email: "rohan.sales@acedigital.cc", passwordHash: emp123, fullName: "Rohan Gupta", role: "employee", teamId: 3, jobTitle: "Business Developer", status: "active", avatarUrl: null, createdAt: now },
+    { id: 10, email: "kavya.hr@acedigital.cc", passwordHash: emp123, fullName: "Kavya Reddy", role: "hr", teamId: 6, jobTitle: "HR Manager", status: "active", avatarUrl: null, createdAt: now },
+    { id: 11, email: "sanjay.ops@acedigital.cc", passwordHash: emp123, fullName: "Sanjay Iyer", role: "employee", teamId: 5, jobTitle: "IT Operations", status: "active", avatarUrl: null, createdAt: now },
+    { id: 12, email: "meera.finance@acedigital.cc", passwordHash: emp123, fullName: "Meera Joshi", role: "employee", teamId: 4, jobTitle: "Accountant", status: "active", avatarUrl: null, createdAt: now },
   ];
   for (const u of users) await setDoc("users", u.id, u);
 
@@ -248,7 +248,7 @@ async function seed() {
     serviceTicketSeq: 2,
   });
 
-  console.log("✅ Firestore seeded. Login: admin@acedigital.com / Admin@123");
+  console.log("✅ Firestore seeded. Login: admin@acedigital.cc / Admin@123");
 }
 
 seed().catch((err) => {

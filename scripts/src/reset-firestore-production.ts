@@ -13,7 +13,7 @@ import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? "ace-digital-os";
 const CONFIRM = process.env.CONFIRM_RESET;
 
-const EMAIL = "kavin@acedigital.com";
+const EMAIL = "kavin@acedigital.cc";
 const PASSWORD = "Kavin@2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";

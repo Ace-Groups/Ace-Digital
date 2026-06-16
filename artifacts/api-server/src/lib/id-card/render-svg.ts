@@ -12,9 +12,9 @@ const INK = "#1E293B";
 const MUTED = "#64748B";
 const BORDER = "#E2E8F0";
 const MARGIN = 56;
-const HR_EMAIL = "hr@mybexo.com";
+const HR_EMAIL = "hr@acedigital.cc";
 const HR_PHONE = "+91 90871 72072";
-const WEBSITE = "www.ace-digital.web.app";
+const WEBSITE = "acedigital.cc";
 
 function esc(s: string): string {
   return s

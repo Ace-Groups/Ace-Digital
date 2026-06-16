@@ -5,7 +5,7 @@
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 
-const EMAIL = "kavin@acedigital.com";
+const EMAIL = "kavin@acedigital.cc";
 const PASSWORD = "Kavin@2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";

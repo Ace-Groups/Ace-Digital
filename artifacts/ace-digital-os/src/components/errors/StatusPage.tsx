@@ -196,7 +196,7 @@ export function StatusPageFooter({
 export function StatusPageContactAdmin() {
   return (
     <a
-      href="mailto:admin@mybexo.com?subject=Ace%20Digital%20support"
+      href="mailto:admin@acedigital.cc?subject=Ace%20Digital%20support"
       className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
     >
       <Mail size={14} aria-hidden />

@@ -1,6 +1,8 @@
 import type cors from "cors";
 
 const DEFAULT_ORIGINS = [
+  "https://acedigital.cc",
+  "https://www.acedigital.cc",
   "https://ace-digital-os.web.app",
   "https://ace-digital-os.firebaseapp.com",
   // Render preview/production API same-origin not needed; frontend on Firebase calls API cross-origin

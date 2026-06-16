@@ -54,7 +54,7 @@ export async function chatOpenRouterCompletion(options: {
 
   const model = getOpenRouterModelName();
   const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://ace-digital-os.web.app";
+    process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://acedigital.cc";
 
   const res = await fetch(OPENROUTER_API, {
     method: "POST",

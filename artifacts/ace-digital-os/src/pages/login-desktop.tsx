@@ -58,7 +58,7 @@ function LoginDesktopForm({
                     data-testid="input-email"
                     type="email"
                     enterKeyHint="next"
-                    placeholder="you@acedigital.com"
+                    placeholder="you@acedigital.cc"
                     autoComplete="username"
                     className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-none placeholder:text-white/30 backdrop-blur-md focus-visible:border-[hsl(203_100%_87%/0.5)] focus-visible:bg-white/[0.09] focus-visible:ring-[hsl(211_38%_52%/0.35)] sm:h-11 sm:text-sm"
                     onKeyDown={(e) => {

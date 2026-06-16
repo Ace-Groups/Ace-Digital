@@ -1,14 +1,14 @@
 /**
  * Prepares the Firestore database for production.
  * Deletes all projects, tasks, clients, approvals, expenses, messages, and other users.
- * Keeps ONLY the user kavin@acedigital.com as the active super_admin.
+ * Keeps ONLY the user kavin@acedigital.cc as the active super_admin.
  *
  * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os npx tsx scripts/src/clear-db-for-prod.ts
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 
-const EMAIL = "kavin@acedigital.com";
+const EMAIL = "kavin@acedigital.cc";
 const PASSWORD = "Kavin@2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";
@@ -182,7 +182,7 @@ async function main() {
   });
   console.log("✅ Counters reset to zero");
 
-  console.log("\n🎉 Database prepared successfully for production! ONLY kavin@acedigital.com exists.");
+  console.log("\n🎉 Database prepared successfully for production! ONLY kavin@acedigital.cc exists.");
 }
 
 main().catch((err) => {

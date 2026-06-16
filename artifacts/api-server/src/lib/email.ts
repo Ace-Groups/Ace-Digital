@@ -2,10 +2,10 @@ import { ensureFirebaseAdminApp } from "@workspace/db";
 import { getFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
-const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://ace-digital-os.web.app/login";
-const APP_URL = process.env.APP_URL ?? "https://ace-digital-os.web.app";
+const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://acedigital.cc/login";
+const APP_URL = process.env.APP_URL ?? "https://acedigital.cc";
 const DEFAULT_FROM =
-  process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.com>";
+  process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.cc>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";
 
 const log = (msg: string, ...args: unknown[]) =>
@@ -99,7 +99,7 @@ function emailShell(opts: {
                   
                   <!-- Center Branding -->
                   <td align="center" valign="middle" style="padding:40px 0 20px;">
-                    <img src="https://ace-digital-os.web.app/ace-logo.png" alt="Ace Digital Logo" height="32" style="display:inline-block;height:32px;width:auto;" />
+                    <img src="https://acedigital.cc/ace-logo.png" alt="Ace Digital Logo" height="32" style="display:inline-block;height:32px;width:auto;" />
                   </td>
 
                   <!-- Decorative Right Blue Accent -->
@@ -175,7 +175,7 @@ function emailShell(opts: {
                       Feel free to get in touch with our HR team:
                     </p>
                     <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1A1A1A;">
-                      <a href="mailto:hr@mybexo.com" style="color:#1A1A1A;text-decoration:none;">hr@mybexo.com</a>
+                      <a href="mailto:hr@acedigital.cc" style="color:#1A1A1A;text-decoration:none;">hr@acedigital.cc</a>
                     </p>
                     <p style="margin:0 0 4px;font-size:13px;color:#5C554E;">
                       +91 90871 72072
@@ -193,7 +193,7 @@ function emailShell(opts: {
                   <td>
                     ${opts.footerExtra ?? ""}
                     <p style="margin:0 0 6px;font-size:12px;color:#7C7267;">
-                      © 2026 <strong style="color:#2C2B2A;">Ace Digital</strong>. All rights reserved. <a href="https://mybexo.com" target="_blank" style="color:#2C2B2A;text-decoration:underline;">mybexo.com</a>
+                      © 2026 <strong style="color:#2C2B2A;">Ace Digital</strong>. All rights reserved. <a href="https://acedigital.cc" target="_blank" style="color:#2C2B2A;text-decoration:underline;">acedigital.cc</a>
                     </p>
                     <p style="margin:0;font-size:11px;color:#9C9287;">
                       If you prefer not to receive emails like this, you may unsubscribe <a href="#" style="color:#7C7267;text-decoration:underline;">here</a>.
@@ -468,7 +468,7 @@ function buildCredentialsContent(params: CredentialsEmailParams): EmailContent {
     </p>
 
     <div style="margin:24px 0;text-align:center;">
-      <img src="https://ace-digital-os.web.app/images/credentials_hero.png" alt="Security Access" width="488" style="display:block;width:100%;max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;" />
+      <img src="https://acedigital.cc/images/credentials_hero.png" alt="Security Access" width="488" style="display:block;width:100%;max-width:100%;height:auto;border-radius:12px;border:1px solid #DFD0BC;" />
     </div>
 
     <!-- Credentials card -->
@@ -486,7 +486,7 @@ function buildCredentialsContent(params: CredentialsEmailParams): EmailContent {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="width:20px;padding-right:12px;" valign="middle">
-                      <img src="https://ace-digital-os.web.app/images/mail-envelope.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
+                      <img src="https://acedigital.cc/images/mail-envelope.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
                     </td>
                     <td valign="middle">
                       <p style="margin:0 0 2px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C7267;">Email Address</p>
@@ -505,7 +505,7 @@ function buildCredentialsContent(params: CredentialsEmailParams): EmailContent {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="width:20px;padding-right:12px;" valign="middle">
-                      <img src="https://ace-digital-os.web.app/images/mail-password.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
+                      <img src="https://acedigital.cc/images/mail-password.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
                     </td>
                     <td valign="middle">
                       <p style="margin:0 0 2px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#4B4ED3;">Temporary Password</p>
@@ -527,7 +527,7 @@ function buildCredentialsContent(params: CredentialsEmailParams): EmailContent {
           <table role="presentation" cellpadding="0" cellspacing="0">
             <tr>
               <td style="width:20px;padding-right:12px;" valign="top">
-                <img src="https://ace-digital-os.web.app/images/mail-warning.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
+                <img src="https://acedigital.cc/images/mail-warning.png" width="20" height="20" style="display:block;width:20px;height:20px;" />
               </td>
               <td>
                 <p style="margin:0;font-size:13px;color:#B45309;line-height:1.5;">

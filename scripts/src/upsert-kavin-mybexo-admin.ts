@@ -1,11 +1,11 @@
 /**
- * Creates or updates Kavin's mybexo super_admin user in Firestore.
+ * Creates or updates Kavin's acedigital super_admin user in Firestore.
  * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin-mybexo
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 
-const EMAIL = "kavin@mybexo.com";
+const EMAIL = "kavin@acedigital.cc";
 const PASSWORD = "Kavin2026";
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";

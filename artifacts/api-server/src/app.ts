@@ -50,7 +50,7 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const WEB_APP_URL = "https://ace-digital-os.web.app";
+const WEB_APP_URL = "https://acedigital.cc";
 
 function sendServiceRoot(_req: express.Request, res: express.Response): void {
   res.json({

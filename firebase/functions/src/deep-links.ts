@@ -1,4 +1,4 @@
-const DEFAULT_APP_ORIGIN = "https://ace-digital-os.web.app";
+const DEFAULT_APP_ORIGIN = "https://acedigital.cc";
 
 /** Public app origin for absolute push deep links (set APP_ORIGIN in functions config). */
 export function getAppOrigin(): string {
