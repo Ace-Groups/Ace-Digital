@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import type { DashboardData } from "@workspace/api-client-react";
 import {
+  getListChannelsQueryKey,
   getListNotificationsQueryKey,
   useListChannels,
   useListNotifications,
@@ -571,7 +572,11 @@ export function DashboardCanvas() {
     },
   });
   const { data: channels } = useListChannels({
-    query: { staleTime: 60_000, refetchOnWindowFocus: false },
+    query: {
+      queryKey: getListChannelsQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
   });
 
   const [timeStr, setTimeStr] = useState("");

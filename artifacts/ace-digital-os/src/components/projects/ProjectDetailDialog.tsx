@@ -174,7 +174,7 @@ export function ProjectDetailDialog({
       await runOptimistic({
         apply: () => {
           const prev = snapshotList<Project>(queryClient, projectsKey);
-          patchListItem(queryClient, projectsKey, projectId, (p) => ({
+          patchListItem(queryClient, projectsKey, projectId, (p: Project) => ({
             ...p,
             name: data.name,
             description: data.description || null,

@@ -104,3 +104,11 @@ export function getAadhaarDocumentNames(value?: string | null): string[] {
 export function readEmployeeDocument(file: File): Promise<string> {
   return uploadHrDocument(file).then((doc) => serializeAadhaarDocuments([doc]));
 }
+
+export function resolveDocumentUrl(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  return resolveApiUrl(url);
+}

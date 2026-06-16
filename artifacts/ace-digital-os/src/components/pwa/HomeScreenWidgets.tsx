@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { DashboardData } from "@workspace/api-client-react";
 import {
+  getListChannelsQueryKey,
   getListNotificationsQueryKey,
   useListChannels,
   useListNotifications,
@@ -81,7 +82,11 @@ export function HomeScreenWidgets({
     },
   });
   const { data: channels } = useListChannels({
-    query: { staleTime: 60_000, refetchOnWindowFocus: false },
+    query: {
+      queryKey: getListChannelsQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
   });
 
   useEffect(() => {

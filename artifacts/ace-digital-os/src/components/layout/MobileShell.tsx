@@ -21,6 +21,7 @@ import {
   StickyNote,
   Search,
   Users2,
+  IdCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,6 +63,8 @@ const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   calendar: CalendarDays,
   activity: Activity,
   notes: StickyNote,
+  credentials: IdCard,
+  interns: Users2,
 };
 
 interface MobileShellProps {

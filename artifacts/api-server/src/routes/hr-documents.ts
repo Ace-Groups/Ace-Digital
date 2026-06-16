@@ -73,22 +73,46 @@ router.post(
           cacheControl: "private, max-age=3600",
         },
       });
-      const [signedUrl] = await file.getSignedUrl({
-        action: "read",
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-      });
+
+      const url = `/api/v1/hr-documents/${uploadId}/${safeName}`;
 
       res.status(201).json({
         name: safeName,
         type: mime,
         size: buffer.length,
-        url: signedUrl,
+        url,
         storagePath: path,
         uploadedAt: new Date().toISOString(),
       });
     } catch (err) {
       logger.warn({ err, path }, "HR document upload failed");
       res.status(500).json({ error: "Could not upload document" });
+    }
+  },
+);
+
+router.get(
+  "/v1/hr-documents/:uploadId/:fileName",
+  requireAuth,
+  requirePermission("employees:read"),
+  async (req, res): Promise<void> => {
+    const { uploadId, fileName } = req.params;
+    const path = `hr-documents/${uploadId}/${fileName}`;
+    try {
+      const bucket = storageBucket();
+      const file = bucket.file(path);
+      const [exists] = await file.exists();
+      if (!exists) {
+        res.status(404).json({ error: "Document not found" });
+        return;
+      }
+      const [metadata] = await file.getMetadata();
+      res.setHeader("Content-Type", metadata.contentType || "application/octet-stream");
+      res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+      file.createReadStream().pipe(res);
+    } catch (err) {
+      logger.warn({ err, path }, "Failed to stream HR document");
+      res.status(500).json({ error: "Could not retrieve document" });
     }
   },
 );

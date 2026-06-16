@@ -14,6 +14,8 @@ import {
   getListEmployeesQueryKey,
   getGetMyProfileQueryKey,
   type Employee,
+  type EmployeeInputWorkType,
+  type EmployeeInputBankAccountType,
 } from "@workspace/api-client-react";
 import { canAssignRole } from "@workspace/rbac";
 import { useQueryClient } from "@tanstack/react-query";
@@ -268,14 +270,14 @@ export default function EmployeesPage() {
               highestQualification: data.highestQualification ?? undefined,
               bloodGroup: data.bloodGroup ?? undefined,
               aadhaarDocument: data.aadhaarDocument ?? undefined,
-              workType: data.workType ?? undefined,
+              workType: data.workType as EmployeeInputWorkType ?? undefined,
               bankAccountNumber: data.bankAccountNumber ?? undefined,
               confirmBankAccountNumber: data.confirmBankAccountNumber ?? undefined,
               bankIfscCode: data.bankIfscCode ?? undefined,
               bankName: data.bankName ?? undefined,
               bankAccountHolderName: data.bankAccountHolderName ?? undefined,
               panNumber: data.panNumber ?? undefined,
-              bankAccountType: data.bankAccountType ?? undefined,
+              bankAccountType: data.bankAccountType as EmployeeInputBankAccountType ?? undefined,
               upiId: data.upiId ?? undefined,
               notes: data.notes ?? undefined,
             },
