@@ -197,7 +197,7 @@ const editSchema = z.object({
   notes: z.string().optional(),
 }).superRefine((data, ctx) => {
   const hrErrors = validateHrOnboarding({ ...data, workType: data.workType ?? "permanent" }, {
-    required: false,
+    required: true,
   });
   for (const [field, message] of Object.entries(hrErrors)) {
     ctx.addIssue({
