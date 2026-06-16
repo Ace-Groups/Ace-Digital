@@ -561,19 +561,27 @@ export function EmployeeFormSheet({
       {mode === "create" ? (
         <Form {...createForm}>
           <form
-            onSubmit={createForm.handleSubmit((data) => {
-              void onCreateSubmit({
-                ...mapCommon(data),
-                passwordMode: data.passwordMode,
-                password: data.passwordMode === "manual" ? data.password : undefined,
-                sendWelcomeEmail: data.sendWelcomeEmail,
-                avatarUrl:
-                  encodeEmployeeIdentityImages({
-                    profilePhotoUrl: data.profilePhotoUrl || null,
-                    mascotId: data.mascotId ?? defaultMascotForRole(data.role).replace("mascot:", ""),
-                  }) ?? undefined,
-              });
-            })}
+            onSubmit={createForm.handleSubmit(
+              (data) => {
+                void onCreateSubmit({
+                  ...mapCommon(data),
+                  passwordMode: data.passwordMode,
+                  password: data.passwordMode === "manual" ? data.password : undefined,
+                  sendWelcomeEmail: data.sendWelcomeEmail,
+                  avatarUrl:
+                    encodeEmployeeIdentityImages({
+                      profilePhotoUrl: data.profilePhotoUrl || null,
+                      mascotId: data.mascotId ?? defaultMascotForRole(data.role).replace("mascot:", ""),
+                    }) ?? undefined,
+                });
+              },
+              (errors) => {
+                const firstError = Object.values(errors)[0];
+                if (firstError?.message) {
+                  toast({ title: "Validation Error", description: String(firstError.message), variant: "destructive" });
+                }
+              }
+            )}
             className="mobile-form space-y-5"
           >
             <FormFields
@@ -646,17 +654,25 @@ export function EmployeeFormSheet({
       ) : (
         <Form {...editForm}>
           <form
-            onSubmit={editForm.handleSubmit((data) => {
-              void onEditSubmit({
-                ...mapCommon(data),
-                payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
-                avatarUrl:
-                  encodeEmployeeIdentityImages({
-                    profilePhotoUrl: data.profilePhotoUrl || null,
-                    mascotId: data.mascotId ?? null,
-                  }) ?? undefined,
-              });
-            })}
+            onSubmit={editForm.handleSubmit(
+              (data) => {
+                void onEditSubmit({
+                  ...mapCommon(data),
+                  payrollStatus: canViewSalaries ? data.payrollStatus : undefined,
+                  avatarUrl:
+                    encodeEmployeeIdentityImages({
+                      profilePhotoUrl: data.profilePhotoUrl || null,
+                      mascotId: data.mascotId ?? null,
+                    }) ?? undefined,
+                });
+              },
+              (errors) => {
+                const firstError = Object.values(errors)[0];
+                if (firstError?.message) {
+                  toast({ title: "Validation Error", description: String(firstError.message), variant: "destructive" });
+                }
+              }
+            )}
             className="mobile-form space-y-5"
           >
             <FormFields

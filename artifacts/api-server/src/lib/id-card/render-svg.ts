@@ -102,8 +102,8 @@ function photoWithHolo(data: IdCardData, y: number, size: number): string {
 
 function infoLine(label: string, value: string, y: number): string {
   return `
-    <text x="${W / 2}" y="${y}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="1.8" fill="${MUTED}">${esc(label)}</text>
-    <text x="${W / 2}" y="${y + 24}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="800" fill="${INK}">${esc(value)}</text>`;
+    <text x="${W / 2}" y="${y}" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${MUTED}">${esc(label)}</text>
+    <text x="${W / 2}" y="${y + 28}" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="800" fill="${INK}">${esc(value)}</text>`;
 }
 
 function qrPanel(data: IdCardData, x: number, y: number, size: number): string {
@@ -131,14 +131,14 @@ function employeeFront(data: IdCardData): string {
   <defs>${defs("front")}</defs>
   <rect width="${W}" height="${H}" rx="26" fill="#FFFFFF"/>
   ${edgePattern("frontNet")}
-  ${brandBlock(28)}
-  ${photoWithHolo(data, 148, 172)}
-  <text x="${W / 2}" y="352" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="24" font-weight="800" letter-spacing="2" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="382" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="12" font-weight="700" letter-spacing="2.5" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
-  ${infoLine("EMPLOYEE ID", data.employeeCode, 408)}
-  ${infoLine("DOB", formatDob(data.dob), 456)}
-  ${infoLine("BLOOD GROUP", data.bloodGroup ?? "—", 504)}
-  ${infoLine("DEPARTMENT", dept, 552)}
+  ${brandBlock(36)}
+  ${photoWithHolo(data, 170, 200)}
+  <text x="${W / 2}" y="420" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="2" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="456" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2.5" fill="${TEAL}">${esc((data.jobTitle ?? "TEAM MEMBER").toUpperCase())}</text>
+  ${infoLine("EMPLOYEE ID", data.employeeCode, 520)}
+  ${infoLine("DOB", formatDob(data.dob), 590)}
+  ${infoLine("BLOOD GROUP", data.bloodGroup ?? "—", 660)}
+  ${infoLine("DEPARTMENT", dept, 730)}
   <rect y="${H - 58}" width="${W}" height="4" fill="${TEAL_LINE}"/>
   <rect y="${H - 54}" width="${W}" height="54" fill="url(#frontFooter)"/>
   <text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="#FFFFFF">EXPIRATION DATE: ${esc(data.expirationLabel ?? "DEC 2026")}</text>
@@ -194,13 +194,13 @@ function internFront(data: IdCardData): string {
   ${edgePattern("frontNet")}
   <rect x="36" y="36" width="110" height="28" rx="14" fill="${TEAL}"/>
   <text x="91" y="55" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="2.5" fill="#fff">INTERN</text>
-  ${brandBlock(36)}
-  ${photoWithHolo(data, 156, 160)}
-  <text x="${W / 2}" y="348" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="22" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
-  <text x="${W / 2}" y="376" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
-  ${infoLine("INTERN ID", data.employeeCode, 404)}
-  ${infoLine("MENTOR", data.mentorName ?? "ASSIGNED", 452)}
-  ${infoLine("UNIVERSITY", data.university ?? "—", 500)}
+  ${brandBlock(46)}
+  ${photoWithHolo(data, 178, 180)}
+  <text x="${W / 2}" y="408" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="${INK}">${esc(data.fullName.toUpperCase())}</text>
+  <text x="${W / 2}" y="440" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="${TEAL}">${esc(dept)}</text>
+  ${infoLine("INTERN ID", data.employeeCode, 500)}
+  ${infoLine("MENTOR", data.mentorName ?? "ASSIGNED", 570)}
+  ${infoLine("UNIVERSITY", data.university ?? "—", 640)}
   <rect y="${H - 58}" width="${W}" height="4" fill="${TEAL_LINE}"/>
   <rect y="${H - 54}" width="${W}" height="54" fill="${NAVY}"/>
   <text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" letter-spacing="1.8" fill="#FFFFFF">VALID UNTIL ${esc(data.expirationLabel ?? "PROGRAM END")}</text>
