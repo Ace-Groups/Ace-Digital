@@ -31,6 +31,7 @@ import { ProfilePhotoUpload } from "@/components/employees/ProfilePhotoUpload";
 import { FilePickControl } from "@/components/ui/file-pick-control";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 import { Textarea } from "@/components/ui/textarea";
 
@@ -298,6 +299,7 @@ export function EmployeeFormSheet({
   onCreateSubmit,
   onEditSubmit,
 }: EmployeeFormSheetProps) {
+  const { toast } = useToast();
   const createForm = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
     defaultValues: {

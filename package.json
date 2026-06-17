@@ -31,5 +31,10 @@
     "prettier": "^3.8.3",
     "sharp": "^0.34.3",
     "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "expo": "~54.0.35",
+    "expo-router": "~6.0.24",
+    "react-native-reanimated": "~3.17.4"
   }
 }

@@ -29,10 +29,20 @@ export default function HomeScreen() {
   const { c, isDark } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const [manualRefreshing, setManualRefreshing] = React.useState(false);
 
   const { data, isLoading, refetch, isRefetching } = useGetDashboard({
     query: { queryKey: ['dashboard'] },
   });
+
+  const handleRefresh = async () => {
+    setManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -49,7 +59,7 @@ export default function HomeScreen() {
           { paddingTop: insets.top + spacing[4], paddingBottom: insets.bottom + 100 },
         ]}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={c.primary} />
+          <RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={c.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -123,32 +133,6 @@ export default function HomeScreen() {
                   />
                 </View>
               </Card>
-            ))}
-          </View>
-        )}
-
-        {/* Recent Activity */}
-        {data?.recentActivity && data.recentActivity.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: c.text }]}>Recent Activity</Text>
-            {data.recentActivity.slice(0, 8).map((activity) => (
-              <View
-                key={activity.id}
-                style={[styles.activityItem, { borderBottomColor: c.borderSubtle }]}
-              >
-                <View style={[styles.activityDot, { backgroundColor: c.primary }]} />
-                <View style={styles.activityContent}>
-                  <Text style={[styles.activityText, { color: c.text }]} numberOfLines={2}>
-                    <Text style={{ fontFamily: typography.bodySemibold.fontFamily }}>
-                      {activity.actorName ?? 'System'}
-                    </Text>
-                    {' '}{activity.action.replace(/_/g, ' ')} {activity.entityType.replace(/_/g, ' ')}
-                  </Text>
-                  <Text style={[styles.activityTime, { color: c.textTertiary }]}>
-                    {timeAgo(activity.createdAt)}
-                  </Text>
-                </View>
-              </View>
             ))}
           </View>
         )}

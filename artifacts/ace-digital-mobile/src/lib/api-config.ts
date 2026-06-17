@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 
 const TOKEN_KEY = 'ace_auth_token';
-const API_BASE = 'https://acedigital.cc';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://ace-digital-api.onrender.com';
 
 // Configure the shared API client for mobile
 export function initApiClient() {

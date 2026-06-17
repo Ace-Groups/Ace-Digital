@@ -10,8 +10,12 @@ import {
   tempMessageIdFromClientId,
 } from "./channel-access";
 import { messageQueue } from "./message-queue";
-import { validateMessagePayload } from "./message-attachments";
+import { validateMessagePayload, messagePreview, messageToJson } from "./message-attachments";
 import { store } from "@workspace/db";
+import { getRedisConnection } from "./redis";
+import { triggerAceBot } from "./acebot";
+import { extractMentionedUserIds } from "./chat-mentions";
+import { notifyChannelMembers } from "./chat-notify";
 
 declare module "socket.io" {
   interface SocketData {
@@ -201,18 +205,84 @@ export function initSocketServer(httpServer: HttpServer): Server {
         broadcastMessageNew(channelId, optimistic, { exceptSocketId: socket.id });
         ack?.({ status: "success", clientId, message: optimistic });
 
-        void messageQueue.add("persist", {
-          channelId,
-          senderId: ctx.userId,
-          clientId,
-          body: payload.body,
-          attachments: payload.attachments ?? null,
-          messageKind: payload.messageKind,
-          metadata: payload.metadata,
-          parentMessageId,
-          senderName: socket.data.senderName ?? null,
-          senderAvatar: socket.data.senderAvatar ?? null,
-        });
+        const persistDirectly = async () => {
+          try {
+            const message = await store.createMessage({
+              channelId,
+              senderId: ctx.userId,
+              body: payload.body,
+              attachments: payload.attachments ?? null,
+              messageKind: payload.messageKind,
+              metadata: payload.metadata ?? null,
+              parentMessageId,
+              editedAt: null,
+              deletedAt: null,
+              deletedById: null,
+              senderName: socket.data.senderName ?? null,
+              senderAvatar: socket.data.senderAvatar ?? null,
+            });
+            const persisted = messageToJson(
+              message,
+              socket.data.senderName ?? "Former teammate",
+              socket.data.senderAvatar ?? null,
+            );
+            const { broadcastMessagePersisted } = await import("./chat-socket-broadcast");
+            broadcastMessagePersisted(channelId, {
+              clientId,
+              message: persisted,
+            });
+
+            // Perform notifications and bot triggers in background
+            setImmediate(async () => {
+              try {
+                if (payload.body.includes("@AceBot")) {
+                  await triggerAceBot(channelId, message.id, payload.body, ctx.userId);
+                }
+                const members = await store.listChannelMembers(channelId);
+                const mentioned = extractMentionedUserIds(payload.body, members);
+                const preview = messagePreview(message.body, message.attachments, message.messageKind);
+                if (mentioned.length > 0) {
+                  await notifyChannelMembers(
+                    channelId,
+                    ctx.userId,
+                    channel?.name ?? "channel",
+                    `@${socket.data.senderName ?? "Someone"} mentioned you: ${preview}`,
+                    mentioned,
+                  );
+                } else {
+                  await notifyChannelMembers(channelId, ctx.userId, channel?.name ?? "channel", preview);
+                }
+                await store.markChannelRead(channelId, ctx.userId);
+              } catch (bgErr) {
+                logger.error({ err: bgErr }, "Failed direct persist background notifications");
+              }
+            });
+          } catch (err) {
+            logger.error({ err, userId: ctx.userId }, "Failed to directly persist message");
+          }
+        };
+
+        const redis = getRedisConnection();
+        if (redis.status === "ready") {
+          messageQueue.add("persist", {
+            channelId,
+            senderId: ctx.userId,
+            clientId,
+            body: payload.body,
+            attachments: payload.attachments ?? null,
+            messageKind: payload.messageKind,
+            metadata: payload.metadata,
+            parentMessageId,
+            senderName: socket.data.senderName ?? null,
+            senderAvatar: socket.data.senderAvatar ?? null,
+          }).catch((err) => {
+            logger.warn({ err }, "Redis persist job fail, falling back to direct persistence");
+            void persistDirectly();
+          });
+        } else {
+          logger.info("Redis connection is not ready, persisting message directly");
+          void persistDirectly();
+        }
       } catch (err) {
         logger.error({ err, userId }, "message:send failed");
         ack?.({ status: "error", error: "Failed to send message" });

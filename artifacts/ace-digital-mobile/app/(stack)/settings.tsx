@@ -1,10 +1,47 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch } from 'react-native';
-import { Stack } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, Switch, Pressable } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography, spacing, radius } from '@/theme';
 
 export default function SettingsScreen() {
-  const { c, isDark } = useTheme();
+  const { c, isDark, setThemeSetting } = useTheme();
+  const router = useRouter();
+
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [emailEnabled, setEmailEnabled] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const storedPush = await SecureStore.getItemAsync('ace_push_enabled');
+        const storedEmail = await SecureStore.getItemAsync('ace_email_enabled');
+        if (storedPush !== null) setPushEnabled(storedPush === 'true');
+        if (storedEmail !== null) setEmailEnabled(storedEmail === 'true');
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const handleTogglePush = async (val: boolean) => {
+    setPushEnabled(val);
+    try {
+      await SecureStore.setItemAsync('ace_push_enabled', String(val));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleToggleEmail = async (val: boolean) => {
+    setEmailEnabled(val);
+    try {
+      await SecureStore.setItemAsync('ace_email_enabled', String(val));
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <>
@@ -19,13 +56,15 @@ export default function SettingsScreen() {
             <Text style={[styles.label, { color: c.text }]}>Dark Mode</Text>
             <Switch
               value={isDark}
-              onValueChange={() => {}} // Hooked up to system theme
+              onValueChange={(val) => {
+                void setThemeSetting(val ? 'dark' : 'light');
+              }}
               trackColor={{ false: c.border, true: c.primary }}
               thumbColor="#FFFFFF"
             />
           </View>
           <Text style={[styles.hint, { color: c.textTertiary }]}>
-            Matches your system appearance.
+            Change the application theme to match your preference.
           </Text>
         </View>
 
@@ -33,16 +72,33 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: c.card, borderColor: c.cardBorder }]}>
           <View style={[styles.row, styles.borderBottom, { borderBottomColor: c.borderSubtle }]}>
             <Text style={[styles.label, { color: c.text }]}>Push Notifications</Text>
-            <Switch value={true} onValueChange={() => {}} trackColor={{ true: c.primary }} />
-          </View>
-          <View style={[styles.row, styles.borderBottom, { borderBottomColor: c.borderSubtle }]}>
-            <Text style={[styles.label, { color: c.text }]}>Email Notifications</Text>
-            <Switch value={true} onValueChange={() => {}} trackColor={{ true: c.primary }} />
+            <Switch
+              value={pushEnabled}
+              onValueChange={handleTogglePush}
+              trackColor={{ false: c.border, true: c.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
           <View style={styles.row}>
-            <Text style={[styles.label, { color: c.text }]}>Marketing Updates</Text>
-            <Switch value={false} onValueChange={() => {}} trackColor={{ true: c.primary }} />
+            <Text style={[styles.label, { color: c.text }]}>Email Notifications</Text>
+            <Switch
+              value={emailEnabled}
+              onValueChange={handleToggleEmail}
+              trackColor={{ false: c.border, true: c.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Activity</Text>
+        <View style={[styles.card, { backgroundColor: c.card, borderColor: c.cardBorder }]}>
+          <Pressable 
+            onPress={() => router.push('/(stack)/recent-activity')}
+            style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={[styles.label, { color: c.text }]}>Recent Activity</Text>
+            <Ionicons name="chevron-forward" size={18} color={c.textTertiary} />
+          </Pressable>
         </View>
       </ScrollView>
     </>

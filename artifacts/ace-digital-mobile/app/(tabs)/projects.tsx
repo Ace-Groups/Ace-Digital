@@ -11,10 +11,20 @@ export default function ProjectsScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [manualRefreshing, setManualRefreshing] = React.useState(false);
 
   const { data: projects, isLoading, refetch, isRefetching } = useListProjects(undefined, {
     query: { queryKey: ['projects'] },
   });
+
+  const handleRefresh = async () => {
+    setManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
 
   const renderItem = ({ item }: { item: Project }) => (
     <ProjectCard
@@ -47,7 +57,7 @@ export default function ProjectsScreen() {
           (!projects || projects.length === 0) && styles.emptyContainer,
         ]}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={c.primary} />
+          <RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={c.primary} />
         }
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

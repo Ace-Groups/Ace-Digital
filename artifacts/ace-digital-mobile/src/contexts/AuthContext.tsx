@@ -38,6 +38,7 @@ interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -170,8 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!token && !!user && !isBootstrapping;
 
   const value = useMemo(
-    () => ({ user, isBootstrapping, isAuthenticated, login, logout, refreshUser }),
-    [user, isBootstrapping, isAuthenticated, login, logout, refreshUser]
+    () => ({ user, token, isBootstrapping, isAuthenticated, login, logout, refreshUser }),
+    [user, token, isBootstrapping, isAuthenticated, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

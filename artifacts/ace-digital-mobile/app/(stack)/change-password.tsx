@@ -31,6 +31,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <>
+      <Stack.Screen options={{ title: 'Change Password' }} />
       <View style={[styles.container, { backgroundColor: c.background }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

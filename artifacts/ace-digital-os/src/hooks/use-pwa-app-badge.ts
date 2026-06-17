@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import {
+  getListChannelsQueryKey,
   getListNotificationsQueryKey,
   useListNotifications,
   useListChannels,
@@ -22,7 +23,11 @@ export function usePwaAppBadge() {
     },
   });
   const { data: channels } = useListChannels({
-    query: { staleTime: 60_000, refetchOnWindowFocus: false },
+    query: {
+      queryKey: getListChannelsQueryKey(),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
   });
 
   useEffect(() => {
