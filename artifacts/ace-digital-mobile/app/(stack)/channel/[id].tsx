@@ -79,6 +79,7 @@ export default function ChannelDetailScreen() {
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const isPickingRef = useRef(false);
 
   const themeIndex = useMemo(() => {
     if (!id) return 0;
@@ -94,6 +95,8 @@ export default function ChannelDetailScreen() {
   const bubbleBgMe = isDark ? currentTheme.bubbleBgMeDark : currentTheme.bubbleBgMeLight;
 
   const pickImage = async () => {
+    if (isPickingRef.current) return;
+    isPickingRef.current = true;
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -157,10 +160,14 @@ export default function ChannelDetailScreen() {
     } catch (err) {
       console.error('[pickImage]', err);
       Alert.alert('Error', 'An error occurred while picking the image.');
+    } finally {
+      isPickingRef.current = false;
     }
   };
 
   const pickDocument = async () => {
+    if (isPickingRef.current) return;
+    isPickingRef.current = true;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -213,10 +220,14 @@ export default function ChannelDetailScreen() {
     } catch (err) {
       console.error('[pickDocument]', err);
       Alert.alert('Error', 'An error occurred while selecting the document.');
+    } finally {
+      isPickingRef.current = false;
     }
   };
 
   const takePhoto = async () => {
+    if (isPickingRef.current) return;
+    isPickingRef.current = true;
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -279,6 +290,8 @@ export default function ChannelDetailScreen() {
     } catch (err) {
       console.error('[takePhoto]', err);
       Alert.alert('Error', 'An error occurred while taking the photo.');
+    } finally {
+      isPickingRef.current = false;
     }
   };
 
@@ -1419,7 +1432,12 @@ export default function ChannelDetailScreen() {
             <Text style={[styles.bottomSheetTitle, { color: c.text }]}>Actions</Text>
             
             <Pressable 
-              onPress={() => { setShowAttachMenu(false); void takePhoto(); }}
+              onPress={() => {
+                setShowAttachMenu(false);
+                setTimeout(() => {
+                  void takePhoto();
+                }, 200);
+              }}
               style={styles.bottomSheetRow}
             >
               <Ionicons name="camera-outline" size={20} color={c.primary} />
@@ -1427,7 +1445,12 @@ export default function ChannelDetailScreen() {
             </Pressable>
 
             <Pressable 
-              onPress={() => { setShowAttachMenu(false); void pickImage(); }}
+              onPress={() => {
+                setShowAttachMenu(false);
+                setTimeout(() => {
+                  void pickImage();
+                }, 200);
+              }}
               style={styles.bottomSheetRow}
             >
               <Ionicons name="image-outline" size={20} color={c.primary} />
@@ -1435,7 +1458,12 @@ export default function ChannelDetailScreen() {
             </Pressable>
 
             <Pressable 
-              onPress={() => { setShowAttachMenu(false); void pickDocument(); }}
+              onPress={() => {
+                setShowAttachMenu(false);
+                setTimeout(() => {
+                  void pickDocument();
+                }, 200);
+              }}
               style={styles.bottomSheetRow}
             >
               <Ionicons name="document-text-outline" size={20} color={c.primary} />
