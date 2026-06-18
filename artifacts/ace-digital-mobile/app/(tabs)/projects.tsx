@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme, typography, spacing } from '@/theme';
@@ -12,6 +12,7 @@ export default function ProjectsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [manualRefreshing, setManualRefreshing] = React.useState(false);
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
 
   const { data: projects, isLoading, refetch, isRefetching } = useListProjects(undefined, {
     query: { queryKey: ['projects'] },
@@ -41,8 +42,8 @@ export default function ProjectsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
-        <Text style={[styles.title, { color: c.text }]}>Projects</Text>
-        <Text style={[styles.count, { color: c.textTertiary }]}>
+        <Text style={[styles.title, { color: c.text, fontFamily: serifFont }]}>Projects</Text>
+        <Text style={[styles.count, { color: c.textTertiary, fontFamily: serifFont }]}>
           {projects?.length ?? 0} total
         </Text>
       </View>

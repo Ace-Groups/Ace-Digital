@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,38 +30,42 @@ export default function ProfileScreen() {
     { icon: 'key-outline' as const, label: 'Change Password', route: '/(stack)/change-password' },
   ];
 
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' }) || 'serif';
+
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + spacing[4], paddingBottom: insets.bottom + 100 },
+          { paddingTop: insets.top + spacing[4], paddingBottom: insets.bottom + 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <Avatar uri={user?.avatarUrl} name={user?.fullName ?? 'User'} size={88} />
-          <Text style={[styles.name, { color: c.text }]}>{user?.fullName}</Text>
-          <Text style={[styles.role, { color: c.textSecondary }]}>
+          <View style={{ borderColor: 'rgba(0, 216, 246, 0.25)', borderWidth: 3, borderRadius: 50, padding: 3, marginBottom: spacing[2] }}>
+            <Avatar uri={user?.avatarUrl} name={user?.fullName ?? 'User'} size={88} />
+          </View>
+          <Text style={[styles.name, { color: c.text, fontFamily: serifFont }]}>{user?.fullName}</Text>
+          <Text style={[styles.role, { color: c.textSecondary, fontFamily: serifFont }]}>
             {user?.jobTitle ?? user?.role ?? 'Employee'}
           </Text>
           {user?.email && (
-            <Text style={[styles.email, { color: c.textTertiary }]}>{user.email}</Text>
+            <Text style={[styles.email, { color: c.textTertiary, fontFamily: serifFont }]}>{user.email}</Text>
           )}
         </View>
 
         {/* Info Cards */}
-        <Card style={{ marginBottom: spacing[4] }}>
-          <InfoRow icon="business-outline" label="Team" value={user?.teamName ?? '—'} c={c} />
+        <Card style={{ marginBottom: spacing[4], borderWidth: 1.5, borderColor: c.border }}>
+          <InfoRow icon="business-outline" label="Team" value={user?.teamName ?? '—'} c={c} serifFont={serifFont} />
           <View style={[styles.divider, { backgroundColor: c.borderSubtle }]} />
-          <InfoRow icon="card-outline" label="Employee ID" value={user?.employeeCode ?? '—'} c={c} />
+          <InfoRow icon="card-outline" label="Employee ID" value={user?.employeeCode ?? '—'} c={c} serifFont={serifFont} />
           <View style={[styles.divider, { backgroundColor: c.borderSubtle }]} />
-          <InfoRow icon="call-outline" label="Phone" value={user?.phone ?? '—'} c={c} />
+          <InfoRow icon="call-outline" label="Phone" value={user?.phone ?? '—'} c={c} serifFont={serifFont} />
         </Card>
 
         {/* Menu Items */}
-        <Card style={{ marginBottom: spacing[4], padding: 0 }}>
+        <Card style={{ marginBottom: spacing[4], padding: 0, borderWidth: 1.5, borderColor: c.border }}>
           {menuItems.map((item, i) => (
             <React.Fragment key={item.label}>
               <Pressable
@@ -74,7 +78,7 @@ export default function ProfileScreen() {
                 ]}
               >
                 <Ionicons name={item.icon} size={20} color={c.textSecondary} />
-                <Text style={[styles.menuLabel, { color: c.text }]}>{item.label}</Text>
+                <Text style={[styles.menuLabel, { color: c.text, fontFamily: serifFont, fontWeight: '700' }]}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={18} color={c.textTertiary} />
               </Pressable>
               {i < menuItems.length - 1 && (
@@ -96,10 +100,10 @@ export default function ProfileScreen() {
           ]}
         >
           <Ionicons name="log-out-outline" size={20} color={c.error} />
-          <Text style={[styles.logoutText, { color: c.error }]}>Sign Out</Text>
+          <Text style={[styles.logoutText, { color: c.error, fontFamily: serifFont }]}>Sign Out</Text>
         </Pressable>
 
-        <Text style={[styles.version, { color: c.textTertiary }]}>
+        <Text style={[styles.version, { color: c.textTertiary, fontFamily: serifFont }]}>
           Ace Digital Mobile v1.0.0
         </Text>
       </ScrollView>
@@ -112,18 +116,20 @@ function InfoRow({
   label,
   value,
   c,
+  serifFont,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   c: any;
+  serifFont: string;
 }) {
   return (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={18} color={c.textTertiary} style={styles.infoIcon} />
       <View style={styles.infoContent}>
-        <Text style={[styles.infoLabel, { color: c.textTertiary }]}>{label}</Text>
-        <Text style={[styles.infoValue, { color: c.text }]}>{value}</Text>
+        <Text style={[styles.infoLabel, { color: c.textTertiary, fontFamily: serifFont }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: c.text, fontFamily: serifFont }]} numberOfLines={1}>{value}</Text>
       </View>
     </View>
   );

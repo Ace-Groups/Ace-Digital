@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography, radius, spacing } from '@/theme';
 import { Badge } from '@/components/ui';
@@ -45,27 +45,36 @@ function formatDueDate(iso: string): string {
 }
 
 export function TaskCard({ title, projectName, assigneeName, priority, status, dueDate, onPress }: TaskCardProps) {
-  const { c } = useTheme();
+  const { c, isDark } = useTheme();
 
   const isOverdue = dueDate && new Date(dueDate) < new Date();
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: pressed ? c.surfacePressed : c.card, borderColor: c.cardBorder },
+        {
+          backgroundColor: pressed ? c.surfacePressed : c.card,
+          borderColor: c.cardBorder,
+          shadowColor: isDark ? c.primary : '#000000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.08 : 0.04,
+          shadowRadius: 8,
+          elevation: 2,
+        },
       ]}
     >
       <View style={styles.row}>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: c.text }]} numberOfLines={2}>
+          <Text style={[styles.title, { color: c.text, fontFamily: serifFont }]} numberOfLines={2}>
             {title}
           </Text>
           {projectName && (
             <View style={styles.projectRow}>
               <Ionicons name="folder-outline" size={12} color={c.textTertiary} />
-              <Text style={[styles.meta, { color: c.textTertiary }]} numberOfLines={1}>
+              <Text style={[styles.meta, { color: c.textTertiary, fontFamily: serifFont }]} numberOfLines={1}>
                 {projectName}
               </Text>
             </View>
@@ -80,7 +89,7 @@ export function TaskCard({ title, projectName, assigneeName, priority, status, d
           <Badge label={status.replace(/[-_]/g, ' ')} variant={STATUS_VARIANT[status.toLowerCase()] ?? 'default'} />
         </View>
         {dueDate && (
-          <Text style={[styles.due, { color: isOverdue ? c.error : c.textTertiary }]}>
+          <Text style={[styles.due, { color: isOverdue ? c.error : c.textTertiary, fontFamily: serifFont }]}>
             {formatDueDate(dueDate)}
           </Text>
         )}

@@ -10,7 +10,8 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -164,6 +165,8 @@ export default function ChatScreen() {
     }
   };
 
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
+
   const renderItem = ({ item }: { item: any }) => {
     const isGeneral = item.name?.toLowerCase() === 'general';
     const icon = item.type === 'DM' ? 'person' : isGeneral ? 'megaphone' : 'chatbubble-ellipses';
@@ -183,11 +186,11 @@ export default function ChatScreen() {
         </View>
         <View style={styles.channelContent}>
           <View style={styles.channelHeader}>
-            <Text style={[styles.channelName, { color: c.text }]} numberOfLines={1}>
+            <Text style={[styles.channelName, { color: c.text, fontFamily: serifFont, fontWeight: '700' }]} numberOfLines={1}>
               {item.type === 'DM' ? `#${item.dmPeerName ?? item.name}` : `#${item.name}`}
             </Text>
             {displayTime && (
-              <Text style={[styles.channelTime, { color: c.textTertiary }]}>
+              <Text style={[styles.channelTime, { color: c.textTertiary, fontFamily: serifFont }]}>
                 {timeAgo(displayTime)}
               </Text>
             )}
@@ -210,7 +213,7 @@ export default function ChatScreen() {
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
-        <Text style={[styles.title, { color: c.text }]}>Chat</Text>
+        <Text style={[styles.title, { color: c.text, fontFamily: serifFont }]}>Chat</Text>
         <View style={styles.headerActions}>
           <Pressable
             onPress={() => setCreateChannelVisible(true)}
@@ -238,7 +241,7 @@ export default function ChatScreen() {
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         contentContainerStyle={[
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: insets.bottom + 120 },
           (!channels || channels.length === 0) && styles.emptyContainer,
         ]}
         refreshControl={

@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography, spacing } from '@/theme';
@@ -79,15 +79,16 @@ export default function HomeScreen() {
     return 'Good Evening';
   }, []);
 
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
   const isAdminOrManager = user?.role?.toLowerCase().includes('admin') || user?.role === 'manager';
 
   const renderStatCard = (title: string, value: number, icon: any) => (
-    <View style={[styles.premiumStatCard, { backgroundColor: c.surfaceElevated, borderColor: c.borderSubtle }]}>
-      <View style={[styles.statIconWrapper, { backgroundColor: c.primaryLight }]}>
+    <View style={[styles.premiumStatCard, { backgroundColor: c.surfaceElevated, borderColor: c.border, shadowColor: c.primary }]}>
+      <View style={[styles.statIconWrapper, { backgroundColor: isDark ? 'rgba(0, 216, 246, 0.12)' : c.primaryLight }]}>
         <Ionicons name={icon} size={22} color={c.primary} />
       </View>
-      <Text style={[styles.statValue, { color: c.text }]}>{value}</Text>
-      <Text style={[styles.statTitle, { color: c.textTertiary }]}>{title}</Text>
+      <Text style={[styles.statValue, { color: c.text, fontFamily: serifFont }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: c.textSecondary, fontFamily: serifFont }]}>{title}</Text>
     </View>
   );
 
@@ -99,9 +100,9 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         refreshControl={
-          <RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor="#FFFFFF" />
+          <RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={c.primary} />
         }
         showsVerticalScrollIndicator={false}
         bounces={true}
@@ -109,23 +110,23 @@ export default function HomeScreen() {
         {/* HERO HEADER */}
         <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: translateY(headerAnim) }] }}>
           <LinearGradient
-            colors={[c.primary, isDark ? c.background : '#1E3A8A']}
+            colors={isDark ? ['#0b2c5e', '#030914'] : [c.primary, '#1E3A8A']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.heroHeader, { paddingTop: insets.top + spacing[4] }]}
           >
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.heroGreeting}>{greeting}</Text>
-                <Text style={styles.heroName}>{user?.fullName?.split(' ')[0] ?? 'User'}</Text>
-                <View style={styles.heroBadge}>
-                  <Text style={styles.heroBadgeText}>
-                    {user?.role ? user.role.replace(/_/g, ' ').toUpperCase() : 'MEMBER'}
+                <Text style={[styles.heroGreeting, { fontFamily: serifFont }]}>{greeting}</Text>
+                <Text style={[styles.heroName, { fontFamily: serifFont }]}>{user?.fullName ?? 'Kavin'}</Text>
+                <View style={[styles.heroBadge, { backgroundColor: isDark ? 'rgba(0, 216, 246, 0.18)' : 'rgba(255,255,255,0.2)' }]}>
+                  <Text style={[styles.heroBadgeText, { color: isDark ? c.primary : '#FFFFFF' }]}>
+                    {user?.role ? user.role.replace(/_/g, ' ').toUpperCase() : 'SUPER ADMIN'}
                   </Text>
                 </View>
               </View>
-              <View style={styles.avatarRing}>
-                <Avatar uri={user?.avatarUrl} name={user?.fullName ?? 'User'} size={56} />
+              <View style={[styles.avatarRing, { borderColor: isDark ? 'rgba(0, 216, 246, 0.3)' : 'rgba(255,255,255,0.3)', borderWidth: 2 }]}>
+                <Avatar uri={user?.avatarUrl} name={user?.fullName ?? 'Kavin'} size={56} />
               </View>
             </View>
           </LinearGradient>
@@ -148,8 +149,8 @@ export default function HomeScreen() {
               )}
 
               <View style={[styles.section, { marginTop: spacing[4] }]}>
-                <Text style={[styles.sectionTitle, { color: c.text, marginBottom: spacing[3] }]}>Overview</Text>
-                <View style={{ borderRadius: 20, overflow: 'hidden', backgroundColor: c.surfaceElevated }}>
+                <Text style={[styles.sectionTitle, { color: c.text, fontFamily: serifFont, marginBottom: spacing[3] }]}>Overview</Text>
+                <View style={{ borderRadius: 20, overflow: 'hidden', backgroundColor: c.surfaceElevated, borderWidth: 1.5, borderColor: c.border }}>
                   <BarChart
                     data={{
                       labels: ['Projects', 'Tasks', 'Approvals'],
@@ -163,7 +164,7 @@ export default function HomeScreen() {
                         },
                       ],
                     }}
-                    width={width - spacing[4] * 2}
+                    width={width - spacing[4] * 2 - 4}
                     height={220}
                     yAxisLabel=""
                     yAxisSuffix=""
@@ -172,8 +173,8 @@ export default function HomeScreen() {
                       backgroundGradientFrom: c.surfaceElevated,
                       backgroundGradientTo: c.surfaceElevated,
                       decimalPlaces: 0,
-                      color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
-                      labelColor: (opacity = 1) => isDark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
+                      color: (opacity = 1) => `rgba(0, 216, 246, ${opacity})`,
+                      labelColor: (opacity = 1) => isDark ? `rgba(149, 165, 192, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
                       style: {
                         borderRadius: 20,
                       },
@@ -193,7 +194,7 @@ export default function HomeScreen() {
           {/* QUICK ACTIONS */}
           {isAdminOrManager && (
             <Animated.View style={[styles.section, { opacity: actionsAnim, transform: [{ translateY: translateY(actionsAnim) }] }]}>
-              <Text style={[styles.sectionTitle, { color: c.text }]}>Quick Actions</Text>
+              <Text style={[styles.sectionTitle, { color: c.text, fontFamily: serifFont }]}>Quick Actions</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionsScroll}>
                 {ACTION_BUTTONS.map((action, idx) => (
                   <TouchableOpacity 
@@ -201,10 +202,10 @@ export default function HomeScreen() {
                     style={styles.actionButton}
                     onPress={() => router.push(action.route as any)}
                   >
-                    <View style={[styles.actionIconBg, { backgroundColor: c.surfaceElevated }]}>
+                    <View style={[styles.actionIconBg, { backgroundColor: c.surfaceElevated, borderColor: c.border, borderWidth: 1.5, shadowColor: c.primary }]}>
                       <Ionicons name={action.icon as any} size={24} color={c.primary} />
                     </View>
-                    <Text style={[styles.actionLabel, { color: c.textSecondary }]}>{action.label}</Text>
+                    <Text style={[styles.actionLabel, { color: c.textSecondary, fontFamily: serifFont }]}>{action.label}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -215,17 +216,17 @@ export default function HomeScreen() {
           {data?.upcomingDeadlines && data.upcomingDeadlines.length > 0 && (
             <Animated.View style={[styles.section, { opacity: deadlinesAnim, transform: [{ translateY: translateY(deadlinesAnim) }] }]}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: c.text }]}>Upcoming Deadlines</Text>
+                <Text style={[styles.sectionTitle, { color: c.text, fontFamily: serifFont }]}>Upcoming Deadlines</Text>
                 <TouchableOpacity>
-                  <Text style={[styles.seeAllText, { color: c.primary }]}>See All</Text>
+                  <Text style={[styles.seeAllText, { color: c.primary, fontFamily: serifFont }]}>See All</Text>
                 </TouchableOpacity>
               </View>
               
               <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width * 0.8 + 16} decelerationRate="fast" contentContainerStyle={styles.deadlinesScroll}>
                 {data.upcomingDeadlines.slice(0, 5).map((project) => (
-                  <View key={project.id} style={[styles.deadlinePremiumCard, { backgroundColor: c.surfaceElevated, borderColor: c.borderSubtle }]}>
+                  <View key={project.id} style={[styles.deadlinePremiumCard, { backgroundColor: c.surfaceElevated, borderColor: c.border, shadowColor: c.primary }]}>
                     <View style={styles.deadlineTop}>
-                      <View style={[styles.deadlineIconBox, { backgroundColor: c.primaryLight }]}>
+                      <View style={[styles.deadlineIconBox, { backgroundColor: isDark ? 'rgba(0, 216, 246, 0.12)' : c.primaryLight }]}>
                         <Ionicons name="calendar" size={20} color={c.primary} />
                       </View>
                       <Badge
@@ -233,10 +234,10 @@ export default function HomeScreen() {
                         variant={project.status === 'active' ? 'success' : 'default'}
                       />
                     </View>
-                    <Text style={[styles.deadlineProjectName, { color: c.text }]} numberOfLines={1}>
+                    <Text style={[styles.deadlineProjectName, { color: c.text, fontFamily: serifFont }]} numberOfLines={1}>
                       {project.name}
                     </Text>
-                    <Text style={[styles.deadlineProjectDate, { color: c.primary }]}>
+                    <Text style={[styles.deadlineProjectDate, { color: c.primary, fontFamily: serifFont }]}>
                       {project.deadline
                         ? new Date(project.deadline).toLocaleDateString('en-IN', {
                             day: 'numeric',

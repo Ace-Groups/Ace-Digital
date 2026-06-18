@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography, radius, spacing, palette } from '@/theme';
 import { Badge } from '@/components/ui';
@@ -29,19 +29,28 @@ export function ProjectCard({ name, status, progress, priority, teamName, deadli
 
   const progressColor = STATUS_COLOR[status.toLowerCase()] ?? c.primary;
   const clampedProgress = Math.min(100, Math.max(0, progress));
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: pressed ? c.surfacePressed : c.card, borderColor: c.cardBorder },
+        {
+          backgroundColor: pressed ? c.surfacePressed : c.card,
+          borderColor: c.cardBorder,
+          shadowColor: isDark ? c.primary : '#000000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.08 : 0.04,
+          shadowRadius: 8,
+          elevation: 2,
+        },
       ]}
     >
       <View style={styles.header}>
         <View style={styles.nameRow}>
           <View style={[styles.dot, { backgroundColor: progressColor }]} />
-          <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: c.text, fontFamily: serifFont }]} numberOfLines={1}>
             {name}
           </Text>
         </View>
@@ -57,7 +66,7 @@ export function ProjectCard({ name, status, progress, priority, teamName, deadli
           ]}
         />
       </View>
-      <Text style={[styles.progressText, { color: c.textTertiary }]}>
+      <Text style={[styles.progressText, { color: c.textTertiary, fontFamily: serifFont }]}>
         {clampedProgress}% complete
       </Text>
 
@@ -70,7 +79,7 @@ export function ProjectCard({ name, status, progress, priority, teamName, deadli
           {teamName && (
             <View style={styles.metaItem}>
               <Ionicons name="people-outline" size={12} color={c.textTertiary} />
-              <Text style={[styles.metaText, { color: c.textTertiary }]} numberOfLines={1}>
+              <Text style={[styles.metaText, { color: c.textTertiary, fontFamily: serifFont }]} numberOfLines={1}>
                 {teamName}
               </Text>
             </View>
@@ -78,7 +87,7 @@ export function ProjectCard({ name, status, progress, priority, teamName, deadli
           {deadline && (
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={12} color={c.textTertiary} />
-              <Text style={[styles.metaText, { color: c.textTertiary }]}>
+              <Text style={[styles.metaText, { color: c.textTertiary, fontFamily: serifFont }]}>
                 {new Date(deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
               </Text>
             </View>

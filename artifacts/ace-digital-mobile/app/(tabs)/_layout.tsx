@@ -1,13 +1,46 @@
+import React, { useEffect, useRef } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme, typography } from '@/theme';
 import { ActivityIndicator, View } from 'react-native';
 
+interface AnimatedTabIconProps {
+  name: keyof typeof Ionicons.glyphMap;
+  focused: boolean;
+  color: string;
+  size: number;
+  c: any;
+}
+
+function AnimatedTabIcon({ name, focused, color, size, c }: AnimatedTabIconProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: focused ? 1.22 : 1,
+      tension: 110,
+      friction: 6,
+      useNativeDriver: true,
+    }).start();
+  }, [focused]);
+
+  return (
+    <Animated.View style={styles.iconContainer}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+        <Ionicons name={name} size={size + 2} color={color} />
+      </Animated.View>
+      {focused && (
+        <View style={[styles.indicatorDot, { backgroundColor: c.primary, shadowColor: c.primary }]} />
+      )}
+    </Animated.View>
+  );
+}
+
 export default function TabsLayout() {
-  const { isAuthenticated, isBootstrapping, user } = useAuth();
+  const { isAuthenticated, isBootstrapping } = useAuth();
   const { c, isDark } = useTheme();
 
   if (isBootstrapping) {
@@ -30,33 +63,43 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: c.tabBarInactive,
         tabBarLabelStyle: {
           ...typography.tabLabel,
-          marginBottom: Platform.OS === 'ios' ? 0 : 4,
+          fontSize: 10,
+          fontWeight: '700',
+          marginBottom: 6,
         },
         tabBarStyle: {
-          backgroundColor: c.tabBar,
-          borderTopColor: c.tabBarBorder,
-          borderTopWidth: 0.5,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingTop: 6,
+          backgroundColor: isDark ? 'rgba(4, 11, 24, 0.72)' : 'rgba(255, 255, 255, 0.85)',
+          borderWidth: 1.5,
+          borderColor: isDark ? 'rgba(0, 216, 246, 0.18)' : 'rgba(0, 0, 0, 0.06)',
+          height: 72,
+          paddingTop: 10,
           position: 'absolute',
-          elevation: 0,
+          bottom: Platform.OS === 'ios' ? 28 : 16,
+          left: 16,
+          right: 16,
+          borderRadius: 24,
+          shadowColor: isDark ? '#00D8F6' : '#000000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: isDark ? 0.16 : 0.08,
+          shadowRadius: 20,
+          elevation: 6,
+          overflow: 'hidden',
         },
-        tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView
-              tint={isDark ? 'dark' : 'light'}
-              intensity={80}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-          ) : null,
+        tabBarBackground: () => (
+          <BlurView
+            tint={isDark ? 'dark' : 'light'}
+            intensity={60}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} size={size} color={color} focused={focused} c={c} />
           ),
         }}
       />
@@ -64,8 +107,8 @@ export default function TabsLayout() {
         name="tasks"
         options={{
           title: 'Tasks',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkbox" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'checkbox' : 'checkbox-outline'} size={size} color={color} focused={focused} c={c} />
           ),
         }}
       />
@@ -73,8 +116,8 @@ export default function TabsLayout() {
         name="projects"
         options={{
           title: 'Projects',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="folder" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'folder' : 'folder-outline'} size={size} color={color} focused={focused} c={c} />
           ),
         }}
       />
@@ -82,8 +125,8 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} focused={focused} c={c} />
           ),
         }}
       />
@@ -91,11 +134,30 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name={focused ? 'person' : 'person-outline'} size={size} color={color} focused={focused} c={c} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 38,
+  },
+  indicatorDot: {
+    position: 'absolute',
+    bottom: -6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+});

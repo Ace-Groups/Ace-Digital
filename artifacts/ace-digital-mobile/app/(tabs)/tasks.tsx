@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   View, Text, FlatList, RefreshControl, StyleSheet, Pressable, 
-  Modal, TextInput, ScrollView, TouchableOpacity 
+  Modal, TextInput, ScrollView, TouchableOpacity, Platform 
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -135,13 +135,15 @@ export default function TasksScreen() {
     />
   );
 
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
+
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
         <View>
-          <Text style={[styles.title, { color: c.text }]}>Tasks</Text>
-          <Text style={[styles.count, { color: c.textTertiary }]}>
+          <Text style={[styles.title, { color: c.text, fontFamily: serifFont }]}>Tasks</Text>
+          <Text style={[styles.count, { color: c.textTertiary, fontFamily: serifFont }]}>
             {filtered.length} {filter === 'all' ? 'total' : filter}
           </Text>
         </View>
@@ -155,6 +157,10 @@ export default function TasksScreen() {
             {
               backgroundColor: c.primary,
               opacity: pressed ? 0.8 : 1,
+              shadowColor: c.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
             },
           ]}
         >
@@ -179,7 +185,7 @@ export default function TasksScreen() {
             <Text
               style={[
                 styles.chipText,
-                { color: filter === f.key ? '#FFFFFF' : c.textSecondary },
+                { color: filter === f.key ? '#030914' : c.textSecondary, fontFamily: serifFont, fontWeight: '700' },
               ]}
             >
               {f.label}
@@ -195,7 +201,7 @@ export default function TasksScreen() {
         renderItem={renderItem}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: insets.bottom + 120 },
           filtered.length === 0 && styles.emptyContainer,
         ]}
         refreshControl={
@@ -220,7 +226,7 @@ export default function TasksScreen() {
         onRequestClose={() => setCreateTaskVisible(false)}
       >
         <View style={[styles.modalWrapper, { backgroundColor: c.background, paddingTop: insets.top }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: c.border }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: c.borderSubtle }]}>
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -230,7 +236,7 @@ export default function TasksScreen() {
             >
               <Ionicons name="close" size={26} color={c.text} />
             </Pressable>
-            <Text style={[styles.modalHeaderTitle, { color: c.text }]}>New Task</Text>
+            <Text style={[styles.modalHeaderTitle, { color: c.text, fontFamily: serifFont }]}>New Task</Text>
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -242,7 +248,7 @@ export default function TasksScreen() {
               <Text
                 style={[
                   styles.modalHeaderAction,
-                  { color: taskTitle.trim() && !createTaskMutation.isPending ? c.primary : c.textTertiary }
+                  { color: taskTitle.trim() && !createTaskMutation.isPending ? c.primary : c.textTertiary, fontFamily: serifFont }
                 ]}
               >
                 Create
@@ -251,7 +257,7 @@ export default function TasksScreen() {
           </View>
 
           <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <Text style={[styles.formLabel, { color: c.textSecondary }]}>TASK TITLE</Text>
+            <Text style={[styles.formLabel, { color: c.textSecondary, fontFamily: serifFont }]}>TASK TITLE</Text>
             <TextInput
               style={[
                 styles.formInput,
