@@ -16,24 +16,19 @@ import { ThemeProvider, useTheme } from '@/theme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { SocketProvider } from '@/contexts/SocketContext';
 import { loadPersistedQueryCache, subscribeToPersistQueryCache } from '@/lib/query-persister';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
 SplashScreen.preventAutoHideAsync();
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+
 
 async function registerForPushNotificationsAsync(token: string | null) {
   if (!token) return;
   try {
+    if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
+      return; // Not supported in Expo Go Android SDK 53+
+    }
+    const Notifications = await import('expo-notifications');
     const existingStatus = (await Notifications.getPermissionsAsync()) as any;
     let finalStatus = existingStatus;
     if (!existingStatus.granted) {
@@ -140,6 +135,27 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    async function initNotifications() {
+      try {
+        if (Platform.OS === 'android' && Constants.appOwnership === 'expo') return;
+        const Notifications = await import('expo-notifications');
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+      } catch (err) {
+        console.warn('Could not initialize notifications', err);
+      }
+    }
+    initNotifications();
+  }, []);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;

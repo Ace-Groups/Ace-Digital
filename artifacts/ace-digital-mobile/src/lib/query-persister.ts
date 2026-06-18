@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { type QueryClient } from '@tanstack/react-query';
 
 const CACHE_FILE_PATH = FileSystem.documentDirectory + 'query_cache_v1.json';
-const PERSIST_KEYS = ['dashboard', 'channels', 'projects', 'tasks', 'channel-messages'];
+const PERSIST_KEYS = ['dashboard', 'channels', 'channel', 'projects', 'tasks', 'channel-messages', 'me', 'users'];
 
 export async function loadPersistedQueryCache(queryClient: QueryClient) {
   try {

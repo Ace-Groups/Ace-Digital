@@ -3,9 +3,9 @@
 
 export const palette = {
   // Brand
-  indigo: '#6366F1',
-  indigoLight: '#818CF8',
-  indigoDark: '#4F46E5',
+  indigo: '#2563EB', // Blue 600
+  indigoLight: '#60A5FA', // Blue 400
+  indigoDark: '#1D4ED8', // Blue 700
   violet: '#8B5CF6',
   cyan: '#06B6D4',
   emerald: '#10B981',

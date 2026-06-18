@@ -131,10 +131,10 @@ export default function ChannelDetailScreen() {
           }
 
           const size = asset.fileSize || Math.floor((base64Data.length * 3) / 4);
-          if (size > 350000) {
+          if (size > 25000000) {
             Alert.alert(
               'File Too Large',
-              `Selected file "${asset.fileName || 'media'}" is too large (${Math.round(size / 1024)}KB). Please select files smaller than 350KB to ensure successful delivery.`
+              `Selected file "${asset.fileName || 'media'}" is too large (${Math.round(size / 1024 / 1024)}MB). Please select files smaller than 25MB to ensure successful delivery.`
             );
             continue;
           }
@@ -159,6 +159,10 @@ export default function ChannelDetailScreen() {
       }
     } catch (err) {
       console.error('[pickImage]', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('picking in progress') || errMsg.includes('canceled')) {
+        return;
+      }
       Alert.alert('Error', 'An error occurred while picking the image.');
     } finally {
       isPickingRef.current = false;
@@ -180,10 +184,10 @@ export default function ChannelDetailScreen() {
         for (const asset of result.assets) {
           const size = asset.size ?? 0;
 
-          if (size > 350000) {
+          if (size > 25000000) {
             Alert.alert(
               'File Too Large',
-              `Selected document "${asset.name || 'file'}" is too large (${Math.round(size / 1024)}KB). Please select files smaller than 350KB.`
+              `Selected document "${asset.name || 'file'}" is too large (${Math.round(size / 1024 / 1024)}MB). Please select files smaller than 25MB.`
             );
             continue;
           }
@@ -219,6 +223,10 @@ export default function ChannelDetailScreen() {
       }
     } catch (err) {
       console.error('[pickDocument]', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('picking in progress') || errMsg.includes('canceled')) {
+        return;
+      }
       Alert.alert('Error', 'An error occurred while selecting the document.');
     } finally {
       isPickingRef.current = false;
@@ -261,10 +269,10 @@ export default function ChannelDetailScreen() {
           }
 
           const size = asset.fileSize || Math.floor((base64Data.length * 3) / 4);
-          if (size > 350000) {
+          if (size > 25000000) {
             Alert.alert(
               'File Too Large',
-              `Photo is too large (${Math.round(size / 1024)}KB). Please try taking the photo again or select from gallery.`
+              `Photo is too large (${Math.round(size / 1024 / 1024)}MB). Please try taking the photo again or select from gallery.`
             );
             continue;
           }
@@ -289,6 +297,10 @@ export default function ChannelDetailScreen() {
       }
     } catch (err) {
       console.error('[takePhoto]', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('picking in progress') || errMsg.includes('canceled')) {
+        return;
+      }
       Alert.alert('Error', 'An error occurred while taking the photo.');
     } finally {
       isPickingRef.current = false;
