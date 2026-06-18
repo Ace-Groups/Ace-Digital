@@ -88,7 +88,7 @@ export default function LoginScreen() {
     >
       {/* Background abstract shapes */}
       <View style={[styles.bgOrb, { backgroundColor: c.primary, opacity: 0.1, top: -height * 0.1, left: -width * 0.2 }]} />
-      <View style={[styles.bgOrb, { backgroundColor: c.secondary, opacity: 0.08, bottom: -height * 0.1, right: -width * 0.2 }]} />
+      <View style={[styles.bgOrb, { backgroundColor: c.info, opacity: 0.08, bottom: -height * 0.1, right: -width * 0.2 }]} />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   brandTitle: { ...typography.h1, marginBottom: spacing[1] },
   brandSubtitle: { ...typography.bodyMedium },
   formCard: {
-    borderRadius: radius.2xl,
+    borderRadius: radius['2xl'],
     padding: spacing[6],
     borderWidth: 1,
     shadowColor: '#000',
