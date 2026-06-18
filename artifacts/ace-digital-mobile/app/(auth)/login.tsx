@@ -11,65 +11,98 @@ import {
   Dimensions,
   TouchableOpacity,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  TextInput,
+  Linking
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, typography, spacing, radius } from '@/theme';
+import { useTheme, spacing, radius } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Input } from '@/components/ui';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
+const CARD_PADDING = 24;
+const CARD_WIDTH = width - 40; // width minus horizontal margins (20 * 2)
+const SLIDE_WIDTH = CARD_WIDTH - CARD_PADDING * 2;
 
 export default function LoginScreen() {
-  const { c, isDark } = useTheme();
+  const { c } = useTheme();
   const { login } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [step, setStep] = useState<'email' | 'password'>('email');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  // Animation values
-  const fadeAnimLogo = useRef(new Animated.Value(0)).current;
-  const slideAnimLogo = useRef(new Animated.Value(30)).current;
+  const passwordInputRef = useRef<TextInput>(null);
+
+  // Card entrance animations
+  const cardFadeAnim = useRef(new Animated.Value(0)).current;
+  const cardSlideAnim = useRef(new Animated.Value(40)).current;
   
-  const fadeAnimForm = useRef(new Animated.Value(0)).current;
-  const slideAnimForm = useRef(new Animated.Value(30)).current;
-  
-  const fadeAnimFooter = useRef(new Animated.Value(0)).current;
-  const slideAnimFooter = useRef(new Animated.Value(30)).current;
+  // Horizontal slide transition between steps
+  const slideTransition = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(200, [
-      Animated.parallel([
-        Animated.timing(fadeAnimLogo, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(slideAnimLogo, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
-      ]),
-      Animated.parallel([
-        Animated.timing(fadeAnimForm, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(slideAnimForm, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
-      ]),
-      Animated.parallel([
-        Animated.timing(fadeAnimFooter, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(slideAnimFooter, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
-      ])
+    // Entrance animations on mount
+    Animated.parallel([
+      Animated.timing(cardFadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(cardSlideAnim, { toValue: 0, tension: 25, friction: 8, useNativeDriver: true })
     ]).start();
   }, []);
 
-  const validate = (): boolean => {
+  const validateEmailStep = (): boolean => {
     const e: typeof errors = {};
-    if (!email.trim()) e.email = 'Email is required';
-    else if (!email.includes('@')) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
+    const trimmed = email.trim();
+    if (!trimmed) {
+      e.email = 'Email is required';
+    } else if (!trimmed.includes('@')) {
+      e.email = 'Enter a valid email address';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  const validatePasswordStep = (): boolean => {
+    const e: typeof errors = {};
+    if (!password) {
+      e.password = 'Password is required';
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleContinue = () => {
+    if (!validateEmailStep()) return;
+    
+    // Slide form left to show password input
+    Animated.timing(slideTransition, {
+      toValue: -SLIDE_WIDTH - CARD_PADDING,
+      duration: 350,
+      useNativeDriver: true,
+    }).start(() => {
+      setStep('password');
+      passwordInputRef.current?.focus();
+    });
+  };
+
+  const handleBack = () => {
+    // Slide form right to show email input
+    Animated.timing(slideTransition, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start(() => {
+      setStep('email');
+    });
+  };
+
   const handleLogin = async () => {
     Keyboard.dismiss();
-    if (!validate()) return;
+    if (!validatePasswordStep()) return;
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
@@ -81,197 +114,325 @@ export default function LoginScreen() {
     }
   };
 
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch(() => {});
+  };
+
+  // Custom typography style using Georgia for serif and system for sans
+  const serifFont = Platform.select({ ios: 'Georgia', android: 'serif' });
+
   return (
-    <LinearGradient
-      colors={isDark ? ['#050B14', '#0A1930', '#102A4A'] : ['#E6F0FA', '#F5F9FF', '#FFFFFF']}
-      style={styles.gradient}
-    >
-      {/* Background abstract shapes */}
-      <View style={[styles.bgOrb, { backgroundColor: c.primary, opacity: 0.1, top: -height * 0.1, left: -width * 0.2 }]} />
-      <View style={[styles.bgOrb, { backgroundColor: c.info, opacity: 0.08, bottom: -height * 0.1, right: -width * 0.2 }]} />
+    <View style={styles.container}>
+      {/* Primary Splash Background GIF */}
+      <Image
+        source={require('../../assets/splash_login.gif')}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="cover"
+        transition={400}
+      />
+      
+      {/* Subtle overlay to enhance contrast */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10, 25, 47, 0.25)' }]} />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.flex}
+          style={styles.keyboardView}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Logo / Branding */}
-            <Animated.View style={[styles.brandSection, { opacity: fadeAnimLogo, transform: [{ translateY: slideAnimLogo }] }]}>
-              <View style={[styles.logoOuterCircle, { backgroundColor: c.primaryLight }]}>
-                <View style={[styles.logoCircle, { backgroundColor: c.primary }]}>
-                  <Ionicons name="layers" size={44} color="#FFFFFF" />
-                </View>
-              </View>
-              <Text style={[styles.brandTitle, { color: c.text }]}>Ace Digital</Text>
-              <Text style={[styles.brandSubtitle, { color: c.textSecondary }]}>
-                Secure Workspace Portal
-              </Text>
-            </Animated.View>
-
-            {/* Form */}
+            {/* Animated Floating Glassmorphism Card */}
             <Animated.View style={[
-              styles.formCard, 
-              { 
-                backgroundColor: c.surfaceElevated, 
-                borderColor: c.borderSubtle,
-                opacity: fadeAnimForm,
-                transform: [{ translateY: slideAnimForm }]
+              styles.cardContainer,
+              {
+                opacity: cardFadeAnim,
+                transform: [{ translateY: cardSlideAnim }]
               }
             ]}>
-              <Text style={[styles.formTitle, { color: c.text }]}>Sign In</Text>
+              <BlurView intensity={45} tint="light" style={styles.blurBackground} />
               
-              <Input
-                label="Email"
-                placeholder="you@acedigital.cc"
-                value={email}
-                onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="emailAddress"
-                editable={!loading}
-              />
+              {/* Actual content of the card */}
+              <View style={styles.cardContent}>
+                
+                {/* Horizontal Paging Container */}
+                <View style={styles.formViewPort}>
+                  <Animated.View style={[
+                    styles.slideTrack,
+                    { transform: [{ translateX: slideTransition }] }
+                  ]}>
+                    
+                    {/* --- STEP 1: EMAIL ENTRY --- */}
+                    <View style={styles.slideView}>
+                      <Text style={[styles.fieldLabel, { fontFamily: serifFont }]}>
+                        YOUR EMAIL ADDRESS
+                      </Text>
+                      
+                      <View style={[styles.inputBox, errors.email ? styles.inputError : null]}>
+                        <Ionicons name="mail-outline" size={20} color="#475569" style={styles.inputIcon} />
+                        <TextInput
+                          style={[styles.textInput, { fontFamily: serifFont }]}
+                          placeholder="Enter your email address"
+                          placeholderTextColor="#94A3B8"
+                          value={email}
+                          onChangeText={(t) => {
+                            setEmail(t);
+                            setErrors((prev) => ({ ...prev, email: undefined }));
+                          }}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          editable={!loading}
+                          returnKeyType="next"
+                          onSubmitEditing={handleContinue}
+                        />
+                      </View>
+                      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-              <View style={styles.passwordContainer}>
-                <Input
-                  label="Password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
-                  error={errors.password}
-                  secureTextEntry={!showPassword}
-                  textContentType="password"
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-                <TouchableOpacity 
-                  style={[styles.eyeIcon, errors.password ? { top: 38 } : { top: 38 }]} 
-                  onPress={() => setShowPassword(!showPassword)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name={showPassword ? "eye-off" : "eye"} size={22} color={c.textTertiary} />
-                </TouchableOpacity>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.actionButton}
+                        onPress={handleContinue}
+                      >
+                        <Text style={[styles.actionButtonText, { fontFamily: serifFont }]}>
+                          Continue
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* GAP BETWEEN SLIDES */}
+                    <View style={{ width: CARD_PADDING }} />
+
+                    {/* --- STEP 2: PASSWORD ENTRY --- */}
+                    <View style={styles.slideView}>
+                      <View style={styles.passwordHeader}>
+                        <TouchableOpacity 
+                          onPress={handleBack} 
+                          style={styles.backLink} 
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="arrow-back-outline" size={16} color="#334155" />
+                          <Text style={[styles.backText, { fontFamily: serifFont }]}>
+                            {email.length > 22 ? `${email.substring(0, 19)}...` : email}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={[styles.fieldLabel, { fontFamily: serifFont }]}>
+                        YOUR PASSWORD
+                      </Text>
+                      
+                      <View style={[styles.inputBox, errors.password ? styles.inputError : null]}>
+                        <Ionicons name="lock-closed-outline" size={20} color="#475569" style={styles.inputIcon} />
+                        <TextInput
+                          ref={passwordInputRef}
+                          style={[styles.textInput, { fontFamily: serifFont }]}
+                          placeholder="Enter your password"
+                          placeholderTextColor="#94A3B8"
+                          value={password}
+                          onChangeText={(t) => {
+                            setPassword(t);
+                            setErrors((prev) => ({ ...prev, password: undefined }));
+                          }}
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          editable={!loading}
+                          returnKeyType="done"
+                          onSubmitEditing={handleLogin}
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowPassword(!showPassword)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons
+                            name={showPassword ? "eye-off-outline" : "eye-outline"}
+                            size={20}
+                            color="#475569"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.actionButton}
+                        onPress={handleLogin}
+                        disabled={loading}
+                      >
+                        <Text style={[styles.actionButtonText, { fontFamily: serifFont }]}>
+                          {loading ? 'Signing In...' : 'Continue'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                  </Animated.View>
+                </View>
+
+                {/* Disclaimer Links */}
+                <View style={styles.disclaimerContainer}>
+                  <Text style={[styles.disclaimerText, { fontFamily: serifFont }]}>
+                    by proceeding you agree to our{' '}
+                    <Text style={[styles.linkText, { fontFamily: serifFont }]} onPress={() => openLink('https://acedigital.cc/terms')}>
+                      terms of use
+                    </Text>{' '}
+                    &{' '}
+                    <Text style={[styles.linkText, { fontFamily: serifFont }]} onPress={() => openLink('https://acedigital.cc/privacy')}>
+                      privacy policy
+                    </Text>
+                  </Text>
+                </View>
+
               </View>
-
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={[styles.forgotText, { color: c.primary }]}>Forgot password?</Text>
-              </TouchableOpacity>
-
-              <Button
-                title="Continue"
-                onPress={handleLogin}
-                loading={loading}
-                disabled={loading}
-                size="lg"
-                style={styles.submitBtn}
-              />
             </Animated.View>
-
-            <Animated.Text style={[
-              styles.footer, 
-              { 
-                color: c.textTertiary,
-                opacity: fadeAnimFooter,
-                transform: [{ translateY: slideAnimFooter }]
-              }
-            ]}>
-              Powered by Ace Digital OS v1.0
-            </Animated.Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  flex: { flex: 1 },
-  bgOrb: {
-    position: 'absolute',
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-    filter: 'blur(40px)',
+  container: {
+    flex: 1,
+    backgroundColor: '#050B14',
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing[6],
-    paddingVertical: spacing[10],
+    justifyContent: 'flex-end',
+    paddingBottom: Platform.OS === 'ios' ? spacing[10] : spacing[6],
   },
-  brandSection: {
-    alignItems: 'center',
-    marginBottom: spacing[8],
+  cardContainer: {
+    width: CARD_WIDTH,
+    marginHorizontal: 20,
+    marginBottom: spacing[4],
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 10,
   },
-  logoOuterCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  blurBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cardContent: {
+    padding: CARD_PADDING,
+  },
+  formViewPort: {
+    width: SLIDE_WIDTH,
+    overflow: 'hidden',
+    minHeight: 180,
+  },
+  slideTrack: {
+    flexDirection: 'row',
+    width: SLIDE_WIDTH * 2 + CARD_PADDING,
+  },
+  slideView: {
+    width: SLIDE_WIDTH,
+  },
+  passwordHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing[4],
   },
-  logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  backLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  backText: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: 2,
+    marginBottom: spacing[3],
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    height: 54,
+    paddingHorizontal: 16,
+    shadowColor: 'rgba(0, 0, 0, 0.03)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0F172A',
+    fontWeight: '500',
+    height: '100%',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 6,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  actionButton: {
+    backgroundColor: '#334155', // Slate-700
+    borderRadius: 14,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    marginTop: spacing[5],
+    shadowColor: '#334155',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  brandTitle: { ...typography.h1, marginBottom: spacing[1] },
-  brandSubtitle: { ...typography.bodyMedium },
-  formCard: {
-    borderRadius: radius['2xl'],
-    padding: spacing[6],
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  formTitle: {
-    ...typography.h3,
-    marginBottom: spacing[6],
-    fontWeight: '700',
-  },
-  passwordContainer: { position: 'relative' },
-  eyeIcon: {
-    position: 'absolute',
-    right: spacing[4],
-    zIndex: 10,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing[6],
-    marginTop: -spacing[2],
-  },
-  forgotText: { ...typography.captionMedium, fontWeight: '600' },
-  submitBtn: {
-    borderRadius: radius.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  footer: {
-    ...typography.caption,
-    textAlign: 'center',
-    marginTop: spacing[10],
-    fontWeight: '500',
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  disclaimerContainer: {
+    marginTop: spacing[5],
+    alignItems: 'center',
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  linkText: {
+    color: '#0F172A',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
