@@ -34,7 +34,6 @@
   },
   "dependencies": {
     "expo": "~54.0.35",
-    "expo-router": "~6.0.24",
-    "react-native-reanimated": "~3.17.4"
+    "expo-router": "~6.0.24"
   }
 }
