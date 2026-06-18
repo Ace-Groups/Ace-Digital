@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "cc.acedigital.app",
+      "sha256_cert_fingerprints": [
+        "70:BA:E7:A2:99:37:12:4E:26:27:A6:80:9A:C3:47:39:42:D6:25:88:BB:36:F0:80:D0:8F:E8:06:4E:09:3D:9D"
+      ]
+    }
+  }
+]

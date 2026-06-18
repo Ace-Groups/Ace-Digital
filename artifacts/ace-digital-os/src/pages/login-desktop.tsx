@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { Link } from "wouter";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AceLogoParticles } from "@/components/AceLogoParticles";
 import { LoginBackground } from "@/components/LoginBackground";
@@ -206,7 +207,13 @@ export default function LoginDesktopLayout({
               onSubmit={onSubmit}
               onForgotPassword={onForgotPassword}
             />
-            <p className="mt-6 text-xs text-white/40">Secure access. Authorized personnel only.</p>
+            <p className="mt-6 text-xs text-white/40">
+              Secure access. Authorized personnel only.
+              <br />
+              <Link href="/privacy" className="hover:text-white transition-colors underline">Privacy Policy</Link>
+              {" • "}
+              <Link href="/terms" className="hover:text-white transition-colors underline">Terms of Service</Link>
+            </p>
           </div>
         </div>
       </div>

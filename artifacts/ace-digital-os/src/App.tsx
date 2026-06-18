@@ -50,6 +50,8 @@ const InternsPage = lazyWithReload(() => import("@/pages/interns"));
 const CredentialsPage = lazyWithReload(() => import("@/pages/credentials"));
 const VerifyProfilePage = lazyWithReload(() => import("@/pages/verify-profile"));
 const VerifyCertificateRedirectPage = lazyWithReload(() => import("@/pages/verify-certificate"));
+const PrivacyPage = lazyWithReload(() => import("@/pages/privacy"));
+const TermsPage = lazyWithReload(() => import("@/pages/terms"));
 
 const AUTH_ONLY_PATHS = new Set(["/change-password", "/settings"]);
 
@@ -156,6 +158,8 @@ function AppRouter() {
     <Suspense fallback={<PageFallback />}>
       <Switch>
         <Route path="/login" component={LoginRoute} />
+        <Route path="/privacy" component={PrivacyPage} />
+        <Route path="/terms" component={TermsPage} />
         <Route path="/v/verification/:employeeCode" component={VerifyProfilePage} />
         <Route path="/v/:slug" component={VerifyProfilePage} />
         <Route path="/verify/cert/:code" component={VerifyCertificateRedirectPage} />

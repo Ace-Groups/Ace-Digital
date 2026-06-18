@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { Link } from "wouter";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Shield } from "lucide-react";
 import {
   Form,
@@ -181,6 +182,14 @@ export function MobileLoginScreen({
             </form>
           </Form>
         </section>
+
+        <p className="text-center text-xs text-muted-foreground/60 mt-1">
+          Secure access. Authorized personnel only.
+          <br />
+          <Link href="/privacy" className="hover:text-primary transition-colors underline">Privacy Policy</Link>
+          {" • "}
+          <Link href="/terms" className="hover:text-primary transition-colors underline">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );
