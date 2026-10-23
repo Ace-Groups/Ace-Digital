@@ -20,3 +20,4 @@ dump.rdb
 .commandcode/
 Mascot/
 .cursor/skills/impeccable/scripts/bin/
+**/__pycache__/
