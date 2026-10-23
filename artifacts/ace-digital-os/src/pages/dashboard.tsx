@@ -1,14 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { DashboardMobile } from "@/components/dashboard/DashboardMobile";
-import { DashboardDesktop } from "@/components/dashboard/DashboardDesktop";
+import { RoleHome } from "@/components/dashboard/RoleHome";
 
 export default function DashboardPage() {
-  const isMobile = useIsMobile();
-
   return (
-    <AppLayout title="">
-      {isMobile ? <DashboardMobile /> : <DashboardDesktop />}
+    <AppLayout title="Home">
+      <RoleHome />
     </AppLayout>
   );
 }

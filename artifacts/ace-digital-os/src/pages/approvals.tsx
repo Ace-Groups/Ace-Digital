@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CanvasPanel, PageCanvasShell } from "@/components/canvas";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +24,7 @@ import { statusColor, cn, formatCurrency, formatRelativeTime } from "@/lib/utils
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { getMonth } from "@/lib/attendance-api";
 import {
   appendListItem,
   patchListItem,
@@ -40,6 +41,8 @@ const createSchema = z.object({
   title: z.string().min(1, "Title required"),
   description: z.string().optional(),
   amount: z.string().optional(),
+  leaveStart: z.string().optional(),
+  leaveEnd: z.string().optional(),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -57,20 +60,54 @@ export default function ApprovalsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { canApprove } = usePermissions();
-  const [open, setOpen] = useState(false);
+  const leaveDeepLink = new URLSearchParams(window.location.search).get("new") === "leave";
+  const [open, setOpen] = useState(leaveDeepLink);
+  const [leaveUsed, setLeaveUsed] = useState<number | null>(null);
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { type: "EXPENSE", title: "" },
+    defaultValues: { type: leaveDeepLink ? "LEAVE" : "EXPENSE", title: "", leaveStart: "", leaveEnd: "" },
   });
+  const requestType = form.watch("type");
+  const waitingLeave = (allApprovals ?? []).filter(
+    (item) => item.type === "LEAVE" && item.status === "PENDING" && item.requestedById === user?.id,
+  ).length;
+
+  useEffect(() => {
+    if (!open || requestType !== "LEAVE" || !user?.id) return;
+    let cancelled = false;
+    const month = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+    }).format(new Date());
+    getMonth(month, user.id)
+      .then((report) => {
+        if (!cancelled) setLeaveUsed(report.totals.onLeaveDays);
+      })
+      .catch(() => {
+        if (!cancelled) setLeaveUsed(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, requestType, user?.id]);
 
   async function onSubmit(data: CreateForm) {
+    let description = data.description?.trim() ?? "";
+    if (data.type === "LEAVE") {
+      if (!data.leaveStart || !data.leaveEnd || data.leaveStart > data.leaveEnd) {
+        toast({ title: "Leave needs a start date and an end date", variant: "destructive" });
+        return;
+      }
+      description = [`${data.leaveStart} to ${data.leaveEnd}`, description].filter(Boolean).join("\n");
+    }
     const tempId = -Date.now();
     const optimistic: Approval = {
       id: tempId,
       type: data.type,
       title: data.title,
-      description: data.description ?? null,
+      description: description || null,
       amount: data.amount ? Number(data.amount) : null,
       requestedById: user?.id,
       requesterName: user?.fullName ?? null,
@@ -93,7 +130,7 @@ export default function ApprovalsPage() {
             data: {
               type: data.type,
               title: data.title,
-              description: data.description,
+              description: description || undefined,
               amount: data.amount ? Number(data.amount) : undefined,
             },
           }),
@@ -193,9 +230,8 @@ export default function ApprovalsPage() {
   return (
     <AppLayout title="">
       <PageCanvasShell
-        eyebrow="Workflow"
-        title="Approvals"
-        description="Submit and review leave, expense, hiring, and budget requests."
+        title="Leave and approvals"
+        description="Ask for a day away, or clear what is waiting on you."
         metrics={metrics}
         actions={
           <Button
@@ -230,7 +266,9 @@ export default function ApprovalsPage() {
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : approvals?.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">No approval requests found</div>
+          <div className="px-2 py-10 text-sm text-muted-foreground">
+            Nothing here yet. Apply for leave when you need a day away, or check back when someone sends a request.
+          </div>
         ) : approvals?.map((a) => (
           <Card key={a.id} data-testid={`approval-card-${a.id}`} className="transition-shadow hover:shadow-brand-sm">
             <CardContent className="p-4">
@@ -327,6 +365,29 @@ export default function ApprovalsPage() {
                 <FormMessage />
               </FormItem>
             )} />
+            {requestType === "LEAVE" && (
+              <p className="text-sm text-muted-foreground">
+                {leaveUsed == null
+                  ? "Checking how many leave days you have used this month."
+                  : `Used this month: ${leaveUsed} day${leaveUsed === 1 ? "" : "s"}. ${waitingLeave} of your requests ${waitingLeave === 1 ? "is" : "are"} still waiting.`}
+              </p>
+            )}
+            {requestType === "LEAVE" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField control={form.control} name="leaveStart" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Leave start</FormLabel>
+                    <FormControl><Input type="date" className="min-h-11" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="leaveEnd" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Leave end</FormLabel>
+                    <FormControl><Input type="date" className="min-h-11" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            )}
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
                 <FormLabel>Description</FormLabel>

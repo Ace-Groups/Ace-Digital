@@ -160,6 +160,7 @@ For full technical specifications on deployment paths, read the supplementary gu
 2. **[docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md)**: Cloud Run deploy commands, Secret Manager, and the Hosting rewrite.
 3. **[docs/RENDER_KEEPALIVE_CRON.md](docs/RENDER_KEEPALIVE_CRON.md)**: Why not to ping the API to keep it warm.
 4. **[FIREBASE.md](FIREBASE.md)**: Firebase project settings, security rules, push functions, and the admin password reset.
+5. **[docs/ATTENDANCE.md](docs/ATTENDANCE.md)**: Daily check-in, morning roster, lazy absences, and the owner summary API.
 
 ---
 

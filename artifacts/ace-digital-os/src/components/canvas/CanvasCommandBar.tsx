@@ -45,7 +45,7 @@ export function CanvasCommandBar({
 
       <div className="dash-command-actions">
         {actions}
-        <Link href="/notifications" className="dash-command-btn dash-command-btn--ghost">
+        <Link href="/notifications" className="dash-command-btn dash-command-btn--ghost" aria-label="Alerts">
           <Bell size={16} aria-hidden />
           <span className="hidden sm:inline">Alerts</span>
         </Link>
@@ -54,6 +54,7 @@ export function CanvasCommandBar({
             type="button"
             className="dash-command-btn dash-command-btn--primary"
             onClick={() => openWithPrompt("What needs my attention today?")}
+            aria-label="Ask Ace"
           >
             <Sparkles size={16} aria-hidden />
             <span className="hidden sm:inline">Ask Ace</span>
