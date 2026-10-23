@@ -2,37 +2,38 @@
 
 Cloud Firestore is the production source of truth. The Cloud Run API writes every record there when `USE_FIRESTORE=true`. PostgreSQL is for local development only.
 
-The employee web app is Firebase Hosting site `ace-digital-app`, meant for `https://app.acedigital.cc`. The apex domain `https://acedigital.cc` is the public marketing website and must not serve this SPA.
+The employee web app is the default Firebase Hosting site `ace-digital-int-12345` in project `ace-digital-int-12345` (display name Ace Digital Int), meant for `https://app.acedigital.cc`. The apex domain `https://acedigital.cc` is the public marketing website and must not serve this SPA. A second site named `ace-digital-app` is not used.
 
 ## Live services
 
 | Surface | URL |
 |---------|-----|
-| Web app (after the owner creates the site) | https://app.acedigital.cc and https://ace-digital-app.web.app |
-| REST and Socket.IO | Same origin, Hosting rewrite to Cloud Run `ace-digital-api` in `asia-south1` |
-| Health check | https://ace-digital-app.web.app/api/healthz |
+| Web app | https://app.acedigital.cc, https://ace-digital-int-12345.web.app, and https://ace-digital-int-12345.firebaseapp.com |
+| REST API | Same origin `/api`, Hosting rewrite to Cloud Run `ace-digital-api` in `asia-south1` |
+| Health check | https://ace-digital-int-12345.web.app/api/healthz |
 | Marketing site (not this app) | https://acedigital.cc |
 
-`https://ace-digital-os.web.app` was a previous documented host and was returning Firebase “Site Not Found” when last checked. New deploys go to the `ace-digital-app` target in `.firebaserc`.
+Project id is `ace-digital-int-12345`. Firestore in that project starts empty. Create the owner with `bootstrap:owner` before asking anyone to log in. See [FIREBASE.md](../FIREBASE.md).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   Browser[Browser SPA]
-  Hosting[Firebase Hosting ace-digital-app]
+  Hosting[Firebase Hosting ace-digital-int-12345]
   Run[Cloud Run ace-digital-api]
   Firestore[(Cloud Firestore)]
 
   Browser --> Hosting
-  Hosting -->|/api and /socket.io| Run
-  Run -->|source of truth| Firestore
-  Browser -->|read-only onSnapshot| Firestore
+  Hosting -->|/api| Run
+  Run -->|writes| Firestore
+  Browser -->|onSnapshot, member-scoped| Firestore
 ```
 
-- Cloud Run handles authenticated REST and Socket.IO. Minimum instances are 0. Billing is request-based.
+- Cloud Run handles authenticated REST. Minimum instances are 0. Billing is request-based. Chat does not open a WebSocket, so an open chat page does not keep an instance alive.
 - Firestore is the source of truth for users, tasks, payroll, chat, and the rest of the API data.
-- Client Firestore writes are denied by rules. Chat members can read mirrored messages.
+- The API mints a Firebase custom token at login. Security rules allow a signed-in member to read `channels/{id}` and `channels/{id}/messages`, and deny client writes. Sends stay on `POST /api/v1/channels/:id/messages`.
+- If the custom token cannot be minted, the chat page polls every 5 seconds while the tab is visible and pauses while it is hidden.
 - Chat persistence does not need Redis. A message is written inline unless `REDIS_URL` is set.
 
 ## Deploy
@@ -44,7 +45,7 @@ ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
 pnpm run deploy:hosting
 ```
 
-`pnpm run deploy:hosting` builds the SPA without `VITE_API_BASE_URL` and deploys Hosting target `ace-digital-app`.
+`pnpm run deploy:hosting` builds the SPA without `VITE_API_BASE_URL` and deploys the default Hosting site `ace-digital-int-12345`. Pass `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, and `VITE_FIREBASE_MESSAGING_SENDER_ID` from `firebase apps:sdkconfig` so chat can use Firestore listeners. Without those, chat polls.
 
 ## Expected monthly cost (12 people)
 
@@ -52,9 +53,7 @@ Prices below are from the Cloud Run request-based table on [cloud.google.com/run
 
 | Workload | Rough result |
 |----------|----------------|
-| Daytime bursts, chat not left open. Order of tens of thousands of sub-second requests. | Inside the free quota. **About $0** for Cloud Run. |
-| 12 people leave one shared chat socket up ~6 hours × 20 weekdays (one 1 vCPU instance, concurrency 80). 432,000 vCPU-seconds. | Past the 180,000 free seconds. About **$6** of CPU. 512Mi memory for that time stays inside 360,000 GiB-seconds. |
-| Same pattern for ~8 hours × 22 weekdays. | About **$11** of CPU. |
+| Daytime use for 12 people. Chat listeners are Firestore reads. API calls are short (send, login, page loads). | Inside the free quota. **About $0.** An open chat page does not hold a Cloud Run instance. |
 
 Firestore, Hosting, and the push Cloud Functions for this team stay inside their own free quotas. Cloud Build’s daily free minutes cover an occasional image build. Artifact Registry’s free storage covers one small image; above that it is cents.
 
@@ -62,12 +61,12 @@ Egress from Mumbai is not the North America 1 GiB free tier. JSON for this team 
 
 **Blaze is required** to create Cloud Run. Linking billing upgrades Spark to Blaze. There is no flat Blaze fee. The bill is usage above free tier.
 
-Set a [budget alert at $10](https://console.cloud.google.com/billing/budgets?project=ace-digital-os) so mail goes out before a surprise. Use an alert, not a hard spend cap. A spend cap pauses Cloud Run and the API returns 5xx until the next month or until someone lifts the cap.
+Set a [budget alert at $10](https://console.cloud.google.com/billing/budgets?project=ace-digital-int-12345) so mail goes out before a surprise. Use an alert, not a hard spend cap. A spend cap pauses Cloud Run and the API returns 5xx until the next month or until someone lifts the cap.
 
 ## Verify
 
-1. Check `https://ace-digital-app.web.app/api/healthz` after Hosting is deployed.
-2. Log in at `https://app.acedigital.cc` (or `https://ace-digital-app.web.app` before DNS).
+1. Check `https://ace-digital-int-12345.web.app/api/healthz` after Hosting is deployed.
+2. Log in at `https://app.acedigital.cc` (or `https://ace-digital-int-12345.web.app` before DNS) as the user created by `bootstrap:owner`.
 3. Send a channel message.
 4. Confirm a second authenticated browser receives the update without refreshing.
 

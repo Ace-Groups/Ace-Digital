@@ -28,15 +28,15 @@ flowchart TD
   Firestore[(Cloud Firestore)]
 
   Browser -->|1. Loads SPA| Hosting
-  Browser -->|2. REST and sockets via Hosting rewrite| API
+  Browser -->|2. REST via Hosting rewrite| API
   API -->|3. Source of truth| Firestore
   Browser -->|4. Realtime chat onSnapshot| Firestore
 ```
 
-1. **REST Operations**: Authenticated actions go to the Express API on Cloud Run (`asia-south1`, minimum instances 0, request-based billing). Firebase Hosting rewrites `/api/**` and `/socket.io/**` to that service.
+1. **REST Operations**: Authenticated actions go to the Express API on Cloud Run (`asia-south1`, minimum instances 0, request-based billing). Firebase Hosting rewrites `/api/**` to that service. Requests are short, so the service scales to zero between them.
 2. **Data consistency**: Cloud Firestore is the production source of truth for every API write (`USE_FIRESTORE=true`). PostgreSQL is the local development database only. Chat does not need Redis.
 3. **Real-time chat**: The API writes messages to Firestore. The client reads them with `onSnapshot`. Firestore security rules deny client writes.
-4. **Web host**: The employee app is a Firebase Hosting site named `ace-digital-app`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app.
+4. **Web host**: The employee app is the default Firebase Hosting site `ace-digital-int-12345` in project `ace-digital-int-12345`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app.
 
 ---
 
@@ -48,7 +48,7 @@ flowchart TD
 - **Database & ORM**: Cloud Firestore in production. PostgreSQL + Drizzle ORM for local development. Zod schema validation
 - **API Spec & Codegen**: OpenAPI v3 (source spec in [openapi.yaml](file:///Users/kavin/Documents/GitHub/Ace%20Digital/lib/api-spec/openapi.yaml)) + Orval for automated client query hook and validator generation
 - **Authentication**: JSON Web Tokens (JWT) Bearer auth, bcryptjs hashing
-- **Deployment Surfaces**: Firebase Hosting site `ace-digital-app` (SPA, `app.acedigital.cc`), Cloud Run `ace-digital-api` in `asia-south1` (API, scale to zero), Cloud Firestore (production data)
+- **Deployment Surfaces**: Firebase Hosting default site `ace-digital-int-12345` (SPA, `app.acedigital.cc`), Cloud Run `ace-digital-api` in `asia-south1` (API, scale to zero), Cloud Firestore in `ace-digital-int-12345` (production data)
 
 ---
 

@@ -1,12 +1,5 @@
 {
   "projects": {
-    "default": "ace-digital-os"
-  },
-  "targets": {
-    "ace-digital-os": {
-      "hosting": {
-        "ace-digital-app": ["ace-digital-app"]
-      }
-    }
+    "default": "ace-digital-int-12345"
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Creates or updates Kavin's admin user in Firestore (no Cloud Functions required).
- * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 \
  *   ADMIN_PASSWORD='choose-a-new-password' \
  *   pnpm --filter @workspace/scripts run upsert:kavin
  */

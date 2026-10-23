@@ -5,10 +5,10 @@
 #
 # One-time repository (only if you use this file instead of --source):
 #   gcloud artifacts repositories create ace-digital \
-#     --repository-format=docker --location=asia-south1 --project=ace-digital-os
+#     --repository-format=docker --location=asia-south1 --project=ace-digital-int-12345
 #
 # Submit:
-#   gcloud builds submit --config cloudbuild.api.yaml --project ace-digital-os
+#   gcloud builds submit --config cloudbuild.api.yaml --project ace-digital-int-12345
 
 substitutions:
   _REGION: asia-south1
@@ -46,7 +46,7 @@ steps:
       - --cpu-throttling
       - --cpu-boost
       - --allow-unauthenticated
-      - '--set-env-vars=^::^NODE_ENV=production::USE_FIRESTORE=true::GCLOUD_PROJECT=$PROJECT_ID::FIREBASE_PROJECT_ID=$PROJECT_ID::GOOGLE_CLOUD_PROJECT=$PROJECT_ID::APP_URL=https://app.acedigital.cc::APP_LOGIN_URL=https://app.acedigital.cc/login::API_PUBLIC_URL=https://app.acedigital.cc::FIREBASE_STORAGE_BUCKET=ace-digital-os.firebasestorage.app::GEMINI_MODEL=gemini-2.0-flash::EMAIL_FROM=Ace Digital <no-reply@acedigital.cc>::CORS_ORIGINS=https://app.acedigital.cc,https://ace-digital-app.web.app,https://ace-digital-app.firebaseapp.com'
+      - '--set-env-vars=^::^NODE_ENV=production::USE_FIRESTORE=true::GCLOUD_PROJECT=$PROJECT_ID::FIREBASE_PROJECT_ID=$PROJECT_ID::GOOGLE_CLOUD_PROJECT=$PROJECT_ID::APP_URL=https://app.acedigital.cc::APP_LOGIN_URL=https://app.acedigital.cc/login::API_PUBLIC_URL=https://app.acedigital.cc::FIREBASE_STORAGE_BUCKET=$PROJECT_ID.firebasestorage.app::FIREBASE_DATABASE_URL=https://$PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app::GEMINI_MODEL=gemini-2.0-flash::EMAIL_FROM=Ace Digital <no-reply@acedigital.cc>::CORS_ORIGINS=https://app.acedigital.cc,https://ace-digital-int-12345.web.app,https://ace-digital-int-12345.firebaseapp.com'
       - --set-secrets=JWT_SECRET=JWT_SECRET:latest
 
 images:

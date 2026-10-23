@@ -6,8 +6,8 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ## 🔗 Direct Dashboard Links
 
-* **Firebase Console**: [console.firebase.google.com/project/ace-digital-os](https://console.firebase.google.com/project/ace-digital-os)
-* **Google Cloud Console**: [console.cloud.google.com](https://console.cloud.google.com/run?project=ace-digital-os)
+* **Firebase Console**: [console.firebase.google.com/project/ace-digital-int-12345](https://console.firebase.google.com/project/ace-digital-int-12345)
+* **Google Cloud Console**: [console.cloud.google.com](https://console.cloud.google.com/run?project=ace-digital-int-12345)
 * **Expo Developer Dashboard**: [expo.dev](https://expo.dev)
 * **Google Play Console**: [play.google.com/console](https://play.google.com/console)
 * **Apple Developer Portal**: [developer.apple.com/account](https://developer.apple.com/account)
@@ -17,13 +17,14 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ## 1. Domain Configuration
 
-`acedigital.cc` is the public marketing website. Leave its apex and `www` records alone. The employee app uses the subdomain `app.acedigital.cc` on Firebase Hosting site `ace-digital-app`.
+`acedigital.cc` is the public marketing website. Leave its apex and `www` records alone. The employee app uses the subdomain `app.acedigital.cc` on the default Firebase Hosting site `ace-digital-int-12345` in project `ace-digital-int-12345`.
 
-### A. Employee app (Firebase Hosting site `ace-digital-app`)
-1. Create the site once: `npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os`
+### A. Employee app (default Hosting site `ace-digital-int-12345`)
+1. Do not create a second site. `firebase.json` already sets `"site": "ace-digital-int-12345"`.
 2. Deploy: `pnpm run deploy:hosting` (only after Cloud Run service `ace-digital-api` exists — see [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md))
-3. In **Firebase Console** -> **Hosting** -> site **ace-digital-app** -> **Add custom domain** -> `app.acedigital.cc`.
-4. Add the DNS records Firebase shows. For this subdomain that is usually a TXT record to prove you own the domain, then a **CNAME** for host `app` pointing at `ace-digital-app.web.app`. Use the values Firebase prints if they differ.
+3. In **Firebase Console** -> **Hosting** -> site **ace-digital-int-12345** -> **Add custom domain** -> `app.acedigital.cc`.
+4. Add the DNS records Firebase shows. For this subdomain that is usually a TXT record to prove you own the domain, then a **CNAME** for host `app` pointing at `ace-digital-int-12345.web.app`. Use the values Firebase prints if they differ.
+5. On the empty Firestore, create the owner before login: `USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 ADMIN_EMAIL='admin@acedigital.cc' ADMIN_PASSWORD='at-least-12-characters' pnpm --filter @workspace/scripts run bootstrap:owner`
 
 ### B. Backend API (Cloud Run)
 
@@ -40,7 +41,7 @@ That sets min instances 0, max instances 2, region `asia-south1`, request-based 
 | Type | Host/Name | Value/Points To | Purpose |
 |---|---|---|---|
 | **TXT** | *(what Firebase shows)* | *(copy from Firebase)* | Prove you own `acedigital.cc` for the `app` host |
-| **CNAME** | `app` | `ace-digital-app.web.app` | Employee app. Do not change the apex `@` record |
+| **CNAME** | `app` | `ace-digital-int-12345.web.app` | Employee app. Do not change the apex `@` record |
 
 ---
 
@@ -54,10 +55,10 @@ That sets min instances 0, max instances 2, region `asia-south1`, request-based 
 |---|---|
 | `NODE_ENV` | `production` |
 | `USE_FIRESTORE` | `true` |
-| `FIREBASE_PROJECT_ID` | `ace-digital-os` |
-| `GOOGLE_CLOUD_PROJECT` | `ace-digital-os` |
+| `FIREBASE_PROJECT_ID` | `ace-digital-int-12345` |
+| `GOOGLE_CLOUD_PROJECT` | `ace-digital-int-12345` |
 | `JWT_SECRET` | Secret Manager secret `JWT_SECRET` (mounted, not a plain env var). |
-| `CORS_ORIGINS` | `https://app.acedigital.cc,https://ace-digital-app.web.app,https://ace-digital-app.firebaseapp.com` |
+| `CORS_ORIGINS` | `https://app.acedigital.cc,https://ace-digital-int-12345.web.app,https://ace-digital-int-12345.firebaseapp.com` |
 | `APP_URL` | `https://app.acedigital.cc` |
 | `APP_LOGIN_URL` | `https://app.acedigital.cc/login` |
 | `API_PUBLIC_URL` | `https://app.acedigital.cc` |
@@ -110,7 +111,7 @@ pnpm run deploy:hosting
 App Store reviewers (Apple and Google) **will reject your app** if you do not provide a working test account.
 1. Run the RBAC seeding script locally targeting your production Firestore instance:
    ```bash
-   CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run seed:rbac-dev
+   CONFIRM_RESET=ace-digital-int-12345 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 pnpm --filter @workspace/scripts run seed:rbac-dev
    ```
    *Note: Ensure you have authenticated using the Firebase CLI (`firebase login`) and have owner rights on the project.*
 2. Write down the reviewer credentials (e.g., `reviewer@acedigital.cc` / `ReviewerPassword@123`) and submit them under the **App Review Information** fields in App Store Connect and Google Play Console.

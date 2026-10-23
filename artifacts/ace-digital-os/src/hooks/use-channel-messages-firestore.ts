@@ -101,7 +101,7 @@ function mergeMessageLists(existing: Message[], incoming: Message[]): Message[] 
 /**
  * Real-time Firestore subscription for channel messages.
  * Uses channels/{channelId}/messages subcollection, ordered by createdAt asc, limit 100.
- * Merges into React Query cache (preserves enriched HTTP/socket fields).
+ * Merges into React Query cache (preserves enriched HTTP fields).
  */
 export function useChannelMessagesFirestore(
   channelId: number | null,

@@ -1552,6 +1552,7 @@ export function createFirestoreStore() {
         {
           lastPostAt: row.createdAt,
           messageCount: prevCount + 1,
+          lastMessagePreview: messageListPreview(row.body, row.messageKind),
         },
         { merge: true },
       );

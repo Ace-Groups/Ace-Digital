@@ -132,14 +132,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
         timeout: 120_000,
         proxyTimeout: 120_000,
       },
-      "/socket.io": {
-        target: apiProxyTarget,
-        ws: true,
-        changeOrigin: true,
-        secure: true,
-        timeout: 120_000,
-        proxyTimeout: 120_000,
-      },
     },
   },
   preview: {

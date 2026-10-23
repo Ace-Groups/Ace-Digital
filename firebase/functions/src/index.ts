@@ -19,8 +19,8 @@ function applyRuntimeSecrets(): void {
   const secret = jwtSecret.value()?.trim();
   if (!secret || secret.length < 32) {
     throw new Error(
-      "[ace-digital-os] JWT_SECRET is missing or too short (need 32+ chars). " +
-        "Run: firebase functions:secrets:set JWT_SECRET --project ace-digital-os",
+      "[ace-digital-int-12345] JWT_SECRET is missing or too short (need 32+ chars). " +
+        "Run: firebase functions:secrets:set JWT_SECRET --project ace-digital-int-12345",
     );
   }
   process.env.JWT_SECRET = secret;
@@ -78,7 +78,6 @@ export const api = functions
     timeoutSeconds: 120,
     maxInstances: 10,
     secrets: [jwtSecret, resendApiKey, emailFrom, geminiApiKey],
-    serviceAccount: "firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com",
   })
   .https.onRequest(async (req: functions.https.Request, res: functions.Response) => {
     try {

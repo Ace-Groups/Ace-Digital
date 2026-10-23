@@ -1,6 +1,6 @@
 import type { MessageAttachment } from "@workspace/db";
 import { store } from "@workspace/db";
-import { messagePreview, messageToJson } from "./message-attachments";
+import { messagePreview } from "./message-attachments";
 import { notifyChannelMembers } from "./chat-notify";
 import { extractMentionedUserIds } from "./chat-mentions";
 import { triggerAceBot } from "./acebot";
@@ -44,18 +44,6 @@ export async function persistMessageJob(data: PersistMessageJob): Promise<void> 
     deletedById: null,
     senderName: data.senderName,
     senderAvatar: data.senderAvatar,
-  });
-
-  const persisted = messageToJson(
-    message,
-    data.senderName ?? "Former teammate",
-    data.senderAvatar ?? null,
-  );
-
-  const { broadcastMessagePersisted } = await import("./chat-socket-broadcast");
-  broadcastMessagePersisted(data.channelId, {
-    clientId: data.clientId,
-    message: persisted,
   });
 
   if (data.body.includes("@AceBot")) {

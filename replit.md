@@ -6,8 +6,8 @@ An internal company operating system for Ace Digital — an IT company. Manages 
 
 | | URL |
 |--|-----|
-| App | https://app.acedigital.cc (Firebase Hosting site `ace-digital-app`) |
-| API + sockets | Same origin on the Hosting site (Cloud Run `ace-digital-api`, `asia-south1`) |
+| App | https://app.acedigital.cc (Firebase Hosting site `ace-digital-int-12345`) |
+| API | Same origin `/api` on the Hosting site (Cloud Run `ace-digital-api`, `asia-south1`) |
 
 Production data lives in Cloud Firestore (`USE_FIRESTORE=true`). PostgreSQL is the local database only.
 

@@ -23,7 +23,7 @@ function storageBucket() {
     process.env.GCLOUD_PROJECT ??
     process.env.FIREBASE_PROJECT_ID ??
     process.env.GOOGLE_CLOUD_PROJECT ??
-    "ace-digital-os";
+    "ace-digital-int-12345";
   return getStorage().bucket(`${projectId}.firebasestorage.app`);
 }
 

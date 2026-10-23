@@ -755,10 +755,6 @@ router.post(
       );
       res.status(201).json(createdJson);
 
-      void import("../lib/chat-socket-broadcast").then(({ broadcastMessageNew }) => {
-        broadcastMessageNew(id, createdJson);
-      });
-
       setImmediate(() => {
         void (async () => {
           try {

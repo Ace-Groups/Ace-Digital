@@ -3,10 +3,13 @@ import { createPortal } from "react-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useListChannels,
+  useListDms,
   useGetChannelMessages,
   useListChannelMembers,
   getGetChannelMessagesQueryKey,
   getListChannelMembersQueryKey,
+  getListChannelsQueryKey,
+  getListDmsQueryKey,
   type Message,
   type MessageInput,
 } from "@workspace/api-client-react";
@@ -15,10 +18,8 @@ import { CHANNEL_MESSAGE_PARAMS } from "@/hooks/use-room-message-list";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useChannelMessagesRealtime } from "@/hooks/use-channel-messages-realtime";
 import { useChannelMessagesFirestore } from "@/hooks/use-channel-messages-firestore";
-import { useChannelActivityRealtime } from "@/hooks/use-channel-activity-realtime";
-import { useSocket } from "@/contexts/SocketContext";
+import { useChannelsActivityRealtime } from "@/hooks/use-channel-activity-realtime";
 import { useRoomMessageList, useMessageListSyncKey } from "@/hooks/use-room-message-list";
 import { useSendChannelMessage } from "@/hooks/use-send-channel-message";
 import { canDeleteMessage, canManageChannel, canPostInChannel } from "@workspace/rbac";
@@ -72,6 +73,7 @@ export default function ChannelsPage() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: channels, isLoading: channelsLoading } = useListChannels();
+  const { data: dms } = useListDms();
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(() =>
     parseChannelIdFromSearch(),
   );
@@ -172,10 +174,21 @@ export default function ChannelsPage() {
       setFirebaseLive(false);
       return;
     }
-    void ensureFirebaseAuth().then((ok) => setFirebaseLive(ok && isFirebaseRealtimeEnabled()));
+    let cancelled = false;
+    void ensureFirebaseAuth().then((ok) => {
+      if (!cancelled) setFirebaseLive(ok && isFirebaseRealtimeEnabled());
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const { connected: socketConnected } = useSocket();
+  const membershipIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const channel of channels ?? []) ids.add(channel.id);
+    for (const channel of dms ?? []) ids.add(channel.id);
+    return [...ids];
+  }, [channels, dms]);
 
   const { data: latestMessages, isPending: messagesPending } = useGetChannelMessages(
     selectedChannelId ?? 0,
@@ -185,7 +198,10 @@ export default function ChannelsPage() {
         enabled: !!selectedChannelId,
         queryKey: getGetChannelMessagesQueryKey(selectedChannelId ?? 0, CHANNEL_MESSAGE_PARAMS),
         staleTime: 120_000,
-        refetchInterval: firebaseLive ? false : 3_000,
+        refetchInterval: () => {
+          if (firebaseLive || document.hidden) return false;
+          return 5_000;
+        },
         placeholderData: (previousData) =>
           previousData ??
           (selectedChannelId
@@ -197,9 +213,9 @@ export default function ChannelsPage() {
     },
   );
 
-  const realtimeReady = threadActive && !!selectedChannelId && socketConnected;
-  const activityRealtimeReady =
-    threadActive && !!selectedChannelId && isFirebaseChatEnabled() && firebaseLive;
+  const firestoreReady =
+    threadActive && !!selectedChannelId && firebaseLive && channels !== undefined;
+  const activityReady = firebaseLive && channels !== undefined;
 
   const {
     messages: roomMessages,
@@ -209,7 +225,6 @@ export default function ChannelsPage() {
     appendMessage,
     patchMessage,
     replaceMessageByClientId,
-    upsertMessage,
     isLoading: roomLoading,
   } = useRoomMessageList(selectedChannelId, !!selectedChannelId);
 
@@ -226,12 +241,26 @@ export default function ChannelsPage() {
     if (msgs !== undefined) syncFromQuery(msgs);
   }, [messageSyncKey, syncFromQuery]);
 
-  useChannelMessagesRealtime(selectedChannelId, realtimeReady, {
-    onUpsert: upsertMessage,
-    onPersisted: replaceMessageByClientId,
-  });
-  useChannelMessagesFirestore(selectedChannelId, activityRealtimeReady);
-  useChannelActivityRealtime(selectedChannelId, activityRealtimeReady);
+  useChannelMessagesFirestore(selectedChannelId, firestoreReady);
+  useChannelsActivityRealtime(membershipIds, activityReady);
+
+  useEffect(() => {
+    if (firebaseLive) return;
+    const refreshLists = () => {
+      if (document.hidden) return;
+      void queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getListDmsQueryKey() });
+    };
+    const onVisible = () => {
+      if (!document.hidden) refreshLists();
+    };
+    const timer = window.setInterval(refreshLists, 5_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [firebaseLive, queryClient]);
 
   const { queuePending, flushPending, markPendingFailed } = useSendChannelMessage(
     selectedChannelId,

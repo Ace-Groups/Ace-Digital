@@ -1,7 +1,7 @@
 {
   "database": [
     {
-      "instance": "ace-digital-os-default-rtdb",
+      "instance": "ace-digital-int-12345-default-rtdb",
       "rules": "firebase/database.rules.json"
     }
   ],
@@ -13,19 +13,12 @@
     "rules": "firebase/storage.rules"
   },
   "hosting": {
-    "target": "ace-digital-app",
+    "site": "ace-digital-int-12345",
     "public": "artifacts/ace-digital-os/dist/public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/api/**",
-        "run": {
-          "serviceId": "ace-digital-api",
-          "region": "asia-south1"
-        }
-      },
-      {
-        "source": "/socket.io/**",
         "run": {
           "serviceId": "ace-digital-api",
           "region": "asia-south1"

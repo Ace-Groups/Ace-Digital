@@ -1,10 +1,10 @@
 # Deploy the API on Cloud Run
 
-The Express API runs as Cloud Run service `ace-digital-api` in project `ace-digital-os`, region `asia-south1` (Mumbai). That region is Tier 1 pricing and is supported for a Firebase Hosting rewrite. Firestore already lives in `asia-south1`.
+The Express API runs as Cloud Run service `ace-digital-api` in project `ace-digital-int-12345` (display name Ace Digital Int), region `asia-south1` (Mumbai). That region is Tier 1 pricing and is supported for a Firebase Hosting rewrite. Create the default Firestore database in `asia-south1` if the console asks. The database starts empty; run `bootstrap:owner` after the API can reach it.
 
 Billing is **request-based** (`--cpu-throttling`, the Cloud Run default): CPU is charged while a request is in flight, plus startup and shutdown. Minimum instances stay at **0**. There is no paid Render service and no keepalive ping.
 
-The employee SPA stays on Firebase Hosting site `ace-digital-app`. Hosting rewrites `/api/**` and `/socket.io/**` to this service, so the browser calls `https://app.acedigital.cc` and `https://ace-digital-app.web.app` same-origin. Do not set `VITE_API_BASE_URL` for that build.
+The employee SPA uses the project's default Hosting site `ace-digital-int-12345` (not a second site named `ace-digital-app`). Hosting rewrites `/api/**` to this service, so the browser calls `https://app.acedigital.cc`, `https://ace-digital-int-12345.web.app`, and `https://ace-digital-int-12345.firebaseapp.com` same-origin. Do not set `VITE_API_BASE_URL` for that build. Chat delivery is a Firestore listener, not a Cloud Run socket. Listeners start only after the Hosting build includes this project's web SDK config.
 
 Cloud Firestore is the production source of truth. PostgreSQL is local development only. Cloud Functions stay in the project for push (`onNotificationCreated`, `onPushOutboxCreated`). They are not the public API.
 
@@ -12,18 +12,18 @@ Do not point `acedigital.cc` at this SPA.
 
 ## What you need first
 
-1. `gcloud` logged in as an owner of `ace-digital-os`, and `firebase` CLI logged in to the same account.
+1. `gcloud` logged in as an owner of `ace-digital-int-12345` (`admin@acedigital.cc`), and `firebase` CLI logged in to the same account.
 2. A billing account linked to the project (Blaze). Cloud Run cannot be created on the Spark plan. Blaze has no flat monthly fee. Confirm, do not change the plan from this repository:
 
 ```bash
-gcloud billing projects describe ace-digital-os --format='value(billingEnabled)'
+gcloud billing projects describe ace-digital-int-12345 --format='value(billingEnabled)'
 ```
 
 3. Secret Manager secret `JWT_SECRET`. Firebase `functions:secrets:set JWT_SECRET` already creates this secret. Reuse it so existing sessions stay valid. If it is missing:
 
 ```bash
 openssl rand -base64 48 | gcloud secrets create JWT_SECRET \
-  --project=ace-digital-os --data-file=- --replication-policy=automatic
+  --project=ace-digital-int-12345 --data-file=- --replication-policy=automatic
 ```
 
 The command reads the value from stdin and does not print it. Do not commit it.
@@ -42,7 +42,7 @@ That runs `scripts/deploy-cloud-run.sh`, which:
 
 - exits if `JWT_SECRET` is missing
 - enables the Cloud Run, Cloud Build, Artifact Registry, and Secret Manager APIs
-- creates runtime service account `ace-digital-api@ace-digital-os.iam.gserviceaccount.com` if needed
+- creates runtime service account `ace-digital-api@ace-digital-int-12345.iam.gserviceaccount.com` if needed
 - grants that account Firestore, Storage, Firebase Auth admin, Realtime Database admin, and `serviceAccountTokenCreator` on itself (custom tokens)
 - deploys from the root `Dockerfile` with `--min-instances=0`, `--max-instances=2`, `--cpu=1`, `--memory=512Mi`, `--concurrency=80`, `--timeout=300`, `--port=8080`, `--cpu-throttling` (request-based billing), `--cpu-boost` (startup only), and `--allow-unauthenticated`
 
@@ -53,12 +53,13 @@ Non-secret environment set by the script:
 | Name | Value |
 |------|--------|
 | `USE_FIRESTORE` | `true` |
-| `GCLOUD_PROJECT`, `FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT` | `ace-digital-os` |
+| `GCLOUD_PROJECT`, `FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT` | `ace-digital-int-12345` |
 | `APP_URL` | `https://app.acedigital.cc` |
 | `APP_LOGIN_URL` | `https://app.acedigital.cc/login` |
 | `API_PUBLIC_URL` | `https://app.acedigital.cc` |
-| `CORS_ORIGINS` | `https://app.acedigital.cc`, `https://ace-digital-app.web.app`, `https://ace-digital-app.firebaseapp.com` |
-| `FIREBASE_STORAGE_BUCKET` | `ace-digital-os.firebasestorage.app` |
+| `CORS_ORIGINS` | `https://app.acedigital.cc`, `https://ace-digital-int-12345.web.app`, `https://ace-digital-int-12345.firebaseapp.com` |
+| `FIREBASE_STORAGE_BUCKET` | `ace-digital-int-12345.firebasestorage.app` |
+| `FIREBASE_DATABASE_URL` | `https://ace-digital-int-12345-default-rtdb.asia-southeast1.firebasedatabase.app` |
 
 No `FIREBASE_SERVICE_ACCOUNT_JSON`. Cloud Run uses the runtime service account.
 
@@ -72,8 +73,8 @@ If the revision is OOM-killed while booting, redeploy with `--memory=1Gi`.
 
 ```bash
 gcloud artifacts repositories create ace-digital \
-  --repository-format=docker --location=asia-south1 --project=ace-digital-os
-gcloud builds submit --config cloudbuild.api.yaml --project ace-digital-os
+  --repository-format=docker --location=asia-south1 --project=ace-digital-int-12345
+gcloud builds submit --config cloudbuild.api.yaml --project ace-digital-int-12345
 ```
 
 The shell script is the one that checks `JWT_SECRET` and mounts optional secrets. Prefer that.
@@ -82,24 +83,49 @@ The shell script is the one that checks `JWT_SECRET` and mounts optional secrets
 
 The rewrite fails if service `ace-digital-api` does not exist yet.
 
+Create the web app once and export its SDK config into the build. Those values are not in git. Without `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, and `VITE_FIREBASE_MESSAGING_SENDER_ID`, the SPA still loads and chat polls.
+
 ```bash
-npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os
+npx firebase-tools@latest apps:create WEB "Ace Digital Int" --project ace-digital-int-12345
+npx firebase-tools@latest apps:sdkconfig WEB --project ace-digital-int-12345
+```
+
+The default Hosting site id is the project id. Do not create `ace-digital-app`.
+
+```bash
 pnpm run deploy:hosting
 ```
 
-`deploy:hosting` builds the SPA with no `VITE_API_BASE_URL` (same-origin `/api`) and deploys target `ace-digital-app`.
+`deploy:hosting` builds the SPA with no `VITE_API_BASE_URL` (same-origin `/api`) and deploys site `ace-digital-int-12345`.
 
-In Firebase Console → Hosting → `ace-digital-app` → Add custom domain `app.acedigital.cc`. Add the TXT and CNAME records Firebase shows. Leave the apex `acedigital.cc` records on the marketing site.
+In Firebase Console → Hosting → site `ace-digital-int-12345` → Add custom domain `app.acedigital.cc`. Add the TXT and CNAME records Firebase shows. The usual CNAME is host `app` pointing at `ace-digital-int-12345.web.app`. Leave the apex `acedigital.cc` records on the marketing site.
+
+## Bootstrap the empty database
+
+After Cloud Run is up (or with ADC from your laptop against the same project):
+
+```bash
+USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 \
+  ADMIN_EMAIL='admin@acedigital.cc' \
+  ADMIN_PASSWORD='at-least-12-characters' \
+  pnpm --filter @workspace/scripts run bootstrap:owner
+```
+
+That creates the Operations team, the owner (`super_admin`), the employee profile, and base counters. It does not wipe data and it does not print the password. Deploy rules in the same change:
+
+```bash
+npx firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage --project ace-digital-int-12345
+```
 
 ## Verify
 
 ```bash
-curl -sS "https://ace-digital-app.web.app/api/healthz"
+curl -sS "https://ace-digital-int-12345.web.app/api/healthz"
 ```
 
 Expect `{"status":"ok"}`. The first request after idle can take a few seconds (cold start). Later requests in the same burst are faster.
 
-Then log in at `https://ace-digital-app.web.app` (or `https://app.acedigital.cc` after DNS) and send a channel message.
+Then log in at `https://ace-digital-int-12345.web.app` (or `https://app.acedigital.cc` after DNS) with `ADMIN_EMAIL` and send a channel message.
 
 ## Cold starts
 
@@ -112,22 +138,17 @@ Minimum instances stay 0, so an idle service scales to zero. Mitigations that do
 
 Do not add a cron ping. A ping on a timer keeps an instance billable and spends the free quota. Do not set min instances.
 
-## WebSockets and the 60 second Hosting limit
+## Chat
 
-Firebase Hosting ends a proxied request at 60 seconds. Normal API calls are shorter. An open Socket.IO connection counts as in-flight work for Cloud Run request-based billing for as long as it stays open.
+Sends are `POST /api/v1/channels/:id/messages`. After login the SPA exchanges its JWT for a Firebase custom token (`GET /api/v1/auth/firebase-custom-token`) and listens with `onSnapshot` on `channels/{channelId}/messages`. Rules allow that read only when `channel_member_index/{channelId}_{userId}` exists for the caller. Client writes are denied.
 
-If chat sockets fail through Hosting, rebuild the SPA with the Cloud Run URL (Cloud Run console → service → URL):
+The deploy script grants the runtime service account `roles/iam.serviceAccountTokenCreator` on itself so it can mint those tokens. If minting fails, the chat page polls every 5 seconds while the tab is visible.
 
-```bash
-VITE_SOCKET_URL="https://ace-digital-api-HASH.asia-south1.run.app" pnpm run build:web:hosting
-npx firebase-tools@latest deploy --only hosting:ace-digital-app --project ace-digital-os
-```
-
-Add that `https://….run.app` origin to `CORS_ORIGINS` on the service if you do this. Same-origin Hosting does not need it.
+There is no `/socket.io` rewrite. Do not add one.
 
 ## Cost for this team
 
-See [PRODUCTION.md](PRODUCTION.md). Short version: about **$0** when people use the app in bursts and do not leave chat connected all day. Leaving chat sockets open through the workday can land around **$5–11** because that CPU time is past the request-based free tier. Set a [budget alert](https://console.cloud.google.com/billing/budgets?project=ace-digital-os) at $10. Prefer an email alert over a hard spend cap: a spend cap pauses Cloud Run and the API starts returning 5xx.
+See [PRODUCTION.md](PRODUCTION.md). For this 12-person team the expected Cloud Run bill is about **$0**: requests are short, and chat no longer holds an instance open. Firestore listener reads for this volume stay inside the Firestore free quota. Set a [budget alert](https://console.cloud.google.com/billing/budgets?project=ace-digital-int-12345) at $10. Prefer an email alert over a hard spend cap: a spend cap pauses Cloud Run and the API starts returning 5xx.
 
 ## Render
 

@@ -209,6 +209,7 @@ export type FirestoreMessageChange = {
 export type FirestoreChannelActivity = {
   lastPostAt: string | null;
   messageCount?: number;
+  lastMessagePreview?: string | null;
 };
 
 export function subscribeChannelMessages(
@@ -287,6 +288,9 @@ export function subscribeChannelActivity(
           lastPostAt: typeof data.lastPostAt === "string" ? data.lastPostAt : null,
           ...(typeof data.messageCount === "number"
             ? { messageCount: data.messageCount }
+            : {}),
+          ...(typeof data.lastMessagePreview === "string"
+            ? { lastMessagePreview: data.lastMessagePreview }
             : {}),
         });
       },

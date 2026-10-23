@@ -5,7 +5,8 @@
 
 // Set up env for the email module
 process.env.USE_FIRESTORE = "true";
-process.env.GOOGLE_CLOUD_PROJECT = "ace-digital-os";
+process.env.GOOGLE_CLOUD_PROJECT =
+  process.env.GOOGLE_CLOUD_PROJECT || "ace-digital-int-12345";
 
 // We need to directly use Resend since the email module is in the api-server
 import { Resend } from "resend";

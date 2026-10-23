@@ -1,9 +1,13 @@
 /**
  * Wipes all Firestore app data and seeds a clean production baseline:
- * one Operations team, one super_admin (Kavin), no demo projects/tasks/clients/payroll.
+ * one Operations team, one super_admin, no demo projects/tasks/clients/payroll.
  *
- * Run (requires Application Default Credentials for ace-digital-os):
- *   CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+ * For an empty project that must keep existing data, use bootstrap:owner instead.
+ *
+ * Run (requires Application Default Credentials for ace-digital-int-12345):
+ *   CONFIRM_RESET=ace-digital-int-12345 USE_FIRESTORE=true \
+ *   GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 \
+ *   ADMIN_EMAIL='admin@acedigital.cc' \
  *   ADMIN_PASSWORD='choose-a-new-password' \
  *     pnpm --filter @workspace/scripts run reset:production
  */
@@ -12,13 +16,16 @@ import type { Firestore } from "firebase-admin/firestore";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
 import { requireAdminPassword } from "./require-admin-password";
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? "ace-digital-os";
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? "ace-digital-int-12345";
+process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID;
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || PROJECT_ID;
+process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || PROJECT_ID;
 const CONFIRM = process.env.CONFIRM_RESET;
 
-const EMAIL = process.env.ADMIN_EMAIL?.trim() || "kavin@acedigital.cc";
+const EMAIL = process.env.ADMIN_EMAIL?.trim() || "admin@acedigital.cc";
 const PASSWORD = requireAdminPassword();
-const FULL_NAME = "Kavin Balaji";
-const JOB_TITLE = "Managing Director";
+const FULL_NAME = process.env.ADMIN_FULL_NAME?.trim() || "Admin";
+const JOB_TITLE = process.env.ADMIN_JOB_TITLE?.trim() || "Owner";
 const ROLE = "super_admin";
 
 const COLLECTIONS = [

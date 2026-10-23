@@ -6,9 +6,10 @@ Ace Digital OS channel chat follows a Slack-like UX: flat message rows, sidebar 
 
 1. The client sends messages, edits, reactions, polls, RSVPs, threads, pins, and deletes through the REST API.
 2. In production the API writes straight to Cloud Firestore, which is the source of truth. Local development writes to PostgreSQL and then mirrors chat documents to Firestore.
-3. Authenticated channel members receive read-only Firestore `onSnapshot` updates in production.
+3. After login the SPA calls `GET /api/v1/auth/firebase-custom-token` and signs in to Firebase. Channel members then receive read-only `onSnapshot` updates on `channels/{channelId}/messages`. Rules require a matching `channel_member_index` document. Client writes are denied.
+4. If that custom token cannot be minted, the chat page polls the API every 5 seconds while the tab is visible and pauses while the tab is hidden. That fallback is short requests, so Cloud Run still scales to zero.
 
-Firestore mirrors each message to **both** `messages/{messageId}` (legacy) and `channels/{channelId}/messages/{messageId}` (client realtime path). Channel activity uses `channels/{channelId}`.
+Firestore stores each message in **both** `messages/{messageId}` and `channels/{channelId}/messages/{messageId}` (the listener path). Channel activity (`lastPostAt`, `lastMessagePreview`) is on `channels/{channelId}`.
 
 ### Deleted / unavailable users
 

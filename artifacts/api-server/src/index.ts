@@ -1,7 +1,5 @@
-import { createServer } from "node:http";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { closeSocketServer, initSocketServer } from "./lib/socket-server";
 import { startCleanupScheduler } from "./lib/cleanup";
 
 const rawPort = process.env["PORT"];
@@ -18,14 +16,12 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const httpServer = createServer(app);
-initSocketServer(httpServer);
 startCleanupScheduler();
 
 const redisUrl = process.env.REDIS_URL?.trim();
 
-httpServer.listen(port, "0.0.0.0", () => {
-  logger.info({ port, redis: Boolean(redisUrl) }, "HTTP + WebSocket server listening");
+const httpServer = app.listen(port, "0.0.0.0", () => {
+  logger.info({ port, redis: Boolean(redisUrl) }, "HTTP server listening");
   setImmediate(() => {
     void import("@workspace/db")
       .then(({ warmupFirestoreChatMirror }) => {
@@ -63,7 +59,6 @@ httpServer.on("error", (err) => {
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutting down");
-  await closeSocketServer();
   const { stopMessageWorker } = await import("./lib/message-worker");
   const { closeMessageQueue } = await import("./lib/message-queue");
   const { closeRedis } = await import("./lib/redis");
