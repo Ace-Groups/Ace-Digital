@@ -41,6 +41,7 @@ import { formatScheduleLabel } from "@/lib/calendar-core";
 import { getGreeting, useDashboardPage } from "../useDashboardPage";
 import { ChatWidget } from "../ChatWidget";
 import { HomeScreenWidgets } from "@/components/pwa/HomeScreenWidgets";
+import { AttendanceCheckCard } from "@/components/attendance/AttendanceCheckCard";
 import "@/styles/dashboard-canvas.css";
 
 const DONUT_COLORS = [
@@ -621,6 +622,10 @@ export function DashboardCanvas() {
         {timeStr && (
           <p className="mt-1 font-mono text-xs text-primary">{timeStr}</p>
         )}
+      </StaggerItem>
+
+      <StaggerItem>
+        <AttendanceCheckCard />
       </StaggerItem>
 
       <StaggerItem>

@@ -42,6 +42,29 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    function isAttendanceAdmin() {
+      return signedIn() && request.auth.token.role in ["super_admin", "management", "hr", "finance"];
+    }
+
+    function isOwnAttendanceDay(dayId) {
+      return signedIn() && int(dayId.split('_')[0]) == authUserId();
+    }
+
+    match /attendance_settings/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /attendance_days/{dayId} {
+      allow read: if isOwnAttendanceDay(dayId) || isAttendanceAdmin();
+      allow write: if false;
+
+      match /audit/{auditId} {
+        allow read: if isOwnAttendanceDay(dayId) || isAttendanceAdmin();
+        allow write: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
