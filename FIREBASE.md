@@ -20,7 +20,7 @@
 
 ## What is deployed
 
-- **Firestore** — rules, indexes, and seed data (collections mirror the Postgres schema: `users`, `teams`, `projects`, `tasks`, `clients`, `approvals`, `expenses`, `payroll_runs`, `reports`, `channels`, `messages`, `activity_logs`, `employee_profiles`, `_meta/counters`).
+- **Firestore** — rules, indexes, and seed data (collections mirror the Postgres schema: `users`, `teams`, `projects`, `tasks`, `clients`, `approvals`, `expenses`, `payroll_runs`, `reports`, `channels`, `messages`, `activity_logs`, `employee_profiles`, `_meta/counters`, plus attendance `attendance_settings/default`, `attendance_days/{userId}_{date}`, and the `audit` subcollection). Attendance absences are computed when the API reads a day. There is no attendance cron. See [docs/ATTENDANCE.md](docs/ATTENDANCE.md).
 - **Hosting** — production build of `artifacts/ace-digital-os` (SPA).
 - **Cloud Run** — Express API `ace-digital-api` in `asia-south1`. Hosting rewrites `/api/**` here. Chat does not keep a socket open.
 - **Cloud Functions** — push only (`onNotificationCreated`, `onPushOutboxCreated`). Not the public API.
@@ -104,7 +104,7 @@ That builds the SPA and runs `firebase deploy --only hosting --project ace-digit
 
 Then in Firebase Console → Hosting → site `ace-digital-int-12345` → Add custom domain `app.acedigital.cc`. Add the TXT and CNAME records Firebase shows. The CNAME host is `app` and the target is `ace-digital-int-12345.web.app` unless Firebase prints a different value. Do not change the apex DNS for `acedigital.cc`.
 
-Deploy Storage and Firestore rules so HR files and chat reads match this repo:
+Deploy Storage and Firestore rules so HR files, chat reads, and attendance reads match this repo. Attendance client writes stay denied. The API writes punches with the Admin SDK:
 
 ```bash
 npx firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage --project ace-digital-int-12345

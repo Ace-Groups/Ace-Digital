@@ -31,7 +31,7 @@ flowchart LR
 ```
 
 - Cloud Run handles authenticated REST. Minimum instances are 0. Billing is request-based. Chat does not open a WebSocket, so an open chat page does not keep an instance alive.
-- Firestore is the source of truth for users, tasks, payroll, chat, and the rest of the API data.
+- Firestore is the source of truth for users, tasks, payroll, chat, attendance, and the rest of the API data. Daily attendance is computed when the roster or summary is read. There is no attendance cron and no always-on instance. See [ATTENDANCE.md](ATTENDANCE.md).
 - The API mints a Firebase custom token at login. Security rules allow a signed-in member to read `channels/{id}` and `channels/{id}/messages`, and deny client writes. Sends stay on `POST /api/v1/channels/:id/messages`.
 - If the custom token cannot be minted, the chat page polls every 5 seconds while the tab is visible and pauses while it is hidden.
 - Chat persistence does not need Redis. A message is written inline unless `REDIS_URL` is set.
