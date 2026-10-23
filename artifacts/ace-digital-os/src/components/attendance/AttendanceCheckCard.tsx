@@ -71,8 +71,7 @@ export function AttendanceCheckCard() {
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Today</p>
-          <p className="mt-1 text-lg font-semibold">{STATUS_LABEL[status]}</p>
+          <p className="text-lg font-semibold" role="status">{STATUS_LABEL[status]}</p>
           <p className="text-sm text-muted-foreground">
             In {formatIst(day?.checkInAt ?? null)}
             {day?.checkOutAt ? ` · Out ${formatIst(day.checkOutAt)}` : ""}

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,18 +9,10 @@ import { MobileLoginScreen } from "@/components/login/MobileLoginScreen";
 import { consumeLoginNotice } from "@/lib/login-notice";
 import type { LoginFormValues } from "@/pages/login-desktop";
 
-import { lazyWithReload } from "@/lib/lazy-with-reload";
-
-const LoginDesktopLayout = lazyWithReload(() => import("@/pages/login-desktop"));
-
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
-
-function LoginDesktopFallback() {
-  return <div className="min-h-dvh bg-[#052659]" aria-hidden />;
-}
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -123,16 +115,5 @@ export default function LoginPage() {
     onForgotPassword,
   };
 
-  return (
-    <>
-      <div className="md:hidden">
-        <MobileLoginScreen {...sharedProps} />
-      </div>
-      <div className="hidden md:block">
-        <Suspense fallback={<LoginDesktopFallback />}>
-          <LoginDesktopLayout {...sharedProps} setShowPassword={setShowPassword} />
-        </Suspense>
-      </div>
-    </>
-  );
+  return <MobileLoginScreen {...sharedProps} />;
 }

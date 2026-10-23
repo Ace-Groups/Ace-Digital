@@ -113,23 +113,22 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden v2-ambient-bg">
       {showAppHeader && (
-      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-1.5 border-b border-border/50 bg-card/80 px-2.5 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-xl sm:gap-3 sm:px-4">
+      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-1.5 border-b border-border bg-background px-2.5 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4">
         <img src={aceLogo} alt="" className="h-8 w-8 shrink-0 bg-transparent object-contain" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            Ace Digital
-          </p>
-          {title && (
+          {title ? (
             <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
+          ) : (
+            <p className="truncate text-base font-semibold">Ace Digital</p>
           )}
         </div>
         <SyncStatusIndicator />
-        <ThemeToggle className="h-10 w-10 shrink-0" />
+        <ThemeToggle className="size-11 shrink-0" />
         <HeaderRefreshButton variant="mobile" />
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-muted"
           aria-label="Search"
         >
           <Search size={20} />
@@ -137,7 +136,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
         <button
           type="button"
           onClick={() => setLocation("/notifications")}
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground active:bg-muted"
+          className="relative flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-muted"
           aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
         >
           <Bell size={20} />
@@ -148,7 +147,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
         <button
           type="button"
           onClick={() => setProfileOpen(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl active:bg-muted"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg active:bg-muted"
           aria-label="Profile"
         >
           <UserAvatar
@@ -176,10 +175,10 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
 
       {!hideBottomNav && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(5.35rem+env(safe-area-inset-bottom))] items-center justify-center px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))]"
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
           aria-label="Main navigation"
         >
-          <div className="flex h-[4.35rem] w-full max-w-md items-stretch justify-around rounded-2xl border border-border/50 bg-card/85 px-1.5 shadow-v2-lg backdrop-blur-2xl">
+          <div className="mx-auto flex h-16 w-full max-w-lg items-stretch justify-around px-1">
             {primary.map((item) => {
               const Icon = ICONS[item.route];
               const active = isActive(item.href);

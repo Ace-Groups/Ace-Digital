@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Plus,
   CheckSquare,
@@ -15,20 +15,21 @@ import { hapticLight, hapticSheetOpen } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
-  { icon: CheckSquare, label: "Task", href: "/tasks?create=1", color: "text-emerald-500" },
-  { icon: FolderKanban, label: "Project", href: "/projects?create=1", color: "text-indigo-500" },
-  { icon: Calendar, label: "Event", href: "/calendar?create=1", color: "text-amber-500" },
-  { icon: StickyNote, label: "Note", href: "/notes?create=1", color: "text-violet-500" },
-  { icon: Ticket, label: "Ticket", href: "/service?create=1", color: "text-rose-500" },
+  { icon: CheckSquare, label: "Task", href: "/tasks?create=1" },
+  { icon: FolderKanban, label: "Project", href: "/projects?create=1" },
+  { icon: Calendar, label: "Event", href: "/calendar?create=1" },
+  { icon: StickyNote, label: "Note", href: "/notes?create=1" },
+  { icon: Ticket, label: "Ticket", href: "/service?create=1" },
 ];
 
 export function QuickCreateFab() {
   const { isAuthenticated } = useAuth();
   const isMobile = useIsMobile();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
 
-  if (!isAuthenticated || !isMobile) return null;
+  if (!isAuthenticated || !isMobile || location === "/") return null;
 
   return (
     <>
@@ -54,7 +55,7 @@ export function QuickCreateFab() {
                 initial={{ opacity: 0, y: 12, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.9 }}
-                transition={{ delay: i * 0.04 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: i * 0.04 }}
                 onClick={() => {
                   hapticLight();
                   setLocation(action.href);
@@ -62,7 +63,7 @@ export function QuickCreateFab() {
                 }}
                 className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/95 px-4 py-2.5 text-sm font-medium shadow-v2-md backdrop-blur-xl"
               >
-                <action.icon size={16} className={action.color} />
+                <action.icon size={16} className="text-foreground" />
                 {action.label}
               </motion.button>
             ))}
@@ -76,7 +77,7 @@ export function QuickCreateFab() {
             setOpen((o) => !o);
           }}
           aria-label="Quick create"
-          whileTap={{ scale: 0.94 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.94 }}
         >
           <Plus size={24} />
         </motion.button>

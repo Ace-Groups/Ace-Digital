@@ -59,11 +59,12 @@ export default function ApprovalsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { canApprove } = usePermissions();
-  const [open, setOpen] = useState(false);
+  const leaveDeepLink = new URLSearchParams(window.location.search).get("new") === "leave";
+  const [open, setOpen] = useState(leaveDeepLink);
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { type: "EXPENSE", title: "", leaveStart: "", leaveEnd: "" },
+    defaultValues: { type: leaveDeepLink ? "LEAVE" : "EXPENSE", title: "", leaveStart: "", leaveEnd: "" },
   });
   const requestType = form.watch("type");
 

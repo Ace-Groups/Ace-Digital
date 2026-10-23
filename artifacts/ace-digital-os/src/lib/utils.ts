@@ -169,11 +169,11 @@ export function getInitials(name: string): string {
 export function priorityColor(priority: string): string {
   switch (priority?.toUpperCase()) {
     case "URGENT":
-      return "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30";
+      return "bg-red-500/15 text-red-950 dark:text-red-200 border-red-500/30";
     case "HIGH":
-      return "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30";
+      return "bg-orange-500/15 text-orange-950 dark:text-orange-200 border-orange-500/30";
     case "MEDIUM":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+      return "bg-amber-500/15 text-amber-950 dark:text-amber-200 border-amber-500/30";
     case "LOW":
       return "bg-muted text-muted-foreground border-border";
     default:
@@ -191,7 +191,7 @@ export function statusColor(status: string): string {
     case "CLOSED":
       return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
     case "OPEN":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+      return "bg-amber-500/15 text-amber-950 dark:text-amber-200 border-amber-500/30";
     case "WAITING_CLIENT":
       return "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30";
     case "IN_PROGRESS":
@@ -201,9 +201,9 @@ export function statusColor(status: string): string {
     case "REVIEW":
       return "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30";
     case "PENDING":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+      return "bg-amber-500/15 text-amber-950 dark:text-amber-200 border-amber-500/30";
     case "REJECTED":
-      return "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30";
+      return "bg-red-500/15 text-red-950 dark:text-red-200 border-red-500/30";
     case "TODO":
     case "INACTIVE":
       return "bg-muted text-muted-foreground border-border";

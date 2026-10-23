@@ -1,7 +1,15 @@
 import { getNavRoutesForRole, NAV_ROUTES, type NavRoute } from "@workspace/rbac";
 
-/** Always shown in the bottom bar when the role has access (in order). */
-const PINNED_ROUTES: NavRoute[] = ["dashboard", "channels"];
+/** Daily destinations for the bottom bar, in order, when the role can open them. */
+function pinnedForRole(role: string): NavRoute[] {
+  if (role === "super_admin" || role === "management" || role === "hr") {
+    return ["dashboard", "attendance", "approvals", "channels"];
+  }
+  if (role === "finance") {
+    return ["dashboard", "finance", "approvals", "channels"];
+  }
+  return ["dashboard", "tasks", "approvals", "channels"];
+}
 
 const FILL_ORDER: NavRoute[] = [
   "projects",
@@ -25,7 +33,10 @@ export type MobileNavItem = {
 };
 
 function labelForRoute(route: NavRoute, role: string): string {
+  if (route === "dashboard") return "Home";
   if (route === "channels") return "Chat";
+  if (route === "approvals" && role === "employee") return "Leave";
+  if (route === "attendance" && (role === "super_admin" || role === "management" || role === "hr")) return "Roster";
   if (route === "employees" && role === "employee") return "Profile";
   if (route === "finance" && role === "employee") return "Payslip";
   const item = NAV_ROUTES.find((n) => n.route === route);
@@ -45,7 +56,7 @@ export function getMobileNavItems(role: string): {
   const byRoute = new Map(items.map((i) => [i.route, i]));
 
   const primaryRoutes: NavRoute[] = [];
-  for (const route of PINNED_ROUTES) {
+  for (const route of pinnedForRole(role)) {
     if (primaryRoutes.length >= MOBILE_PRIMARY_MAX) break;
     if (allowed.has(route)) primaryRoutes.push(route);
   }

@@ -280,7 +280,7 @@ export default function TasksPage() {
       },
     },
   });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
   const [editOpen, setEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -828,6 +828,7 @@ export default function TasksPage() {
                   >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
+                    aria-label={`Mark ${task.title} complete`}
                     checked={isMyPartDone(task)}
                     disabled={!canCompleteTask(task) || toggleTask.isPending}
                     onCheckedChange={(checked) => {
@@ -859,7 +860,7 @@ export default function TasksPage() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-10 w-10 shrink-0 sm:h-8 sm:w-8"
+                          className="size-11 shrink-0"
                           data-testid={`task-edit-${task.id}`}
                           onClick={() => openEditTask(task)}
                           aria-label="Edit task"
@@ -871,7 +872,7 @@ export default function TasksPage() {
                             type="button"
                             variant="outline"
                             size="icon"
-                            className="h-10 w-10 shrink-0 text-destructive sm:h-8 sm:w-8"
+                            className="size-11 shrink-0 text-destructive"
                             data-testid={`task-delete-${task.id}`}
                             onClick={() => requestDeleteTask(task)}
                             aria-label="Delete task"
@@ -883,7 +884,7 @@ export default function TasksPage() {
                           value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
                           onValueChange={(value) => void handleProjectTask(task, value)}
                         >
-                          <SelectTrigger className="h-10 w-full min-w-[9.5rem] text-xs sm:h-8 sm:w-[10.5rem]" data-testid={`task-project-${task.id}`}>
+                          <SelectTrigger className="h-11 w-full min-w-[9.5rem] text-xs sm:w-[10.5rem]" aria-label={`Project for ${task.title}`} data-testid={`task-project-${task.id}`}>
                             <SelectValue placeholder="Project" />
                           </SelectTrigger>
                           <SelectContent>
