@@ -9,7 +9,7 @@ import {
   socketAccessContext,
   tempMessageIdFromClientId,
 } from "./channel-access";
-import { messageQueue } from "./message-queue";
+import { enqueuePersistMessage } from "./message-queue";
 import { validateMessagePayload } from "./message-attachments";
 import { store } from "@workspace/db";
 
@@ -201,7 +201,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
         broadcastMessageNew(channelId, optimistic, { exceptSocketId: socket.id });
         ack?.({ status: "success", clientId, message: optimistic });
 
-        void messageQueue.add("persist", {
+        void enqueuePersistMessage({
           channelId,
           senderId: ctx.userId,
           clientId,
@@ -212,6 +212,8 @@ export function initSocketServer(httpServer: HttpServer): Server {
           parentMessageId,
           senderName: socket.data.senderName ?? null,
           senderAvatar: socket.data.senderAvatar ?? null,
+        }).catch((err) => {
+          logger.error({ err, clientId }, "message persist failed");
         });
       } catch (err) {
         logger.error({ err, userId }, "message:send failed");

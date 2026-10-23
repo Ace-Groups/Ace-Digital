@@ -7,7 +7,7 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 ## 🔗 Direct Dashboard Links
 
 * **Firebase Console**: [console.firebase.google.com/project/ace-digital-os](https://console.firebase.google.com/project/ace-digital-os)
-* **Render Dashboard**: [dashboard.render.com](https://dashboard.render.com)
+* **Google Cloud Console**: [console.cloud.google.com](https://console.cloud.google.com/run?project=ace-digital-os)
 * **Expo Developer Dashboard**: [expo.dev](https://expo.dev)
 * **Google Play Console**: [play.google.com/console](https://play.google.com/console)
 * **Apple Developer Portal**: [developer.apple.com/account](https://developer.apple.com/account)
@@ -21,15 +21,19 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ### A. Employee app (Firebase Hosting site `ace-digital-app`)
 1. Create the site once: `npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os`
-2. Deploy: `pnpm run deploy:hosting:render`
+2. Deploy: `pnpm run deploy:hosting` (only after Cloud Run service `ace-digital-api` exists — see [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md))
 3. In **Firebase Console** -> **Hosting** -> site **ace-digital-app** -> **Add custom domain** -> `app.acedigital.cc`.
 4. Add the DNS records Firebase shows. For this subdomain that is usually a TXT record to prove you own the domain, then a **CNAME** for host `app` pointing at `ace-digital-app.web.app`. Use the values Firebase prints if they differ.
 
-### B. Backend API (Render)
-1. Go to the **Render Dashboard**, select your `ace-digital-api` Web Service.
-2. Click **Settings** -> **Custom Domains** -> **Add Custom Domain**.
-3. Enter `api.acedigital.cc` only if you want the API on that name. The SPA is already built to call `https://ace-digital-api.onrender.com`.
-4. Render will ask for a **CNAME** from `api` to `ace-digital-api.onrender.com`.
+### B. Backend API (Cloud Run)
+
+The SPA calls same-origin `/api`. You do not need an `api.acedigital.cc` DNS record.
+
+```bash
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+```
+
+That sets min instances 0, max instances 2, region `asia-south1`, request-based billing, and mounts Secret Manager. Details and the cost estimate: [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
 ### DNS to add for the employee app
 
@@ -37,27 +41,31 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 |---|---|---|---|
 | **TXT** | *(what Firebase shows)* | *(copy from Firebase)* | Prove you own `acedigital.cc` for the `app` host |
 | **CNAME** | `app` | `ace-digital-app.web.app` | Employee app. Do not change the apex `@` record |
-| **CNAME** | `api` | `ace-digital-api.onrender.com` | Optional API hostname |
 
 ---
 
 ## 2. Environment Variables & Credentials Update
 
-### A. Render API Server Configuration
-In the **Render Dashboard**, select your `api-server` service, click **Environment** -> **Add Environment Variable**, and populate/update the following values:
+### A. Cloud Run API
+
+`scripts/deploy-cloud-run.sh` sets these. Secrets are Secret Manager names, not values in git.
 
 | Variable Name | Production Value / Instruction |
 |---|---|
 | `NODE_ENV` | `production` |
 | `USE_FIRESTORE` | `true` |
 | `FIREBASE_PROJECT_ID` | `ace-digital-os` |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Go to Firebase Console -> Project Settings -> Service Accounts -> Click **Generate New Private Key**. Copy the entire JSON content, convert it into a single-line string, and paste it here. |
-| `JWT_SECRET` | Generate a strong 32+ character random string (e.g., run `openssl rand -base64 32` in your local terminal). |
-| `REDIS_URL` | Enter the connection string for your production Redis server (needed for message workers and chat queues). |
+| `GOOGLE_CLOUD_PROJECT` | `ace-digital-os` |
+| `JWT_SECRET` | Secret Manager secret `JWT_SECRET` (mounted, not a plain env var). |
 | `CORS_ORIGINS` | `https://app.acedigital.cc,https://ace-digital-app.web.app,https://ace-digital-app.firebaseapp.com` |
+| `APP_URL` | `https://app.acedigital.cc` |
+| `APP_LOGIN_URL` | `https://app.acedigital.cc/login` |
+| `API_PUBLIC_URL` | `https://app.acedigital.cc` |
 | `EMAIL_FROM` | `Ace Digital <no-reply@acedigital.cc>` |
-| `RESEND_API_KEY` | Your production Resend API Key (used to email ID cards and payslips to employees). |
-| `GEMINI_API_KEY` | Your Google Gemini API Key (used for the Ace AI assistant). |
+| `RESEND_API_KEY` | Optional Secret Manager secret, for welcome and reset mail. |
+| `GEMINI_API_KEY` | Optional Secret Manager secret, for Ace AI. |
+
+Do not set `REDIS_URL` or `FIREBASE_SERVICE_ACCOUNT_JSON` on Cloud Run. Leave minimum instances at 0.
 
 ---
 
@@ -87,11 +95,16 @@ In [assetlinks.json](file:///Users/kavin/Documents/GitHub/Ace%20Digital/artifact
 
 Once environment variables and verification placeholders are updated, push the latest files to live:
 
-### A. Deploy Web Portal & Firebase Functions
-Run the following script command from the root folder to compile the web app with custom headers, copy assets, and deploy to Firebase:
+### A. Deploy the API, then the web app
+
+Cloud Run first, then Hosting (the rewrite needs the service to exist):
+
 ```bash
-pnpm run deploy:production
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
+
+`pnpm run deploy:production` runs those two steps. It still refuses to deploy until `ACE_DEPLOY_CLOUD_RUN=1` is set. Push functions stay a separate Firebase deploy; see FIREBASE.md.
 
 ### B. Create an App Reviewer Test Account
 App Store reviewers (Apple and Google) **will reject your app** if you do not provide a working test account.

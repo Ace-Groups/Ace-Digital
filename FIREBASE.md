@@ -1,6 +1,6 @@
 # Firebase deployment (Ace Digital OS)
 
-**Current production:** Cloud Firestore is the source of truth for all API data. REST runs on [Render](https://ace-digital-api.onrender.com). The employee SPA deploys to Firebase Hosting site `ace-digital-app`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app. Deploy the frontend with `pnpm run deploy:hosting:render` after the site exists (see below). Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
+**Current production:** Cloud Firestore is the source of truth for all API data. The Express API deploys to Cloud Run service `ace-digital-api` in `asia-south1` (minimum instances 0, request-based billing). Firebase Hosting site `ace-digital-app` serves the SPA and rewrites `/api/**` and `/socket.io/**` to that service, for `https://app.acedigital.cc` and `https://ace-digital-app.web.app`. `https://acedigital.cc` is the public marketing site and is not this app. Commands: [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md). Cloud Functions remain only for push notifications.
 
 ## Project
 
@@ -11,14 +11,15 @@
 | Hosting site | `ace-digital-app` (target in `.firebaserc`) |
 | Hosting URL | https://ace-digital-app.web.app and https://app.acedigital.cc |
 | Database | Cloud Firestore `(default)` in `asia-south1` |
-| API region | `asia-south1` (Gen 1 HTTPS function `api`) |
+| API | Cloud Run `ace-digital-api` in `asia-south1` |
 | Plan | Blaze (billing enabled) |
 
 ## What is deployed
 
 - **Firestore** — rules, indexes, and seed data (collections mirror the Postgres schema: `users`, `teams`, `projects`, `tasks`, `clients`, `approvals`, `expenses`, `payroll_runs`, `reports`, `channels`, `messages`, `activity_logs`, `employee_profiles`, `_meta/counters`).
 - **Hosting** — production build of `artifacts/ace-digital-os` (SPA).
-- **Cloud Functions (API)** — Gen 1 HTTPS `api` in `asia-south1`; Hosting rewrites `/api/**` to this function.
+- **Cloud Run** — Express API `ace-digital-api` in `asia-south1`. Hosting rewrites `/api/**` and `/socket.io/**` here.
+- **Cloud Functions** — push only (`onNotificationCreated`, `onPushOutboxCreated`). Not the public API.
 
 ## Firebase web app (chat client SDK)
 
@@ -70,7 +71,7 @@ The marketing site stays on `acedigital.cc`. The ERP uses a separate Hosting sit
 
 ```bash
 npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os
-pnpm run deploy:hosting:render
+pnpm run deploy:hosting
 ```
 
 Then in Firebase Console → Hosting → `ace-digital-app` → Add custom domain `app.acedigital.cc`. Add the TXT and CNAME records Firebase shows. Do not change the apex DNS for `acedigital.cc`.
@@ -112,8 +113,8 @@ Set `VITE_FIREBASE_DATABASE_URL` at build time if your instance URL differs.
 Firebase Console → Project settings → Cloud Messaging → **Web Push certificates** → Generate key pair.
 
 ```bash
-# Build with VAPID (Render / local)
-VITE_FIREBASE_VAPID_KEY=your_key pnpm run build:web:render
+# Build with VAPID (Hosting / local)
+VITE_FIREBASE_VAPID_KEY=your_key pnpm run build:web:hosting
 ```
 
 ### 2. Deploy push functions
@@ -133,7 +134,7 @@ firebase deploy --only functions:api --project ace-digital-os
 Web push build (replace with your VAPID key from Firebase Console → Cloud Messaging):
 
 ```bash
-VITE_FIREBASE_VAPID_KEY="YOUR_VAPID_KEY_HERE" pnpm run build:web:render
+VITE_FIREBASE_VAPID_KEY="YOUR_VAPID_KEY_HERE" pnpm run build:web:hosting
 ```
 
 Also deploy Firestore rules: `firebase deploy --only firestore:rules`
@@ -153,20 +154,11 @@ Must return `True`. If `False`, complete these steps:
 1. Open https://console.firebase.google.com/project/ace-digital-os/usage/details  
 2. Click **Modify plan** → **Blaze (pay as you go)**.  
 3. Link a Google Cloud **billing account** (credit/debit card). You are **not** charged a flat monthly Firebase fee.  
-4. Wait 2–5 minutes, then deploy the API:
+4. Wait a few minutes, then deploy Cloud Run and Hosting. Cloud Run is what requires Blaze. Full command list: [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md).
 
 ```bash
-pnpm run build:api
-cp artifacts/api-server/dist/api-app.mjs firebase/functions/api-app.mjs
-cd firebase/functions && npm install && npm run build
-cd ../..
-npx firebase-tools@latest deploy --only functions --project ace-digital-os
-```
-
-5. Re-deploy hosting so `/api/**` rewrites resolve:
-
-```bash
-npx firebase-tools@latest deploy --only hosting --project ace-digital-os
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
 
 ## Security (production) — JWT secret
@@ -189,16 +181,15 @@ firebase functions:secrets:set JWT_SECRET --project ace-digital-os
 
 When prompted, paste the value from step 1.
 
-### 3. Deploy functions (required after setting or rotating the secret)
+### 3. Mount it on Cloud Run
+
+`firebase functions:secrets:set` stores `JWT_SECRET` in Secret Manager. Cloud Run reads that same secret. After creating or rotating it:
 
 ```bash
-pnpm run build:api
-cp artifacts/api-server/dist/api-app.mjs firebase/functions/api-app.mjs
-cd firebase/functions && npm run build && cd ../..
-npx firebase-tools deploy --only functions --project ace-digital-os
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
 ```
 
-Login and API calls will fail until `JWT_SECRET` is set and functions are redeployed.
+Login fails until that secret exists and the Cloud Run revision has started. Push functions do not serve `/api`.
 
 ### Employee email (Resend — recommended)
 
@@ -241,15 +232,14 @@ CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
 | Use | URL |
 |-----|-----|
 | **Web app (login here)** | https://app.acedigital.cc |
-| **API via hosting** | https://app.acedigital.cc/api/v1/... only if Hosting still rewrites `/api/**`. The SPA calls Render directly. |
-| **Function health check** | https://asia-south1-ace-digital-os.cloudfunctions.net/api/api/healthz |
-| **Function root (info JSON only)** | https://asia-south1-ace-digital-os.cloudfunctions.net/api |
+| **API via Hosting** | https://app.acedigital.cc/api/v1/... and https://ace-digital-app.web.app/api/v1/... |
+| **Health check** | https://ace-digital-app.web.app/api/healthz |
 
-Opening `…cloudfunctions.net/api` in Safari shows API metadata JSON after deploy — not the React app.
+The SPA calls same-origin `/api`. It does not call a separate API host.
 
 ## Deploy troubleshooting
 
-- **Hosting** `Assertion failed: resolving hosting target...` — `firebase.json` must include `"site": "ace-digital-os"` under `hosting`.
+- **Hosting** `Assertion failed: resolving hosting target...` — `.firebaserc` must map target `ace-digital-app` to site `ace-digital-app`, and that site must already exist.
 - **Functions** `...-compute@developer.gserviceaccount.com doesn't exist` — the `api` function uses `firebase-adminsdk-fbsvc@ace-digital-os.iam.gserviceaccount.com` in `firebase/functions/src/index.ts` (`runWith`) so custom tokens and Admin SDK calls work.
 - **`/api/v1/auth/firebase-custom-token` returns 503** — the function’s service account must be allowed to mint custom tokens. One-time IAM (replace project ID if needed):
 
@@ -278,37 +268,37 @@ pnpm run build:api
 # Seed Firestore (production)
 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run seed:firestore
 
-# Full deploy (after Blaze)
-pnpm run deploy:firebase
+# API + Hosting (after Blaze and JWT_SECRET). See docs/DEPLOY_CLOUD_RUN.md
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
 
 ## Architecture (production)
 
 | Component | Role |
 |-----------|------|
-| **Firestore** | Production database and realtime chat transport; API on Render uses Admin SDK (`FIREBASE_SERVICE_ACCOUNT_JSON`). Client writes are denied. |
-| **Hosting** | SPA on site `ace-digital-app` (`https://ace-digital-app.web.app`, custom domain `https://app.acedigital.cc`). Build with `pnpm run build:web:render`. |
-| **Render (`ace-digital-api`)** | REST `/api/*`; see [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). |
-| **Cloud Functions (gen 1)** | Legacy bundled API for Hosting `/api/**` rewrite; unused when the SPA calls Render via `VITE_API_BASE_URL`. |
+| **Firestore** | Production database and realtime chat transport. Cloud Run uses Application Default Credentials (its runtime service account). Client writes are denied. |
+| **Hosting** | SPA on site `ace-digital-app` (`https://ace-digital-app.web.app`, custom domain `https://app.acedigital.cc`). Build with `pnpm run build:web:hosting`. Rewrites `/api/**` and `/socket.io/**` to Cloud Run. |
+| **Cloud Run (`ace-digital-api`)** | REST and Socket.IO in `asia-south1`. Minimum instances 0, request-based billing. See [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md). |
+| **Cloud Functions (gen 1)** | Push notifications only. Not the public `/api` route. |
 
-Cloud Firestore is the production source of truth (`USE_FIRESTORE=true` on Render). Postgres (`DATABASE_URL`) is for local development only. Local dev runs the API server on port 8080.
+Cloud Firestore is the production source of truth (`USE_FIRESTORE=true` on Cloud Run). Postgres (`DATABASE_URL`) is for local development only. Local dev runs the API server on port 8080.
 
 Full diagram and deploy commands: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**. Chat: **[docs/CHAT.md](docs/CHAT.md)**.
 
 ## Estimated monthly cost (Ace Digital OS, small team)
 
-Blaze means **billing is attached**, not that you pay every month. For a small internal app (~5–15 users, light usage), you typically stay in **free quotas**:
+Blaze means **billing is attached**, not that you pay every month. Cloud Run requires it. There is no fixed Blaze fee. The worked example for 12 people is in [docs/PRODUCTION.md](docs/PRODUCTION.md): about **$0** when use is bursty, and about **$5–11** if chat sockets stay open through the workday, because an open WebSocket is billable CPU time past the 180,000 vCPU-second request-based free tier.
 
 | Service | Free quota (typical) | Your likely usage |
 |---------|----------------------|-------------------|
 | Hosting | 10 GB storage, ~360 MB/day transfer | Well within free |
 | Firestore | 50K reads / 20K writes per day | Well within free |
-| Cloud Functions | 2M invocations/month (Gen 1) | Well within free |
+| Cloud Run (request-based) | 180,000 vCPU-seconds, 360,000 GiB-seconds, 2M requests | $0 unless sockets stay open all day |
+| Cloud Functions | 2M invocations/month (push only) | Well within free |
 | Cloud Build | 120 build-min/day | Only when you deploy |
 
-**Realistic estimate:** **$0–3/month** for light internal use. Charges appear only if you exceed free limits (heavy traffic, many builds, or large Firestore reads). Set a [budget alert](https://console.cloud.google.com/billing/budgets) at $5–10 in Google Cloud Console to get email warnings.
-
-There is **no** fixed “Blaze monthly fee” — you pay for usage above free tier only.
+Set a [budget alert](https://console.cloud.google.com/billing/budgets) at $10. Use email, not a hard spend cap. A spend cap pauses Cloud Run and the API returns 5xx.
 
 ## Role-based access control (RBAC)
 

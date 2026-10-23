@@ -25,7 +25,7 @@ export function validateEmailConfig(): void {
   const domain = extractDomain(DEFAULT_FROM);
 
   if (!apiKey) {
-    warn("RESEND_API_KEY is not set — emails will not be sent. Set it in Render Dashboard env vars.");
+    warn("RESEND_API_KEY is not set — emails will not be sent. Add the RESEND_API_KEY secret and redeploy Cloud Run.");
   } else {
     log(`RESEND_API_KEY configured (${apiKey.slice(0, 6)}...)`);
   }
@@ -653,7 +653,7 @@ async function sendEmail(
   if (!queued) {
     warn(
       "No RESEND_API_KEY and Firestore mail queue also failed. " +
-        "Set RESEND_API_KEY (recommended) in Render env vars, or install the firestore-send-email extension on Firebase.",
+        "Set RESEND_API_KEY (recommended) in Secret Manager for Cloud Run, or install the firestore-send-email extension on Firebase.",
     );
   }
   return queued;

@@ -13,11 +13,10 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   const env = loadEnv(mode, repoRoot, "");
   const port = Number(env.PORT ?? process.env.PORT ?? 5173);
   const basePath = env.BASE_PATH ?? process.env.BASE_PATH ?? "/";
-  /** Default to Render API so local v2 dev works without a local API process. */
   const apiProxyTarget =
     env.VITE_DEV_API_PROXY?.trim() ||
     process.env.VITE_DEV_API_PROXY?.trim() ||
-    "https://ace-digital-api.onrender.com";
+    "http://localhost:8080";
 
   if (Number.isNaN(port) || port <= 0) {
     throw new Error(`Invalid PORT value: "${env.PORT ?? process.env.PORT}"`);

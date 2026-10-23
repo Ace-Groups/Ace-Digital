@@ -1,8 +1,9 @@
 import { cert, getApps, initializeApp, type App, type ServiceAccount } from "firebase-admin/app";
 
 /**
- * Firebase Admin on Cloud Functions uses default credentials.
- * On Render/other hosts, set FIREBASE_SERVICE_ACCOUNT_JSON to the service account JSON string.
+ * Cloud Run and Cloud Functions use Application Default Credentials
+ * (the runtime service account). Set FIREBASE_SERVICE_ACCOUNT_JSON only on
+ * hosts that do not provide ADC.
  */
 export function ensureFirebaseAdminApp(): App {
   if (getApps().length) return getApps()[0]!;

@@ -1,0 +1,12 @@
+#!include:.gitignore
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/.expo
+attached_assets
+Mascot
+firebase-debug.log
+firebase-debug.*.log

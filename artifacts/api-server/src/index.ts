@@ -1,14 +1,8 @@
 import { createServer } from "node:http";
-import { warmupFirestoreChatMirror } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { closeMessageQueue } from "./lib/message-queue";
-import { startMessageWorker, stopMessageWorker } from "./lib/message-worker";
-import { closeRedis, getRedisConnection } from "./lib/redis";
 import { closeSocketServer, initSocketServer } from "./lib/socket-server";
 import { startCleanupScheduler } from "./lib/cleanup";
-
-warmupFirestoreChatMirror();
 
 const rawPort = process.env["PORT"];
 
@@ -26,21 +20,41 @@ if (Number.isNaN(port) || port <= 0) {
 
 const httpServer = createServer(app);
 initSocketServer(httpServer);
-startMessageWorker();
 startCleanupScheduler();
 
-void getRedisConnection()
-  .connect()
-  .catch((err) => {
-    logger.warn(
-      { err },
-      "Redis not reachable — message queue disabled until reconnect",
-    );
-  });
+const redisUrl = process.env.REDIS_URL?.trim();
 
-httpServer.listen(port, () => {
-  logger.info({ port }, "HTTP + WebSocket server listening");
+httpServer.listen(port, "0.0.0.0", () => {
+  logger.info({ port, redis: Boolean(redisUrl) }, "HTTP + WebSocket server listening");
+  setImmediate(() => {
+    void import("@workspace/db")
+      .then(({ warmupFirestoreChatMirror }) => {
+        warmupFirestoreChatMirror();
+      })
+      .catch((err) => {
+        logger.warn({ err }, "Firestore chat mirror warmup skipped");
+      });
+  });
 });
+
+if (redisUrl) {
+  void import("./lib/message-worker")
+    .then(({ startMessageWorker }) => {
+      startMessageWorker();
+    })
+    .catch((err) => {
+      logger.warn({ err }, "Message worker failed to start");
+    });
+  void import("./lib/redis")
+    .then(({ getRedisConnection }) =>
+      getRedisConnection().connect().catch((err) => {
+        logger.warn({ err }, "Redis not reachable — message queue disabled until reconnect");
+      }),
+    )
+    .catch((err) => {
+      logger.warn({ err }, "Redis client failed to load");
+    });
+}
 
 httpServer.on("error", (err) => {
   logger.error({ err }, "Error listening on port");
@@ -50,6 +64,9 @@ httpServer.on("error", (err) => {
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutting down");
   await closeSocketServer();
+  const { stopMessageWorker } = await import("./lib/message-worker");
+  const { closeMessageQueue } = await import("./lib/message-queue");
+  const { closeRedis } = await import("./lib/redis");
   await stopMessageWorker();
   await closeMessageQueue();
   await closeRedis();

@@ -7,16 +7,16 @@ An internal company operating system for Ace Digital — an IT company. Manages 
 | | URL |
 |--|-----|
 | App | https://app.acedigital.cc (Firebase Hosting site `ace-digital-app`) |
-| API + WS | https://ace-digital-api.onrender.com |
+| API + sockets | Same origin on the Hosting site (Cloud Run `ace-digital-api`, `asia-south1`) |
 
 Production data lives in Cloud Firestore (`USE_FIRESTORE=true`). PostgreSQL is the local database only.
 
 ```bash
-pnpm run deploy:hosting:render   # build:web:render + firebase hosting
-# Render API auto-deploys from main (scripts/render-build.sh)
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
 
-Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md), [FIREBASE.md](FIREBASE.md).
+Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md), [FIREBASE.md](FIREBASE.md).
 
 ## Run & Operate
 

@@ -8,9 +8,7 @@ export function createChatSocket(token: string): Socket {
   return io(resolveSocketUrl(), {
     path: SOCKET_PATH,
     auth: { token },
-    // Start with polling so the handshake succeeds even if Render is
-    // cold-starting (WebSocket upgrade fails until the server is ready).
-    // Socket.IO auto-upgrades to WebSocket once the server responds.
+    // Polling first so the handshake still works while Cloud Run is cold-starting.
     transports: ["polling", "websocket"],
     reconnection: true,
     reconnectionAttempts: Infinity,
