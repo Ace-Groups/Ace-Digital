@@ -3,14 +3,15 @@
  * Deletes all projects, tasks, clients, approvals, expenses, messages, and other users.
  * Keeps ONLY the user kavin@acedigital.cc as the active super_admin.
  *
- * Run: DATABASE_URL=<production_url> npx tsx scripts/src/clear-db-for-prod-pg.ts
+ * Run: DATABASE_URL=<url> ADMIN_PASSWORD='choose-a-new-password' npx tsx scripts/src/clear-db-for-prod-pg.ts
  */
 import bcrypt from "bcryptjs";
 import * as schema from "../../lib/db/src/index";
 import { getPgDb, closePgPool } from "../../lib/db/src/pg";
+import { requireAdminPassword } from "./require-admin-password";
 
-const EMAIL = "kavin@acedigital.cc";
-const PASSWORD = "Kavin@2026";
+const EMAIL = process.env.ADMIN_EMAIL?.trim() || "kavin@acedigital.cc";
+const PASSWORD = requireAdminPassword();
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";
 const ROLE = "super_admin";

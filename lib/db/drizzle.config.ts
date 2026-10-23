@@ -46,7 +46,7 @@ if (!process.env.DATABASE_URL?.trim()) {
       "  pnpm db:push",
       "",
       "Or copy .env.example to .env and set DATABASE_URL.",
-      "Production (Firestore on Render) does not require drizzle push.",
+      "Production (Firestore on Cloud Run) does not require drizzle push.",
     ].join("\n"),
   );
 }

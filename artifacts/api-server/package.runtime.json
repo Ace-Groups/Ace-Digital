@@ -1,0 +1,11 @@
+{
+  "name": "ace-digital-api-runtime",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "0.24.1",
+    "@resvg/resvg-js": "2.6.2",
+    "bcryptjs": "3.0.2",
+    "firebase-admin": "13.6.0"
+  }
+}

@@ -26,6 +26,11 @@ service cloud.firestore {
     match /channels/{channelId} {
       allow read: if signedIn() && isChannelMember(int(channelId));
       allow write: if false;
+
+      match /messages/{messageId} {
+        allow read: if signedIn() && isChannelMember(int(channelId));
+        allow write: if false;
+      }
     }
 
     match /users/{userId}/user_tokens/{tokenId} {

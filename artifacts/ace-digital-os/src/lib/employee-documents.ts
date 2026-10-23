@@ -1,5 +1,5 @@
 import { resolveApiUrl } from "@/lib/api-config";
-import { authHeader, getAuthToken } from "@/lib/api";
+import { authHeader } from "@/lib/api";
 
 export const MAX_AADHAAR_DOCUMENT_BYTES = 10_000_000;
 export const MAX_AADHAAR_FILES = 5;
@@ -110,14 +110,19 @@ export function resolveDocumentUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
     return url;
   }
-  // For API-relative paths (e.g. /api/v1/hr-documents/...),
-  // append the auth token so the document can be viewed in a new tab
-  // where custom Authorization headers are not sent.
-  const resolved = resolveApiUrl(url);
-  const token = getAuthToken();
-  if (token && url.startsWith("/api/")) {
-    const sep = resolved.includes("?") ? "&" : "?";
-    return `${resolved}${sep}token=${encodeURIComponent(token)}`;
+  return resolveApiUrl(url);
+}
+
+/** Load an HR document with the Authorization header. Returns a blob URL for API paths. */
+export async function fetchAuthorizedDocumentBlob(url: string): Promise<string> {
+  const resolved = resolveDocumentUrl(url);
+  if (!resolved || resolved.startsWith("data:") || !resolved.includes("/api/")) {
+    return resolved;
   }
-  return resolved;
+  const res = await fetch(resolved, { headers: authHeader() });
+  if (!res.ok) {
+    throw new Error("Could not open document");
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }

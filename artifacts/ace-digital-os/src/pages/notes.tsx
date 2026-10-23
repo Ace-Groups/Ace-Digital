@@ -34,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSocket } from "@/contexts/SocketContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Note } from "@workspace/api-client-react";
 import { format } from "date-fns";
@@ -77,15 +76,16 @@ function getChecklistStats(html: string): {
 
 export default function NotesPage() {
   const { user } = useAuth();
-  const { socket } = useSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
-  const { data: notes, isLoading } = useListNotes();
-  const [collaborators, setCollaborators] = useState<
-    { userId: number; fullName: string; avatarUrl: string | null }[]
-  >([]);
+  const { data: notes, isLoading } = useListNotes(undefined, {
+    query: {
+      queryKey: getListNotesQueryKey(),
+      refetchInterval: () => (document.hidden ? false : 5_000),
+    },
+  });
   const [collabPresence, setCollabPresence] = useState<NoteCollabPresenceState | null>(
     null,
   );
@@ -221,126 +221,7 @@ export default function NotesPage() {
     [createNote, updateNote, queryClient]
   );
 
-  // Manage socket note rooms and collaborators sync
-  const lastJoinedNoteIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const currentNoteId = selectedNoteId;
-    const lastNoteId = lastJoinedNoteIdRef.current;
-
-    if (lastNoteId && lastNoteId !== currentNoteId) {
-      socket.emit("leave_note", lastNoteId);
-      setCollaborators([]);
-      setCollabPresence(null);
-      lastJoinedNoteIdRef.current = null;
-    }
-
-    if (currentNoteId) {
-      socket.emit("join_note", currentNoteId, (res: { ok?: boolean; error?: string }) => {
-        if (res?.error) {
-          console.error("Failed to join note room:", res.error);
-        } else {
-          lastJoinedNoteIdRef.current = currentNoteId;
-        }
-      });
-    }
-
-    return () => {
-      if (lastJoinedNoteIdRef.current) {
-        socket.emit("leave_note", lastJoinedNoteIdRef.current);
-        lastJoinedNoteIdRef.current = null;
-      }
-    };
-  }, [selectedNoteId, socket]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNoteTitleEdited = (payload: {
-      noteId: number;
-      title: string;
-      senderId: number;
-    }) => {
-      if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
-        setTitle(payload.title);
-        lastSavedRef.current = {
-          ...lastSavedRef.current,
-          title: payload.title,
-        };
-      }
-    };
-
-    const handleNoteUsers = (payload: {
-      noteId: number;
-      users: { userId: number; fullName: string; avatarUrl: string | null }[];
-    }) => {
-      if (payload.noteId === selectedNoteId) {
-        setCollaborators(payload.users.filter((u) => u.userId !== user?.id));
-      }
-    };
-
-    const handleNoteSaved = (payload: {
-      noteId: number;
-      note: Note;
-      senderId: number;
-    }) => {
-      if (payload.noteId === selectedNoteId && payload.senderId !== user?.id) {
-        setTitle(payload.note.title);
-        lastSavedRef.current = {
-          ...lastSavedRef.current,
-          title: payload.note.title,
-        };
-      }
-    };
-
-    const handleNotesRefresh = (payload: {
-      noteId: number;
-      type: "create" | "update" | "delete";
-      senderId: number;
-    }) => {
-      void queryClient.invalidateQueries({
-        queryKey: getListNotesQueryKey(),
-      });
-
-      if (
-        payload.type === "delete" &&
-        payload.noteId === selectedNoteId &&
-        payload.senderId !== user?.id
-      ) {
-        setSelectedNoteId(null);
-        setCreating(false);
-        toast({ title: "This note was deleted by the owner" });
-      }
-    };
-
-    socket.on("note:title_edited", handleNoteTitleEdited);
-    socket.on("note:users", handleNoteUsers);
-    socket.on("note:saved", handleNoteSaved);
-    socket.on("notes:refresh", handleNotesRefresh);
-
-    return () => {
-      socket.off("note:title_edited", handleNoteTitleEdited);
-      socket.off("note:users", handleNoteUsers);
-      socket.off("note:saved", handleNoteSaved);
-      socket.off("notes:refresh", handleNotesRefresh);
-    };
-  }, [selectedNoteId, socket, user?.id, queryClient, toast]);
-
-  const broadcastTitleEdit = useCallback(
-    (newTitle: string) => {
-      if (selectedNoteId && socket) {
-        socket.emit("note:title_edit", {
-          noteId: selectedNoteId,
-          title: newTitle,
-        });
-      }
-    },
-    [selectedNoteId, socket],
-  );
-
-  // Debounced auto-save
+  // Debounced auto-save. Note body sync uses Firebase RTDB, not an API socket.
   const scheduleAutoSave = useCallback(
     (newTitle: string, newContent: string) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -355,10 +236,9 @@ export default function NotesPage() {
   const handleTitleChange = useCallback(
     (val: string) => {
       setTitle(val);
-      broadcastTitleEdit(val);
       scheduleAutoSave(val, content);
     },
-    [content, scheduleAutoSave, broadcastTitleEdit],
+    [content, scheduleAutoSave],
   );
 
   // Content change — Yjs handles real-time body sync; REST save exports HTML to Postgres.
@@ -670,25 +550,6 @@ export default function NotesPage() {
                   />
 
                   <div className="notes-editor-actions">
-                    {!collabIslandEnabled && collaborators.length > 0 && (
-                      <div
-                        className="notes-editor-collab-avatars hidden sm:flex"
-                        title="Collaborators active on this note"
-                      >
-                        <div className="flex -space-x-1.5 overflow-hidden">
-                          {collaborators.map((collab) => (
-                            <div
-                              key={collab.userId}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background"
-                              title={`${collab.fullName} is editing`}
-                            >
-                              {collab.fullName ? getInitials(collab.fullName) : "?"}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     <div className="hidden md:flex items-center gap-1">
                       {selectedNote && selectedNote.createdById === user?.id && (
                         <Button

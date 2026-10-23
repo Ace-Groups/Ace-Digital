@@ -1,9 +1,19 @@
 /**
- * Seeds Firestore with demo data (mirrors scripts/src/seed.ts).
- * Run: USE_FIRESTORE=true npx tsx scripts/src/seed-firestore.ts
+ * Demo data only (mirrors scripts/src/seed.ts), including demo passwords.
+ * Do not run this on an empty production project. Use bootstrap:owner.
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 npx tsx scripts/src/seed-firestore.ts
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
+
+const PROJECT_ID =
+  process.env.GOOGLE_CLOUD_PROJECT?.trim() ||
+  process.env.GCLOUD_PROJECT?.trim() ||
+  process.env.FIREBASE_PROJECT_ID?.trim() ||
+  "ace-digital-int-12345";
+process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID;
+process.env.GCLOUD_PROJECT = PROJECT_ID;
+process.env.FIREBASE_PROJECT_ID = PROJECT_ID;
 
 const store = createFirestoreStore();
 const db = store.db;
@@ -13,7 +23,7 @@ async function setDoc(collection: string, id: number, data: Record<string, unkno
 }
 
 async function seed() {
-  console.log("🌱 Seeding Firestore (ace-digital-os)...");
+  console.log("🌱 Seeding Firestore demo data (not for an empty production project)...");
 
   const now = new Date().toISOString();
   const teams = [

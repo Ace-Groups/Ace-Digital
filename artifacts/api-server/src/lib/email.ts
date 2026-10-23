@@ -2,8 +2,8 @@ import { ensureFirebaseAdminApp } from "@workspace/db";
 import { getFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
-const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://acedigital.cc/login";
-const APP_URL = process.env.APP_URL ?? "https://acedigital.cc";
+const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://app.acedigital.cc/login";
+const APP_URL = process.env.APP_URL ?? "https://app.acedigital.cc";
 const DEFAULT_FROM =
   process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.cc>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";
@@ -25,7 +25,7 @@ export function validateEmailConfig(): void {
   const domain = extractDomain(DEFAULT_FROM);
 
   if (!apiKey) {
-    warn("RESEND_API_KEY is not set — emails will not be sent. Set it in Render Dashboard env vars.");
+    warn("RESEND_API_KEY is not set — emails will not be sent. Add the RESEND_API_KEY secret and redeploy Cloud Run.");
   } else {
     log(`RESEND_API_KEY configured (${apiKey.slice(0, 6)}...)`);
   }
@@ -653,7 +653,7 @@ async function sendEmail(
   if (!queued) {
     warn(
       "No RESEND_API_KEY and Firestore mail queue also failed. " +
-        "Set RESEND_API_KEY (recommended) in Render env vars, or install the firestore-send-email extension on Firebase.",
+        "Set RESEND_API_KEY (recommended) in Secret Manager for Cloud Run, or install the firestore-send-email extension on Firebase.",
     );
   }
   return queued;

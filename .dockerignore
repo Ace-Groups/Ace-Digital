@@ -1,0 +1,17 @@
+.git
+.github
+.cursor
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/.expo
+**/coverage
+**/*.log
+attached_assets
+Mascot
+firebase-debug.log
+firebase-debug.*.log
+*.md
+!FIREBASE.md

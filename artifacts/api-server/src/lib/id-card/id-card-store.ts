@@ -61,7 +61,7 @@ export function buildPublicAssetApiUrl(
 ): string {
   const base =
     process.env.API_PUBLIC_URL?.replace(/\/$/, "") ??
-    process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "") ??
-    "https://ace-digital-api.onrender.com";
+    process.env.APP_URL?.replace(/\/$/, "") ??
+    "https://app.acedigital.cc";
   return `${base}/api/v1/public/id-cards/${encodeURIComponent(normalizeEmployeeCode(employeeCode))}/${fileName}`;
 }

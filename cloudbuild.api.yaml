@@ -1,0 +1,56 @@
+# Manual Cloud Build path. Do not attach a trigger.
+# Prefer scripts/deploy-cloud-run.sh (it refuses to run without ACE_DEPLOY_CLOUD_RUN=1
+# and checks that JWT_SECRET exists). This file builds the same Dockerfile and
+# deploys the same Cloud Run settings.
+#
+# One-time repository (only if you use this file instead of --source):
+#   gcloud artifacts repositories create ace-digital \
+#     --repository-format=docker --location=asia-south1 --project=ace-digital-int-12345
+#
+# Submit:
+#   gcloud builds submit --config cloudbuild.api.yaml --project ace-digital-int-12345
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: ace-digital-api
+  _REPO: ace-digital
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$BUILD_ID
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$BUILD_ID
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --project=$PROJECT_ID
+      - --region=${_REGION}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$BUILD_ID
+      - --service-account=ace-digital-api@$PROJECT_ID.iam.gserviceaccount.com
+      - --min-instances=0
+      - --max-instances=2
+      - --cpu=1
+      - --memory=512Mi
+      - --concurrency=80
+      - --timeout=300
+      - --port=8080
+      - --cpu-throttling
+      - --cpu-boost
+      - --allow-unauthenticated
+      - '--set-env-vars=^::^NODE_ENV=production::USE_FIRESTORE=true::GCLOUD_PROJECT=$PROJECT_ID::FIREBASE_PROJECT_ID=$PROJECT_ID::GOOGLE_CLOUD_PROJECT=$PROJECT_ID::APP_URL=https://app.acedigital.cc::APP_LOGIN_URL=https://app.acedigital.cc/login::API_PUBLIC_URL=https://app.acedigital.cc::FIREBASE_STORAGE_BUCKET=$PROJECT_ID.firebasestorage.app::FIREBASE_DATABASE_URL=https://$PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app::GEMINI_MODEL=gemini-2.0-flash::EMAIL_FROM=Ace Digital <no-reply@acedigital.cc>::CORS_ORIGINS=https://app.acedigital.cc,https://ace-digital-int-12345.web.app,https://ace-digital-int-12345.firebaseapp.com'
+      - --set-secrets=JWT_SECRET=JWT_SECRET:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$BUILD_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY

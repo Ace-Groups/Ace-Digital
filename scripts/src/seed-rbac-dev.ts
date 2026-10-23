@@ -1,9 +1,18 @@
 /**
  * Dev-only: upsert one user per RBAC role for manual matrix testing.
- * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run seed:rbac-dev
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 pnpm --filter @workspace/scripts run seed:rbac-dev
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
+
+const PROJECT_ID =
+  process.env.GOOGLE_CLOUD_PROJECT?.trim() ||
+  process.env.GCLOUD_PROJECT?.trim() ||
+  process.env.FIREBASE_PROJECT_ID?.trim() ||
+  "ace-digital-int-12345";
+process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID;
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || PROJECT_ID;
+process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || PROJECT_ID;
 
 const PASSWORD = "Test@1234";
 const TEAM_ID = 1;

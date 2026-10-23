@@ -1,11 +1,11 @@
 import type cors from "cors";
 
 const DEFAULT_ORIGINS = [
-  "https://acedigital.cc",
-  "https://www.acedigital.cc",
-  "https://ace-digital-os.web.app",
-  "https://ace-digital-os.firebaseapp.com",
-  // Render preview/production API same-origin not needed; frontend on Firebase calls API cross-origin
+  "https://app.acedigital.cc",
+  "https://ace-digital-int-12345.web.app",
+  "https://ace-digital-int-12345.firebaseapp.com",
+  // Same-origin Hosting does not need CORS. These cover the custom domain,
+  // the default Hosting site ace-digital-int-12345, and local Vite.
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:21973",

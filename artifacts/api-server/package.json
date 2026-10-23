@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts src/lib/ai/agent-response.test.ts"
+    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts src/lib/ai/agent-response.test.ts src/lib/credentials/verification.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -30,8 +30,7 @@
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",
     "qrcode": "^1.5.4",
-    "resend": "^4.5.1",
-    "socket.io": "^4.8.3"
+    "resend": "^4.5.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

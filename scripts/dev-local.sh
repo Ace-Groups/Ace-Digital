@@ -9,7 +9,7 @@ bash scripts/kill-dev-ports.sh
 export PORT=5173
 echo ""
 echo "→ Ace Digital OS dev: http://localhost:5173"
-echo "→ API proxy: ${VITE_DEV_API_PROXY:-https://ace-digital-api.onrender.com}"
+echo "→ API proxy: ${VITE_DEV_API_PROXY:-http://localhost:8080}"
 echo ""
 
 exec pnpm --filter @workspace/ace-digital-os dev

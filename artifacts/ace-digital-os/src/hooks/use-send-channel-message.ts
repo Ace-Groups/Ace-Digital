@@ -7,7 +7,6 @@ import {
   type MessageInput,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEnsureChannelJoined, useSocket, useSocketEmit } from "@/contexts/SocketContext";
 import {
   CHANNEL_MESSAGE_PARAMS,
   globalPatchChannelMessageByClientId,
@@ -19,10 +18,6 @@ export type PendingMessage = Message & {
   clientId: string;
   status: "sending" | "failed" | "delivered";
 };
-
-type SendAck =
-  | { status: "success"; clientId: string; message: Message & { clientId?: string } }
-  | { status: "error"; error: string; clientId?: string };
 
 function messageQueryKey(channelId: number) {
   return getGetChannelMessagesQueryKey(channelId, CHANNEL_MESSAGE_PARAMS);
@@ -59,9 +54,6 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const sendMessage = useSendMessage();
-  const { connected } = useSocket();
-  const ensureJoined = useEnsureChannelJoined();
-  const socketEmit = useSocketEmit();
   const pendingRef = useRef<Map<string, PendingMessage>>(new Map());
   const onAppend = options?.onAppend;
   const onReplace = options?.onReplace;
@@ -129,16 +121,6 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
     [channelId, user, appendPending],
   );
 
-  const flushPendingHttp = useCallback(
-    async (clientId: string, payload: MessageInput) => {
-      if (!channelId || !user) throw new Error("Not ready");
-      const result = await sendMessage.mutateAsync({ id: channelId, data: payload });
-      replacePending(clientId, result);
-      return result;
-    },
-    [channelId, user, replacePending, sendMessage],
-  );
-
   const flushPending = useCallback(
     async (
       clientId: string,
@@ -146,36 +128,10 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
       _previewAttachments?: MessageInput["attachments"],
     ) => {
       if (!channelId || !user) throw new Error("Not ready");
-
-      // Socket.io first keeps authorization, persistence, notifications, and Firestore mirroring in one path.
-      if (connected) {
-        try {
-          await ensureJoined(channelId);
-          const ack = (await socketEmit("message:send", {
-            channelId,
-            clientId,
-            body: payload.body,
-            attachments: payload.attachments,
-            messageKind: payload.messageKind,
-            metadata: payload.metadata,
-            parentMessageId: payload.parentMessageId,
-          })) as SendAck;
-          if (ack.status === "success" && ack.message) {
-            const { clientId: _c, ...msg } = ack.message;
-            replacePending(clientId, msg as Message);
-            return msg as Message;
-          }
-          throw new Error(ack.status === "error" ? ack.error : "Send failed");
-        } catch (err) {
-          if (import.meta.env.DEV) {
-            console.warn("[chat-send] socket failed, falling back to HTTP", err);
-          }
-        }
-      }
-
-      // HTTP fallback is always available.
       try {
-        return await flushPendingHttp(clientId, payload);
+        const result = await sendMessage.mutateAsync({ id: channelId, data: payload });
+        replacePending(clientId, result);
+        return result;
       } catch (err) {
         markFailed(clientId);
         const message =
@@ -187,16 +143,7 @@ export function useSendChannelMessage(channelId: number | null, options?: SendOp
         throw new Error(message);
       }
     },
-    [
-      channelId,
-      user,
-      connected,
-      ensureJoined,
-      socketEmit,
-      replacePending,
-      markFailed,
-      flushPendingHttp,
-    ],
+    [channelId, user, replacePending, markFailed, sendMessage],
   );
 
   const send = useCallback(

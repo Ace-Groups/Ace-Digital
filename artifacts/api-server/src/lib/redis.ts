@@ -2,12 +2,18 @@ import type { RedisOptions } from "ioredis";
 import Redis from "ioredis";
 import { logger } from "./logger";
 
-const DEFAULT_REDIS_URL = "redis://127.0.0.1:6379";
-
 let connection: Redis | null = null;
 
+export function isRedisConfigured(): boolean {
+  return Boolean(process.env.REDIS_URL?.trim());
+}
+
 export function getRedisUrl(): string {
-  return process.env.REDIS_URL?.trim() || DEFAULT_REDIS_URL;
+  const url = process.env.REDIS_URL?.trim();
+  if (!url) {
+    throw new Error("REDIS_URL is not set");
+  }
+  return url;
 }
 
 export function getRedisConnectionOptions(): RedisOptions {
@@ -30,6 +36,9 @@ export function getRedisConnectionOptions(): RedisOptions {
 }
 
 export function getRedisConnection(): Redis {
+  if (!isRedisConfigured()) {
+    throw new Error("REDIS_URL is not set");
+  }
   if (!connection) {
     connection = new Redis(getRedisConnectionOptions());
     connection.on("error", (err) => {

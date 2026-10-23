@@ -7,8 +7,6 @@ import { get, set, del } from "idb-keyval";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { SocketProvider, useSocket } from "@/contexts/SocketContext";
-import { useGlobalChatRealtime } from "@/hooks/use-global-chat-realtime";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { usePrefetchAppData } from "@/hooks/use-prefetch-app-data";
 import { usePwaAppBadge } from "@/hooks/use-pwa-app-badge";
@@ -131,9 +129,6 @@ function PrefetchBoot() {
 }
 
 function GlobalChatBoot() {
-  const { isSessionVerified } = useAuth();
-  const { connected } = useSocket();
-  useGlobalChatRealtime(isSessionVerified && connected);
   usePushNotifications();
   usePwaAppBadge();
   return null;
@@ -216,7 +211,6 @@ function App() {
           <AuthProvider>
             <AceAssistantProvider>
             <ErrorBoundary>
-            <SocketProvider>
             <GlobalChatBoot />
             <PrefetchBoot />
             <MobileChromeProvider>
@@ -232,7 +226,6 @@ function App() {
               <Toaster />
               <FormEnterNavigation />
             </MobileChromeProvider>
-            </SocketProvider>
             </ErrorBoundary>
             </AceAssistantProvider>
           </AuthProvider>

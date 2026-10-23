@@ -6,8 +6,8 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ## 🔗 Direct Dashboard Links
 
-* **Firebase Console**: [console.firebase.google.com/project/ace-digital-os](https://console.firebase.google.com/project/ace-digital-os)
-* **Render Dashboard**: [dashboard.render.com](https://dashboard.render.com)
+* **Firebase Console**: [console.firebase.google.com/project/ace-digital-int-12345](https://console.firebase.google.com/project/ace-digital-int-12345)
+* **Google Cloud Console**: [console.cloud.google.com](https://console.cloud.google.com/run?project=ace-digital-int-12345)
 * **Expo Developer Dashboard**: [expo.dev](https://expo.dev)
 * **Google Play Console**: [play.google.com/console](https://play.google.com/console)
 * **Apple Developer Portal**: [developer.apple.com/account](https://developer.apple.com/account)
@@ -15,51 +15,58 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ---
 
-## 1. Domain Configuration for `acedigital.cc`
+## 1. Domain Configuration
 
-You need to configure DNS records in your domain registrar (e.g. GoDaddy, Cloudflare, Namecheap) to connect the Web Portal and the Backend API.
+`acedigital.cc` is the public marketing website. Leave its apex and `www` records alone. The employee app uses the subdomain `app.acedigital.cc` on the default Firebase Hosting site `ace-digital-int-12345` in project `ace-digital-int-12345`.
 
-### A. Web Portal (Firebase Hosting)
-1. Go to **Firebase Console** -> **Build** -> **Hosting**.
-2. Click **Add Custom Domain** and enter `acedigital.cc` (and optionally `www.acedigital.cc`).
-3. Firebase will ask you to verify ownership by adding a **TXT record** to your DNS settings. Copy the TXT hostname and value and add it in your registrar.
-4. Once verified, Firebase will provide **A records** (typically two IP addresses like `199.36.158.100` and `199.36.158.105`). Add these as **A records** in your registrar pointing to the `@` (root) host.
+### A. Employee app (default Hosting site `ace-digital-int-12345`)
+1. Do not create a second site. `firebase.json` already sets `"site": "ace-digital-int-12345"`.
+2. Deploy: `pnpm run deploy:hosting` (only after Cloud Run service `ace-digital-api` exists — see [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md))
+3. In **Firebase Console** -> **Hosting** -> site **ace-digital-int-12345** -> **Add custom domain** -> `app.acedigital.cc`.
+4. Add the DNS records Firebase shows. For this subdomain that is usually a TXT record to prove you own the domain, then a **CNAME** for host `app` pointing at `ace-digital-int-12345.web.app`. Use the values Firebase prints if they differ.
+5. On the empty Firestore, create the owner before login: `USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 ADMIN_EMAIL='admin@acedigital.cc' ADMIN_PASSWORD='at-least-12-characters' pnpm --filter @workspace/scripts run bootstrap:owner`
 
-### B. Backend API (Render)
-1. Go to the **Render Dashboard**, select your `api-server` Web Service.
-2. Click **Settings** -> Scroll down to **Custom Domains** -> click **Add Custom Domain**.
-3. Enter `api.acedigital.cc`.
-4. Render will ask you to add a **CNAME record** in your registrar pointing `api` to your Render service address (e.g., `ace-digital-api.onrender.com`). Add this record in your registrar.
+### B. Backend API (Cloud Run)
 
-### Summary of Required DNS Records in your Registrar:
+The SPA calls same-origin `/api`. You do not need an `api.acedigital.cc` DNS record.
+
+```bash
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+```
+
+That sets min instances 0, max instances 2, region `asia-south1`, request-based billing, and mounts Secret Manager. Details and the cost estimate: [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md) and [docs/PRODUCTION.md](docs/PRODUCTION.md).
+
+### DNS to add for the employee app
 
 | Type | Host/Name | Value/Points To | Purpose |
 |---|---|---|---|
-| **TXT** | `@` (or empty) | *[Copy from Firebase Hosting]* | Domain ownership verification |
-| **A** | `@` (or empty) | `199.36.158.100` | Points `acedigital.cc` to Web Portal |
-| **A** | `@` (or empty) | `199.36.158.105` | Points `acedigital.cc` to Web Portal (secondary IP) |
-| **CNAME** | `www` | `ace-digital-os.web.app` | Redirects `www.acedigital.cc` to Web Portal |
-| **CNAME** | `api` | `ace-digital-api.onrender.com` | Points `api.acedigital.cc` to Express API |
+| **TXT** | *(what Firebase shows)* | *(copy from Firebase)* | Prove you own `acedigital.cc` for the `app` host |
+| **CNAME** | `app` | `ace-digital-int-12345.web.app` | Employee app. Do not change the apex `@` record |
 
 ---
 
 ## 2. Environment Variables & Credentials Update
 
-### A. Render API Server Configuration
-In the **Render Dashboard**, select your `api-server` service, click **Environment** -> **Add Environment Variable**, and populate/update the following values:
+### A. Cloud Run API
+
+`scripts/deploy-cloud-run.sh` sets these. Secrets are Secret Manager names, not values in git.
 
 | Variable Name | Production Value / Instruction |
 |---|---|
 | `NODE_ENV` | `production` |
 | `USE_FIRESTORE` | `true` |
-| `FIREBASE_PROJECT_ID` | `ace-digital-os` |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Go to Firebase Console -> Project Settings -> Service Accounts -> Click **Generate New Private Key**. Copy the entire JSON content, convert it into a single-line string, and paste it here. |
-| `JWT_SECRET` | Generate a strong 32+ character random string (e.g., run `openssl rand -base64 32` in your local terminal). |
-| `REDIS_URL` | Enter the connection string for your production Redis server (needed for message workers and chat queues). |
-| `CORS_ORIGINS` | `https://acedigital.cc,https://www.acedigital.cc` (Allows the web app to query the API). |
+| `FIREBASE_PROJECT_ID` | `ace-digital-int-12345` |
+| `GOOGLE_CLOUD_PROJECT` | `ace-digital-int-12345` |
+| `JWT_SECRET` | Secret Manager secret `JWT_SECRET` (mounted, not a plain env var). |
+| `CORS_ORIGINS` | `https://app.acedigital.cc,https://ace-digital-int-12345.web.app,https://ace-digital-int-12345.firebaseapp.com` |
+| `APP_URL` | `https://app.acedigital.cc` |
+| `APP_LOGIN_URL` | `https://app.acedigital.cc/login` |
+| `API_PUBLIC_URL` | `https://app.acedigital.cc` |
 | `EMAIL_FROM` | `Ace Digital <no-reply@acedigital.cc>` |
-| `RESEND_API_KEY` | Your production Resend API Key (used to email ID cards and payslips to employees). |
-| `GEMINI_API_KEY` | Your Google Gemini API Key (used for the Ace AI assistant). |
+| `RESEND_API_KEY` | Optional Secret Manager secret, for welcome and reset mail. |
+| `GEMINI_API_KEY` | Optional Secret Manager secret, for Ace AI. |
+
+Do not set `REDIS_URL` or `FIREBASE_SERVICE_ACCOUNT_JSON` on Cloud Run. Leave minimum instances at 0.
 
 ---
 
@@ -89,17 +96,22 @@ In [assetlinks.json](file:///Users/kavin/Documents/GitHub/Ace%20Digital/artifact
 
 Once environment variables and verification placeholders are updated, push the latest files to live:
 
-### A. Deploy Web Portal & Firebase Functions
-Run the following script command from the root folder to compile the web app with custom headers, copy assets, and deploy to Firebase:
+### A. Deploy the API, then the web app
+
+Cloud Run first, then Hosting (the rewrite needs the service to exist):
+
 ```bash
-pnpm run deploy:production
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
+
+`pnpm run deploy:production` runs those two steps. It still refuses to deploy until `ACE_DEPLOY_CLOUD_RUN=1` is set. Push functions stay a separate Firebase deploy; see FIREBASE.md.
 
 ### B. Create an App Reviewer Test Account
 App Store reviewers (Apple and Google) **will reject your app** if you do not provide a working test account.
 1. Run the RBAC seeding script locally targeting your production Firestore instance:
    ```bash
-   CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run seed:rbac-dev
+   CONFIRM_RESET=ace-digital-int-12345 USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 pnpm --filter @workspace/scripts run seed:rbac-dev
    ```
    *Note: Ensure you have authenticated using the Firebase CLI (`firebase login`) and have owner rights on the project.*
 2. Write down the reviewer credentials (e.g., `reviewer@acedigital.cc` / `ReviewerPassword@123`) and submit them under the **App Review Information** fields in App Store Connect and Google Play Console.

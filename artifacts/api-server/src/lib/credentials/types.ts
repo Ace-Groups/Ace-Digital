@@ -63,7 +63,7 @@ export const DEFAULT_ORG_CREDENTIAL_SETTINGS: OrgCredentialSettings = {
   defaultIdCardSignatoryUserId: null,
   defaultCertificateSignatoryUserId: null,
   certificatePrefix: "ACE-INT",
-  verifyBaseUrl: process.env.APP_URL ?? "https://acedigital.cc",
+  verifyBaseUrl: process.env.APP_URL ?? "https://app.acedigital.cc",
   verifyInactiveMessage:
     "This employee is no longer active. Please return this ID card to Ace Digital HR immediately.",
   updatedAt: new Date().toISOString(),

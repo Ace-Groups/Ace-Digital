@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Creates the default Firebase Realtime Database instance (one-time per project).
-# Requires: firebase CLI logged in with Owner/Editor on ace-digital-os.
+# Requires: firebase CLI logged in with Owner/Editor on ace-digital-int-12345.
 set -euo pipefail
 
-PROJECT="${FIREBASE_PROJECT:-ace-digital-os}"
+PROJECT="${FIREBASE_PROJECT:-ace-digital-int-12345}"
 LOCATION="${RTDB_LOCATION:-asia-southeast1}"
 
 echo "Enabling Realtime Database for project: ${PROJECT}"

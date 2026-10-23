@@ -6,15 +6,17 @@ An internal company operating system for Ace Digital — an IT company. Manages 
 
 | | URL |
 |--|-----|
-| App | https://ace-digital-os.web.app |
-| API + WS | https://ace-digital-api.onrender.com |
+| App | https://app.acedigital.cc (Firebase Hosting site `ace-digital-int-12345`) |
+| API | Same origin `/api` on the Hosting site (Cloud Run `ace-digital-api`, `asia-south1`) |
+
+Production data lives in Cloud Firestore (`USE_FIRESTORE=true`). PostgreSQL is the local database only.
 
 ```bash
-pnpm run deploy:hosting:render   # build:web:render + firebase hosting
-# Render API auto-deploys from main (scripts/render-build.sh)
+ACE_DEPLOY_CLOUD_RUN=1 pnpm run deploy:cloud-run
+pnpm run deploy:hosting
 ```
 
-Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md), [FIREBASE.md](FIREBASE.md).
+Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md), [FIREBASE.md](FIREBASE.md).
 
 ## Run & Operate
 
@@ -32,7 +34,7 @@ Docs: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**, [docs/DEPLOY_RENDER.md](docs
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5 (port 8080, path `/api`)
 - Frontend: React 19 + Vite (port 21973, path `/`)
-- DB: PostgreSQL + Drizzle ORM
+- DB: Cloud Firestore in production; PostgreSQL + Drizzle ORM locally
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Auth: JWT Bearer tokens, bcryptjs hashing

@@ -1,12 +1,15 @@
 /**
  * Creates or updates Nesa's manager user in Firestore.
- * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:nesa
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 \
+ *   ADMIN_EMAIL=nesa@acedigital.cc ADMIN_PASSWORD='choose-a-new-password' \
+ *   pnpm --filter @workspace/scripts run upsert:nesa
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
+import { requireAdminPassword } from "./require-admin-password";
 
-const EMAIL = "nesa@acedigital.cc";
-const PASSWORD = "Nesa@2026";
+const EMAIL = process.env.ADMIN_EMAIL?.trim() || "nesa@acedigital.cc";
+const PASSWORD = requireAdminPassword();
 const FULL_NAME = "Nesa";
 const JOB_TITLE = "Manager";
 const ROLE = "manager";
@@ -75,7 +78,7 @@ async function main() {
 
   console.log("✅ Manager ready:");
   console.log(`   Email:    ${EMAIL}`);
-  console.log(`   Password: ${PASSWORD}`);
+  console.log("   Password: (value of ADMIN_PASSWORD, not printed)");
   console.log(`   Role:     ${ROLE} (${JOB_TITLE})`);
 }
 

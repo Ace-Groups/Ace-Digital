@@ -23,21 +23,20 @@ flowchart LR
 ```mermaid
 flowchart TD
   Browser[React SPA]
-  Hosting[Firebase Hosting]
-  API[Render REST API]
-  PG[(Render PostgreSQL)]
+  Hosting[Firebase Hosting app.acedigital.cc]
+  API[Cloud Run ace-digital-api]
   Firestore[(Cloud Firestore)]
 
   Browser -->|1. Loads SPA| Hosting
-  Browser -->|2. REST Writes| API
-  API -->|3. Source of Truth| PG
-  API -->|4. Mirrors Chat Activity| Firestore
-  Browser -->|5. Realtime onSnapshot Reads| Firestore
+  Browser -->|2. REST via Hosting rewrite| API
+  API -->|3. Source of truth| Firestore
+  Browser -->|4. Realtime chat onSnapshot| Firestore
 ```
 
-1. **REST Operations**: All authenticated actions (authentication, adding users, updating projects, approving requests) are processed via the REST API server hosted on Render.
-2. **Data Consistency**: PostgreSQL remains the source of truth for all writes.
-3. **Real-time Chat**: For live messaging, the API mirrors message and channel events to Cloud Firestore. The client connects directly to Firestore via standard web SDK `onSnapshot` listeners to receive instantaneous chat updates without API polling. All Firestore client writes are denied by Firestore Security Rules.
+1. **REST Operations**: Authenticated actions go to the Express API on Cloud Run (`asia-south1`, minimum instances 0, request-based billing). Firebase Hosting rewrites `/api/**` to that service. Requests are short, so the service scales to zero between them.
+2. **Data consistency**: Cloud Firestore is the production source of truth for every API write (`USE_FIRESTORE=true`). PostgreSQL is the local development database only. Chat does not need Redis.
+3. **Real-time chat**: The API writes messages to Firestore. The client reads them with `onSnapshot`. Firestore security rules deny client writes.
+4. **Web host**: The employee app is the default Firebase Hosting site `ace-digital-int-12345` in project `ace-digital-int-12345`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app.
 
 ---
 
@@ -46,10 +45,10 @@ flowchart TD
 - **Monorepo Manager**: [pnpm workspaces](file:///Users/kavin/Documents/GitHub/Ace%20Digital/pnpm-workspace.yaml) (Node.js 24, TypeScript 5.9)
 - **Frontend App**: React 19, Vite 7, Tailwind CSS v4, Lucide React, shadcn/ui components
 - **REST API Server**: Express 5 (listening on port 8080, prefixed `/api`)
-- **Database & ORM**: PostgreSQL, Drizzle ORM, Zod schema validation
+- **Database & ORM**: Cloud Firestore in production. PostgreSQL + Drizzle ORM for local development. Zod schema validation
 - **API Spec & Codegen**: OpenAPI v3 (source spec in [openapi.yaml](file:///Users/kavin/Documents/GitHub/Ace%20Digital/lib/api-spec/openapi.yaml)) + Orval for automated client query hook and validator generation
 - **Authentication**: JSON Web Tokens (JWT) Bearer auth, bcryptjs hashing
-- **Deployment Surfaces**: Firebase Hosting (static SPA client), Google Cloud Firestore (real-time chat sync), Render (REST API + PostgreSQL database hosting)
+- **Deployment Surfaces**: Firebase Hosting default site `ace-digital-int-12345` (SPA, `app.acedigital.cc`), Cloud Run `ace-digital-api` in `asia-south1` (API, scale to zero), Cloud Firestore in `ace-digital-int-12345` (production data)
 
 ---
 
@@ -157,10 +156,10 @@ Requests submitted by employees routes to authorized roles depending on approval
 
 For full technical specifications on deployment paths, read the supplementary guides:
 
-1. **[docs/PRODUCTION.md](file:///Users/kavin/Documents/GitHub/Ace%20Digital/docs/PRODUCTION.md)**: Production architecture overview, layout diagram, and hosting target details.
-2. **[docs/DEPLOY_RENDER.md](file:///Users/kavin/Documents/GitHub/Ace%20Digital/docs/DEPLOY_RENDER.md)**: Environment variable settings and step-by-step setup guides for deploying the REST API server on Render.
-3. **[docs/RENDER_KEEPALIVE_CRON.md](file:///Users/kavin/Documents/GitHub/Ace%20Digital/docs/RENDER_KEEPALIVE_CRON.md)**: Configuring keep-alive hooks from external monitors (cron-job.org / UptimeRobot) to keep the Render free tier API warm.
-4. **[FIREBASE.md](file:///Users/kavin/Documents/GitHub/Ace%20Digital/FIREBASE.md)**: Firebase project settings, security rule deployment, Cloud functions configurations, and production admin credentials reset.
+1. **[docs/PRODUCTION.md](docs/PRODUCTION.md)**: Production architecture, Hosting target, and the 12-person cost estimate.
+2. **[docs/DEPLOY_CLOUD_RUN.md](docs/DEPLOY_CLOUD_RUN.md)**: Cloud Run deploy commands, Secret Manager, and the Hosting rewrite.
+3. **[docs/RENDER_KEEPALIVE_CRON.md](docs/RENDER_KEEPALIVE_CRON.md)**: Why not to ping the API to keep it warm.
+4. **[FIREBASE.md](FIREBASE.md)**: Firebase project settings, security rules, push functions, and the admin password reset.
 
 ---
 

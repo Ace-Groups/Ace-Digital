@@ -1,17 +1,28 @@
 /**
- * Prepares the Firestore database for production.
- * Deletes all projects, tasks, clients, approvals, expenses, messages, and other users.
- * Keeps ONLY the user kavin@acedigital.cc as the active super_admin.
+ * Wipes most Firestore data and keeps a single super_admin.
+ * Prefer bootstrap:owner on an empty project. This script deletes other users.
  *
- * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os npx tsx scripts/src/clear-db-for-prod.ts
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-int-12345 \
+ *   ADMIN_EMAIL='admin@acedigital.cc' ADMIN_PASSWORD='choose-a-new-password' \
+ *   npx tsx scripts/src/clear-db-for-prod.ts
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
+import { requireAdminPassword } from "./require-admin-password";
 
-const EMAIL = "kavin@acedigital.cc";
-const PASSWORD = "Kavin@2026";
-const FULL_NAME = "Kavin Balaji";
-const JOB_TITLE = "Managing Director";
+const PROJECT_ID =
+  process.env.GOOGLE_CLOUD_PROJECT?.trim() ||
+  process.env.GCLOUD_PROJECT?.trim() ||
+  process.env.FIREBASE_PROJECT_ID?.trim() ||
+  "ace-digital-int-12345";
+process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID;
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || PROJECT_ID;
+process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || PROJECT_ID;
+
+const EMAIL = process.env.ADMIN_EMAIL?.trim() || "admin@acedigital.cc";
+const PASSWORD = requireAdminPassword();
+const FULL_NAME = process.env.ADMIN_FULL_NAME?.trim() || "Admin";
+const JOB_TITLE = process.env.ADMIN_JOB_TITLE?.trim() || "Owner";
 const ROLE = "super_admin";
 
 async function main() {
@@ -182,7 +193,7 @@ async function main() {
   });
   console.log("✅ Counters reset to zero");
 
-  console.log("\n🎉 Database prepared successfully for production! ONLY kavin@acedigital.cc exists.");
+  console.log(`\n🎉 Database prepared successfully for production! ONLY ${EMAIL} exists.`);
 }
 
 main().catch((err) => {

@@ -14,6 +14,16 @@ service firebase.storage {
         && firestore.exists(/databases/(default)/documents/channel_member_index/$(channelId + '_' + authUserId()));
     }
 
+    // Direct Storage reads of HR files. The API still enforces employees:read
+    // when it streams a file. Custom tokens include the app role claim.
+    function canReadHrDocuments() {
+      return signedIn() && (
+        request.auth.token.role == "hr" ||
+        request.auth.token.role == "management" ||
+        request.auth.token.role == "super_admin"
+      );
+    }
+
     match /channels/{channelId}/{uploadId}/{fileName} {
       allow read: if signedIn() && isChannelMember(int(channelId));
       allow write: if signedIn()
@@ -27,9 +37,9 @@ service firebase.storage {
       allow write: if false;
     }
 
-    /** HR onboarding documents — writes via Admin SDK only. */
+    // HR onboarding documents. Writes are Admin SDK only.
     match /hr-documents/{uploadId}/{fileName} {
-      allow read: if signedIn();
+      allow read: if canReadHrDocuments();
       allow write: if false;
     }
   }

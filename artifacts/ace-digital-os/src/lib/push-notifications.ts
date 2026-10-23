@@ -103,7 +103,17 @@ export async function registerWebPushToken(): Promise<boolean> {
   const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  const workerQuery = new URLSearchParams({
+    apiKey: firebaseConfig.apiKey,
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId,
+    storageBucket: firebaseConfig.storageBucket,
+    messagingSenderId: firebaseConfig.messagingSenderId,
+    appId: firebaseConfig.appId,
+  });
+  const registration = await navigator.serviceWorker.register(
+    `/firebase-messaging-sw.js?${workerQuery.toString()}`,
+  );
 
   const token = await getToken(messaging, {
     vapidKey,

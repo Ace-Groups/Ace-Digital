@@ -9,7 +9,7 @@ import {
   parseAadhaarDocuments,
   serializeAadhaarDocuments,
   uploadHrDocument,
-  resolveDocumentUrl,
+  fetchAuthorizedDocumentBlob,
   type StoredHrDocument,
 } from "@/lib/employee-documents";
 
@@ -111,15 +111,26 @@ export function AadhaarMultiUpload({ value, onChange, error }: AadhaarMultiUploa
               className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border bg-muted/40 text-xs"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <a
-                  href={resolveDocumentUrl(doc.url)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-primary hover:underline truncate"
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline truncate text-left"
                   title="Click to view Aadhaar document"
+                  onClick={() => {
+                    void fetchAuthorizedDocumentBlob(doc.url)
+                      .then((blobUrl) => {
+                        window.open(blobUrl, "_blank", "noopener,noreferrer");
+                      })
+                      .catch(() => {
+                        toast({
+                          title: "Could not open document",
+                          description: "Sign in again and retry.",
+                          variant: "destructive",
+                        });
+                      });
+                  }}
                 >
                   {doc.name}
-                </a>
+                </button>
                 <span className="text-[10px] text-muted-foreground shrink-0">
                   ({(doc.size / (1024 * 1024)).toFixed(2)} MB)
                 </span>
