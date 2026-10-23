@@ -15,31 +15,29 @@ This document outlines the exact step-by-step actions required to deploy the Ace
 
 ---
 
-## 1. Domain Configuration for `acedigital.cc`
+## 1. Domain Configuration
 
-You need to configure DNS records in your domain registrar (e.g. GoDaddy, Cloudflare, Namecheap) to connect the Web Portal and the Backend API.
+`acedigital.cc` is the public marketing website. Leave its apex and `www` records alone. The employee app uses the subdomain `app.acedigital.cc` on Firebase Hosting site `ace-digital-app`.
 
-### A. Web Portal (Firebase Hosting)
-1. Go to **Firebase Console** -> **Build** -> **Hosting**.
-2. Click **Add Custom Domain** and enter `acedigital.cc` (and optionally `www.acedigital.cc`).
-3. Firebase will ask you to verify ownership by adding a **TXT record** to your DNS settings. Copy the TXT hostname and value and add it in your registrar.
-4. Once verified, Firebase will provide **A records** (typically two IP addresses like `199.36.158.100` and `199.36.158.105`). Add these as **A records** in your registrar pointing to the `@` (root) host.
+### A. Employee app (Firebase Hosting site `ace-digital-app`)
+1. Create the site once: `npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os`
+2. Deploy: `pnpm run deploy:hosting:render`
+3. In **Firebase Console** -> **Hosting** -> site **ace-digital-app** -> **Add custom domain** -> `app.acedigital.cc`.
+4. Add the DNS records Firebase shows. For this subdomain that is usually a TXT record to prove you own the domain, then a **CNAME** for host `app` pointing at `ace-digital-app.web.app`. Use the values Firebase prints if they differ.
 
 ### B. Backend API (Render)
-1. Go to the **Render Dashboard**, select your `api-server` Web Service.
-2. Click **Settings** -> Scroll down to **Custom Domains** -> click **Add Custom Domain**.
-3. Enter `api.acedigital.cc`.
-4. Render will ask you to add a **CNAME record** in your registrar pointing `api` to your Render service address (e.g., `ace-digital-api.onrender.com`). Add this record in your registrar.
+1. Go to the **Render Dashboard**, select your `ace-digital-api` Web Service.
+2. Click **Settings** -> **Custom Domains** -> **Add Custom Domain**.
+3. Enter `api.acedigital.cc` only if you want the API on that name. The SPA is already built to call `https://ace-digital-api.onrender.com`.
+4. Render will ask for a **CNAME** from `api` to `ace-digital-api.onrender.com`.
 
-### Summary of Required DNS Records in your Registrar:
+### DNS to add for the employee app
 
 | Type | Host/Name | Value/Points To | Purpose |
 |---|---|---|---|
-| **TXT** | `@` (or empty) | *[Copy from Firebase Hosting]* | Domain ownership verification |
-| **A** | `@` (or empty) | `199.36.158.100` | Points `acedigital.cc` to Web Portal |
-| **A** | `@` (or empty) | `199.36.158.105` | Points `acedigital.cc` to Web Portal (secondary IP) |
-| **CNAME** | `www` | `ace-digital-os.web.app` | Redirects `www.acedigital.cc` to Web Portal |
-| **CNAME** | `api` | `ace-digital-api.onrender.com` | Points `api.acedigital.cc` to Express API |
+| **TXT** | *(what Firebase shows)* | *(copy from Firebase)* | Prove you own `acedigital.cc` for the `app` host |
+| **CNAME** | `app` | `ace-digital-app.web.app` | Employee app. Do not change the apex `@` record |
+| **CNAME** | `api` | `ace-digital-api.onrender.com` | Optional API hostname |
 
 ---
 
@@ -56,7 +54,7 @@ In the **Render Dashboard**, select your `api-server` service, click **Environme
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Go to Firebase Console -> Project Settings -> Service Accounts -> Click **Generate New Private Key**. Copy the entire JSON content, convert it into a single-line string, and paste it here. |
 | `JWT_SECRET` | Generate a strong 32+ character random string (e.g., run `openssl rand -base64 32` in your local terminal). |
 | `REDIS_URL` | Enter the connection string for your production Redis server (needed for message workers and chat queues). |
-| `CORS_ORIGINS` | `https://acedigital.cc,https://www.acedigital.cc` (Allows the web app to query the API). |
+| `CORS_ORIGINS` | `https://app.acedigital.cc,https://ace-digital-app.web.app,https://ace-digital-app.firebaseapp.com` |
 | `EMAIL_FROM` | `Ace Digital <no-reply@acedigital.cc>` |
 | `RESEND_API_KEY` | Your production Resend API Key (used to email ID cards and payslips to employees). |
 | `GEMINI_API_KEY` | Your Google Gemini API Key (used for the Ace AI assistant). |

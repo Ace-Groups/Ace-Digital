@@ -1,12 +1,15 @@
 /**
  * Creates or updates Kavin's admin user in Firestore (no Cloud Functions required).
- * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
+ * Run: USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+ *   ADMIN_PASSWORD='choose-a-new-password' \
+ *   pnpm --filter @workspace/scripts run upsert:kavin
  */
 import bcrypt from "bcryptjs";
 import { createFirestoreStore } from "../../lib/db/src/store/firestore";
+import { requireAdminPassword } from "./require-admin-password";
 
-const EMAIL = "kavin@acedigital.cc";
-const PASSWORD = "Kavin@2026";
+const EMAIL = process.env.ADMIN_EMAIL?.trim() || "kavin@acedigital.cc";
+const PASSWORD = requireAdminPassword();
 const FULL_NAME = "Kavin Balaji";
 const JOB_TITLE = "Managing Director";
 /** Full app access; job title shown as Managing Director */
@@ -69,7 +72,7 @@ async function main() {
 
   console.log("✅ Admin ready:");
   console.log(`   Email:    ${EMAIL}`);
-  console.log(`   Password: ${PASSWORD}`);
+  console.log("   Password: (value of ADMIN_PASSWORD, not printed)");
   console.log(`   Role:     ${ROLE} (${JOB_TITLE})`);
 }
 

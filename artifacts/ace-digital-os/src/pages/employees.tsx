@@ -25,6 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Briefcase, IdCard, Mail, Plus, Search, ShieldCheck, Users, UserCheck, Building2 } from "lucide-react";
+import { AuthorizedHrDocument } from "@/components/employees/AuthorizedHrDocument";
+import { fetchAuthorizedDocumentBlob } from "@/lib/employee-documents";
 import { IdCardPreview } from "@/components/id-card/IdCardPreview";
 import { CertificateList } from "@/components/credentials/CertificateList";
 import { cn, formatCurrency, statusColor } from "@/lib/utils";
@@ -813,17 +815,6 @@ function EmployeeDetailDialog({
                 return (
                   <div className="flex flex-wrap gap-2 mt-1">
                     {docs.map((doc: any, i: number) => {
-                      const resolvedUrl = (() => {
-                        const url = doc.url || "";
-                        if (url.startsWith("http") || url.startsWith("data:")) return url;
-                        // Append token for relative endpoints
-                        const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-                        const cleanBase = apiBase.replace(/\/$/, "");
-                        const token = localStorage.getItem("ace_token");
-                        const sep = url.includes("?") ? "&" : "?";
-                        return `${cleanBase}${url}${token ? `${sep}token=${encodeURIComponent(token)}` : ""}`;
-                      })();
-
                       const isPdf = doc.type === "application/pdf" || doc.name?.toLowerCase().endsWith(".pdf");
 
                       return (
@@ -848,26 +839,22 @@ function EmployeeDetailDialog({
                               </DialogDescription>
                             </DialogHeader>
                             <div className="flex-1 min-h-0 w-full bg-muted/40 rounded-xl overflow-hidden border border-border/40 relative flex items-center justify-center">
-                              {isPdf ? (
-                                <iframe
-                                  src={resolvedUrl}
-                                  className="w-full h-full border-none"
-                                  title={doc.name}
-                                />
-                              ) : (
-                                <img
-                                  src={resolvedUrl}
-                                  alt={doc.name || "Aadhaar Card"}
-                                  className="max-w-full max-h-full object-contain rounded-lg p-2"
-                                />
-                              )}
+                              <AuthorizedHrDocument
+                                url={doc.url || ""}
+                                name={doc.name || "Aadhaar Document"}
+                                isPdf={isPdf}
+                              />
                             </div>
                             <DialogFooter className="shrink-0 pt-2 border-t flex gap-2 justify-end">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(resolvedUrl, "_blank")}
+                                onClick={() => {
+                                  void fetchAuthorizedDocumentBlob(doc.url || "")
+                                    .then((blobUrl) => window.open(blobUrl, "_blank", "noopener,noreferrer"))
+                                    .catch(() => undefined);
+                                }}
                               >
                                 Open in new tab
                               </Button>

@@ -5,7 +5,7 @@
   "targets": {
     "ace-digital-os": {
       "hosting": {
-        "ace-digital-os": ["ace-digital-os"]
+        "ace-digital-app": ["ace-digital-app"]
       }
     }
   }

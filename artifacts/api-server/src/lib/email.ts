@@ -2,8 +2,8 @@ import { ensureFirebaseAdminApp } from "@workspace/db";
 import { getFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
-const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://acedigital.cc/login";
-const APP_URL = process.env.APP_URL ?? "https://acedigital.cc";
+const LOGIN_URL = process.env.APP_LOGIN_URL ?? "https://app.acedigital.cc/login";
+const APP_URL = process.env.APP_URL ?? "https://app.acedigital.cc";
 const DEFAULT_FROM =
   process.env.EMAIL_FROM ?? "Ace-Digital <no-reply@acedigital.cc>";
 const MAIL_COLLECTION = process.env.FIREBASE_MAIL_COLLECTION ?? "mail";

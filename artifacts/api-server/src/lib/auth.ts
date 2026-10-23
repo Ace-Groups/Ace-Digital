@@ -36,11 +36,7 @@ declare global {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
-  let token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token && typeof req.query.token === "string" && req.query.token.trim()) {
-    token = req.query.token.trim();
-  }
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
     res.status(401).json({ error: "Unauthorized" });

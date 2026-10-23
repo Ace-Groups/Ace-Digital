@@ -5,9 +5,8 @@ Ace Digital OS channel chat follows a Slack-like UX: flat message rows, sidebar 
 ## Data flow
 
 1. The client sends messages, edits, reactions, polls, RSVPs, threads, pins, and deletes through the REST API.
-2. The API writes to PostgreSQL (dev) or Firestore (prod) through the shared store layer.
-3. The store mirrors message and channel activity documents to Firestore.
-4. Authenticated channel members receive read-only Firestore `onSnapshot` updates in production.
+2. In production the API writes straight to Cloud Firestore, which is the source of truth. Local development writes to PostgreSQL and then mirrors chat documents to Firestore.
+3. Authenticated channel members receive read-only Firestore `onSnapshot` updates in production.
 
 Firestore mirrors each message to **both** `messages/{messageId}` (legacy) and `channels/{channelId}/messages/{messageId}` (client realtime path). Channel activity uses `channels/{channelId}`.
 

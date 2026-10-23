@@ -2,7 +2,7 @@
 
 **Live service:** https://ace-digital-api.onrender.com
 
-Render hosts the Express REST API. Firebase Hosting serves the SPA, and Firestore supplies realtime chat updates.
+Render hosts the Express REST API. Firebase Hosting site `ace-digital-app` serves the SPA at `https://app.acedigital.cc`. Cloud Firestore is the production source of truth, including realtime chat. PostgreSQL is local development only. Do not point the marketing domain `acedigital.cc` at this SPA.
 
 ## Required environment
 
@@ -30,10 +30,10 @@ Use the root `render.yaml` Blueprint or configure the service manually.
 
 ```bash
 pnpm run build:web:render
-firebase deploy --only hosting
+npx firebase-tools@latest deploy --only hosting:ace-digital-app --project ace-digital-os
 ```
 
-`build:web:render` sets `VITE_API_BASE_URL=https://ace-digital-api.onrender.com`.
+`build:web:render` sets `VITE_API_BASE_URL=https://ace-digital-api.onrender.com`. The Hosting target is `ace-digital-app` (see `.firebaserc`), not the marketing site.
 
 ## Verify
 

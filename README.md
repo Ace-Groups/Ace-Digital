@@ -23,21 +23,20 @@ flowchart LR
 ```mermaid
 flowchart TD
   Browser[React SPA]
-  Hosting[Firebase Hosting]
+  Hosting[Firebase Hosting app.acedigital.cc]
   API[Render REST API]
-  PG[(Render PostgreSQL)]
   Firestore[(Cloud Firestore)]
 
   Browser -->|1. Loads SPA| Hosting
-  Browser -->|2. REST Writes| API
-  API -->|3. Source of Truth| PG
-  API -->|4. Mirrors Chat Activity| Firestore
-  Browser -->|5. Realtime onSnapshot Reads| Firestore
+  Browser -->|2. REST reads and writes| API
+  API -->|3. Source of truth| Firestore
+  Browser -->|4. Realtime chat onSnapshot| Firestore
 ```
 
 1. **REST Operations**: All authenticated actions (authentication, adding users, updating projects, approving requests) are processed via the REST API server hosted on Render.
-2. **Data Consistency**: PostgreSQL remains the source of truth for all writes.
-3. **Real-time Chat**: For live messaging, the API mirrors message and channel events to Cloud Firestore. The client connects directly to Firestore via standard web SDK `onSnapshot` listeners to receive instantaneous chat updates without API polling. All Firestore client writes are denied by Firestore Security Rules.
+2. **Data consistency**: Cloud Firestore is the production source of truth for every API write. `render.yaml` sets `USE_FIRESTORE=true` and does not set `DATABASE_URL`. PostgreSQL is the local development database only.
+3. **Real-time chat**: The API writes messages to Firestore. The client reads them with `onSnapshot`. Firestore security rules deny client writes.
+4. **Web host**: The employee app is a Firebase Hosting site named `ace-digital-app`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app.
 
 ---
 
@@ -46,10 +45,10 @@ flowchart TD
 - **Monorepo Manager**: [pnpm workspaces](file:///Users/kavin/Documents/GitHub/Ace%20Digital/pnpm-workspace.yaml) (Node.js 24, TypeScript 5.9)
 - **Frontend App**: React 19, Vite 7, Tailwind CSS v4, Lucide React, shadcn/ui components
 - **REST API Server**: Express 5 (listening on port 8080, prefixed `/api`)
-- **Database & ORM**: PostgreSQL, Drizzle ORM, Zod schema validation
+- **Database & ORM**: Cloud Firestore in production. PostgreSQL + Drizzle ORM for local development. Zod schema validation
 - **API Spec & Codegen**: OpenAPI v3 (source spec in [openapi.yaml](file:///Users/kavin/Documents/GitHub/Ace%20Digital/lib/api-spec/openapi.yaml)) + Orval for automated client query hook and validator generation
 - **Authentication**: JSON Web Tokens (JWT) Bearer auth, bcryptjs hashing
-- **Deployment Surfaces**: Firebase Hosting (static SPA client), Google Cloud Firestore (real-time chat sync), Render (REST API + PostgreSQL database hosting)
+- **Deployment Surfaces**: Firebase Hosting site `ace-digital-app` (static SPA, custom domain `app.acedigital.cc`), Cloud Firestore (production database and realtime chat), Render (REST API)
 
 ---
 

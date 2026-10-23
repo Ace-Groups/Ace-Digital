@@ -13,7 +13,7 @@
     "rules": "firebase/storage.rules"
   },
   "hosting": {
-    "site": "ace-digital-os",
+    "target": "ace-digital-app",
     "public": "artifacts/ace-digital-os/dist/public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

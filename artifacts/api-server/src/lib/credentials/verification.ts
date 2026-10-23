@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 function secret(): string {
   return (
@@ -41,9 +41,12 @@ export function buildLegacyCertificateVerifyPath(certificateCode: string): strin
 }
 
 export function verifyCertificateSignature(certificateCode: string, sig: string | undefined): boolean {
-  if (!sig) return true;
+  if (!sig?.trim()) return false;
   const expected = signCertificateCode(certificateCode);
-  return expected === sig;
+  const actual = Buffer.from(sig);
+  const wanted = Buffer.from(expected);
+  if (actual.length !== wanted.length) return false;
+  return timingSafeEqual(actual, wanted);
 }
 
 export function hashIp(ip: string | undefined): string | null {

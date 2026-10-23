@@ -1,6 +1,6 @@
 # Firebase deployment (Ace Digital OS)
 
-**Current production:** the hosted SPA is on Firebase Hosting; REST runs on [Render](https://ace-digital-api.onrender.com), and Firestore supplies realtime chat updates. Deploy the frontend with `pnpm run build:web:render` then `firebase deploy --only hosting`. See **[docs/PRODUCTION.md](docs/PRODUCTION.md)** for the full live architecture. Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
+**Current production:** Cloud Firestore is the source of truth for all API data. REST runs on [Render](https://ace-digital-api.onrender.com). The employee SPA deploys to Firebase Hosting site `ace-digital-app`, intended for `https://app.acedigital.cc`. `https://acedigital.cc` is the public marketing site and is not this app. Deploy the frontend with `pnpm run deploy:hosting:render` after the site exists (see below). Cloud Functions remain in the project for optional `/api/**` rewrites but are bypassed when `VITE_API_BASE_URL` points to Render.
 
 ## Project
 
@@ -8,7 +8,8 @@
 |------|--------|
 | Firebase project ID | `ace-digital-os` |
 | Console | https://console.firebase.google.com/project/ace-digital-os |
-| Hosting URL | https://ace-digital-os.web.app |
+| Hosting site | `ace-digital-app` (target in `.firebaserc`) |
+| Hosting URL | https://ace-digital-app.web.app and https://app.acedigital.cc |
 | Database | Cloud Firestore `(default)` in `asia-south1` |
 | API region | `asia-south1` (Gen 1 HTTPS function `api`) |
 | Plan | Blaze (billing enabled) |
@@ -29,30 +30,55 @@ npx firebase-tools@latest apps:sdkconfig WEB 1:468590312757:web:90d5fa23bd3cb78e
 
 ## Production login (single admin)
 
+The ERP does not use Firebase Authentication email/password. Login checks a bcrypt hash on the Firestore `users` document. The password is not stored in this repository.
+
 | Field | Value |
 |-------|--------|
-| Email | `kavin@acedigital.com` |
-| Password | `Kavin@2026` |
+| Email | Set `ADMIN_EMAIL` if it is not `kavin@acedigital.cc`. Older notes also mentioned `kavin@acedigital.com`. Confirm the live document before rotating. |
+| Password | `ADMIN_PASSWORD` in your shell only. At least 12 characters. Never commit it. |
 | Job title | Managing Director |
 | App role | `super_admin` (full access) |
 
-Login: https://ace-digital-os.web.app
+Login (after Hosting is deployed): https://app.acedigital.cc/login
+
+Refresh that admin without wiping other data:
+
+```bash
+USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+  ADMIN_EMAIL='the-live-login-email' \
+  ADMIN_PASSWORD='choose-a-new-password' \
+  pnpm --filter @workspace/scripts run upsert:kavin
+```
+
+Requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) for `ace-digital-os` (`gcloud auth application-default login`). The script prints the email and does not print the password.
 
 ### Reset database to production baseline
 
-Removes **all** demo data (projects, tasks, users, clients, etc.) and keeps only the Kavin admin account plus one Operations team:
+Removes **all** demo data (projects, tasks, users, clients, etc.) and keeps only the admin account plus one Operations team:
 
 ```bash
 CONFIRM_RESET=ace-digital-os USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os \
+  ADMIN_PASSWORD='choose-a-new-password' \
   pnpm --filter @workspace/scripts run reset:production
 ```
 
-Requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) for `ace-digital-os` (e.g. `gcloud auth application-default login`).
+Requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) for `ace-digital-os` (e.g. `gcloud auth application-default login`). This wipes the database. To change only the password, use `upsert:kavin` above.
 
-Refresh a single admin without wiping data:
+## One-time: create the employee Hosting site
+
+The marketing site stays on `acedigital.cc`. The ERP uses a separate Hosting site:
 
 ```bash
-USE_FIRESTORE=true GOOGLE_CLOUD_PROJECT=ace-digital-os pnpm --filter @workspace/scripts run upsert:kavin
+npx firebase-tools@latest hosting:sites:create ace-digital-app --project ace-digital-os
+pnpm run deploy:hosting:render
+```
+
+Then in Firebase Console → Hosting → `ace-digital-app` → Add custom domain `app.acedigital.cc`. Add the TXT and CNAME records Firebase shows. Do not change the apex DNS for `acedigital.cc`.
+
+Deploy Storage rules in the same change so HR files are not world-readable to every signed-in user:
+
+```bash
+npx firebase-tools@latest deploy --only storage --project ace-digital-os
 ```
 
 ## One-time: enable Realtime Database (notes collaboration)
@@ -112,7 +138,7 @@ VITE_FIREBASE_VAPID_KEY="YOUR_VAPID_KEY_HERE" pnpm run build:web:render
 
 Also deploy Firestore rules: `firebase deploy --only firestore:rules`
 
-Set optional `APP_ORIGIN=https://ace-digital-os.web.app` on functions for absolute deep links in push payloads.
+Set optional `APP_ORIGIN=https://app.acedigital.cc` on functions for absolute deep links in push payloads.
 
 ## One-time: enable API (Blaze) — required
 
@@ -202,7 +228,7 @@ npx firebase-tools deploy --only functions --project ace-digital-os
 |--------------|---------|
 | `RESEND_API_KEY` | Resend API key (required for email) |
 | `EMAIL_FROM` | Verified sender, e.g. `Ace-Digital <hr@mybexo.com>` |
-| `APP_LOGIN_URL` | Optional; defaults to `https://ace-digital-os.web.app/login` |
+| `APP_LOGIN_URL` | Optional; defaults to `https://app.acedigital.cc/login` |
 
 If `RESEND_API_KEY` is missing, the API falls back to queuing docs in Firestore collection `mail` (only works if you installed [Trigger Email from Firestore](https://extensions.dev/extensions/firebase/firestore-send-email) with valid SMTP). **You can skip that extension entirely if you use Resend.**
 
@@ -214,8 +240,8 @@ CORS is restricted to Ace Digital hosting URLs and localhost dev ports.
 
 | Use | URL |
 |-----|-----|
-| **Web app (login here)** | https://ace-digital-os.web.app |
-| **API via hosting** | https://ace-digital-os.web.app/api/v1/... |
+| **Web app (login here)** | https://app.acedigital.cc |
+| **API via hosting** | https://app.acedigital.cc/api/v1/... only if Hosting still rewrites `/api/**`. The SPA calls Render directly. |
 | **Function health check** | https://asia-south1-ace-digital-os.cloudfunctions.net/api/api/healthz |
 | **Function root (info JSON only)** | https://asia-south1-ace-digital-os.cloudfunctions.net/api |
 
@@ -261,11 +287,11 @@ pnpm run deploy:firebase
 | Component | Role |
 |-----------|------|
 | **Firestore** | Production database and realtime chat transport; API on Render uses Admin SDK (`FIREBASE_SERVICE_ACCOUNT_JSON`). Client writes are denied. |
-| **Hosting** | SPA at https://ace-digital-os.web.app — build with `pnpm run build:web:render`. |
+| **Hosting** | SPA on site `ace-digital-app` (`https://ace-digital-app.web.app`, custom domain `https://app.acedigital.cc`). Build with `pnpm run build:web:render`. |
 | **Render (`ace-digital-api`)** | REST `/api/*`; see [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). |
 | **Cloud Functions (gen 1)** | Legacy bundled API for Hosting `/api/**` rewrite; unused when the SPA calls Render via `VITE_API_BASE_URL`. |
 
-Postgres (`DATABASE_URL`) is for local development. Local dev runs the API server on port 8080.
+Cloud Firestore is the production source of truth (`USE_FIRESTORE=true` on Render). Postgres (`DATABASE_URL`) is for local development only. Local dev runs the API server on port 8080.
 
 Full diagram and deploy commands: **[docs/PRODUCTION.md](docs/PRODUCTION.md)**. Chat: **[docs/CHAT.md](docs/CHAT.md)**.
 
