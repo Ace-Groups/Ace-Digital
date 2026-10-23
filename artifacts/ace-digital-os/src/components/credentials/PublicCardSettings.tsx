@@ -57,14 +57,14 @@ export function PublicCardSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-11 items-center justify-between gap-4">
         <div>
-          <Label>Enable Nexme public card</Label>
+          <Label id="public-card-enabled">Enable public card</Label>
           <p className="text-xs text-muted-foreground">
-            Show contact actions when someone scans your ID QR (active employees only).
+            Show contact actions when someone scans your ID QR.
           </p>
         </div>
-        <Switch checked={enabled} onCheckedChange={setEnabled} />
+        <Switch checked={enabled} onCheckedChange={setEnabled} aria-labelledby="public-card-enabled" />
       </div>
       {verifyPath && (
         <p className="text-xs">
@@ -75,28 +75,28 @@ export function PublicCardSettings() {
         </p>
       )}
       <div className="space-y-2">
-        <Label>Tagline</Label>
-        <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} />
+        <Label htmlFor="public-card-bio">Tagline</Label>
+        <Textarea id="public-card-bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={2} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>LinkedIn</Label>
-          <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." />
+          <Label htmlFor="public-card-linkedin">LinkedIn</Label>
+          <Input id="public-card-linkedin" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." />
         </div>
         <div className="space-y-2">
-          <Label>Portfolio</Label>
-          <Input value={portfolio} onChange={(e) => setPortfolio(e.target.value)} />
+          <Label htmlFor="public-card-portfolio">Portfolio</Label>
+          <Input id="public-card-portfolio" value={portfolio} onChange={(e) => setPortfolio(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>Public phone</Label>
-          <Input value={publicPhone} onChange={(e) => setPublicPhone(e.target.value)} />
+          <Label htmlFor="public-card-phone">Public phone</Label>
+          <Input id="public-card-phone" value={publicPhone} onChange={(e) => setPublicPhone(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>Office address</Label>
-          <Input value={officeAddress} onChange={(e) => setOfficeAddress(e.target.value)} />
+          <Label htmlFor="public-card-address">Office address</Label>
+          <Input id="public-card-address" value={officeAddress} onChange={(e) => setOfficeAddress(e.target.value)} />
         </div>
       </div>
-      <Button onClick={() => void save()} disabled={saving}>
+      <Button className="min-h-11" onClick={() => void save()} disabled={saving}>
         {saving ? "Saving…" : "Save public card"}
       </Button>
     </div>

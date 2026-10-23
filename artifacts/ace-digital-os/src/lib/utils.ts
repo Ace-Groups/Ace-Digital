@@ -30,7 +30,7 @@ export function formatRelativeTime(dateStr: string | null | undefined): string {
     if (futureMins < 60) return `in ${futureMins}m`;
     if (futureHours < 24) return `in ${futureHours}h`;
     if (futureDays < 7) return `in ${futureDays}d`;
-    return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
   }
 
   const diffMins = Math.floor(diffMs / 60000);
@@ -41,7 +41,7 @@ export function formatRelativeTime(dateStr: string | null | undefined): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 }
 
 /** Parse `YYYY-MM-DD` as local calendar date (no timezone shift). */
@@ -88,7 +88,7 @@ export function formatDateLabel(
 ): string {
   const date = parseDateInput(value) ?? (value ? new Date(value) : undefined);
   if (!date || Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-IN", options);
+  return date.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", ...options });
 }
 
 /** Parse `YYYY-MM-DDTHH:mm` (datetime-local) or ISO strings as local time. */
@@ -126,6 +126,7 @@ export function formatDateTimeLabel(value: string | undefined | null): string {
   const date = parseDateTimeInput(value);
   if (!date) return "";
   return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

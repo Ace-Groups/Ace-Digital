@@ -22,6 +22,7 @@ import { AceAssistantPanel } from "@/components/ai/AceAssistantPanel";
 import { KeyboardShortcutsSheet } from "@/components/v2/KeyboardShortcutsSheet";
 import { QuickCreateFab } from "@/components/v2/QuickCreateFab";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
+import { isHrefInDailyScope, useExtendedOps } from "@/lib/product-scope";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
 const ErrorPage = lazyWithReload(() => import("@/pages/error"));
 const ForbiddenPage = lazyWithReload(() => import("@/pages/forbidden"));
@@ -92,6 +93,7 @@ function PageFallback() {
 function ProtectedRoute({ component: Component }: { component: ComponentType }) {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
   const [location] = useLocation();
+  const extended = useExtendedOps();
 
   if (isBootstrapping) {
     return <LoadingScreen />;
@@ -103,6 +105,10 @@ function ProtectedRoute({ component: Component }: { component: ComponentType }) 
 
   if (user?.mustChangePassword && location !== "/change-password") {
     return <Redirect to="/change-password" />;
+  }
+
+  if (user && !AUTH_ONLY_PATHS.has(location) && !isHrefInDailyScope(location, extended)) {
+    return <Redirect to="/" />;
   }
 
   if (user && !AUTH_ONLY_PATHS.has(location) && !canAccessRoute(user.role, location)) {

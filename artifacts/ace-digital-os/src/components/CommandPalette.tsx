@@ -24,6 +24,7 @@ import {
 import { AceAiAvatar } from "@/components/ai/AceAiAvatar";
 import { useAceAssistant } from "@/contexts/AceAssistantContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useExtendedOps } from "@/lib/product-scope";
 import { hapticLight } from "@/lib/haptics";
 import {
   CommandDialog,
@@ -51,6 +52,7 @@ export function CommandPalette() {
   const { resolvedTheme, setTheme } = useTheme();
   const { setOpen: setAssistantOpen } = useAceAssistant();
   const { isSessionVerified } = useAuth();
+  const extended = useExtendedOps();
   const searchEnabled = open && isSessionVerified;
 
   // Load searchable data only when palette is open and user is signed in
@@ -112,9 +114,28 @@ export function CommandPalette() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Search, navigate, or ask Ace anything…" />
+      <CommandInput placeholder="Search people, or jump to check-in, work, leave…" />
       <CommandList className="max-h-[350px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>Nothing matches. Try a name, or jump to check-in.</CommandEmpty>
+
+        <CommandGroup heading="Today">
+          <CommandItem value="check in home attendance" onSelect={() => runCommand(() => setLocation("/"))} className="min-h-11">
+            Check in
+          </CommandItem>
+          <CommandItem value="submit work new task" onSelect={() => runCommand(() => setLocation("/tasks?new=1"))} className="min-h-11">
+            Submit work
+          </CommandItem>
+          <CommandItem value="apply for leave approvals" onSelect={() => runCommand(() => setLocation("/approvals?new=leave"))} className="min-h-11">
+            Apply for leave
+          </CommandItem>
+          <CommandItem value="roster attendance who is in" onSelect={() => runCommand(() => setLocation("/attendance"))} className="min-h-11">
+            Today&apos;s roster
+          </CommandItem>
+          <CommandItem value="inbox notifications approvals review" onSelect={() => runCommand(() => setLocation("/notifications"))} className="min-h-11">
+            Inbox
+          </CommandItem>
+        </CommandGroup>
+        <CommandSeparator className="my-1" />
 
         {/* Dynamic Search Results */}
         {projects && projects.length > 0 && (
@@ -138,7 +159,7 @@ export function CommandPalette() {
           </CommandGroup>
         )}
 
-        {notes && notes.length > 0 && (
+        {extended && notes && notes.length > 0 && (
           <CommandGroup heading="Notes & Docs">
             {notes.slice(0, 5).map((note) => (
               <CommandItem
@@ -201,7 +222,7 @@ export function CommandPalette() {
 
         <CommandSeparator className="my-1" />
 
-        {/* AI */}
+        {extended && (
         <CommandGroup heading="Ace AI">
           <CommandItem
             value="ask ace assistant ai help insights"
@@ -219,6 +240,7 @@ export function CommandPalette() {
             <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[9px]">⌘J</kbd>
           </CommandItem>
         </CommandGroup>
+        )}
 
         <CommandSeparator className="my-1" />
 
@@ -238,7 +260,7 @@ export function CommandPalette() {
 
           <CommandItem
             value="Create new task add checklist todo"
-            onSelect={() => runCommand(() => setLocation("/tasks"))}
+            onSelect={() => runCommand(() => setLocation("/tasks?new=1"))}
             className="flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors"
           >
             <div className="flex items-center gap-2">
@@ -248,6 +270,7 @@ export function CommandPalette() {
             <span className="text-[10px] text-muted-foreground">Go to Tasks</span>
           </CommandItem>
 
+          {extended && (
           <CommandItem
             value="Create new note document memo note"
             onSelect={() => runCommand(() => setLocation("/notes"))}
@@ -259,6 +282,7 @@ export function CommandPalette() {
             </div>
             <span className="text-[10px] text-muted-foreground">Go to Notes</span>
           </CommandItem>
+          )}
 
           <CommandItem
             value="Refresh workspace reload sync dashboard application"
@@ -278,12 +302,12 @@ export function CommandPalette() {
         {/* Pages / Navigation */}
         <CommandGroup heading="Navigation">
           <CommandItem
-            value="go to Dashboard overview stats home"
+            value="go to Home check in overview"
             onSelect={() => runCommand(() => setLocation("/"))}
             className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/80"
           >
             <LayoutDashboard size={15} className="text-muted-foreground" />
-            <span className="text-xs">Dashboard</span>
+            <span className="text-xs">Home</span>
           </CommandItem>
           <CommandItem
             value="go to Channels Chat conversations messaging direct messages"
@@ -341,6 +365,7 @@ export function CommandPalette() {
             <DollarSign size={15} className="text-muted-foreground" />
             <span className="text-xs">Finance Panel</span>
           </CommandItem>
+          {extended && (
           <CommandItem
             value="go to Notes collaborative document memos"
             onSelect={() => runCommand(() => setLocation("/notes"))}
@@ -349,6 +374,7 @@ export function CommandPalette() {
             <StickyNote size={15} className="text-muted-foreground" />
             <span className="text-xs">Notes & Docs</span>
           </CommandItem>
+          )}
           <CommandItem
             value="go to Notifications updates highlights alerts"
             onSelect={() => runCommand(() => setLocation("/notifications"))}
@@ -357,6 +383,7 @@ export function CommandPalette() {
             <Bell size={15} className="text-muted-foreground" />
             <span className="text-xs">Notifications</span>
           </CommandItem>
+          {extended && (
           <CommandItem
             value="go to Activity logs audit tracking"
             onSelect={() => runCommand(() => setLocation("/activity"))}
@@ -365,6 +392,7 @@ export function CommandPalette() {
             <TrendingUp size={15} className="text-muted-foreground" />
             <span className="text-xs">Activity Log</span>
           </CommandItem>
+          )}
           <CommandItem
             value="go to Settings profile configuration security"
             onSelect={() => runCommand(() => setLocation("/settings"))}

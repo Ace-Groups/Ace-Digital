@@ -13,9 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hapticLight, hapticSheetOpen } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { isHrefInDailyScope, useExtendedOps } from "@/lib/product-scope";
 
 const ACTIONS = [
-  { icon: CheckSquare, label: "Task", href: "/tasks?create=1" },
+  { icon: CheckSquare, label: "Task", href: "/tasks?new=1" },
   { icon: FolderKanban, label: "Project", href: "/projects?create=1" },
   { icon: Calendar, label: "Event", href: "/calendar?create=1" },
   { icon: StickyNote, label: "Note", href: "/notes?create=1" },
@@ -27,9 +28,11 @@ export function QuickCreateFab() {
   const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
   const reduceMotion = useReducedMotion();
+  const extended = useExtendedOps();
   const [open, setOpen] = useState(false);
+  const actions = ACTIONS.filter((action) => isHrefInDailyScope(action.href, extended));
 
-  if (!isAuthenticated || !isMobile || location === "/") return null;
+  if (!isAuthenticated || !isMobile || location === "/" || actions.length === 0) return null;
 
   return (
     <>
@@ -48,7 +51,7 @@ export function QuickCreateFab() {
       <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex flex-col items-end gap-3">
         <AnimatePresence>
           {open &&
-            ACTIONS.map((action, i) => (
+            actions.map((action, i) => (
               <motion.button
                 key={action.href}
                 type="button"

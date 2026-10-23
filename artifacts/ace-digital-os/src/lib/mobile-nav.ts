@@ -1,4 +1,5 @@
 import { getNavRoutesForRole, NAV_ROUTES, type NavRoute } from "@workspace/rbac";
+import { extendedOpsEnabled, isRouteInDailyScope } from "@/lib/product-scope";
 
 /** Daily destinations for the bottom bar, in order, when the role can open them. */
 function pinnedForRole(role: string): NavRoute[] {
@@ -43,12 +44,14 @@ function labelForRoute(route: NavRoute, role: string): string {
   return item?.label ?? route;
 }
 
-export function getMobileNavItems(role: string): {
+export function getMobileNavItems(role: string, extended = extendedOpsEnabled()): {
   primary: MobileNavItem[];
   overflow: MobileNavItem[];
 } {
   const allowed = new Set(getNavRoutesForRole(role));
-  const items: MobileNavItem[] = NAV_ROUTES.filter((n) => allowed.has(n.route)).map((n) => ({
+  const items: MobileNavItem[] = NAV_ROUTES.filter(
+    (n) => allowed.has(n.route) && (extended || isRouteInDailyScope(n.route, extended)),
+  ).map((n) => ({
     route: n.route,
     href: n.href,
     label: labelForRoute(n.route, role),

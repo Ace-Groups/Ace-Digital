@@ -13,6 +13,7 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import aceLogo from "@/assets/ace-logo.png";
 import { AceAssistantTrigger } from "@/components/ai/AceAssistantTrigger";
+import { isRouteInDailyScope, useExtendedOps } from "@/lib/product-scope";
 
 const NAV_ICONS = {
   dashboard: LayoutDashboard,
@@ -41,6 +42,7 @@ export function Sidebar() {
   const collapsed = !expanded;
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const extended = useExtendedOps();
 
   async function handleLogout() {
     await logout();
@@ -52,15 +54,19 @@ export function Sidebar() {
   const handleMouseLeave = useCallback(() => setHovering(false), []);
 
   const allowedRoutes = new Set(getNavRoutesForRole(user?.role ?? ""));
-  const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
+  const navItems = NAV_ROUTES.filter(
+    (n) => allowedRoutes.has(n.route) && isRouteInDailyScope(n.route, extended),
+  ).map((n) => ({
     ...n,
     icon: NAV_ICONS[n.route],
     label:
-      n.route === "employees" && user?.role === "employee"
-        ? "My Profile"
-        : n.route === "interns" && user?.role === "employee"
-          ? "Intern Hub"
-          : n.label,
+      n.route === "dashboard"
+        ? "Home"
+        : n.route === "employees" && user?.role === "employee"
+          ? "My profile"
+          : n.route === "approvals" && user?.role === "employee"
+            ? "Leave"
+            : n.label,
   }));
 
   function handleProfileClose() {

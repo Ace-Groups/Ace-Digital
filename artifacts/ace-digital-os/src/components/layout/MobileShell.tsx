@@ -33,6 +33,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeaderRefreshButton } from "@/components/layout/HeaderRefreshButton";
 import { SyncStatusIndicator } from "./SyncStatusIndicator";
 import { getMobileNavItems } from "@/lib/mobile-nav";
+import { useExtendedOps } from "@/lib/product-scope";
 import type { NavRoute } from "@workspace/rbac";
 import {
   Sheet,
@@ -78,6 +79,7 @@ interface MobileShellProps {
 export function MobileShell({ children, title, fillViewport }: MobileShellProps) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const extended = useExtendedOps();
   const { setOpen: setAssistantOpen } = useAceAssistant();
   const { data: notifications } = useListNotifications({
     query: {
@@ -100,7 +102,7 @@ export function MobileShell({ children, title, fillViewport }: MobileShellProps)
     }
   }, [moreOpen, profileOpen]);
 
-  const { primary, overflow } = getMobileNavItems(user?.role ?? "");
+  const { primary, overflow } = getMobileNavItems(user?.role ?? "", extended);
   const { hideBottomNav, immersivePage } = useMobileChrome();
 
   function isActive(href: string) {

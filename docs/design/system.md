@@ -89,7 +89,8 @@ Bottom bar:
 - Icon-only controls have accessible names.
 - Targets are at least 44px.
 - `prefers-reduced-motion` is honored globally.
-- axe-core 4.10.3 (`wcag2a`, `wcag2aa`, `wcag22aa`) reports no violations on login, both role homes, tasks, and leave in the light theme. Zoom is allowed (`maximum-scale` removed).
+- axe-core 4.10.3 (`wcag2a`, `wcag2aa`, `wcag22aa`) reports no violations on login, both role homes, tasks, leave, the leave form, the inbox, and settings in the light theme. Zoom is allowed (`maximum-scale` removed).
+- Daily navigation hides reports, activity, notes, teams, interns, credentials, and the service desk. See `docs/design/scope.md`.
 
 ## Performance
 
