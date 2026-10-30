@@ -23,6 +23,7 @@ const FILL_ORDER: NavRoute[] = [
   "reports",
   "activity",
   "attendance",
+  "visits",
 ];
 
 const MOBILE_PRIMARY_MAX = 4;

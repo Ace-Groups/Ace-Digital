@@ -37,6 +37,9 @@ export type DayView = {
   canCheckOut?: boolean;
   serverTime?: string;
   settings?: Pick<AttendanceSettings, "officeStart" | "graceMinutes" | "halfDayMinHours" | "absentCutoff">;
+  faceMatchScore?: number | null;
+  faceMatchResult?: "match" | "review" | "skipped" | null;
+  faceReviewStatus?: "pending" | "accepted" | "declined" | null;
 };
 
 export type RosterResponse = {
