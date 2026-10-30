@@ -11,6 +11,7 @@ import {
   saveAttendanceSettings,
   type AttendanceAudit,
   type AttendanceDay,
+  type FaceStamp,
   type GeoPoint,
 } from "./store";
 import {
@@ -52,6 +53,9 @@ export type DayView = Person & {
   checkInLng: number | null;
   checkOutLat: number | null;
   checkOutLng: number | null;
+  faceMatchScore: number | null;
+  faceMatchResult: "match" | "review" | "skipped" | null;
+  faceReviewStatus: "pending" | "accepted" | "declined" | null;
 };
 
 async function activePeople(teamId: number | null): Promise<Person[]> {
@@ -146,6 +150,9 @@ function viewFor(
     checkInLng: punch?.checkInLng ?? null,
     checkOutLat: punch?.checkOutLat ?? null,
     checkOutLng: punch?.checkOutLng ?? null,
+    faceMatchScore: punch?.faceMatchScore ?? null,
+    faceMatchResult: punch?.faceMatchResult ?? null,
+    faceReviewStatus: punch?.faceReviewStatus ?? null,
   };
 }
 
@@ -178,7 +185,13 @@ export async function myToday(userId: number, now = new Date()) {
   };
 }
 
-export async function punchIn(userId: number, planNote: string | null, geo: GeoPoint | null, now = new Date()) {
+export async function punchIn(
+  userId: number,
+  planNote: string | null,
+  geo: GeoPoint | null,
+  now = new Date(),
+  face: FaceStamp | null = null,
+) {
   const date = kolkataDate(now);
   const before = await myToday(userId, now);
   const day = await checkInDay({
@@ -187,8 +200,26 @@ export async function punchIn(userId: number, planNote: string | null, geo: GeoP
     planNote,
     geo,
     beforeStatus: before.status,
+    face,
   });
   return myTodayFromPunch(userId, date, now, day);
+}
+
+export async function teamDays(start: string, end: string, now = new Date(), userId?: number): Promise<DayView[]> {
+  const settings = await getAttendanceSettings();
+  const people = (await activePeople(null)).filter((person) => userId == null || person.userId === userId);
+  const punches = await listDaysBetween(start, end);
+  const leave = await leaveByUser(start, end, people.map((person) => person.userId));
+  const dates = eachDate(start, end);
+  const views: DayView[] = [];
+  for (const person of people) {
+    const ranges = leave.get(person.userId) ?? [];
+    for (const date of dates) {
+      const punch = punches.find((row) => row.userId === person.userId && row.date === date) ?? null;
+      views.push(viewFor(person, date, now, settings, punch, dateInRanges(date, ranges)));
+    }
+  }
+  return views;
 }
 
 export async function punchOut(userId: number, geo: GeoPoint | null, now = new Date()) {

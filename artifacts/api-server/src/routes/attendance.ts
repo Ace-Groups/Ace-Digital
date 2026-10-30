@@ -22,6 +22,9 @@ import {
   normalizeSettings,
   type AttendanceStatus,
 } from "../lib/attendance/status";
+import { AccountabilityError } from "../lib/accountability/store";
+import { faceStampForCheckIn } from "../lib/accountability/service";
+import { getAccountabilitySettings } from "../lib/accountability/store";
 
 const router = Router();
 
@@ -99,10 +102,18 @@ router.get("/v1/attendance/today", requireAuth, async (req, res): Promise<void> 
 router.post("/v1/attendance/check-in", requireAuth, async (req, res): Promise<void> => {
   const ctx = getAccessContext(req);
   try {
-    const day = await punchIn(ctx.userId, noteFrom(req.body ?? {}), geoFrom(req.body ?? {}));
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const note = noteFrom(body);
+    const settings = await getAccountabilitySettings();
+    if (settings.requireDailyPlan && !note) {
+      res.status(400).json({ error: "Add a short plan for today" });
+      return;
+    }
+    const face = body.face ? await faceStampForCheckIn(ctx.userId, body.face as never) : null;
+    const day = await punchIn(ctx.userId, note, geoFrom(body), new Date(), face);
     res.status(201).json(day);
   } catch (err) {
-    if (err instanceof AttendanceError) {
+    if (err instanceof AttendanceError || err instanceof AccountabilityError) {
       res.status(err.statusCode).json({ error: err.message });
       return;
     }

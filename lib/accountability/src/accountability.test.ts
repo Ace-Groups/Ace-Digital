@@ -77,11 +77,11 @@ describe("face match", () => {
   it("sends a different face to review", () => {
     const other = embeddingFromLandmarks(
       face({
-        nose: { x: 18, y: 70 },
-        mouthLeft: { x: 4, y: 90 },
-        mouthRight: { x: 70, y: 40 },
-        leftEar: { x: -30, y: 40 },
-        rightEar: { x: 110, y: -10 },
+        nose: { x: -20, y: 10 },
+        mouthLeft: { x: -40, y: 20 },
+        mouthRight: { x: 10, y: 90 },
+        leftEar: { x: 40, y: -30 },
+        rightEar: { x: -10, y: 80 },
       }),
     )!;
     const decision = decideFaceMatch(enrolled, other, "passed");
