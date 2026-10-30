@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
-  Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity,   CalendarDays, Clock,
+  Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity,   CalendarDays, Clock, MapPin,
   LogOut, ChevronLeft, ChevronRight, UserCircle, Settings, StickyNote, Users2, GraduationCap, ShieldCheck,
 } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -33,6 +33,7 @@ const NAV_ICONS = {
   interns: GraduationCap,
   credentials: ShieldCheck,
   attendance: Clock,
+  visits: MapPin,
 } as const;
 
 export function Sidebar() {

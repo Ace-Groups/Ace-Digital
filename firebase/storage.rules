@@ -9,6 +9,10 @@ service firebase.storage {
       return int(request.auth.token.userId);
     }
 
+    function ownsStorage(userId) {
+      return signedIn() && int(userId) == authUserId();
+    }
+
     function isChannelMember(channelId) {
       return signedIn()
         && firestore.exists(/databases/(default)/documents/channel_member_index/$(channelId + '_' + authUserId()));
@@ -41,6 +45,22 @@ service firebase.storage {
     match /hr-documents/{uploadId}/{fileName} {
       allow read: if canReadHrDocuments();
       allow write: if false;
+    }
+
+    function isPeopleManager() {
+      return signedIn() && (
+        request.auth.token.role == "hr" ||
+        request.auth.token.role == "management" ||
+        request.auth.token.role == "super_admin"
+      );
+    }
+
+    match /attendance-selfies/{userId}/{fileName} {
+      allow read: if ownsStorage(userId) || isPeopleManager();
+      allow write: if ownsStorage(userId)
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+      allow delete: if false;
     }
   }
 }

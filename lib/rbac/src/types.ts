@@ -40,7 +40,8 @@ export type NavRoute =
   | "teams"
   | "interns"
   | "credentials"
-  | "attendance";
+  | "attendance"
+  | "visits";
 
 export type DashboardWidget =
   | "activeProjects"

@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { getGetFinanceSummaryQueryKey, getGetMyPayslipQueryKey, getListTasksQueryKey, useGetFinanceSummary, useGetMyPayslip, useListTasks } from "@workspace/api-client-react";
 import { AttendanceCheckCard } from "@/components/attendance/AttendanceCheckCard";
+import { ScorecardList } from "@/components/accountability/ScorecardList";
+import { ConnectedWorkLog } from "@/components/accountability/WorkLogCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAlerts, getMyScorecard, getScorecards, type IdleAlert, type Scorecard } from "@/lib/accountability-api";
 import { getRoster, type RosterResponse } from "@/lib/attendance-api";
 import { formatCurrency } from "@/lib/utils";
 import { getGreeting, useDashboardPage } from "./useDashboardPage";
@@ -54,6 +57,8 @@ export function RoleHome() {
   });
   const [roster, setRoster] = useState<RosterResponse | null>(null);
   const [rosterError, setRosterError] = useState(false);
+  const [cards, setCards] = useState<Scorecard[] | null>(null);
+  const [alerts, setAlerts] = useState<IdleAlert[]>([]);
 
   useEffect(() => {
     if (!isRoster) return;
@@ -69,6 +74,29 @@ export function RoleHome() {
       cancelled = true;
     };
   }, [isRoster]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    const load = isRoster ? getScorecards() : getMyScorecard().then((card) => [card]);
+    load
+      .then((next) => {
+        if (!cancelled) setCards(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCards([]);
+      });
+    if (isRoster) {
+      getAlerts()
+        .then((next) => {
+          if (!cancelled) setAlerts(next);
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isRoster, user?.id]);
 
   const today = kolkataDate();
   const openTasks = (tasks ?? []).filter((task) => task.status !== "DONE").slice(0, 4);
@@ -97,6 +125,31 @@ export function RoleHome() {
       </header>
 
       <AttendanceCheckCard />
+
+      <section aria-labelledby="week-heading">
+        <h2 id="week-heading" className="mb-2 text-base font-semibold">
+          This week
+        </h2>
+        {cards == null ? <Skeleton className="h-24 w-full" /> : <ScorecardList cards={cards} />}
+      </section>
+
+      {isRoster && alerts.length > 0 && (
+        <section aria-labelledby="idle-heading">
+          <h2 id="idle-heading" className="mb-2 text-base font-semibold">
+            No update yet
+          </h2>
+          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+            {alerts.map((alert) => (
+              <li key={alert.userId} className="flex min-h-11 items-center justify-between px-4 py-2">
+                <span className="font-medium">{alert.fullName}</span>
+                <span className="text-sm text-muted-foreground">{Math.round(alert.quietMinutes / 60)}h quiet</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <ConnectedWorkLog />
 
       {isRoster ? (
         <section aria-labelledby="today-heading">
@@ -189,6 +242,7 @@ export function RoleHome() {
             }
           />
           <ActionRow href="/channels" title="Chat" detail="Open" />
+          <ActionRow href="/visits" title="Field visits" detail="Open" />
         </ul>
       </section>
     </div>

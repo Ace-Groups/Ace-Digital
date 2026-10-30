@@ -131,6 +131,9 @@ export function CommandPalette() {
           <CommandItem value="roster attendance who is in" onSelect={() => runCommand(() => setLocation("/attendance"))} className="min-h-11">
             Today&apos;s roster
           </CommandItem>
+          <CommandItem value="field visits site check" onSelect={() => runCommand(() => setLocation("/visits"))} className="min-h-11">
+            Field visits
+          </CommandItem>
           <CommandItem value="inbox notifications approvals review" onSelect={() => runCommand(() => setLocation("/notifications"))} className="min-h-11">
             Inbox
           </CommandItem>

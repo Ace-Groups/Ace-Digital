@@ -79,3 +79,7 @@ npx firebase-tools@latest deploy --only firestore:rules,firestore:indexes --proj
 ```
 
 The date queries work on the automatic single-field index, so the roster does not wait for the composite index to finish building.
+
+## Phase 2b
+
+Face check-in, field visits, work logs, and the weekly scorecard sit on this punch model. See [PHASE2B.md](./PHASE2B.md). A web check-in without a face payload stays a normal punch. A face payload is stored on the same day and never auto-rejects the person.

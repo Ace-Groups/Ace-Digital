@@ -23,6 +23,7 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { Bell, Camera, KeyRound, ShieldCheck, Check, X, User, Palette, BadgeCheck, Layers } from "lucide-react";
+import { PresenceSettings } from "@/components/accountability/PresenceSettings";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PublicCardSettings } from "@/components/credentials/PublicCardSettings";
 import {
@@ -468,6 +469,10 @@ export default function SettingsPage() {
             </div>
           </CanvasPanel>
         )}
+
+        <CanvasPanel title="Presence" icon={ShieldCheck}>
+          <PresenceSettings canEdit={user?.role === "super_admin" || user?.role === "management"} />
+        </CanvasPanel>
 
         <CanvasPanel title="Appearance" icon={Palette}>
           <p className="mb-4 text-sm text-muted-foreground">Theme for Ace-Digital on this device</p>

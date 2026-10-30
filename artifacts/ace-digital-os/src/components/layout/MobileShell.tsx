@@ -18,6 +18,7 @@ import {
   Activity,
   CalendarDays,
   Clock,
+  MapPin,
   Menu,
   StickyNote,
   Search,
@@ -68,6 +69,7 @@ const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   credentials: IdCard,
   interns: Users2,
   attendance: Clock,
+  visits: MapPin,
 };
 
 interface MobileShellProps {
