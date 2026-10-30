@@ -9,6 +9,7 @@ import { Avatar, Badge } from '@/components/ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BarChart } from 'react-native-chart-kit';
+import { HomeLinks } from '@/components/phase2b/HomeLinks';
 
 const { width } = Dimensions.get('window');
 
@@ -133,6 +134,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         <View style={styles.contentContainer}>
+          <HomeLinks />
           {/* STATS GRID OVERLAPPING HEADER */}
           {data && (
             <Animated.View style={[styles.statsContainer, { opacity: statsAnim, transform: [{ translateY: translateY(statsAnim) }] }]}>

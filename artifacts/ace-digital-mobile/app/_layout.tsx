@@ -368,6 +368,7 @@ function RootNavigator() {
           name="(stack)"
           options={{ headerShown: false }}
         />
+        <Stack.Screen name="preview-phase2b" options={{ headerShown: false }} />
       </Stack>
 
       <CustomAlertModal

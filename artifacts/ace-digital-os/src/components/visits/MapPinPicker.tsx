@@ -37,7 +37,7 @@ export function MapPinPicker({
       <button
         type="button"
         aria-label="Map. Click to place the visit pin."
-        className="relative block h-64 w-full overflow-hidden rounded-xl border border-border"
+        className="relative block h-64 w-64 overflow-hidden rounded-xl border border-border"
         onClick={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
           const x = tileX + (event.clientX - rect.left) / 256;

@@ -33,7 +33,20 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ace uses the camera only when you take a check-in selfie.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Ace uses your location only when you check in to an assigned visit."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

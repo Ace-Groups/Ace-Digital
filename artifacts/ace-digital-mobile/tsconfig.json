@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/api-client-react": ["../../lib/api-client-react/src"]
+      "@workspace/api-client-react": ["../../lib/api-client-react/src"],
+      "@workspace/accountability": ["../../lib/accountability/src/index.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
