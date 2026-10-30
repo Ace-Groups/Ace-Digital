@@ -40,6 +40,8 @@ const createSchema = z.object({
   title: z.string().min(1, "Title required"),
   description: z.string().optional(),
   amount: z.string().optional(),
+  leaveStart: z.string().optional(),
+  leaveEnd: z.string().optional(),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -61,16 +63,25 @@ export default function ApprovalsPage() {
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { type: "EXPENSE", title: "" },
+    defaultValues: { type: "EXPENSE", title: "", leaveStart: "", leaveEnd: "" },
   });
+  const requestType = form.watch("type");
 
   async function onSubmit(data: CreateForm) {
+    let description = data.description?.trim() ?? "";
+    if (data.type === "LEAVE") {
+      if (!data.leaveStart || !data.leaveEnd || data.leaveStart > data.leaveEnd) {
+        toast({ title: "Leave needs a start date and an end date", variant: "destructive" });
+        return;
+      }
+      description = [`${data.leaveStart} to ${data.leaveEnd}`, description].filter(Boolean).join("\n");
+    }
     const tempId = -Date.now();
     const optimistic: Approval = {
       id: tempId,
       type: data.type,
       title: data.title,
-      description: data.description ?? null,
+      description: description || null,
       amount: data.amount ? Number(data.amount) : null,
       requestedById: user?.id,
       requesterName: user?.fullName ?? null,
@@ -93,7 +104,7 @@ export default function ApprovalsPage() {
             data: {
               type: data.type,
               title: data.title,
-              description: data.description,
+              description: description || undefined,
               amount: data.amount ? Number(data.amount) : undefined,
             },
           }),
@@ -327,6 +338,22 @@ export default function ApprovalsPage() {
                 <FormMessage />
               </FormItem>
             )} />
+            {requestType === "LEAVE" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField control={form.control} name="leaveStart" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Leave start</FormLabel>
+                    <FormControl><Input type="date" className="min-h-11" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="leaveEnd" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Leave end</FormLabel>
+                    <FormControl><Input type="date" className="min-h-11" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            )}
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
                 <FormLabel>Description</FormLabel>

@@ -48,6 +48,7 @@ const InternsPage = lazyWithReload(() => import("@/pages/interns"));
 const CredentialsPage = lazyWithReload(() => import("@/pages/credentials"));
 const VerifyProfilePage = lazyWithReload(() => import("@/pages/verify-profile"));
 const VerifyCertificateRedirectPage = lazyWithReload(() => import("@/pages/verify-certificate"));
+const AttendancePage = lazyWithReload(() => import("@/pages/attendance"));
 const PrivacyPage = lazyWithReload(() => import("@/pages/privacy"));
 const TermsPage = lazyWithReload(() => import("@/pages/terms"));
 
@@ -175,6 +176,7 @@ function AppRouter() {
         <Route path="/tasks" component={() => <ProtectedRoute component={TasksPage} />} />
         <Route path="/teams" component={() => <ProtectedRoute component={TeamsPage} />} />
         <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
+        <Route path="/attendance" component={() => <ProtectedRoute component={AttendancePage} />} />
         <Route path="/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
         <Route path="/interns" component={() => <ProtectedRoute component={InternsPage} />} />
         <Route path="/credentials" component={() => <ProtectedRoute component={CredentialsPage} />} />

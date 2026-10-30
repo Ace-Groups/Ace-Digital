@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Activity,
   CalendarDays,
+  Clock,
   Menu,
   StickyNote,
   Search,
@@ -65,6 +66,7 @@ const ICONS: Record<NavRoute, typeof LayoutDashboard> = {
   notes: StickyNote,
   credentials: IdCard,
   interns: Users2,
+  attendance: Clock,
 };
 
 interface MobileShellProps {
