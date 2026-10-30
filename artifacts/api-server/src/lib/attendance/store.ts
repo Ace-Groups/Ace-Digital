@@ -38,6 +38,23 @@ export type AttendanceDay = {
   overrideReason: string | null;
   overrideById: number | null;
   overrideAt: string | null;
+  faceMatchScore: number | null;
+  faceMatchResult: "match" | "review" | "skipped" | null;
+  faceLiveness: string | null;
+  faceSelfiePath: string | null;
+  faceRetainUntil: string | null;
+  faceReviewStatus: "pending" | "accepted" | "declined" | null;
+  faceReviewId: string | null;
+};
+
+export type FaceStamp = {
+  faceMatchScore: number | null;
+  faceMatchResult: "match" | "review" | "skipped";
+  faceLiveness: string | null;
+  faceSelfiePath: string | null;
+  faceRetainUntil: string | null;
+  faceReviewStatus: "pending" | "accepted" | "declined" | null;
+  faceReviewId: string | null;
 };
 
 export type AttendanceAudit = {
@@ -89,6 +106,13 @@ function blank(userId: number, date: string): AttendanceDay {
     overrideReason: null,
     overrideById: null,
     overrideAt: null,
+    faceMatchScore: null,
+    faceMatchResult: null,
+    faceLiveness: null,
+    faceSelfiePath: null,
+    faceRetainUntil: null,
+    faceReviewStatus: null,
+    faceReviewId: null,
   };
 }
 
@@ -109,6 +133,13 @@ function mapDay(data: DocumentData): AttendanceDay {
     overrideReason: (data.overrideReason as string | null) ?? null,
     overrideById: data.overrideById == null ? null : Number(data.overrideById),
     overrideAt: (data.overrideAt as string | null) ?? null,
+    faceMatchScore: numOrNull(data.faceMatchScore),
+    faceMatchResult: (data.faceMatchResult as AttendanceDay["faceMatchResult"]) ?? null,
+    faceLiveness: (data.faceLiveness as string | null) ?? null,
+    faceSelfiePath: (data.faceSelfiePath as string | null) ?? null,
+    faceRetainUntil: (data.faceRetainUntil as string | null) ?? null,
+    faceReviewStatus: (data.faceReviewStatus as AttendanceDay["faceReviewStatus"]) ?? null,
+    faceReviewId: (data.faceReviewId as string | null) ?? null,
   };
 }
 
@@ -214,6 +245,7 @@ export async function checkInDay(input: {
   planNote: string | null;
   geo: GeoPoint | null;
   beforeStatus: string | null;
+  face?: FaceStamp | null;
 }): Promise<AttendanceDay> {
   const key = dayKey(input.userId, input.date);
   const at = new Date().toISOString();
@@ -232,6 +264,17 @@ export async function checkInDay(input: {
       checkInLat: input.geo?.latitude ?? null,
       checkInLng: input.geo?.longitude ?? null,
       checkInAccuracy: input.geo?.accuracy ?? null,
+      ...(input.face
+        ? input.face
+        : {
+            faceMatchResult: "skipped" as const,
+            faceMatchScore: null,
+            faceLiveness: null,
+            faceSelfiePath: null,
+            faceRetainUntil: null,
+            faceReviewStatus: null,
+            faceReviewId: null,
+          }),
     };
   };
 
@@ -391,4 +434,39 @@ export async function overrideDay(input: {
     });
     return row;
   });
+}
+
+export async function setDayFaceReview(
+  userId: number,
+  date: string,
+  status: "accepted" | "declined",
+  reviewId: string,
+): Promise<AttendanceDay | null> {
+  const key = dayKey(userId, date);
+  const apply = (existing: AttendanceDay | null): AttendanceDay | null => {
+    if (!existing) return null;
+    return { ...existing, faceReviewStatus: status, faceReviewId: reviewId };
+  };
+  if (!useFirestore()) {
+    const next = apply(memoryDays.get(key) ?? null);
+    if (next) memoryDays.set(key, next);
+    return next;
+  }
+  const ref = fs().collection(DAYS).doc(key);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const next = apply(mapDay(snap.data()!));
+  if (!next) return null;
+  await ref.set({ faceReviewStatus: status, faceReviewId: reviewId }, { merge: true });
+  return next;
+}
+
+export function resetAttendanceMemoryForTests(): void {
+  memoryDays.clear();
+  memoryAudit.clear();
+  memorySettings = {
+    ...DEFAULT_ATTENDANCE_SETTINGS,
+    weeklyOff: [...DEFAULT_ATTENDANCE_SETTINGS.weeklyOff],
+    holidays: [],
+  };
 }

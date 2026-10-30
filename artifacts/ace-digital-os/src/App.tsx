@@ -22,6 +22,7 @@ import { AceAssistantPanel } from "@/components/ai/AceAssistantPanel";
 import { KeyboardShortcutsSheet } from "@/components/v2/KeyboardShortcutsSheet";
 import { QuickCreateFab } from "@/components/v2/QuickCreateFab";
 import { canAccessRoute, getDefaultRouteForRole } from "@workspace/rbac";
+import { isHrefInDailyScope, useExtendedOps } from "@/lib/product-scope";
 const NotFound = lazyWithReload(() => import("@/pages/not-found"));
 const ErrorPage = lazyWithReload(() => import("@/pages/error"));
 const ForbiddenPage = lazyWithReload(() => import("@/pages/forbidden"));
@@ -49,6 +50,8 @@ const CredentialsPage = lazyWithReload(() => import("@/pages/credentials"));
 const VerifyProfilePage = lazyWithReload(() => import("@/pages/verify-profile"));
 const VerifyCertificateRedirectPage = lazyWithReload(() => import("@/pages/verify-certificate"));
 const AttendancePage = lazyWithReload(() => import("@/pages/attendance"));
+const VisitsPage = lazyWithReload(() => import("@/pages/visits"));
+const PreviewPhase2b = lazyWithReload(() => import("@/pages/preview-phase2b"));
 const PrivacyPage = lazyWithReload(() => import("@/pages/privacy"));
 const TermsPage = lazyWithReload(() => import("@/pages/terms"));
 
@@ -92,6 +95,7 @@ function PageFallback() {
 function ProtectedRoute({ component: Component }: { component: ComponentType }) {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
   const [location] = useLocation();
+  const extended = useExtendedOps();
 
   if (isBootstrapping) {
     return <LoadingScreen />;
@@ -103,6 +107,10 @@ function ProtectedRoute({ component: Component }: { component: ComponentType }) 
 
   if (user?.mustChangePassword && location !== "/change-password") {
     return <Redirect to="/change-password" />;
+  }
+
+  if (user && !AUTH_ONLY_PATHS.has(location) && !isHrefInDailyScope(location, extended)) {
+    return <Redirect to="/" />;
   }
 
   if (user && !AUTH_ONLY_PATHS.has(location) && !canAccessRoute(user.role, location)) {
@@ -177,6 +185,8 @@ function AppRouter() {
         <Route path="/teams" component={() => <ProtectedRoute component={TeamsPage} />} />
         <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
         <Route path="/attendance" component={() => <ProtectedRoute component={AttendancePage} />} />
+        <Route path="/visits" component={() => <ProtectedRoute component={VisitsPage} />} />
+        {import.meta.env.DEV ? <Route path="/preview/phase2b" component={PreviewPhase2b} /> : null}
         <Route path="/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
         <Route path="/interns" component={() => <ProtectedRoute component={InternsPage} />} />
         <Route path="/credentials" component={() => <ProtectedRoute component={CredentialsPage} />} />

@@ -19,6 +19,7 @@ const ROUTE_PERMISSIONS: Record<NavRoute, string> = {
   interns: "employees:read",
   credentials: "credentials:read",
   attendance: "dashboard:view",
+  visits: "dashboard:view",
 };
 
 /** Nav href paths */
@@ -40,6 +41,7 @@ export const NAV_ROUTES: { route: NavRoute; href: string; label: string }[] = [
   { route: "interns", href: "/interns", label: "Interns" },
   { route: "credentials", href: "/credentials", label: "Credentials" },
   { route: "attendance", href: "/attendance", label: "Attendance" },
+  { route: "visits", href: "/visits", label: "Visits" },
 ];
 
 export function getNavRoutesForRole(role: string): NavRoute[] {

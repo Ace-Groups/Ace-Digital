@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AttendanceCheckCard } from "@/components/attendance/AttendanceCheckCard";
+import { ConnectedFaceReviews } from "@/components/accountability/FaceReviewQueue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -202,6 +203,11 @@ export default function AttendancePage() {
                 ))}
               </div>
             )}
+            {canOverride && (
+              <div className="mt-4">
+                <ConnectedFaceReviews />
+              </div>
+            )}
             <ul className="mt-3 divide-y divide-border">
               {employees.map((person) => (
                 <li key={person.userId} className="flex items-start justify-between gap-3 py-3">
@@ -217,6 +223,11 @@ export default function AttendancePage() {
                     <p className="text-xs text-muted-foreground">
                       {person.teamName ?? "No team"} · {formatIst(person.checkInAt)}
                       {person.planNote ? ` · ${person.planNote}` : ""}
+                      {person.faceMatchResult === "review" || person.faceReviewStatus === "pending"
+                        ? " · Face in review"
+                        : person.faceMatchResult === "match"
+                          ? " · Face matched"
+                          : ""}
                     </p>
                   </button>
                   <span className="shrink-0 text-sm font-medium">{STATUS_LABEL[person.status]}</span>

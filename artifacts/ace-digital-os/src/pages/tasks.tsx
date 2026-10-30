@@ -42,6 +42,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title required"),
+  link: z.string().optional(),
   projectId: z.string().optional(),
   assigneeId: z.string().optional(),
   teamId: z.string().optional(),
@@ -61,6 +62,31 @@ const editSchema = z.object({
 type EditForm = z.infer<typeof editSchema>;
 
 const STATUSES = ["PENDING", "IN_PROGRESS", "DONE"];
+const WORK_STEPS = [
+  { status: "PENDING", label: "Submitted" },
+  { status: "IN_PROGRESS", label: "In progress" },
+  { status: "DONE", label: "Done" },
+] as const;
+
+function workTitle(title: string): { name: string; link: string | null } {
+  const match = title.match(/https?:\/\/\S+/);
+  if (!match) return { name: title.trim(), link: null };
+  const name = title.replace(match[0], "").replace(/\s+/g, " ").trim();
+  return { name: name || "Work", link: match[0] };
+}
+
+function WorkTimeline({ status }: { status: string }) {
+  const current = WORK_STEPS.findIndex((step) => step.status === status);
+  return (
+    <ol className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Work status">
+      {WORK_STEPS.map((step, index) => (
+        <li key={step.status} className={index === current ? "font-semibold text-foreground" : undefined} aria-current={index === current ? "step" : undefined}>
+          {step.label}
+        </li>
+      ))}
+    </ol>
+  );
+}
 const OWNERSHIP_FILTERS = ["all", "mine", "common"] as const;
 const ALL_TEAMS_VALUE = "__all_teams__";
 const NO_PROJECT_VALUE = "__no_project__";
@@ -280,7 +306,7 @@ export default function TasksPage() {
       },
     },
   });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
   const [editOpen, setEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -289,6 +315,7 @@ export default function TasksPage() {
     resolver: zodResolver(createSchema),
     defaultValues: {
       title: "",
+      link: "",
       priority: "MEDIUM",
       status: "PENDING",
       projectId: projectIdFilter ? String(projectIdFilter) : NO_PROJECT_VALUE,
@@ -395,6 +422,7 @@ export default function TasksPage() {
   function resetCreateForm() {
     form.reset({
       title: "",
+      link: "",
       priority: "MEDIUM",
       status: "PENDING",
       projectId: projectIdFilter ? String(projectIdFilter) : NO_PROJECT_VALUE,
@@ -408,11 +436,16 @@ export default function TasksPage() {
     const teamId = data.teamId && data.teamId !== ALL_TEAMS_VALUE ? Number(data.teamId) : undefined;
     const assigneeIds = selectedAssigneeIds;
     const projectId = resolveProjectId(data.projectId);
+    const link = data.link?.trim();
+    if (link && !/^https?:\/\//i.test(link)) {
+      toast({ title: "The link needs to start with http:// or https://", variant: "destructive" });
+      return;
+    }
     setOpen(false);
     resetCreateForm();
     createTask.mutate({
       data: {
-        title: data.title,
+        title: link ? `${data.title}\n${link}` : data.title,
         projectId,
         assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         teamId,
@@ -557,8 +590,17 @@ export default function TasksPage() {
         <FormField control={form.control} name="title" render={({ field }) => (
           <FormItem>
             <FormLabel>Task Title</FormLabel>
-            <FormControl><Input data-testid="input-task-title" {...field} /></FormControl>
+            <FormControl><Input data-testid="input-task-title" placeholder="What did you do?" {...field} /></FormControl>
             <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="link" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Link or file URL</FormLabel>
+            <FormControl>
+              <Input data-testid="input-task-link" type="url" inputMode="url" placeholder="https:// — Drive, Figma, or a doc" {...field} />
+            </FormControl>
+            <p className="text-sm text-muted-foreground">The file stays where it already lives. Paste the address.</p>
           </FormItem>
         )} />
         <FormField control={form.control} name="projectId" render={({ field }) => (
@@ -771,9 +813,8 @@ export default function TasksPage() {
   return (
     <AppLayout title="">
       <PageCanvasShell
-        eyebrow="Work"
         title="Tasks"
-        description="Track assignments, status, and due dates across your workspace."
+        description="Submit work with a link, then follow it from submitted to done."
         metrics={taskMetrics}
         actions={
           <Button
@@ -805,7 +846,7 @@ export default function TasksPage() {
             </div>
           ) : visibleTasks.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">No tasks found for this filter.</p>
+              <p className="text-sm text-muted-foreground">Nothing matches. Clear the filter, or submit the work you started today.</p>
               <Button className="mt-4 gap-2" onClick={() => setOpen(true)}>
                 <Plus size={14} /> Create Task
               </Button>
@@ -828,6 +869,7 @@ export default function TasksPage() {
                   >
                   <Checkbox
                     data-testid={`task-toggle-${task.id}`}
+                    aria-label={`Mark ${task.title} complete`}
                     checked={isMyPartDone(task)}
                     disabled={!canCompleteTask(task) || toggleTask.isPending}
                     onCheckedChange={(checked) => {
@@ -838,8 +880,19 @@ export default function TasksPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-medium", task.progress >= 100 && "line-through text-muted-foreground")}>
-                      {task.title}
+                      {workTitle(task.title).name}
                     </p>
+                    <WorkTimeline status={task.status} />
+                    {workTitle(task.title).link && (
+                      <a
+                        href={workTitle(task.title).link ?? undefined}
+                        className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open the work
+                      </a>
+                    )}
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
                       {task.projectName && (
                         <span className="text-xs text-muted-foreground">{task.projectName}</span>
@@ -859,7 +912,7 @@ export default function TasksPage() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-10 w-10 shrink-0 sm:h-8 sm:w-8"
+                          className="size-11 shrink-0"
                           data-testid={`task-edit-${task.id}`}
                           onClick={() => openEditTask(task)}
                           aria-label="Edit task"
@@ -871,7 +924,7 @@ export default function TasksPage() {
                             type="button"
                             variant="outline"
                             size="icon"
-                            className="h-10 w-10 shrink-0 text-destructive sm:h-8 sm:w-8"
+                            className="size-11 shrink-0 text-destructive"
                             data-testid={`task-delete-${task.id}`}
                             onClick={() => requestDeleteTask(task)}
                             aria-label="Delete task"
@@ -883,7 +936,7 @@ export default function TasksPage() {
                           value={task.projectId == null ? NO_PROJECT_VALUE : String(task.projectId)}
                           onValueChange={(value) => void handleProjectTask(task, value)}
                         >
-                          <SelectTrigger className="h-10 w-full min-w-[9.5rem] text-xs sm:h-8 sm:w-[10.5rem]" data-testid={`task-project-${task.id}`}>
+                          <SelectTrigger className="h-11 w-full min-w-[9.5rem] text-xs sm:w-[10.5rem]" aria-label={`Project for ${task.title}`} data-testid={`task-project-${task.id}`}>
                             <SelectValue placeholder="Project" />
                           </SelectTrigger>
                           <SelectContent>
@@ -907,7 +960,7 @@ export default function TasksPage() {
                     {task.dueDate && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar size={11} />
-                        {new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                        {new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}
                       </span>
                     )}
                     <Badge variant="outline" className={cn("text-xs", priorityColor(task.priority))}>

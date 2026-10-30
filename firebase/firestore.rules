@@ -65,6 +65,97 @@ service cloud.firestore {
       }
     }
 
+    function isPeopleManager() {
+      return signedIn() && request.auth.token.role in ["super_admin", "management", "hr"];
+    }
+
+    function isOwnerRole() {
+      return signedIn() && request.auth.token.role in ["super_admin", "management"];
+    }
+
+    function isFinanceReader() {
+      return signedIn() && request.auth.token.role in ["super_admin", "management", "hr", "finance"];
+    }
+
+    function owns(userId) {
+      return signedIn() && int(userId) == authUserId();
+    }
+
+    match /face_enrollments/{userId} {
+      allow read: if owns(userId) || isPeopleManager();
+      allow create, update: if owns(userId) && (
+        (request.resource.data.consent == true
+          && request.resource.data.embedding is list
+          && request.resource.data.embedding.size() == 12)
+        || (request.resource.data.consent == false
+          && request.resource.data.withdrawnAt is string
+          && request.resource.data.embedding is list
+          && request.resource.data.embedding.size() == 0)
+      );
+      allow delete: if false;
+    }
+
+    match /work_logs/{logId} {
+      allow read: if owns(resource.data.userId) || isFinanceReader();
+      allow create, update: if signedIn()
+        && logId == string(authUserId()) + "_" + request.resource.data.date
+        && request.resource.data.userId == authUserId()
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() >= 3
+        && request.resource.data.summary.size() <= 2000
+        && request.resource.data.links is list
+        && request.resource.data.links.size() <= 5;
+      allow delete: if false;
+    }
+
+    match /field_visits/{visitId} {
+      allow read: if signedIn() && (resource.data.employeeId == authUserId() || isFinanceReader());
+      allow create: if isPeopleManager()
+        && request.resource.data.assignedById == authUserId()
+        && request.resource.data.status == "assigned";
+      allow update: if isPeopleManager() || (
+        signedIn()
+        && resource.data.employeeId == authUserId()
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.clientName == resource.data.clientName
+        && request.resource.data.lat == resource.data.lat
+        && request.resource.data.lng == resource.data.lng
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status", "distanceMeters", "accuracy", "mocked", "fixLat", "fixLng",
+          "withinRadius", "faceMatchScore", "faceMatchResult", "liveness",
+          "selfiePath", "retainUntil", "flagReason", "checkedInAt"
+        ])
+      );
+      allow delete: if false;
+    }
+
+    match /presence_pings/{pingId} {
+      allow read: if signedIn() && (resource.data.userId == authUserId() || isPeopleManager());
+      allow create: if false;
+      allow update: if signedIn()
+        && resource.data.userId == authUserId()
+        && request.resource.data.status == "confirmed"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status", "confirmedAt", "selfiePath", "faceMatchScore", "faceMatchResult"
+        ]);
+      allow delete: if false;
+    }
+
+    match /face_reviews/{reviewId} {
+      allow read: if signedIn() && (resource.data.userId == authUserId() || isPeopleManager());
+      allow create: if signedIn()
+        && request.resource.data.userId == authUserId()
+        && request.resource.data.status == "pending";
+      allow update: if isPeopleManager();
+      allow delete: if false;
+    }
+
+    match /accountability_settings/{docId} {
+      allow read: if signedIn();
+      allow write: if isOwnerRole();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

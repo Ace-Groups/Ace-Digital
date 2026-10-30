@@ -22,7 +22,8 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import { Bell, Camera, KeyRound, ShieldCheck, Check, X, User, Palette, BadgeCheck } from "lucide-react";
+import { Bell, Camera, KeyRound, ShieldCheck, Check, X, User, Palette, BadgeCheck, Layers } from "lucide-react";
+import { PresenceSettings } from "@/components/accountability/PresenceSettings";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PublicCardSettings } from "@/components/credentials/PublicCardSettings";
 import {
@@ -30,6 +31,7 @@ import {
   getNotificationPermission,
   isWebPushAvailable,
 } from "@/lib/push-notifications";
+import { setExtendedOpsEnabled, useExtendedOps } from "@/lib/product-scope";
 
 const NOTIF_PREFS_KEY = "ace-digital-notification-prefs";
 
@@ -175,6 +177,7 @@ export default function SettingsPage() {
   const [pushAvailable, setPushAvailable] = useState(false);
   const [pushPermission, setPushPermission] = useState(getNotificationPermission());
   const [pushBusy, setPushBusy] = useState(false);
+  const extendedOps = useExtendedOps();
 
   useEffect(() => {
     setFullName(user?.fullName ?? "");
@@ -231,9 +234,8 @@ export default function SettingsPage() {
   return (
     <AppLayout title="">
       <PageCanvasShell
-        eyebrow="Workspace"
         title="Settings"
-        description="Manage your profile, security, notifications, and appearance."
+        description="Your profile, password, notifications, and how this app looks."
       >
       <div className="mx-auto max-w-2xl space-y-4">
         <CanvasPanel title="Account" icon={User}>
@@ -414,10 +416,11 @@ export default function SettingsPage() {
             )}
             <div className="flex min-h-11 items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium">Task assignments</p>
+                <p id="pref-email-tasks" className="text-sm font-medium">Task assignments</p>
                 <p className="text-xs text-muted-foreground">Email when you are assigned a task</p>
               </div>
               <Switch
+                aria-labelledby="pref-email-tasks"
                 checked={notifPrefs.emailTasks}
                 onCheckedChange={(v) =>
                   saveNotifPrefs({ ...notifPrefs, emailTasks: v })
@@ -427,10 +430,11 @@ export default function SettingsPage() {
             <Separator />
             <div className="flex min-h-11 items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium">Approvals</p>
+                <p id="pref-email-approvals" className="text-sm font-medium">Approvals</p>
                 <p className="text-xs text-muted-foreground">Email for approval updates</p>
               </div>
               <Switch
+                aria-labelledby="pref-email-approvals"
                 checked={notifPrefs.emailApprovals}
                 onCheckedChange={(v) =>
                   saveNotifPrefs({ ...notifPrefs, emailApprovals: v })
@@ -443,6 +447,31 @@ export default function SettingsPage() {
               </Button>
             </Link>
           </div>
+        </CanvasPanel>
+
+        {user?.role === "super_admin" && (
+          <CanvasPanel title="Daily tools" icon={Layers}>
+            <div className="flex min-h-11 items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Show extra tools</p>
+                <p className="text-xs text-muted-foreground">
+                  Reports, notes, teams, interns, credentials, activity, and the service desk. Stored on this browser only.
+                </p>
+              </div>
+              <Switch
+                checked={extendedOps}
+                onCheckedChange={(on) => {
+                  setExtendedOpsEnabled(on);
+                  toast({ title: on ? "Extra tools are visible" : "Back to the daily app" });
+                }}
+                aria-label="Show extra tools"
+              />
+            </div>
+          </CanvasPanel>
+        )}
+
+        <CanvasPanel title="Presence" icon={ShieldCheck}>
+          <PresenceSettings canEdit={user?.role === "super_admin" || user?.role === "management"} />
         </CanvasPanel>
 
         <CanvasPanel title="Appearance" icon={Palette}>

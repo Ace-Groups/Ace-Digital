@@ -8,11 +8,12 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts src/lib/ai/agent-response.test.ts src/lib/credentials/verification.test.ts src/lib/attendance/status.test.ts"
+    "test": "DATABASE_URL=${DATABASE_URL:-postgres://test:test@localhost:5432/test} node --import tsx --test src/lib/ai/tool-rbac.test.ts src/lib/ai/agent-response.test.ts src/lib/credentials/verification.test.ts src/lib/attendance/status.test.ts src/lib/accountability/service.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@resvg/resvg-js": "^2.6.2",
+    "@workspace/accountability": "workspace:*",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/rbac": "workspace:*",

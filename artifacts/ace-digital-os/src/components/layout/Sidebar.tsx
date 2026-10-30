@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { getNavRoutesForRole, NAV_ROUTES } from "@workspace/rbac";
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, DollarSign,
-  Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity,   CalendarDays, Clock,
+  Building2, Ticket, ClipboardCheck, BarChart3, MessageSquare, Activity,   CalendarDays, Clock, MapPin,
   LogOut, ChevronLeft, ChevronRight, UserCircle, Settings, StickyNote, Users2, GraduationCap, ShieldCheck,
 } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -13,6 +13,7 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import aceLogo from "@/assets/ace-logo.png";
 import { AceAssistantTrigger } from "@/components/ai/AceAssistantTrigger";
+import { isRouteInDailyScope, useExtendedOps } from "@/lib/product-scope";
 
 const NAV_ICONS = {
   dashboard: LayoutDashboard,
@@ -32,6 +33,7 @@ const NAV_ICONS = {
   interns: GraduationCap,
   credentials: ShieldCheck,
   attendance: Clock,
+  visits: MapPin,
 } as const;
 
 export function Sidebar() {
@@ -41,6 +43,7 @@ export function Sidebar() {
   const collapsed = !expanded;
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const extended = useExtendedOps();
 
   async function handleLogout() {
     await logout();
@@ -52,15 +55,19 @@ export function Sidebar() {
   const handleMouseLeave = useCallback(() => setHovering(false), []);
 
   const allowedRoutes = new Set(getNavRoutesForRole(user?.role ?? ""));
-  const navItems = NAV_ROUTES.filter((n) => allowedRoutes.has(n.route)).map((n) => ({
+  const navItems = NAV_ROUTES.filter(
+    (n) => allowedRoutes.has(n.route) && isRouteInDailyScope(n.route, extended),
+  ).map((n) => ({
     ...n,
     icon: NAV_ICONS[n.route],
     label:
-      n.route === "employees" && user?.role === "employee"
-        ? "My Profile"
-        : n.route === "interns" && user?.role === "employee"
-          ? "Intern Hub"
-          : n.label,
+      n.route === "dashboard"
+        ? "Home"
+        : n.route === "employees" && user?.role === "employee"
+          ? "My profile"
+          : n.route === "approvals" && user?.role === "employee"
+            ? "Leave"
+            : n.label,
   }));
 
   function handleProfileClose() {
@@ -81,7 +88,7 @@ export function Sidebar() {
           data-testid="sidebar"
           data-collapsed={collapsed ? "true" : "false"}
           className={cn(
-            "sticky top-0 flex h-[100dvh] flex-col overflow-hidden bg-sidebar/90 text-sidebar-foreground border-r border-sidebar-border/30 backdrop-blur-2xl shadow-v2-md transition-[width] duration-300 ease-out",
+            "sticky top-0 flex h-[100dvh] flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out",
             collapsed ? "w-[4.25rem]" : "w-64",
           )}
         >
@@ -103,8 +110,8 @@ export function Sidebar() {
               <p className="text-sm font-semibold leading-tight text-sidebar-foreground">
                 Ace Digital
               </p>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/50">
-                Operating System
+              <p className="truncate text-xs text-sidebar-foreground/70">
+                {user?.fullName ?? "Workspace"}
               </p>
             </div>
           )}
@@ -112,7 +119,7 @@ export function Sidebar() {
             type="button"
             data-testid="sidebar-toggle"
             onClick={() => setPinned((p) => !p)}
-            className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
             aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
             aria-pressed={pinned}
           >
@@ -126,10 +133,10 @@ export function Sidebar() {
               location === href || (href !== "/" && location.startsWith(href));
 
             const linkClass = cn(
-              "flex items-center rounded-lg text-sm font-medium transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.97]",
+              "flex items-center rounded-lg text-sm font-medium transition-colors duration-150",
               collapsed
-                ? "mx-auto h-10 w-10 justify-center p-0"
-                : "gap-3 px-3 py-2.5 hover:translate-x-0.5",
+                ? "mx-auto size-11 justify-center p-0"
+                : "min-h-11 gap-3 px-3",
               active
                 ? "v2-nav-pill-active bg-primary/12 text-primary shadow-v2-xs"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
@@ -141,6 +148,7 @@ export function Sidebar() {
                 data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
                 className={linkClass}
                 aria-label={label}
+                aria-current={active ? "page" : undefined}
               >
                 <Icon size={18} className="shrink-0" strokeWidth={active ? 2.25 : 2} />
                 {!collapsed && <span className="truncate">{label}</span>}
@@ -178,7 +186,7 @@ export function Sidebar() {
                   <Link
                     href="/settings"
                     data-testid="nav-settings"
-                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    className="mx-auto flex size-11 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     aria-label="Settings"
                   >
                     <Settings size={18} />
@@ -192,7 +200,7 @@ export function Sidebar() {
                     type="button"
                     data-testid="btn-profile"
                     onClick={() => setProfileOpen(true)}
-                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-sidebar-accent"
+                    className="mx-auto flex size-11 items-center justify-center rounded-lg transition-colors hover:bg-sidebar-accent"
                     aria-label="Profile"
                   >
                     <UserAvatar
@@ -212,7 +220,7 @@ export function Sidebar() {
                     type="button"
                     data-testid="btn-logout"
                     onClick={() => void handleLogout()}
-                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    className="mx-auto flex size-11 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     aria-label="Sign out"
                   >
                     <LogOut size={18} className="shrink-0" />
@@ -227,7 +235,7 @@ export function Sidebar() {
               <Link
                 href="/settings"
                 data-testid="nav-settings"
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
               >
                 <Settings size={18} className="shrink-0" />
                 <span>Settings</span>
@@ -236,7 +244,7 @@ export function Sidebar() {
                 type="button"
                 data-testid="btn-profile"
                 onClick={() => setProfileOpen(true)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
               >
                 <UserAvatar
                   avatarUrl={user?.avatarUrl}

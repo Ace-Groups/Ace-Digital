@@ -90,42 +90,41 @@
   /* Ace Digital Brand Palette */
   /* ace-800: #052659, ace-600: #5483B3, ace-100: #C1E8FF */
 
-  --background: 210 40% 98%;
-  --foreground: 215 50% 12%;
+  --background: 220 18% 97%;
+  --foreground: 222 39% 11%;
 
   --card: 0 0% 100%;
-  --card-foreground: 215 50% 12%;
-  --card-border: 210 25% 91%;
+  --card-foreground: 222 39% 11%;
+  --card-border: 220 14% 90%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 215 50% 12%;
-  --popover-border: 210 25% 89%;
+  --popover-foreground: 222 39% 11%;
+  --popover-border: 220 14% 88%;
 
-  /* Primary = ace-600 blue */
-  --primary: 211 38% 52%;
+  /* One accent: Ace navy */
+  --primary: 215 84% 18%;
   --primary-foreground: 0 0% 100%;
-  --primary-border: hsl(211 38% 44%);
+  --primary-border: hsl(215 84% 14%);
 
-  /* Secondary = ace-100 light blue */
-  --secondary: 203 100% 87%;
-  --secondary-foreground: 215 50% 22%;
-  --secondary-border: hsl(203 70% 78%);
+  --secondary: 220 14% 93%;
+  --secondary-foreground: 222 30% 18%;
+  --secondary-border: hsl(220 12% 86%);
 
-  --muted: 210 30% 94%;
-  --muted-foreground: 215 20% 48%;
-  --muted-border: hsl(210 20% 86%);
+  --muted: 220 14% 94%;
+  --muted-foreground: 215 14% 32%;
+  --muted-border: hsl(220 12% 86%);
 
-  --accent: 203 100% 87%;
-  --accent-foreground: 215 50% 22%;
-  --accent-border: hsl(203 70% 78%);
+  --accent: 220 14% 93%;
+  --accent-foreground: 222 30% 18%;
+  --accent-border: hsl(220 12% 86%);
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 72% 38%;
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: hsl(0 74% 52%);
+  --destructive-border: hsl(0 72% 32%);
 
-  --border: 210 22% 88%;
-  --input: 210 22% 92%;
-  --ring: 211 38% 52%;
+  --border: 220 13% 86%;
+  --input: 220 14% 90%;
+  --ring: 215 84% 18%;
 
   --radius: 0.75rem;
 
@@ -136,19 +135,19 @@
   --chart-5: 270 70% 60%;
 
   /* Sidebar — light workspace rail (Slack-style), navy reserved for brand accents */
-  --sidebar: 210 28% 97%;
-  --sidebar-foreground: 215 45% 22%;
-  --sidebar-border: 210 22% 90%;
-  --sidebar-primary: 211 38% 52%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 222 30% 16%;
+  --sidebar-border: 220 13% 88%;
+  --sidebar-primary: 215 84% 18%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-primary-border: hsl(211 38% 44%);
-  --sidebar-accent: 210 35% 93%;
-  --sidebar-accent-foreground: 215 50% 18%;
-  --sidebar-accent-border: hsl(210 25% 86%);
-  --sidebar-ring: 211 38% 52%;
+  --sidebar-primary-border: hsl(215 84% 14%);
+  --sidebar-accent: 220 14% 94%;
+  --sidebar-accent-foreground: 222 39% 11%;
+  --sidebar-accent-border: hsl(220 12% 86%);
+  --sidebar-ring: 215 84% 18%;
 
-  --app-font-sans: 'Inter', system-ui, sans-serif;
-  --app-font-display: 'Clash Display', sans-serif;
+  --app-font-sans: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  --app-font-display: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
@@ -173,32 +172,32 @@
 
 /* DARK MODE */
 .dark {
-  --background: 222 47% 4%;
-  --foreground: 210 40% 98%;
+  --background: 222 28% 8%;
+  --foreground: 210 25% 96%;
 
-  --card: 222 47% 7.5%;
-  --card-foreground: 210 40% 98%;
-  --card-border: 222 30% 13%;
+  --card: 222 22% 11%;
+  --card-foreground: 210 25% 96%;
+  --card-border: 222 16% 18%;
 
-  --popover: 222 47% 7.5%;
-  --popover-foreground: 210 40% 98%;
-  --popover-border: 222 30% 13%;
+  --popover: 222 22% 11%;
+  --popover-foreground: 210 25% 96%;
+  --popover-border: 222 16% 18%;
 
-  --primary: 184 100% 50%;
-  --primary-foreground: 222 47% 4%;
-  --primary-border: hsl(184 100% 40%);
+  --primary: 210 62% 72%;
+  --primary-foreground: 222 40% 10%;
+  --primary-border: hsl(210 50% 60%);
 
-  --secondary: 222 30% 11%;
-  --secondary-foreground: 184 100% 50%;
-  --secondary-border: hsl(222 25% 16%);
+  --secondary: 222 16% 16%;
+  --secondary-foreground: 210 25% 92%;
+  --secondary-border: hsl(222 14% 22%);
 
-  --muted: 222 30% 11%;
-  --muted-foreground: 217.9 10.6% 64.9%;
-  --muted-border: hsl(222 25% 16%);
+  --muted: 222 16% 15%;
+  --muted-foreground: 215 14% 74%;
+  --muted-border: hsl(222 14% 22%);
 
-  --accent: 222 30% 11%;
-  --accent-foreground: 184 100% 50%;
-  --accent-border: hsl(222 25% 16%);
+  --accent: 222 16% 16%;
+  --accent-foreground: 210 25% 92%;
+  --accent-border: hsl(222 14% 22%);
 
   --destructive: 346 84% 50%;
   --destructive-foreground: 0 0% 100%;
@@ -206,23 +205,23 @@
 
   --border: 222 25% 14%;
   --input: 222 25% 14%;
-  --ring: 184 100% 50%;
+  --ring: 210 62% 72%;
 
-  --sidebar: 222 47% 2.5%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-border: 222 30% 11%;
-  --sidebar-primary: 184 100% 50%;
-  --sidebar-primary-foreground: 222 47% 4%;
-  --sidebar-accent: 222 30% 9%;
-  --sidebar-accent-foreground: 184 100% 50%;
-  --sidebar-ring: 184 100% 50%;
+  --sidebar: 222 26% 7%;
+  --sidebar-foreground: 210 20% 92%;
+  --sidebar-border: 222 16% 16%;
+  --sidebar-primary: 210 62% 72%;
+  --sidebar-primary-foreground: 222 40% 10%;
+  --sidebar-accent: 222 16% 14%;
+  --sidebar-accent-foreground: 210 25% 96%;
+  --sidebar-ring: 210 62% 72%;
 
-  --app-font-sans: 'Inter', system-ui, sans-serif;
-  --app-font-display: 'Clash Display', sans-serif;
+  --app-font-sans: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  --app-font-display: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --shadow-brand: 222 47% 2%;
-  --ace-glow: 184 100% 50%;
+  --ace-glow: 210 62% 72%;
 
   --elevation-xs: 0 1px 2px hsl(0 0% 0% / 0.2);
   --elevation-sm: 0 2px 8px hsl(0 0% 0% / 0.25), 0 1px 2px hsl(0 0% 0% / 0.15);
@@ -563,17 +562,11 @@ body {
   }
 
   .v2-ambient-bg {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--ace-sky) / 0.15), transparent),
-      hsl(var(--background));
+    background: hsl(var(--background));
   }
 
   .dark .v2-ambient-bg {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.06), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(184 100% 50% / 0.04), transparent),
-      hsl(var(--background));
+    background: hsl(var(--background));
   }
 
   .v2-fab {
@@ -682,5 +675,16 @@ body {
 @supports not (content-visibility: auto) {
   .contain-region {
     contain: layout style paint;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

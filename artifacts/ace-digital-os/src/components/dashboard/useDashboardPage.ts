@@ -27,6 +27,7 @@ export function useDashboardPage() {
   const dashboardDate = useMemo(
     () =>
       new Date().toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
         weekday: "long",
         month: "long",
         day: "numeric",

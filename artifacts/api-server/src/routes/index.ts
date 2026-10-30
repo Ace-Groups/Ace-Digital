@@ -27,6 +27,7 @@ import notesRouter from "./notes";
 import pushTokensRouter from "./push-tokens";
 import aiRouter from "./ai";
 import attendanceRouter from "./attendance";
+import accountabilityRouter from "./accountability";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(notesRouter);
 router.use(pushTokensRouter);
 router.use(aiRouter);
 router.use(attendanceRouter);
+router.use(accountabilityRouter);
 
 export default router;

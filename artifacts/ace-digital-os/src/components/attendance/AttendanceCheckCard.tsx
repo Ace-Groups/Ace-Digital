@@ -17,6 +17,14 @@ import {
 
 const ROSTER_ROLES = new Set(["super_admin", "management", "hr", "finance"]);
 
+function formatHours(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours <= 0) return `${rest} min`;
+  if (rest === 0) return `${hours}h`;
+  return `${hours}h ${rest}m`;
+}
+
 export function AttendanceCheckCard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -72,7 +80,7 @@ export function AttendanceCheckCard() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Today</p>
-          <p className="mt-1 text-lg font-semibold">{STATUS_LABEL[status]}</p>
+          <p className="mt-1 text-lg font-semibold" role="status">{STATUS_LABEL[status]}</p>
           <p className="text-sm text-muted-foreground">
             In {formatIst(day?.checkInAt ?? null)}
             {day?.checkOutAt ? ` · Out ${formatIst(day.checkOutAt)}` : ""}
@@ -83,7 +91,21 @@ export function AttendanceCheckCard() {
         </Link>
       </div>
       {day?.planNote && (
-        <p className="mt-3 text-sm text-muted-foreground">Plan: {day.planNote}</p>
+        <p className="mt-3 text-sm text-muted-foreground">Today&apos;s plan: {day.planNote}</p>
+      )}
+      {day?.checkOutAt && (
+        <p className="mt-3 text-sm" role="status">
+          Day closed. In {formatIst(day.checkInAt)}
+          {", out "}
+          {formatIst(day.checkOutAt)}
+          {day.workedMinutes != null ? ` · ${formatHours(day.workedMinutes)}` : ""}.
+          {day.planNote ? ` Plan was “${day.planNote}”.` : " No plan was saved."}
+        </p>
+      )}
+      {day?.canCheckOut && !day.checkOutAt && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          When you check out, this card keeps your plan and your hours.
+        </p>
       )}
       {day?.canCheckIn && (
         <Input
